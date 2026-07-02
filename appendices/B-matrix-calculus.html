@@ -1,0 +1,1586 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Appendix B — Matrix Calculus – The Mathematics of Indirect Treatment Comparisons</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../appendices/C-distributions.html" rel="next">
+<link href="../appendices/A-notation-glossary.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-aafe154f14b83768199b70e6209de778.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../appendices/A-notation-glossary.html">Appendices</a></li><li class="breadcrumb-item"><a href="../appendices/B-matrix-calculus.html"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Matrix Calculus</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">The Mathematics of Indirect Treatment Comparisons</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/choxos/Mathematics-of-ITC" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Notation and Conventions</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part I: Mathematical Foundations</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/01-linear-algebra-i.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Linear Algebra I: Vector Spaces, Linear Maps, and Rank</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/02-linear-algebra-ii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Linear Algebra II: Orthogonality and the Projection Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/03-linear-algebra-iii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Linear Algebra III: Spectral Theory and Quadratic Forms</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/04-probability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Probability and Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/05-inference.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Statistical Inference</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/06-linear-regression.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Linear Regression from First Principles</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/07-glm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Generalized Linear Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/08-hierarchical-bayes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Hierarchical Models, Shrinkage, and Bayesian Inference</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Causal Inference and Estimands</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part2/09-potential-outcomes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Potential Outcomes and Identification</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part2/10-adjustment-methods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Adjustment Methods</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part2/11-effect-modification-collapsibility.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Effect Modification, Interaction, and Collapsibility</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part2/12-transportability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Transportability: The Estimand-Based Theory</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Meta-Analysis and Network Meta-Analysis</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part3/13-pairwise-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Pairwise Meta-Analysis</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part3/14-bucher.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Indirect Comparison and Bucher’s Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part3/15-network-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Network Meta-Analysis: Models and Identifiability</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part3/16-limits-of-nma.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">The Limits of Standard Network Meta-Analysis</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Population Adjustment: MAIC and STC</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part4/17-population-adjustment-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Population Adjustment Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part4/18-maic.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">Matching-Adjusted Indirect Comparison</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part4/19-stc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Simulated Treatment Comparison</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part V: Multilevel Network Meta-Regression</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/20-mlnmr-aggregation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression I: The Aggregation Principle</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/21-mlnmr-discrete.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression II: Discrete Outcomes and Approximation Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/22-mlnmr-integration.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression III: Numerical Integration Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/23-mlnmr-estimands.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression IV: Estimands, Identifiability, and Generality</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/24-computation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Bayesian Computation and Diagnostics</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/25-general-likelihoods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">General Likelihoods: Survival and Ordered Categorical Outcomes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/26-ml-umr.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Multilevel Unanchored Meta-Regression</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part VI: Bias, Comparator Selection, and Rigor</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part6/27-distance-matching.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Aggregate-Level Covariate-Distance Matching</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part6/28-qba.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Quantitative Bias Analysis for Indirect Comparisons</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part6/29-simulation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Simulation Study Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part6/30-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Machine-Checked Foundations: The Coq Formalization</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/A-notation-glossary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Notation Glossary</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/B-matrix-calculus.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Matrix Calculus</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/C-distributions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">Probability Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/D-special-functions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">D</span>&nbsp; <span class="chapter-title">Special Functions for Numerical Integration</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/E-reference-implementations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">E</span>&nbsp; <span class="chapter-title">Reference Implementations: multinma, mlumr, and uitc</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/F-solutions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">F</span>&nbsp; <span class="chapter-title">Solutions to Selected Exercises</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/G-reading-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">G</span>&nbsp; <span class="chapter-title">Reading the Coq Proofs</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#sec-mc-warmup" id="toc-sec-mc-warmup" class="nav-link active" data-scroll-target="#sec-mc-warmup"><span class="header-section-number">B.1</span> A scalar warm-up: derivatives as first-order approximations</a></li>
+  <li><a href="#sec-mc-conventions" id="toc-sec-mc-conventions" class="nav-link" data-scroll-target="#sec-mc-conventions"><span class="header-section-number">B.2</span> Conventions: gradient, Jacobian, and the matrix derivative</a></li>
+  <li><a href="#sec-mc-differential" id="toc-sec-mc-differential" class="nav-link" data-scroll-target="#sec-mc-differential"><span class="header-section-number">B.3</span> The differential and its algebra</a></li>
+  <li><a href="#sec-mc-forms" id="toc-sec-mc-forms" class="nav-link" data-scroll-target="#sec-mc-forms"><span class="header-section-number">B.4</span> Linear, quadratic, and bilinear forms</a></li>
+  <li><a href="#sec-mc-trace-inverse-det" id="toc-sec-mc-trace-inverse-det" class="nav-link" data-scroll-target="#sec-mc-trace-inverse-det"><span class="header-section-number">B.5</span> Trace, inverse, and log-determinant</a></li>
+  <li><a href="#sec-mc-woodbury" id="toc-sec-mc-woodbury" class="nav-link" data-scroll-target="#sec-mc-woodbury"><span class="header-section-number">B.6</span> The Sherman-Morrison-Woodbury identity</a></li>
+  <li><a href="#sec-mc-chain-rule" id="toc-sec-mc-chain-rule" class="nav-link" data-scroll-target="#sec-mc-chain-rule"><span class="header-section-number">B.7</span> The chain rule for matrix functions</a></li>
+  <li><a href="#sec-mc-example" id="toc-sec-mc-example" class="nav-link" data-scroll-target="#sec-mc-example"><span class="header-section-number">B.8</span> A worked example: the compound-symmetry covariance</a></li>
+  <li><a href="#sec-mc-logistic" id="toc-sec-mc-logistic" class="nav-link" data-scroll-target="#sec-mc-logistic"><span class="header-section-number">B.9</span> A second worked example: the score of a logistic log-likelihood</a></li>
+  <li><a href="#sec-mc-summary" id="toc-sec-mc-summary" class="nav-link" data-scroll-target="#sec-mc-summary"><span class="header-section-number">B.10</span> Summary of identities</a></li>
+  <li><a href="#sec-mc-notes" id="toc-sec-mc-notes" class="nav-link" data-scroll-target="#sec-mc-notes"><span class="header-section-number">B.11</span> Notes and references</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../appendices/A-notation-glossary.html">Appendices</a></li><li class="breadcrumb-item"><a href="../appendices/B-matrix-calculus.html"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Matrix Calculus</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">Appendix B — Matrix Calculus</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>Several of the central derivations of this book are exercises in differentiating a function whose argument is a vector or a matrix. The normal equations of least squares come from setting the gradient of a quadratic form to zero (<a href="../chapters/part1/03-linear-algebra-iii.html#def-quadratic-form" class="quarto-xref">Definition&nbsp;<span>3.6</span></a> and the least-squares chapter); the score and Fisher information of a likelihood are a gradient and a negative expected Hessian (<a href="../chapters/part1/05-inference.html#def-score" class="quarto-xref">Definition&nbsp;<span>5.5</span></a>); the restricted likelihood used for variance components in hierarchical models and meta-analysis is built from a log-determinant and an inverse-quadratic form (Chapters 8 and 13); and the calibration of matching weights and the variance propagation of population-adjusted estimators rest on Jacobians (Chapters 18 and 19). This appendix collects the matrix-calculus identities those chapters use and proves each one. It is reference material, but reference material with proofs: every formula below is derived from the definition of the derivative, so the reader can trust it and reconstruct it.</p>
+<p><strong>How to read this appendix.</strong> The identities here are tools, and different readers need different tools. If your goal is least squares and the normal equations, read the gradient and quadratic-form identities (<a href="#sec-mc-forms" class="quarto-xref"><span>Section B.4</span></a>) and stop. If your goal is the delta method and variance propagation for MAIC and STC (Chapters 18 and 19), read the Jacobian convention (<a href="#def-mc-jacobian" class="quarto-xref">Definition&nbsp;<span>B.2</span></a>) and the chain rule (<a href="#thm-chain-rule" class="quarto-xref">Theorem&nbsp;<span>B.8</span></a>). If your goal is restricted maximum likelihood and random-effects meta-analysis (Chapters 8 and 13), read the trace, inverse, and log-determinant identities (<a href="#sec-mc-trace-inverse-det" class="quarto-xref"><span>Section B.5</span></a>) together with the worked covariance example (<a href="#sec-mc-example" class="quarto-xref"><span>Section B.8</span></a>). If your goal is efficient computation of a marginal likelihood in ML-NMR (Chapters 20 to 25), read the Sherman-Morrison-Woodbury identity (<a href="#sec-mc-woodbury" class="quarto-xref"><span>Section B.6</span></a>). A one-line map from each identity to the chapter that consumes it is the closing table of the appendix (<a href="#sec-mc-summary" class="quarto-xref"><span>Section B.10</span></a>); a reader who wants that map first may jump there now and use it as a roadmap.</p>
+<p>Two reading aids appear throughout. A short <em>reader translation</em> in italics follows each identity, saying in plain words what it computes and where the book uses it. A <em>shape check</em> in parentheses records the size of each factor: the single most common error in matrix calculus is a stray transpose or a nonconformable product, and a shape check catches it on sight.</p>
+<p>The treatment is deliberately self-contained. We fix one set of layout conventions, compatible with the gradient and Jacobian already used in the foundations chapters, and we adopt the <em>differential</em> as the working tool. Differentials turn matrix differentiation into ordinary algebra: one expands a perturbation to first order, reads off a linear term, and identifies the derivative from it. This avoids the index gymnastics that make componentwise differentiation error-prone, while remaining completely rigorous. The prerequisites are the determinant, the adjugate and Cramer’s rule, and the characterization of invertibility, all developed in <span class="citation" data-cites="strang2016">Strang (<a href="../references.html#ref-strang2016" role="doc-biblioref">2016</a>)</span> and in <a href="../chapters/part1/01-linear-algebra-i.html#thm-invertibility-characterization" class="quarto-xref">Theorem&nbsp;<span>1.6</span></a>.</p>
+<p>Throughout, <span class="math inline">\(\|\cdot\|\)</span> denotes any fixed norm on the relevant finite-dimensional space; because all norms on a finite-dimensional space are equivalent, the Landau symbols <span class="math inline">\(O(\cdot)\)</span> and <span class="math inline">\(o(\cdot)\)</span> do not depend on the choice. For matrices we will most often use the Frobenius norm <span class="math inline">\(\|A\|_F=\sqrt{\sum_{i,j}A_{ij}^2}\)</span>. We write <span class="math inline">\(E_{ij}=\mathbf{e}_i\mathbf{e}_j^\top\)</span> for the standard basis matrix with a single <span class="math inline">\(1\)</span> in position <span class="math inline">\((i,j)\)</span> and zeros elsewhere. The symbol <span class="math inline">\(X^{-\top}\)</span> abbreviates <span class="math inline">\((X^{-1})^\top=(X^\top)^{-1}\)</span>. See <a href="../notation.html">Notation</a> for the standing conventions on bold vectors and matrices.</p>
+<p><strong>A note on symbols used only here.</strong> Two small conventions differ from the rest of the book, and we flag them so the reader is not tripped up. First, matrix calculus is traditionally written with plain capital letters for generic matrices; accordingly, in this appendix <span class="math inline">\(A\)</span>, <span class="math inline">\(X\)</span>, <span class="math inline">\(U\)</span>, <span class="math inline">\(V\)</span>, <span class="math inline">\(C\)</span> denote generic matrices, not random variables, not the design matrix <span class="math inline">\(\mathbf{X}\)</span> of the regression chapters, and not a covariance matrix, while bold letters such as <span class="math inline">\(\mathbf{x}\)</span>, <span class="math inline">\(\mathbf{a}\)</span>, <span class="math inline">\(\mathbf{1}_n\)</span> are reserved for vectors. This is why the matrices here are unbolded even though the book’s standing convention (see <a href="../notation.html">Notation</a>) bolds matrices; where a plain capital could be confused with a book-wide symbol we say so explicitly. Second, two pieces of asymptotic shorthand recur. The symbol <span class="math inline">\(o(\|\mathbf{h}\|)\)</span> denotes a remainder that, divided by <span class="math inline">\(\|\mathbf{h}\|\)</span>, tends to <span class="math inline">\(0\)</span> as <span class="math inline">\(\mathbf{h}\to\mathbf{0}\)</span>: it is strictly smaller than linear in the perturbation, so it disappears when we identify a derivative. The symbol <span class="math inline">\(O(\|\mathbf{h}\|^2)\)</span> denotes a remainder bounded in absolute value by a constant times <span class="math inline">\(\|\mathbf{h}\|^2\)</span>, that is, at most quadratic; a quadratic remainder is in particular <span class="math inline">\(o(\|\mathbf{h}\|)\)</span>. The phrase “<span class="math inline">\(U\)</span> is <strong>open</strong>” may be read as “<span class="math inline">\(U\)</span> contains a small ball around each of its points,” so that a small perturbation in any direction stays inside <span class="math inline">\(U\)</span> and the function is defined there; a reader who has not met open sets may replace “open <span class="math inline">\(U\subseteq\mathbb{R}^n\)</span>” by “a neighborhood of the point in question” without losing anything. Finally, <span class="math inline">\(f\)</span> is called <strong><span class="math inline">\(C^2\)</span></strong> if it has continuous second-order partial derivatives; this is the standard condition under which the mixed partials are equal, so the Hessian is symmetric.</p>
+<section id="sec-mc-warmup" class="level2" data-number="B.1">
+<h2 data-number="B.1" class="anchored" data-anchor-id="sec-mc-warmup"><span class="header-section-number">B.1</span> A scalar warm-up: derivatives as first-order approximations</h2>
+<p>Before any matrices, we recall the one idea that all of matrix calculus generalizes. For a differentiable scalar function of one real variable, the derivative <span class="math inline">\(f'(x)\)</span> is the number for which <span id="eq-mc-scalar-deriv"><span class="math display">\[
+f(x+h)=f(x)+f'(x)\,h+o(h)\qquad(h\to 0).
+\tag{B.1}\]</span></span> Read this as: near <span class="math inline">\(x\)</span>, the function changes by approximately <span class="math inline">\(f'(x)\,h\)</span>, a quantity <em>linear</em> in the small step <span class="math inline">\(h\)</span>, plus an error <span class="math inline">\(o(h)\)</span> too small to matter as <span class="math inline">\(h\to 0\)</span>. Every definition in this appendix is this one sentence with <span class="math inline">\(h\)</span> replaced by a vector or a matrix perturbation and the ordinary product <span class="math inline">\(f'(x)\,h\)</span> replaced by an inner product. Nothing more abstract is going on; matrix calculus is single-variable calculus with the slope promoted to a vector or a matrix.</p>
+<p>The <strong>differential</strong> is simply a name for the linear part <span class="math inline">\(f'(x)\,h\)</span>. To see it in the smallest possible case, take <span class="math inline">\(f(x)=x^2\)</span>. Then <span class="math display">\[
+f(x+h)=(x+h)^2=x^2+2xh+h^2,
+\]</span> so the change <span class="math inline">\(f(x+h)-f(x)=2xh+h^2\)</span> splits into a linear part <span class="math inline">\(2xh\)</span> and a quadratic remainder <span class="math inline">\(h^2=o(h)\)</span>. We write <span class="math inline">\(df=2x\,dx\)</span>, meaning: the first-order change in <span class="math inline">\(f\)</span> caused by a small change <span class="math inline">\(dx\)</span> in <span class="math inline">\(x\)</span> is <span class="math inline">\(2x\,dx\)</span>, and we read the derivative <span class="math inline">\(f'(x)=2x\)</span> off the coefficient of <span class="math inline">\(dx\)</span>. The whole method of this appendix is exactly this three-step move, <em>expand, discard everything smaller than linear, read off the coefficient</em>, carried out for functions whose argument is a vector or a matrix. The single new feature is that matrices do not commute, so the coefficient may sit to the left or to the right of the perturbation <span class="math inline">\(dX\)</span>, and that order must be respected; getting it wrong is what produces a spurious transpose.</p>
+<p>Geometrically, the derivative is the best linear approximation to the function at a point: a slope in one dimension, a direction of steepest ascent (the gradient) for a scalar field, a local linear map (the Jacobian) for a vector field, and a curvature (the Hessian) for the second order. Keeping those pictures in mind makes the algebra below easier to remember.</p>
+</section>
+<section id="sec-mc-conventions" class="level2" data-number="B.2">
+<h2 data-number="B.2" class="anchored" data-anchor-id="sec-mc-conventions"><span class="header-section-number">B.2</span> Conventions: gradient, Jacobian, and the matrix derivative</h2>
+<p>We first pin down what “the derivative” means for the three cases we need: a scalar function of a vector, a vector function of a vector, and a scalar function of a matrix. The conventions chosen here are exactly those already in force in the inference and regression chapters, so the formulas of this appendix can be dropped into those chapters without relabeling.</p>
+<p>One choice deserves to be named, because it is the source of most apparent contradictions between textbooks. There are two competing traditions, called <strong>numerator layout</strong> and <strong>denominator layout</strong>, for arranging the partial derivatives of a function into an array. They differ by a transpose. We use <strong>denominator layout</strong>, meaning the derivative is given the <em>same shape as the variable</em>: the gradient of a scalar function of the vector <span class="math inline">\(\mathbf{x}\)</span> is a column vector shaped like <span class="math inline">\(\mathbf{x}\)</span>, and the derivative of a scalar function of the matrix <span class="math inline">\(X\)</span> is a matrix shaped like <span class="math inline">\(X\)</span>. This is the natural choice because it puts the gradient in the same space as the argument, so that a step <span class="math inline">\(\mathbf{x}\mapsto
+\mathbf{x}-\eta\,\nabla f(\mathbf{x})\)</span> makes sense without a transpose. The practical warning is this: if you meet a formula in a paper that disagrees with ours by a single transpose, it is almost certainly a layout difference and not an error. Numerator layout would report the gradient as a row; we never do.</p>
+<div id="def-mc-gradient" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition B.1 (Gradient of a scalar function of a vector)</strong></span> Let <span class="math inline">\(U\subseteq\mathbb{R}^{n}\)</span> be open and <span class="math inline">\(f:U\to\mathbb{R}\)</span>. We say <span class="math inline">\(f\)</span> is <strong>differentiable</strong> at <span class="math inline">\(\mathbf{x}\in U\)</span> if there is a vector <span class="math inline">\(\nabla f(\mathbf{x})\in\mathbb{R}^{n}\)</span>, the <strong>gradient</strong>, with <span id="eq-mc-grad-def"><span class="math display">\[
+f(\mathbf{x}+\mathbf{h})=f(\mathbf{x})+\nabla f(\mathbf{x})^\top\mathbf{h}+o(\|\mathbf{h}\|)
+\qquad\text{as }\mathbf{h}\to\mathbf{0}.
+\tag{B.2}\]</span></span> The gradient is a <strong>column vector</strong> of the same shape as <span class="math inline">\(\mathbf{x}\)</span>, with entries <span class="math inline">\([\nabla f(\mathbf{x})]_i=\partial f/\partial x_i\)</span>.</p>
+</div>
+<p><em>Reader translation.</em> The gradient is the vector version of a slope: it collects the <span class="math inline">\(n\)</span> partial derivatives into one column so that <span class="math inline">\(\nabla f(\mathbf{x})^\top\mathbf{h}\)</span> gives the first-order change in <span class="math inline">\(f\)</span> when we step from <span class="math inline">\(\mathbf{x}\)</span> to <span class="math inline">\(\mathbf{x}+\mathbf{h}\)</span>. It is a column, not a row, precisely so that it lives in the same space as <span class="math inline">\(\mathbf{x}\)</span>; that is what lets a step <span class="math inline">\(\mathbf{x}-\eta\,\nabla
+f(\mathbf{x})\)</span> (gradient descent, and Fisher scoring in later chapters) even be written down. Its direction is the direction of steepest ascent of <span class="math inline">\(f\)</span>. In this book the gradient is the score <span class="math inline">\(\mathbf{s}(\boldsymbol\theta)=\nabla_{\boldsymbol\theta}\ell(\boldsymbol\theta)\)</span> of a log-likelihood (<a href="../chapters/part1/05-inference.html#def-score" class="quarto-xref">Definition&nbsp;<span>5.5</span></a>) and the gradient of the least-squares objective that yields the normal equations.</p>
+<p>This is the convention under which the least-squares objective <span class="math inline">\(S(\mathbf{b})\)</span> has gradient <span class="math inline">\(\nabla S(\mathbf{b})=-2\mathbf{X}^\top\mathbf{y}+2\mathbf{X}^\top\mathbf{X}\mathbf{b}\)</span>, a column vector, and under which the score <span class="math inline">\(\mathbf{s}(\boldsymbol\theta)=\nabla_{\boldsymbol\theta}\ell(\boldsymbol\theta)\)</span> of <a href="../chapters/part1/05-inference.html#def-score" class="quarto-xref">Definition&nbsp;<span>5.5</span></a> is a column vector in the parameter space.</p>
+<div id="def-mc-jacobian" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition B.2 (Jacobian of a vector function of a vector)</strong></span> Let <span class="math inline">\(U\subseteq\mathbb{R}^{n}\)</span> be open and <span class="math inline">\(\mathbf{g}:U\to\mathbb{R}^{m}\)</span>. We say <span class="math inline">\(\mathbf{g}\)</span> is <strong>differentiable</strong> at <span class="math inline">\(\mathbf{x}\in U\)</span> if there is a matrix <span class="math inline">\(J_{\mathbf{g}}(\mathbf{x})\in\mathbb{R}^{m\times n}\)</span>, the <strong>Jacobian</strong>, with <span id="eq-mc-jac-def"><span class="math display">\[
+\mathbf{g}(\mathbf{x}+\mathbf{h})=\mathbf{g}(\mathbf{x})+J_{\mathbf{g}}(\mathbf{x})\,\mathbf{h}
++o(\|\mathbf{h}\|).
+\tag{B.3}\]</span></span> Its entries are <span class="math inline">\([J_{\mathbf{g}}(\mathbf{x})]_{ab}=\partial g_a/\partial x_b\)</span>: row <span class="math inline">\(a\)</span> collects the partials of output <span class="math inline">\(g_a\)</span>, column <span class="math inline">\(b\)</span> the partials with respect to input <span class="math inline">\(x_b\)</span>.</p>
+</div>
+<p><em>Reader translation.</em> The Jacobian is the local linear map that best approximates <span class="math inline">\(\mathbf{g}\)</span> near <span class="math inline">\(\mathbf{x}\)</span>: it is the matrix by which you multiply a small input change <span class="math inline">\(\mathbf{h}\)</span> to get the resulting output change, <span class="math inline">\(\mathbf{g}(\mathbf{x}+\mathbf{h})-\mathbf{g}(\mathbf{x})\approx
+J_{\mathbf{g}}(\mathbf{x})\,\mathbf{h}\)</span>. This is the object the delta method uses to push the variance of an estimator through a smooth transformation, which is exactly how the variance of a population-adjusted effect is propagated in the MAIC and STC chapters (Chapters 18 and 19). A concrete <span class="math inline">\(2\times 2\)</span> Jacobian is computed in <a href="#exm-mc-jacobian" class="quarto-xref">Example&nbsp;<span>B.2</span></a> below.</p>
+<p>This is the <span class="math inline">\(q\times p\)</span> Jacobian <span class="math inline">\(\mathbf{D}=[\partial g_a/\partial\theta_b]\)</span> of the delta method (<a href="../chapters/part1/05-inference.html#thm-delta-method" class="quarto-xref">Theorem&nbsp;<span>5.3</span></a>). The two conventions are consistent: a scalar function <span class="math inline">\(f\)</span> is the special case <span class="math inline">\(m=1\)</span>, where the Jacobian is the <span class="math inline">\(1\times n\)</span> row vector <span class="math inline">\(J_f(\mathbf{x})\)</span>, and comparing <a href="#eq-mc-grad-def" class="quarto-xref">Equation&nbsp;<span>B.2</span></a> with <a href="#eq-mc-jac-def" class="quarto-xref">Equation&nbsp;<span>B.3</span></a> gives the relationship <span id="eq-mc-grad-is-jac-transpose"><span class="math display">\[
+\nabla f(\mathbf{x})=J_f(\mathbf{x})^\top.
+\tag{B.4}\]</span></span> This equation looks like a paradox on first reading, so it is worth stating carefully: the gradient and the Jacobian of a scalar function are <em>not the same object</em>. The gradient <span class="math inline">\(\nabla f(\mathbf{x})\)</span> is a <em>column</em> vector (denominator layout), while the Jacobian <span class="math inline">\(J_f(\mathbf{x})\)</span> of the same scalar <span class="math inline">\(f\)</span> is a <span class="math inline">\(1\times n\)</span> <em>row</em> vector; one is literally the transpose of the other. There is no contradiction because they are two different arrangements of the same <span class="math inline">\(n\)</span> partial derivatives. Throughout the book we use the gradient (the column). Say it once and the confusion never returns.</p>
+<p>The <strong>Hessian</strong> of a twice differentiable <span class="math inline">\(f\)</span> is the Jacobian of the gradient map <span class="math inline">\(\mathbf{x}\mapsto\nabla f(\mathbf{x})\)</span>, <span class="math display">\[
+\nabla^2 f(\mathbf{x})=J_{\nabla f}(\mathbf{x})\in\mathbb{R}^{n\times n},
+\qquad
+[\nabla^2 f(\mathbf{x})]_{ij}=\frac{\partial^2 f}{\partial x_i\,\partial x_j},
+\]</span> which is symmetric whenever <span class="math inline">\(f\)</span> is <span class="math inline">\(C^2\)</span>, by the equality of mixed partials.</p>
+<p><em>Reader translation.</em> The Hessian is curvature: it is the matrix of second derivatives, and it records how fast the gradient itself is changing. Its sign pattern classifies a stationary point (positive definite Hessian means a strict local minimum, negative definite a maximum, indefinite a saddle), which is exactly how the least-squares and maximum-likelihood objectives of this book are shown to have genuine optima. Its role in inference is central: the observed information is the negative Hessian of the log-likelihood, and the Fisher information <span class="math inline">\(\mathcal{I}(\boldsymbol\theta)\)</span> is its negative expectation (<a href="../chapters/part1/05-inference.html#def-score" class="quarto-xref">Definition&nbsp;<span>5.5</span></a>), so the Hessian is what turns a fitted model into a standard error. It is also the matrix inverted at each step of Newton and Fisher scoring.</p>
+<p>For functions of a matrix we use the natural extension: the derivative has the same shape as the matrix argument.</p>
+<div id="def-mc-matrix-derivative" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition B.3 (Derivative of a scalar function of a matrix)</strong></span> Let <span class="math inline">\(U\subseteq\mathbb{R}^{m\times n}\)</span> be open and <span class="math inline">\(f:U\to\mathbb{R}\)</span> differentiable at <span class="math inline">\(X\in U\)</span>, meaning that there is a matrix <span class="math inline">\(\dfrac{\partial f}{\partial X}\in\mathbb{R}^{m\times n}\)</span> with <span id="eq-mc-matder-def"><span class="math display">\[
+f(X+H)=f(X)+\Big\langle \tfrac{\partial f}{\partial X},\,H\Big\rangle_F+o(\|H\|),
+\qquad
+\langle A,B\rangle_F:=\operatorname{tr}(A^\top B)=\sum_{i,j}A_{ij}B_{ij}.
+\tag{B.5}\]</span></span> The matrix <span class="math inline">\(\partial f/\partial X\)</span> has entries <span class="math inline">\([\partial f/\partial X]_{ij}=\partial f/\partial X_{ij}\)</span>, and <span class="math inline">\(\langle\cdot,\cdot\rangle_F\)</span> is the <strong>Frobenius inner product</strong>.</p>
+</div>
+<p><em>Reader translation.</em> The Frobenius inner product <span class="math inline">\(\langle A,B\rangle_F=\sum_{i,j}A_{ij}B_{ij}\)</span> is not an arbitrary ceremony involving a trace: it is exactly the ordinary dot product of <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span> after you <em>flatten</em> each matrix into a long vector of its entries. So <a href="#eq-mc-matder-def" class="quarto-xref">Equation&nbsp;<span>B.5</span></a> says the same thing as the gradient definition, only with the <span class="math inline">\(mn\)</span> entries of <span class="math inline">\(X\)</span> laid out as a rectangle instead of a column. That is also why the derivative with respect to a matrix is itself a matrix and not a giant unwieldy array: we keep the <span class="math inline">\(mn\)</span> partial derivatives arranged in the same rectangle as <span class="math inline">\(X\)</span> (denominator layout), so that <span class="math inline">\([\partial f/\partial X]_{ij}=\partial f/\partial X_{ij}\)</span> sits in the slot of the entry it differentiates. The simplest instance is <span class="math inline">\(f(X)=\operatorname{tr}(X)\)</span>, whose derivative is the identity <span class="math inline">\(I\)</span>; it is worked in <a href="#exm-mc-trace-derivative" class="quarto-xref">Example&nbsp;<span>B.1</span></a> once we have the differential rules.</p>
+<p>The bridge between the differential of a matrix function and its derivative is the following identification, the single most useful tool in this appendix.</p>
+<div id="lem-mc-identification" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma B.1 (Identification of the derivative from the differential)</strong></span> Let <span class="math inline">\(f:U\to\mathbb{R}\)</span> be differentiable at <span class="math inline">\(X\in U\subseteq\mathbb{R}^{m\times n}\)</span>. If a matrix <span class="math inline">\(G\in\mathbb{R}^{m\times n}\)</span> satisfies <span class="math display">\[
+f(X+H)=f(X)+\operatorname{tr}(G^\top H)+o(\|H\|)\qquad\text{for all }H,
+\]</span> then <span class="math inline">\(\partial f/\partial X=G\)</span>. Such a <span class="math inline">\(G\)</span> is unique.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Setting <span class="math inline">\(H=tE_{ij}\)</span> for a scalar <span class="math inline">\(t\to 0\)</span> in the hypothesis gives, after dividing by <span class="math inline">\(t\)</span>, <span class="math display">\[
+\frac{\partial f}{\partial X_{ij}}
+=\lim_{t\to0}\frac{f(X+tE_{ij})-f(X)}{t}
+=\operatorname{tr}(G^\top E_{ij})=G_{ij},
+\]</span> because <span class="math inline">\(\operatorname{tr}(G^\top E_{ij})=\sum_{k}(G^\top)_{ik}(E_{ij})_{ki}=G_{ij}\)</span>. Hence <span class="math inline">\(G=\partial f/\partial X\)</span> entrywise, which is <a href="#eq-mc-matder-def" class="quarto-xref">Equation&nbsp;<span>B.5</span></a>. Uniqueness is the same computation: if <span class="math inline">\(\operatorname{tr}(G^\top H)=\operatorname{tr}(\tilde G^\top H)\)</span> for all <span class="math inline">\(H\)</span>, take <span class="math inline">\(H=E_{ij}\)</span> to get <span class="math inline">\(G_{ij}=\tilde G_{ij}\)</span> for every <span class="math inline">\(i,j\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>In words: expand <span class="math inline">\(f(X+H)\)</span>, keep only the part linear in <span class="math inline">\(H\)</span>, write it as <span class="math inline">\(\operatorname{tr}(G^\top H)\)</span>, and read off <span class="math inline">\(\partial f/\partial X=G\)</span>. Everything quadratic or smaller in <span class="math inline">\(H\)</span> is absorbed into <span class="math inline">\(o(\|H\|)\)</span>. The same principle, with <span class="math inline">\(\operatorname{tr}(G^\top H)\)</span> replaced by <span class="math inline">\(\mathbf{a}^\top\mathbf{h}\)</span> or <span class="math inline">\(J\mathbf{h}\)</span>, identifies gradients and Jacobians in the vector case.</p>
+<p>Why is this the most useful tool here? Because it splits a hard problem into an easy one. Computing a derivative entry by entry means differentiating <span class="math inline">\(mn\)</span> scalar functions and keeping the bookkeeping straight, which is where sign and transpose errors creep in. Computing a <em>differential</em>, by contrast, is pure algebra: it obeys a product rule, a transpose rule, and a trace rule (developed next), so one manipulates whole matrices at once. The identification lemma is the hinge that connects the two. Once we have massaged the linear part of <span class="math inline">\(f(X+H)\)</span> into the canonical form <span class="math inline">\(\operatorname{tr}(G^\top\,dX)\)</span>, the derivative is <span class="math inline">\(G\)</span> for free, with no indices. Essentially every identity below is proved this way.</p>
+</section>
+<section id="sec-mc-differential" class="level2" data-number="B.3">
+<h2 data-number="B.3" class="anchored" data-anchor-id="sec-mc-differential"><span class="header-section-number">B.3</span> The differential and its algebra</h2>
+<p>It is convenient to manipulate the linear term abstractly. For a map <span class="math inline">\(F\)</span> between matrix spaces (a scalar, vector, or matrix being special cases), the <strong>differential</strong> at <span class="math inline">\(X\)</span> is the linear map <span class="math inline">\(H\mapsto dF(X)[H]\)</span> defined by <span class="math display">\[
+F(X+H)=F(X)+dF(X)[H]+o(\|H\|).
+\]</span> When the base point is understood we write <span class="math inline">\(dF\)</span> for <span class="math inline">\(dF(X)[H]\)</span> and treat <span class="math inline">\(dX:=H\)</span> as a free increment. The derivative is recovered from the differential by <a href="#lem-mc-identification" class="quarto-xref">Lemma&nbsp;<span>B.1</span></a> in the scalar case and by reading off the coefficient matrix in the vector case. The following rules let us compute differentials of composite expressions without ever returning to indices.</p>
+<p><em>What <span class="math inline">\(dX\)</span> and <span class="math inline">\(dF\)</span> mean, in plain words.</em> Think of <span class="math inline">\(dX\)</span> as a bookkeeping symbol standing for a small, arbitrary change applied to every entry of <span class="math inline">\(X\)</span> at once (it is the perturbation <span class="math inline">\(H\)</span>, renamed). Then <span class="math inline">\(dF\)</span> is the resulting first-order change in <span class="math inline">\(F\)</span>, the part of <span class="math inline">\(F(X+dX)-F(X)\)</span> that is linear in <span class="math inline">\(dX\)</span>, with the smaller-than-linear remainder thrown away. This is precisely the scalar picture <span class="math inline">\(df=f'(x)\,dx\)</span> from <a href="#sec-mc-warmup" class="quarto-xref"><span>Section B.1</span></a>, promoted to matrices. The one caution: <span class="math inline">\(dX\)</span> is <em>not</em> a number, so when a rule produces a factor on each side of <span class="math inline">\(dX\)</span>, as in <span class="math inline">\(A\,(dX)\,B\)</span>, the order cannot be rearranged; the whole art of the method is to shuffle those factors, legally, until <span class="math inline">\(dX\)</span> stands alone at the end inside a trace.</p>
+<div id="lem-mc-differential-rules" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma B.2 (Rules of differentials)</strong></span> Let <span class="math inline">\(F,G\)</span> be differentiable matrix-valued maps and <span class="math inline">\(\alpha,\beta\in\mathbb{R}\)</span> constants. Wherever the shapes are conformable, <span class="math display">\[
+\begin{aligned}
+d(\alpha F+\beta G)&amp;=\alpha\,dF+\beta\,dG, &amp;&amp;\text{(linearity)}\\
+d(FG)&amp;=(dF)\,G+F\,(dG), &amp;&amp;\text{(product rule)}\\
+d(F^\top)&amp;=(dF)^\top, &amp;&amp;\text{(transpose)}\\
+d\operatorname{tr}(F)&amp;=\operatorname{tr}(dF). &amp;&amp;\text{(trace)}
+\end{aligned}
+\]</span> A constant matrix <span class="math inline">\(C\)</span> has <span class="math inline">\(dC=0\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span><em>Linearity</em> is immediate from the definition, since the first-order term of a sum is the sum of the first-order terms, and <span class="math inline">\(d C=0\)</span> holds because a constant satisfies <span class="math inline">\(C(X+H)=C(X)\)</span> exactly.</p>
+<p><em>Product rule.</em> With <span class="math inline">\(F=F(X)\)</span>, <span class="math inline">\(G=G(X)\)</span> and increments <span class="math inline">\(dF,dG\)</span> of order <span class="math inline">\(\|H\|\)</span>, <span class="math display">\[
+F(X+H)\,G(X+H)
+=\bigl(F+dF+o\bigr)\bigl(G+dG+o\bigr)
+=FG+(dF)G+F(dG)+\underbrace{(dF)(dG)}_{O(\|H\|^2)}+o(\|H\|).
+\]</span> The cross term <span class="math inline">\((dF)(dG)\)</span> is <span class="math inline">\(O(\|H\|^2)=o(\|H\|)\)</span> because each factor is <span class="math inline">\(O(\|H\|)\)</span> and the Frobenius norm is <strong>submultiplicative</strong>, meaning <span class="math inline">\(\|AB\|_F\le\|A\|_F\,\|B\|_F\)</span> (the size of a product is at most the product of the sizes; this standard inequality is proved from the Cauchy-Schwarz inequality applied to the rows of <span class="math inline">\(A\)</span> and columns of <span class="math inline">\(B\)</span>). So the product of two first-order changes is a second-order quantity, the matrix analogue of the discarded <span class="math inline">\(h^2\)</span> in <span class="math inline">\(f(x)=x^2\)</span>: two small things multiplied give something an order of magnitude smaller still, negligible at first order. Collecting the linear part gives <span class="math inline">\(d(FG)=(dF)G+F(dG)\)</span>.</p>
+<p><em>Transpose</em> and <em>trace</em> are linear operations with constant coefficients, so they commute with taking the first-order term: <span class="math inline">\((F+dF)^\top=F^\top+(dF)^\top\)</span> and <span class="math inline">\(\operatorname{tr}(F+dF)=\operatorname{tr}F
++\operatorname{tr}(dF)\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>We will also use, repeatedly, the three elementary properties of the trace that turn a differential into the canonical form <span class="math inline">\(\operatorname{tr}(G^\top\,dX)\)</span>.</p>
+<div id="lem-mc-trace-properties" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma B.3 (Properties of the trace)</strong></span> For matrices of conformable shape and <span class="math inline">\(\alpha,\beta\in\mathbb{R}\)</span>: <span class="math display">\[
+\operatorname{tr}(\alpha A+\beta B)=\alpha\operatorname{tr}A+\beta\operatorname{tr}B,\qquad
+\operatorname{tr}(A^\top)=\operatorname{tr}(A),\qquad
+\operatorname{tr}(AB)=\operatorname{tr}(BA).
+\]</span> Consequently <span class="math inline">\(\operatorname{tr}(A^\top B)=\operatorname{tr}(B^\top A)=\langle A,B\rangle_F\)</span>, and the Frobenius inner product is symmetric.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Linearity is entrywise. For the transpose, <span class="math inline">\(\operatorname{tr}(A^\top)=\sum_i (A^\top)_{ii}=\sum_i
+A_{ii}=\operatorname{tr}(A)\)</span>. For the cyclic property, with <span class="math inline">\(A\in\mathbb{R}^{p\times q}\)</span> and <span class="math inline">\(B\in\mathbb{R}^{q\times p}\)</span>, <span class="math display">\[
+\operatorname{tr}(AB)=\sum_{i=1}^{p}\sum_{k=1}^{q}A_{ik}B_{ki}
+=\sum_{k=1}^{q}\sum_{i=1}^{p}B_{ki}A_{ik}=\operatorname{tr}(BA).
+\]</span> The last claim follows since <span class="math inline">\(\operatorname{tr}(A^\top B)=\operatorname{tr}((A^\top B)^\top)
+=\operatorname{tr}(B^\top A)=\sum_{i,j}A_{ij}B_{ij}\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><strong>The canonical-form recipe.</strong> These trace rules exist to serve one workflow, the recipe that recovers a matrix derivative from a differential. It has four steps.</p>
+<ol type="1">
+<li><strong>Differentiate.</strong> Apply the differential rules of <a href="#lem-mc-differential-rules" class="quarto-xref">Lemma&nbsp;<span>B.2</span></a> to <span class="math inline">\(f(X)\)</span>, treating <span class="math inline">\(dX\)</span> as a small perturbation. Discard at once every term containing two factors of <span class="math inline">\(dX\)</span> (those are <span class="math inline">\(o(\|dX\|)\)</span>).</li>
+<li><strong>Trace it.</strong> Since <span class="math inline">\(f\)</span> is scalar, <span class="math inline">\(df\)</span> already equals its own trace; write <span class="math inline">\(df=\operatorname{tr}(df)\)</span> if it is not yet a trace.</li>
+<li><strong>Isolate <span class="math inline">\(dX\)</span>.</strong> Use the cyclic property to rotate the factors until <span class="math inline">\(dX\)</span> sits alone at the right end, producing the form <span class="math inline">\(\operatorname{tr}(M\,dX)\)</span> for some matrix <span class="math inline">\(M\)</span>.</li>
+<li><strong>Read off.</strong> Rewrite <span class="math inline">\(M=G^\top\)</span>; then <a href="#lem-mc-identification" class="quarto-xref">Lemma&nbsp;<span>B.1</span></a> gives <span class="math inline">\(\partial f/\partial X=G\)</span>.</li>
+</ol>
+<p>One warning is essential here, because the whole recipe leans on step 3. The cyclic property <span class="math inline">\(\operatorname{tr}(AB)=\operatorname{tr}(BA)\)</span> extends to longer products as a <em>rotation</em>: <span class="math display">\[
+\operatorname{tr}(ABC)=\operatorname{tr}(BCA)=\operatorname{tr}(CAB).
+\]</span> You may rotate the factors around the circle, keeping their circular order. You may <strong>not</strong> permute them freely: in general <span class="math inline">\(\operatorname{tr}(ABC)\ne\operatorname{tr}(ACB)\)</span>, because swapping two factors breaks the circular order. Rotate, never reshuffle. Confusing the two is the commonest mistake in this style of calculation.</p>
+<p>As a mini example of step 3, suppose a differentiation has produced the term <span class="math inline">\(\operatorname{tr}(A\,dX\,B)\)</span> with <span class="math inline">\(A,B\)</span> constant. Rotate <span class="math inline">\(dX\)</span> to the end: <span class="math display">\[
+\operatorname{tr}(A\,dX\,B)=\operatorname{tr}(B A\,dX)
+=\operatorname{tr}\bigl((A^\top B^\top)^\top dX\bigr),
+\]</span> so the coefficient is <span class="math inline">\(G=A^\top B^\top\)</span> and the derivative of that piece is <span class="math inline">\(A^\top B^\top\)</span>. Notice we rotated <span class="math inline">\(B\)</span> to the front, we did not swap it past <span class="math inline">\(A\)</span>.</p>
+<div id="exm-mc-trace-derivative" class="theorem example">
+<p><span class="theorem-title"><strong>Example B.1 (The two simplest matrix derivatives, from scratch)</strong></span> Take <span class="math inline">\(f(X)=\operatorname{tr}(X)\)</span>. By the trace rule <span class="math inline">\(d\operatorname{tr}(X)=\operatorname{tr}(dX)
+=\operatorname{tr}(I^\top\,dX)\)</span>, so <a href="#lem-mc-identification" class="quarto-xref">Lemma&nbsp;<span>B.1</span></a> reads off <span class="math inline">\(\partial f/\partial X=I\)</span>: the derivative of the trace is the identity matrix. Now take <span class="math inline">\(f(X)=\operatorname{tr}(AX)\)</span> with <span class="math inline">\(A\)</span> constant. The product and trace rules give <span class="math inline">\(d\operatorname{tr}(AX)=\operatorname{tr}(A\,dX)
+=\operatorname{tr}\bigl((A^\top)^\top dX\bigr)\)</span>, so <span class="math inline">\(\partial f/\partial X=A^\top\)</span>. These are the two identities of <a href="#thm-trace-derivative" class="quarto-xref">Theorem&nbsp;<span>B.4</span></a>, obtained here in one line each purely by the recipe, with no indices.</p>
+</div>
+<p><em>Reader translation.</em> This is the payoff promised in the introduction: differentiating whole matrices by the recipe is quick and mechanical, whereas doing the same entry by entry (as in <a href="#thm-trace-derivative" class="quarto-xref">Theorem&nbsp;<span>B.4</span></a>’s alternative) is where errors hide. We reuse exactly this recipe for every identity in the next two sections.</p>
+</section>
+<section id="sec-mc-forms" class="level2" data-number="B.4">
+<h2 data-number="B.4" class="anchored" data-anchor-id="sec-mc-forms"><span class="header-section-number">B.4</span> Linear, quadratic, and bilinear forms</h2>
+<p>These are the derivatives that appear in least squares and in the quadratic-form arithmetic of the normal theory of regression.</p>
+<div id="thm-linear-form-derivative" class="theorem">
+<p><span class="theorem-title"><strong>Theorem B.1 (Derivative of a linear form and of a linear map)</strong></span> Let <span class="math inline">\(\mathbf{a}\in\mathbb{R}^{n}\)</span> and <span class="math inline">\(A\in\mathbb{R}^{m\times n}\)</span> be constant.</p>
+<ol type="1">
+<li>The linear form <span class="math inline">\(f(\mathbf{x})=\mathbf{a}^\top\mathbf{x}=\mathbf{x}^\top\mathbf{a}\)</span> has gradient <span class="math inline">\(\nabla f(\mathbf{x})=\mathbf{a}\)</span> for every <span class="math inline">\(\mathbf{x}\)</span>.</li>
+<li>The linear map <span class="math inline">\(\mathbf{g}(\mathbf{x})=A\mathbf{x}\)</span> has Jacobian <span class="math inline">\(J_{\mathbf{g}}(\mathbf{x})=A\)</span> for every <span class="math inline">\(\mathbf{x}\)</span>.</li>
+</ol>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>For (1), <span class="math inline">\(f(\mathbf{x}+\mathbf{h})=\mathbf{a}^\top\mathbf{x}+\mathbf{a}^\top\mathbf{h}
+=f(\mathbf{x})+\mathbf{a}^\top\mathbf{h}\)</span>, with no remainder; comparison with <a href="#eq-mc-grad-def" class="quarto-xref">Equation&nbsp;<span>B.2</span></a> gives <span class="math inline">\(\nabla f(\mathbf{x})=\mathbf{a}\)</span>. Equivalently <span class="math inline">\(\partial(\sum_k a_k x_k)/\partial x_i=a_i\)</span>. For (2), <span class="math inline">\(\mathbf{g}(\mathbf{x}+\mathbf{h})=A\mathbf{x}+A\mathbf{h}=\mathbf{g}(\mathbf{x})+A\mathbf{h}\)</span>, again with no remainder, so <a href="#eq-mc-jac-def" class="quarto-xref">Equation&nbsp;<span>B.3</span></a> gives <span class="math inline">\(J_{\mathbf{g}}=A\)</span>. Entrywise, <span class="math inline">\(g_a=\sum_b A_{ab}x_b\)</span> has <span class="math inline">\(\partial g_a/\partial x_b=A_{ab}\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Reader translation.</em> A linear form <span class="math inline">\(\mathbf{a}^\top\mathbf{x}\)</span> has a constant gradient, namely its own coefficient vector <span class="math inline">\(\mathbf{a}\)</span> (shape check: <span class="math inline">\(\mathbf{a}\)</span> is <span class="math inline">\(n\times 1\)</span>, matching <span class="math inline">\(\mathbf{x}\)</span>); a linear map <span class="math inline">\(A\mathbf{x}\)</span> has constant Jacobian <span class="math inline">\(A\)</span> (shape check: <span class="math inline">\(A\)</span> is <span class="math inline">\(m\times n\)</span>, mapping an <span class="math inline">\(n\)</span>-vector step to an <span class="math inline">\(m\)</span>-vector step). These are the “slope equals the coefficient” facts that make the linear predictor <span class="math inline">\(\boldsymbol\eta=\mathbf{X}\boldsymbol\beta\)</span> differentiate to the design matrix, which is the first step of every score computation in the regression and GLM chapters.</p>
+<div id="exm-mc-jacobian" class="theorem example">
+<p><span class="theorem-title"><strong>Example B.2 (A concrete <span class="math inline">\(2\times 2\)</span> Jacobian)</strong></span> Let <span class="math inline">\(\mathbf{g}:\mathbb{R}^2\to\mathbb{R}^2\)</span> be the nonlinear map <span class="math inline">\(\mathbf{g}(\mathbf{x})=(x_1^2 x_2,\; x_1+x_2^2)\)</span>. Its Jacobian collects the four partials, output by input: <span class="math display">\[
+J_{\mathbf{g}}(\mathbf{x})=
+\begin{pmatrix}
+\partial g_1/\partial x_1 &amp; \partial g_1/\partial x_2\\[2pt]
+\partial g_2/\partial x_1 &amp; \partial g_2/\partial x_2
+\end{pmatrix}
+=\begin{pmatrix} 2x_1 x_2 &amp; x_1^2\\ 1 &amp; 2x_2 \end{pmatrix}.
+\]</span> At the point <span class="math inline">\(\mathbf{x}=(1,2)\)</span> this is the numerical matrix <span class="math inline">\(J_{\mathbf{g}}(1,2)=\left(\begin{smallmatrix}4&amp;1\\1&amp;4\end{smallmatrix}\right)\)</span>. Reading it as a local linear approximation: a small input step <span class="math inline">\(\mathbf{h}=(h_1,h_2)\)</span> produces the output step <span class="math inline">\(J_{\mathbf{g}}(1,2)\,\mathbf{h}=(4h_1+h_2,\;h_1+4h_2)\)</span> to first order. This is the picture behind the delta method (<a href="../chapters/part1/05-inference.html#thm-delta-method" class="quarto-xref">Theorem&nbsp;<span>5.3</span></a>): to move a variance through <span class="math inline">\(\mathbf{g}\)</span>, sandwich the input covariance with this matrix.</p>
+</div>
+<div id="thm-quadratic-form-derivative" class="theorem">
+<p><span class="theorem-title"><strong>Theorem B.2 (Derivative of a quadratic form)</strong></span> Let <span class="math inline">\(A\in\mathbb{R}^{n\times n}\)</span> be constant, not necessarily symmetric, and let <span class="math inline">\(q(\mathbf{x})=\mathbf{x}^\top A\mathbf{x}\)</span>. Then <span id="eq-mc-quad-grad"><span class="math display">\[
+\nabla q(\mathbf{x})=(A+A^\top)\mathbf{x},
+\qquad
+\nabla^2 q(\mathbf{x})=A+A^\top .
+\tag{B.6}\]</span></span> If <span class="math inline">\(A\)</span> is symmetric, <span class="math inline">\(\nabla q(\mathbf{x})=2A\mathbf{x}\)</span> and <span class="math inline">\(\nabla^2 q(\mathbf{x})=2A\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Expand about <span class="math inline">\(\mathbf{x}\)</span>: <span class="math display">\[
+q(\mathbf{x}+\mathbf{h})
+=(\mathbf{x}+\mathbf{h})^\top A(\mathbf{x}+\mathbf{h})
+=\mathbf{x}^\top A\mathbf{x}
++\mathbf{x}^\top A\mathbf{h}+\mathbf{h}^\top A\mathbf{x}
++\mathbf{h}^\top A\mathbf{h}.
+\]</span> The term <span class="math inline">\(\mathbf{x}^\top A\mathbf{h}\)</span> is a scalar, hence equal to its transpose <span class="math inline">\(\mathbf{h}^\top A^\top\mathbf{x}\)</span>, so the two middle terms combine to <span class="math inline">\(\mathbf{h}^\top(A^\top+A)\mathbf{x}=\bigl((A+A^\top)\mathbf{x}\bigr)^\top\mathbf{h}\)</span>. The final term satisfies <span class="math inline">\(|\mathbf{h}^\top A\mathbf{h}|\le\|A\|\,\|\mathbf{h}\|^2=o(\|\mathbf{h}\|)\)</span>. Therefore <span class="math display">\[
+q(\mathbf{x}+\mathbf{h})=q(\mathbf{x})+\bigl((A+A^\top)\mathbf{x}\bigr)^\top\mathbf{h}+o(\|\mathbf{h}\|),
+\]</span> and <a href="#eq-mc-grad-def" class="quarto-xref">Equation&nbsp;<span>B.2</span></a> identifies <span class="math inline">\(\nabla q(\mathbf{x})=(A+A^\top)\mathbf{x}\)</span>. The gradient is the linear map <span class="math inline">\(\mathbf{x}\mapsto(A+A^\top)\mathbf{x}\)</span>, whose Jacobian is <span class="math inline">\(A+A^\top\)</span> by <a href="#thm-linear-form-derivative" class="quarto-xref">Theorem&nbsp;<span>B.1</span></a>; that Jacobian is the Hessian. When <span class="math inline">\(A=A^\top\)</span> these reduce to <span class="math inline">\(2A\mathbf{x}\)</span> and <span class="math inline">\(2A\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>This is the identity behind the normal equations: the least-squares objective expands as <span class="math inline">\(S(\mathbf{b})=\mathbf{y}^\top\mathbf{y}-2\mathbf{b}^\top\mathbf{X}^\top\mathbf{y}
++\mathbf{b}^\top(\mathbf{X}^\top\mathbf{X})\mathbf{b}\)</span>, a quadratic form with symmetric matrix <span class="math inline">\(\mathbf{X}^\top\mathbf{X}\)</span>, so <a href="#thm-quadratic-form-derivative" class="quarto-xref">Theorem&nbsp;<span>B.2</span></a> and <a href="#thm-linear-form-derivative" class="quarto-xref">Theorem&nbsp;<span>B.1</span></a> give <span class="math inline">\(\nabla S(\mathbf{b})=-2\mathbf{X}^\top\mathbf{y}+2\mathbf{X}^\top\mathbf{X}\mathbf{b}\)</span> and Hessian <span class="math inline">\(2\mathbf{X}^\top\mathbf{X}\)</span>, positive semidefinite by <a href="../chapters/part1/03-linear-algebra-iii.html#def-definiteness" class="quarto-xref">Definition&nbsp;<span>3.7</span></a>.</p>
+<p><em>Reader translation.</em> The gradient of <span class="math inline">\(\mathbf{x}^\top A\mathbf{x}\)</span> is <span class="math inline">\((A+A^\top)\mathbf{x}\)</span>, the symmetrized matrix times <span class="math inline">\(\mathbf{x}\)</span> (shape check: <span class="math inline">\(A+A^\top\)</span> is <span class="math inline">\(n\times n\)</span>, <span class="math inline">\(\mathbf{x}\)</span> is <span class="math inline">\(n\times 1\)</span>, so the gradient is <span class="math inline">\(n\times 1\)</span>, the same shape as <span class="math inline">\(\mathbf{x}\)</span>, as denominator layout demands). Setting this to zero is what produces the normal equations <span class="math inline">\(\mathbf{X}^\top\mathbf{X}\hat{\boldsymbol\beta}=\mathbf{X}^\top\mathbf{y}\)</span>; the Hessian <span class="math inline">\(2\mathbf{X}^\top\mathbf{X}\)</span> being positive semidefinite is what certifies that solution is a minimum, not a saddle. This one identity is the entire analytic content of least squares.</p>
+<div id="exm-mc-quadratic" class="theorem example">
+<p><span class="theorem-title"><strong>Example B.3 (A quadratic gradient two ways)</strong></span> Let <span class="math inline">\(q(\mathbf{x})=3x_1^2+2x_1x_2+x_2^2\)</span>. Writing <span class="math inline">\(q(\mathbf{x})=\mathbf{x}^\top A\mathbf{x}\)</span> with the symmetric <span class="math inline">\(A=\left(\begin{smallmatrix}3&amp;1\\1&amp;1\end{smallmatrix}\right)\)</span> checks out, since <span class="math inline">\(\mathbf{x}^\top A\mathbf{x}=3x_1^2+2\cdot 1\cdot x_1x_2+x_2^2\)</span>. <strong>Entrywise</strong>, <span class="math inline">\(\partial q/\partial x_1
+=6x_1+2x_2\)</span> and <span class="math inline">\(\partial q/\partial x_2=2x_1+2x_2\)</span>, so <span class="math inline">\(\nabla q=(6x_1+2x_2,\;2x_1+2x_2)\)</span>. <strong>By the formula</strong> <a href="#eq-mc-quad-grad" class="quarto-xref">Equation&nbsp;<span>B.6</span></a>, <span class="math inline">\(\nabla q=2A\mathbf{x}
+=2\left(\begin{smallmatrix}3&amp;1\\1&amp;1\end{smallmatrix}\right)\mathbf{x}
+=(6x_1+2x_2,\;2x_1+2x_2)\)</span>, in agreement. At <span class="math inline">\(\mathbf{x}=(1,1)\)</span> both give <span class="math inline">\(\nabla q=(8,4)\)</span>, and the Hessian is <span class="math inline">\(2A=\left(\begin{smallmatrix}6&amp;2\\2&amp;2\end{smallmatrix}\right)\)</span>. The theorem also tolerates a nonsymmetric representation: taking instead <span class="math inline">\(A'=\left(\begin{smallmatrix}3&amp;2\\0&amp;1\end{smallmatrix}\right)\)</span> (which also gives <span class="math inline">\(q\)</span>) yields the <em>same</em> gradient because <span class="math inline">\(A'+A'^\top=\left(\begin{smallmatrix}6&amp;2\\2&amp;2\end{smallmatrix}\right)\)</span>; this is exactly why the symmetrization <span class="math inline">\(A+A^\top\)</span> appears in <a href="#eq-mc-quad-grad" class="quarto-xref">Equation&nbsp;<span>B.6</span></a>.</p>
+</div>
+<div id="thm-bilinear-form-derivative" class="theorem">
+<p><span class="theorem-title"><strong>Theorem B.3 (Derivative of a bilinear form)</strong></span> Let <span class="math inline">\(A\in\mathbb{R}^{m\times n}\)</span> be constant and <span class="math inline">\(\beta(\mathbf{x},\mathbf{y})=\mathbf{x}^\top
+A\mathbf{y}\)</span> for <span class="math inline">\(\mathbf{x}\in\mathbb{R}^{m}\)</span>, <span class="math inline">\(\mathbf{y}\in\mathbb{R}^{n}\)</span>. Then <span class="math display">\[
+\nabla_{\mathbf{x}}\beta=A\mathbf{y},
+\qquad
+\nabla_{\mathbf{y}}\beta=A^\top\mathbf{x}.
+\]</span> Regarded instead as a function of the matrix <span class="math inline">\(A\)</span> with <span class="math inline">\(\mathbf{x},\mathbf{y}\)</span> fixed, <span class="math display">\[
+\frac{\partial}{\partial A}\bigl(\mathbf{x}^\top A\mathbf{y}\bigr)=\mathbf{x}\mathbf{y}^\top .
+\]</span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Fix <span class="math inline">\(\mathbf{y}\)</span>. Then <span class="math inline">\(\beta(\cdot,\mathbf{y})=\mathbf{x}^\top(A\mathbf{y})=(A\mathbf{y})^\top\mathbf{x}\)</span> is a linear form in <span class="math inline">\(\mathbf{x}\)</span> with coefficient vector <span class="math inline">\(A\mathbf{y}\)</span>, so <span class="math inline">\(\nabla_{\mathbf{x}}\beta=A\mathbf{y}\)</span> by <a href="#thm-linear-form-derivative" class="quarto-xref">Theorem&nbsp;<span>B.1</span></a>(1). Fix <span class="math inline">\(\mathbf{x}\)</span>. Then <span class="math inline">\(\beta(\mathbf{x},\cdot)=(A^\top\mathbf{x})^\top\mathbf{y}\)</span> is a linear form in <span class="math inline">\(\mathbf{y}\)</span> with coefficient <span class="math inline">\(A^\top\mathbf{x}\)</span>, so <span class="math inline">\(\nabla_{\mathbf{y}}\beta=A^\top\mathbf{x}\)</span>. For the derivative in <span class="math inline">\(A\)</span>, write <span class="math inline">\(\beta=\sum_{i,j}x_i A_{ij}y_j\)</span>; then <span class="math inline">\(\partial\beta/\partial A_{ij}=x_i y_j\)</span>, which is the <span class="math inline">\((i,j)\)</span> entry of the outer product <span class="math inline">\(\mathbf{x}\mathbf{y}^\top\)</span>. Equivalently, by the differential, <span class="math inline">\(\beta(A+H)-\beta(A)=\mathbf{x}^\top H\mathbf{y}=\operatorname{tr}(\mathbf{y}\mathbf{x}^\top H)
+=\operatorname{tr}\bigl((\mathbf{x}\mathbf{y}^\top)^\top H\bigr)\)</span>, and <a href="#lem-mc-identification" class="quarto-xref">Lemma&nbsp;<span>B.1</span></a> gives <span class="math inline">\(\partial\beta/\partial A=\mathbf{x}\mathbf{y}^\top\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Reader translation.</em> Read left to right, <span class="math inline">\(\mathbf{x}^\top A\mathbf{y}\)</span> is linear in each of its three arguments, so each gradient is just the “other” object: differentiating in <span class="math inline">\(\mathbf{x}\)</span> leaves <span class="math inline">\(A\mathbf{y}\)</span>, in <span class="math inline">\(\mathbf{y}\)</span> leaves <span class="math inline">\(A^\top\mathbf{x}\)</span>, and in the matrix <span class="math inline">\(A\)</span> leaves the outer product <span class="math inline">\(\mathbf{x}\mathbf{y}^\top\)</span> (shape check: <span class="math inline">\(\mathbf{x}\)</span> is <span class="math inline">\(m\times 1\)</span> and <span class="math inline">\(\mathbf{y}^\top\)</span> is <span class="math inline">\(1\times n\)</span>, so <span class="math inline">\(\mathbf{x}\mathbf{y}^\top\)</span> is <span class="math inline">\(m\times n\)</span>, the shape of <span class="math inline">\(A\)</span>). The outer-product rule <span class="math inline">\(\partial(\mathbf{x}^\top A\mathbf{y})/\partial A=\mathbf{x}\mathbf{y}^\top\)</span> is the seed from which the trace derivatives of the next section grow.</p>
+</section>
+<section id="sec-mc-trace-inverse-det" class="level2" data-number="B.5">
+<h2 data-number="B.5" class="anchored" data-anchor-id="sec-mc-trace-inverse-det"><span class="header-section-number">B.5</span> Trace, inverse, and log-determinant</h2>
+<p>These identities power the restricted-likelihood computations of Chapters 8 and 13, where one must differentiate <span class="math inline">\(\log\det\mathbf{V}\)</span> and <span class="math inline">\(\mathbf{a}^\top\mathbf{V}^{-1}\mathbf{a}\)</span> with respect to variance parameters that enter <span class="math inline">\(\mathbf{V}\)</span>.</p>
+<p><em>Why these two expressions, and not others.</em> It is worth seeing, before the algebra, exactly where <span class="math inline">\(\log\det\mathbf{V}\)</span> and the inverse-quadratic form come from, because they are not arbitrary. A multivariate normal model with mean <span class="math inline">\(\mathbf{X}\boldsymbol\beta\)</span> and covariance <span class="math inline">\(\mathbf{V}=\mathbf{V}(\boldsymbol\vartheta)\)</span> (the covariance depending on variance parameters <span class="math inline">\(\boldsymbol\vartheta\)</span>, for instance a between-study variance <span class="math inline">\(\tau^2\)</span>) has log-likelihood <span id="eq-mc-mvn-loglik"><span class="math display">\[
+\ell(\boldsymbol\beta,\boldsymbol\vartheta)
+=-\tfrac{1}{2}\log\det\mathbf{V}(\boldsymbol\vartheta)
+-\tfrac{1}{2}\,\mathbf{r}^\top\mathbf{V}(\boldsymbol\vartheta)^{-1}\mathbf{r}
++\text{const},
+\qquad \mathbf{r}=\mathbf{y}-\mathbf{X}\boldsymbol\beta,
+\tag{B.7}\]</span></span> where <span class="math inline">\(\mathbf{r}\)</span> is the residual vector. This is the single formula that makes the whole section relevant: to fit the model one maximizes <a href="#eq-mc-mvn-loglik" class="quarto-xref">Equation&nbsp;<span>B.7</span></a>, and to maximize it one needs its derivative with respect to <span class="math inline">\(\boldsymbol\vartheta\)</span>, which by the chain rule requires the derivatives of exactly <span class="math inline">\(\log\det\mathbf{V}\)</span> and <span class="math inline">\(\mathbf{r}^\top\mathbf{V}^{-1}\mathbf{r}\)</span>. The restricted (REML) log-likelihood of Chapters 8 and 13 adds one more log-determinant term of the same kind. So the two identities below are precisely the pieces a health researcher needs to differentiate a random-effects meta-analysis or mixed model likelihood; we assemble the resulting score explicitly at the end of <a href="#sec-mc-chain-rule" class="quarto-xref"><span>Section B.7</span></a>.</p>
+<div id="thm-trace-derivative" class="theorem">
+<p><span class="theorem-title"><strong>Theorem B.4 (Derivative of the trace of a product)</strong></span> For constant <span class="math inline">\(A\)</span> and a matrix variable <span class="math inline">\(X\)</span> of conformable shape, <span class="math display">\[
+\frac{\partial}{\partial X}\operatorname{tr}(AX)=A^\top,\qquad
+\frac{\partial}{\partial X}\operatorname{tr}(X^\top A)=A,\qquad
+\frac{\partial}{\partial X}\operatorname{tr}(X^\top A X)=(A+A^\top)X,
+\]</span> and in particular <span class="math inline">\(\dfrac{\partial}{\partial X}\operatorname{tr}(X)=I\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>We use <a href="#lem-mc-differential-rules" class="quarto-xref">Lemma&nbsp;<span>B.2</span></a> and <a href="#lem-mc-trace-properties" class="quarto-xref">Lemma&nbsp;<span>B.3</span></a>, then <a href="#lem-mc-identification" class="quarto-xref">Lemma&nbsp;<span>B.1</span></a>.</p>
+<p>For <span class="math inline">\(\operatorname{tr}(AX)\)</span>: <span class="math inline">\(d\operatorname{tr}(AX)=\operatorname{tr}(A\,dX)
+=\operatorname{tr}\bigl((A^\top)^\top dX\bigr)\)</span>, so the derivative is <span class="math inline">\(A^\top\)</span>.</p>
+<p>For <span class="math inline">\(\operatorname{tr}(X^\top A)\)</span>: <span class="math inline">\(d\operatorname{tr}(X^\top A)=\operatorname{tr}\bigl((dX)^\top A\bigr)
+=\operatorname{tr}\bigl(((dX)^\top A)^\top\bigr)=\operatorname{tr}(A^\top\,dX)\)</span>, so the derivative is <span class="math inline">\(A\)</span>.</p>
+<p>For <span class="math inline">\(\operatorname{tr}(X^\top A X)\)</span>, the product and trace rules give <span class="math display">\[
+d\operatorname{tr}(X^\top A X)
+=\operatorname{tr}\bigl((dX)^\top A X\bigr)+\operatorname{tr}\bigl(X^\top A\,dX\bigr).
+\]</span> The first term equals <span class="math inline">\(\operatorname{tr}\bigl((AX)^\top dX\bigr)\)</span> by transposing inside the trace, since <span class="math inline">\(((dX)^\top AX)^\top=X^\top A^\top\,dX\)</span> has the same trace and <span class="math inline">\(X^\top A^\top=(AX)^\top\)</span>. The second term is already <span class="math inline">\(\operatorname{tr}\bigl((A^\top X)^\top dX\bigr)\)</span> because <span class="math inline">\((A^\top X)^\top=X^\top A\)</span>. Adding, <span class="math inline">\(d\operatorname{tr}(X^\top A X)=\operatorname{tr}\bigl(((A+A^\top)X)^\top dX\bigr)\)</span>, so the derivative is <span class="math inline">\((A+A^\top)X\)</span>. Setting <span class="math inline">\(A=I\)</span> in the first identity gives <span class="math inline">\(\partial\operatorname{tr}(X)/\partial X=I\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Reader translation.</em> These are the workhorse trace derivatives. Notice the last one, <span class="math inline">\(\partial\operatorname{tr}(X^\top A X)/\partial X=(A+A^\top)X\)</span>, is the matrix twin of the quadratic-form gradient <span class="math inline">\((A+A^\top)\mathbf{x}\)</span>; the same symmetrization appears for the same reason. It is instructive to appreciate what the differential method saved us: done entrywise one writes <span class="math inline">\(\operatorname{tr}(X^\top A X)
+=\sum_{i,j,k}X_{ji}A_{jk}X_{ki}\)</span>, differentiates this triple sum in a generic entry <span class="math inline">\(X_{ab}\)</span> (two terms, by the product rule on the two factors of <span class="math inline">\(X\)</span>), and reassembles the pieces into a matrix; the proof above reached <span class="math inline">\((A+A^\top)X\)</span> in three clean lines with no indices at all. That contrast is the entire argument for adopting differentials.</p>
+<p>To differentiate the determinant and the inverse we first record how the inverse responds to a perturbation. Two classical objects appear, and we define them here at first use rather than assume them. The <strong>minor</strong> <span class="math inline">\(M_{ij}\)</span> of a square matrix <span class="math inline">\(X\)</span> is the determinant of the submatrix obtained by striking out row <span class="math inline">\(i\)</span> and column <span class="math inline">\(j\)</span>. The <strong>cofactor</strong> is the signed minor <span class="math inline">\(C_{ij}=(-1)^{i+j}M_{ij}\)</span>, and the <strong>adjugate</strong> <span class="math inline">\(\operatorname{adj}(X)\)</span> is the transpose of the cofactor matrix, <span class="math inline">\(\operatorname{adj}(X)=C^\top\)</span>. The one fact we borrow (from <span class="citation" data-cites="strang2016">Strang (<a href="../references.html#ref-strang2016" role="doc-biblioref">2016</a>)</span>) is <strong>Cramer’s rule</strong> in the form <span class="math inline">\(X^{-1}=\operatorname{adj}(X)/\det(X)\)</span>, valid whenever <span class="math inline">\(\det(X)\ne 0\)</span>. The proof below needs that the entries of <span class="math inline">\(X^{-1}\)</span> are differentiable functions of the entries of <span class="math inline">\(X\)</span>; Cramer’s rule exhibits each entry of <span class="math inline">\(X^{-1}\)</span> as a ratio of polynomials in the entries of <span class="math inline">\(X\)</span> whose denominator <span class="math inline">\(\det(X)\)</span> does not vanish on the open set of invertible matrices, so each entry is differentiable there <span class="citation" data-cites="strang2016">(<a href="../references.html#ref-strang2016" role="doc-biblioref">Strang 2016</a>)</span>.</p>
+<div id="thm-inverse-derivative" class="theorem">
+<p><span class="theorem-title"><strong>Theorem B.5 (Derivative of the inverse)</strong></span> Let <span class="math inline">\(X\)</span> range over invertible matrices. As a differential, <span id="eq-mc-inverse-diff"><span class="math display">\[
+d\bigl(X^{-1}\bigr)=-X^{-1}\,(dX)\,X^{-1}.
+\tag{B.8}\]</span></span> Componentwise, <span class="math inline">\(\dfrac{\partial (X^{-1})_{kl}}{\partial X_{ij}}=-(X^{-1})_{ki}\,(X^{-1})_{jl}\)</span>. If <span class="math inline">\(X(t)\)</span> depends differentiably on a scalar <span class="math inline">\(t\)</span>, then <span class="math inline">\(\dfrac{d}{dt}X(t)^{-1}=-X(t)^{-1}\dot X(t)\,X(t)^{-1}\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Differentiate the identity <span class="math inline">\(X X^{-1}=I\)</span>. The right side is constant, so <span class="math inline">\(d(X X^{-1})=0\)</span>; the product rule of <a href="#lem-mc-differential-rules" class="quarto-xref">Lemma&nbsp;<span>B.2</span></a> gives <span class="math inline">\((dX)X^{-1}+X\,d(X^{-1})=0\)</span>. Left-multiplying by <span class="math inline">\(X^{-1}\)</span> and solving, <span class="math display">\[
+d(X^{-1})=-X^{-1}(dX)X^{-1},
+\]</span> which is <a href="#eq-mc-inverse-diff" class="quarto-xref">Equation&nbsp;<span>B.8</span></a>. For the componentwise form take <span class="math inline">\(dX=E_{ij}\)</span>; then <span class="math inline">\(d(X^{-1})=-X^{-1}E_{ij}X^{-1}\)</span>, and <span class="math display">\[
+\bigl(X^{-1}E_{ij}X^{-1}\bigr)_{kl}
+=\sum_{p,q}(X^{-1})_{kp}(E_{ij})_{pq}(X^{-1})_{ql}
+=(X^{-1})_{ki}(X^{-1})_{jl},
+\]</span> where the double sum collapses because <span class="math inline">\(E_{ij}=\mathbf{e}_i\mathbf{e}_j^\top\)</span> has a single nonzero entry, <span class="math inline">\((E_{ij})_{pq}=1\)</span> only when <span class="math inline">\(p=i\)</span> and <span class="math inline">\(q=j\)</span>; every other term is zero. Hence <span class="math inline">\(\partial(X^{-1})_{kl}/\partial X_{ij}=-(X^{-1})_{ki}(X^{-1})_{jl}\)</span>. The scalar-parameter statement is the same computation with <span class="math inline">\(dX\)</span> replaced by <span class="math inline">\(\dot X(t)\,dt\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Reader translation.</em> The rule <span class="math inline">\(d(X^{-1})=-X^{-1}(dX)X^{-1}\)</span> is the matrix version of the scalar fact <span class="math inline">\(d(1/x)=-x^{-2}\,dx\)</span>; the two copies of <span class="math inline">\(X^{-1}\)</span>, one on each side of <span class="math inline">\(dX\)</span>, are the price of noncommutativity, and their order cannot be swapped. This is exactly the identity that produces the <span class="math inline">\(-\mathbf{a}^\top\mathbf{V}^{-1}(\partial\mathbf{V}/\partial\vartheta)\mathbf{V}^{-1}\mathbf{a}\)</span> term in a variance-component score: it says how the inverse covariance changes when a variance parameter nudges <span class="math inline">\(\mathbf{V}\)</span>. We use it in that form in <a href="#sec-mc-chain-rule" class="quarto-xref"><span>Section B.7</span></a> and Chapters 8 and 13.</p>
+<p>Next, the differential of the determinant, classically Jacobi’s formula. It rests on the cofactor (Laplace) expansion and the adjugate identity <span class="math inline">\(X\,\operatorname{adj}(X)=\det(X)\,I\)</span>, both standard <span class="citation" data-cites="strang2016">(<a href="../references.html#ref-strang2016" role="doc-biblioref">Strang 2016</a>)</span>. A reader who only needs the log-determinant derivative below (which is what the likelihood of <a href="#eq-mc-mvn-loglik" class="quarto-xref">Equation&nbsp;<span>B.7</span></a> requires) may accept this lemma on first reading and skip its proof; the cofactor machinery is used only to prove it, not to apply it.</p>
+<div id="lem-mc-jacobi" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma B.4 (Jacobi’s formula for the determinant)</strong></span> For any square <span class="math inline">\(X\)</span>, writing <span class="math inline">\(C=\operatorname{cof}(X)\)</span> for the matrix of cofactors <span class="math inline">\(C_{ij}=(-1)^{i+j}M_{ij}\)</span> (with <span class="math inline">\(M_{ij}\)</span> the minor deleting row <span class="math inline">\(i\)</span> and column <span class="math inline">\(j\)</span>), <span class="math display">\[
+\frac{\partial \det(X)}{\partial X_{ij}}=C_{ij},
+\qquad
+d\det(X)=\operatorname{tr}\bigl(\operatorname{adj}(X)\,dX\bigr).
+\]</span> If in addition <span class="math inline">\(X\)</span> is invertible, then <span class="math inline">\(\operatorname{adj}(X)=\det(X)\,X^{-1}\)</span> and <span id="eq-mc-jacobi"><span class="math display">\[
+\frac{\partial \det(X)}{\partial X}=\det(X)\,X^{-\top},
+\qquad
+d\det(X)=\det(X)\,\operatorname{tr}\bigl(X^{-1}\,dX\bigr).
+\tag{B.9}\]</span></span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Fix a row index <span class="math inline">\(i\)</span>. The Laplace expansion along row <span class="math inline">\(i\)</span> reads <span class="math inline">\(\det(X)=\sum_{k=1}^{n}X_{ik}\,C_{ik}\)</span>, and crucially each cofactor <span class="math inline">\(C_{ik}\)</span> is built from the minor that <em>deletes</em> row <span class="math inline">\(i\)</span>, so <span class="math inline">\(C_{ik}\)</span> does not depend on any entry of row <span class="math inline">\(i\)</span>. To see this last point plainly: the minor <span class="math inline">\(M_{ik}\)</span> is by definition the determinant of the submatrix obtained by striking out row <span class="math inline">\(i\)</span> and column <span class="math inline">\(k\)</span>, so not a single entry <span class="math inline">\(X_{i1},\dots,X_{in}\)</span> of row <span class="math inline">\(i\)</span> survives in it; therefore <span class="math inline">\(\partial C_{ik}/\partial X_{ij}=0\)</span> for every <span class="math inline">\(j\)</span>. Differentiating <span class="math inline">\(\det(X)=\sum_k X_{ik}C_{ik}\)</span> in <span class="math inline">\(X_{ij}\)</span>, only the explicit factor <span class="math inline">\(X_{ik}\)</span> can contribute, and it does so only when <span class="math inline">\(k=j\)</span>, giving <span class="math inline">\(\partial\det(X)/\partial X_{ij}=C_{ij}\)</span>. Assembling the differential, <span class="math display">\[
+d\det(X)=\sum_{i,j}C_{ij}\,dX_{ij}=\operatorname{tr}\bigl(C^\top\,dX\bigr)
+=\operatorname{tr}\bigl(\operatorname{adj}(X)\,dX\bigr),
+\]</span> since the adjugate is the transpose of the cofactor matrix, <span class="math inline">\(\operatorname{adj}(X)=C^\top\)</span>. When <span class="math inline">\(X\)</span> is invertible, the adjugate identity <span class="math inline">\(X\,\operatorname{adj}(X)=\det(X)\,I\)</span> gives <span class="math inline">\(\operatorname{adj}(X)=\det(X)\,X^{-1}\)</span>; substituting yields <span class="math inline">\(d\det(X)=\det(X)\operatorname{tr}(X^{-1}dX)\)</span>, and because <span class="math inline">\(\operatorname{adj}(X)=C^\top\)</span> we get <span class="math inline">\(C=\det(X)(X^{-1})^\top\)</span>, that is <span class="math inline">\(\partial\det(X)/\partial X=\det(X)X^{-\top}\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Reader translation.</em> Jacobi’s formula says the determinant changes, to first order, in proportion to <span class="math inline">\(\det(X)\)</span> times the inverse transpose: <span class="math inline">\(d\det(X)=\det(X)\operatorname{tr}(X^{-1}\,dX)\)</span>. We almost never need the raw determinant derivative; we need its logarithm, obtained next by one application of the chain rule, because it is <span class="math inline">\(\log\det\mathbf{V}\)</span> (not <span class="math inline">\(\det\mathbf{V}\)</span>) that appears in every Gaussian log-likelihood <a href="#eq-mc-mvn-loglik" class="quarto-xref">Equation&nbsp;<span>B.7</span></a>.</p>
+<div id="thm-logdet-derivative" class="theorem">
+<p><span class="theorem-title"><strong>Theorem B.6 (Derivative of the log-determinant)</strong></span> Let <span class="math inline">\(X\)</span> range over matrices with <span class="math inline">\(\det(X)&gt;0\)</span>. Then <span id="eq-mc-logdet"><span class="math display">\[
+d\log\det(X)=\operatorname{tr}\bigl(X^{-1}\,dX\bigr),
+\qquad
+\frac{\partial}{\partial X}\log\det(X)=X^{-\top}=(X^{-1})^\top .
+\tag{B.10}\]</span></span> If <span class="math inline">\(X\)</span> is symmetric and invertible, <span class="math inline">\(\partial\log\det(X)/\partial X=X^{-1}\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>The map <span class="math inline">\(X\mapsto\log\det(X)\)</span> is the composition of <span class="math inline">\(t\mapsto\log t\)</span> with <span class="math inline">\(X\mapsto\det(X)\)</span>, both differentiable where <span class="math inline">\(\det(X)&gt;0\)</span>. The ordinary chain rule for the outer scalar function gives <span class="math display">\[
+d\log\det(X)=\frac{1}{\det(X)}\,d\det(X)
+=\frac{1}{\det(X)}\,\det(X)\operatorname{tr}\bigl(X^{-1}\,dX\bigr)
+=\operatorname{tr}\bigl(X^{-1}\,dX\bigr),
+\]</span> using <a href="#eq-mc-jacobi" class="quarto-xref">Equation&nbsp;<span>B.9</span></a>. Writing this as <span class="math inline">\(\operatorname{tr}\bigl((X^{-\top})^\top dX\bigr)\)</span> and applying <a href="#lem-mc-identification" class="quarto-xref">Lemma&nbsp;<span>B.1</span></a> gives <span class="math inline">\(\partial\log\det(X)/\partial X=X^{-\top}\)</span>. For symmetric invertible <span class="math inline">\(X\)</span> the inverse is symmetric, so <span class="math inline">\(X^{-\top}=X^{-1}\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Reader translation.</em> This is one of the two identities the whole section was aiming at. In words: the derivative of <span class="math inline">\(\log\det\)</span> is the inverse (transposed, but for a symmetric covariance matrix the transpose does nothing). Combined with the inverse-derivative rule for the <span class="math inline">\(\mathbf{r}^\top\mathbf{V}^{-1}\mathbf{r}\)</span> term, it delivers the gradient of the Gaussian log-likelihood <a href="#eq-mc-mvn-loglik" class="quarto-xref">Equation&nbsp;<span>B.7</span></a> with respect to a variance parameter, hence the restricted-likelihood score of random-effects meta-analysis. The next remark records a layout subtlety that matters precisely because covariance matrices are symmetric.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span>The symmetric case hides a layout subtlety worth stating, because covariance and precision matrices are symmetric. There are two different questions, and they have different answers.</p>
+<p><em>Question one: all entries free.</em> If one differentiates <span class="math inline">\(f(X)=\log\det X\)</span> treating all <span class="math inline">\(n^2\)</span> entries as independent, the answer is <span class="math inline">\(X^{-\top}\)</span> as proved above. This is the derivative reported by the theorem.</p>
+<p><em>Question two: only the free parameters of a symmetric matrix.</em> If instead <span class="math inline">\(X\)</span> is <em>constrained</em> symmetric and one differentiates with respect to the <span class="math inline">\(\binom{n+1}{2}\)</span> genuinely free parameters (the diagonal and one triangle), then a diagonal parameter <span class="math inline">\(X_{ii}\)</span> moves one entry, but an off-diagonal free parameter <span class="math inline">\(X_{ij}\)</span> with <span class="math inline">\(i&lt;j\)</span> moves <em>two</em> entries at once, <span class="math inline">\(X_{ij}\)</span> and <span class="math inline">\(X_{ji}\)</span>. By the chain rule the derivative with respect to that one parameter is <span class="math inline">\(\partial f/\partial X_{ij}+\partial f/\partial X_{ji}
+=2(X^{-1})_{ij}\)</span>: the off-diagonal derivatives are doubled.</p>
+<p>A <span class="math inline">\(2\times 2\)</span> example makes the doubling concrete. Let <span class="math inline">\(X=\left(\begin{smallmatrix}a&amp;b\\ b&amp;c\end{smallmatrix}\right)\)</span> with free parameters <span class="math inline">\(a,b,c\)</span>, so <span class="math inline">\(\det X=ac-b^2\)</span> and <span class="math inline">\(X^{-1}=\dfrac{1}{ac-b^2}\left(\begin{smallmatrix}c&amp;-b\\ -b&amp;a\end{smallmatrix}\right)\)</span>. Differentiating <span class="math inline">\(f=\log(ac-b^2)\)</span> directly, <span class="math display">\[
+\frac{\partial f}{\partial a}=\frac{c}{ac-b^2}=(X^{-1})_{11},
+\qquad
+\frac{\partial f}{\partial c}=\frac{a}{ac-b^2}=(X^{-1})_{22},
+\qquad
+\frac{\partial f}{\partial b}=\frac{-2b}{ac-b^2}=2\,(X^{-1})_{12}.
+\]</span> The diagonal parameters reproduce single entries of <span class="math inline">\(X^{-1}\)</span>, while the off-diagonal parameter <span class="math inline">\(b\)</span> picks up a factor <span class="math inline">\(2\)</span> because it sits in both off-diagonal slots. Arranging these into a symmetric matrix gives <span class="math display">\[
+\begin{pmatrix}(X^{-1})_{11}&amp;2(X^{-1})_{12}\\ 2(X^{-1})_{12}&amp;(X^{-1})_{22}\end{pmatrix}
+=2X^{-1}-\operatorname{diag}(X^{-1}),
+\]</span> the “symmetric gradient” with off-diagonal entries doubled. This is a genuine chain-rule consequence, not a trap, once one is clear about which variables are being held free.</p>
+<p>In the restricted-likelihood applications of Chapters 8 and 13 this subtlety does not arise: one differentiates with respect to a <em>scalar</em> variance parameter <span class="math inline">\(\vartheta\)</span> that enters <span class="math inline">\(\mathbf{V}(\vartheta)\)</span>, and the chain rule of <a href="#sec-mc-chain-rule" class="quarto-xref"><span>Section B.7</span></a> gives the unambiguous <span class="math display">\[
+\frac{\partial}{\partial\vartheta}\log\det\mathbf{V}(\vartheta)
+=\operatorname{tr}\!\Bigl(\mathbf{V}^{-1}\frac{\partial\mathbf{V}}{\partial\vartheta}\Bigr),
+\qquad
+\frac{\partial}{\partial\vartheta}\bigl(\mathbf{a}^\top\mathbf{V}^{-1}\mathbf{a}\bigr)
+=-\,\mathbf{a}^\top\mathbf{V}^{-1}\frac{\partial\mathbf{V}}{\partial\vartheta}\mathbf{V}^{-1}\mathbf{a},
+\]</span> the second equality from <a href="#thm-inverse-derivative" class="quarto-xref">Theorem&nbsp;<span>B.5</span></a>. These are the two pieces of the restricted-likelihood score. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-mc-woodbury" class="level2" data-number="B.6">
+<h2 data-number="B.6" class="anchored" data-anchor-id="sec-mc-woodbury"><span class="header-section-number">B.6</span> The Sherman-Morrison-Woodbury identity</h2>
+<p>A recurring computational need is to invert a matrix that differs from an easily inverted one by a low-rank correction. In random-effects meta-analysis and in mixed models the marginal covariance has the form <span class="math inline">\(\mathbf{V}=A+UCV\)</span> with <span class="math inline">\(A\)</span> diagonal (so trivially inverted) and <span class="math inline">\(UCV\)</span> of small rank; the Woodbury identity reduces the inversion of <span class="math inline">\(\mathbf{V}\)</span> to that of a small matrix.</p>
+<p><em>A warning about the letter <span class="math inline">\(V\)</span>.</em> In the identity below, <span class="math inline">\(V\)</span> (plain, unbolded) is a generic rectangular factor, one of the four matrices <span class="math inline">\(A,U,C,V\)</span> that build the low-rank update. It is <em>not</em> the covariance matrix <span class="math inline">\(\mathbf{V}\)</span> (bold) of the likelihood <a href="#eq-mc-mvn-loglik" class="quarto-xref">Equation&nbsp;<span>B.7</span></a>, and it is not a vector space. The clash is unfortunate but the notation <span class="math inline">\(A+UCV\)</span> is universal, so we keep it and simply flag it here.</p>
+<p><em>What the four matrices are, concretely.</em> It helps to have a picture before the algebra. Think of a mixed model or a random-effects meta-analysis whose marginal covariance is <span class="math inline">\(\mathbf{V}=A+UCV\)</span>. Here <span class="math inline">\(A\)</span> is the easy diagonal part (within-study or residual variances, one per observation); <span class="math inline">\(U\)</span> is a tall thin matrix that maps a few random effects to the many observations they influence; <span class="math inline">\(C\)</span> is the small covariance of those random effects (often just a single between-study variance <span class="math inline">\(\tau^2\)</span>); and <span class="math inline">\(V=U^\top\)</span> closes the low-rank correction. Inverting the big <span class="math inline">\(n\times n\)</span> matrix <span class="math inline">\(\mathbf{V}\)</span> directly is expensive, but Woodbury turns it into inverting the tiny <span class="math inline">\(k\times k\)</span> <strong>capacitance matrix</strong> <span class="math inline">\(C^{-1}+VA^{-1}U\)</span>, where <span class="math inline">\(k\)</span> is the number of random effects. The compound-symmetry example of <a href="#sec-mc-example" class="quarto-xref"><span>Section B.8</span></a> is the smallest instance, with <span class="math inline">\(k=1\)</span>: a single shared random effect, <span class="math inline">\(U=V^\top=\mathbf{1}_n\)</span> and <span class="math inline">\(C=[\tau^2]\)</span>. The same low-rank structure appears in the marginal likelihood of ML-NMR (Chapters 20 to 25), where integrating out individual-level variation leaves a diagonal-plus-low-rank covariance of exactly this kind, and Woodbury is what keeps the likelihood computable.</p>
+<p>We build up from the rank-one case.</p>
+<div id="lem-sherman-morrison" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma B.5 (Sherman-Morrison rank-one update)</strong></span> Let <span class="math inline">\(A\in\mathbb{R}^{n\times n}\)</span> be invertible and <span class="math inline">\(\mathbf{u},\mathbf{v}\in\mathbb{R}^{n}\)</span>. If <span class="math inline">\(1+\mathbf{v}^\top A^{-1}\mathbf{u}\ne 0\)</span>, then <span class="math inline">\(A+\mathbf{u}\mathbf{v}^\top\)</span> is invertible and <span id="eq-mc-sm"><span class="math display">\[
+\bigl(A+\mathbf{u}\mathbf{v}^\top\bigr)^{-1}
+=A^{-1}-\frac{A^{-1}\mathbf{u}\,\mathbf{v}^\top A^{-1}}{1+\mathbf{v}^\top A^{-1}\mathbf{u}} .
+\tag{B.11}\]</span></span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Write <span class="math inline">\(c=\mathbf{v}^\top A^{-1}\mathbf{u}\)</span> (a scalar) and <span class="math inline">\(s=1+c\ne 0\)</span>, and let <span class="math inline">\(B\)</span> denote the proposed right-hand side of <a href="#eq-mc-sm" class="quarto-xref">Equation&nbsp;<span>B.11</span></a>. Multiply on the left by <span class="math inline">\(A+\mathbf{u}\mathbf{v}^\top\)</span>: <span class="math display">\[
+\bigl(A+\mathbf{u}\mathbf{v}^\top\bigr)B
+=AB+\mathbf{u}\mathbf{v}^\top B.
+\]</span> Compute each piece. First <span class="math display">\[
+AB=A A^{-1}-\frac{A A^{-1}\mathbf{u}\,\mathbf{v}^\top A^{-1}}{s}
+=I-\frac{\mathbf{u}\,\mathbf{v}^\top A^{-1}}{s}.
+\]</span> Second, using <span class="math inline">\(\mathbf{v}^\top A^{-1}\mathbf{u}=c\)</span>, <span class="math display">\[
+\mathbf{u}\mathbf{v}^\top B
+=\mathbf{u}\mathbf{v}^\top A^{-1}
+-\frac{\mathbf{u}\,(\mathbf{v}^\top A^{-1}\mathbf{u})\,\mathbf{v}^\top A^{-1}}{s}
+=\mathbf{u}\mathbf{v}^\top A^{-1}\Bigl(1-\frac{c}{s}\Bigr)
+=\mathbf{u}\mathbf{v}^\top A^{-1}\,\frac{s-c}{s}
+=\frac{\mathbf{u}\,\mathbf{v}^\top A^{-1}}{s},
+\]</span> since <span class="math inline">\(s-c=1\)</span>. Adding the two pieces, the corrections cancel and <span class="math inline">\(\bigl(A+\mathbf{u}\mathbf{v}^\top\bigr)B=I\)</span>. A square matrix with a right inverse is invertible, with that right inverse equal to the inverse (<a href="../chapters/part1/01-linear-algebra-i.html#thm-invertibility-characterization" class="quarto-xref">Theorem&nbsp;<span>1.6</span></a>), so <span class="math inline">\(\bigl(A+\mathbf{u}\mathbf{v}^\top\bigr)^{-1}=B\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Reader translation.</em> Sherman-Morrison says: when you add a rank-one bump <span class="math inline">\(\mathbf{u}\mathbf{v}^\top\)</span> to a matrix you can already invert, the new inverse is the old inverse minus a rank-one correction, and the only new scalar you must compute is the denominator <span class="math inline">\(1+\mathbf{v}^\top A^{-1}\mathbf{u}\)</span>. No new matrix is inverted at all. It is worth verifying once on numbers before trusting the general case.</p>
+<div id="exm-mc-sherman-morrison" class="theorem example">
+<p><span class="theorem-title"><strong>Example B.4 (Sherman-Morrison on a <span class="math inline">\(2\times 2\)</span> matrix)</strong></span> Take <span class="math inline">\(A=I_2\)</span> and <span class="math inline">\(\mathbf{u}=\mathbf{v}=\mathbf{1}_2=(1,1)^\top\)</span>, so <span class="math inline">\(A+\mathbf{u}\mathbf{v}^\top=I_2+\mathbf{1}_2\mathbf{1}_2^\top
+=\left(\begin{smallmatrix}2&amp;1\\ 1&amp;2\end{smallmatrix}\right)\)</span>. Here <span class="math inline">\(A^{-1}=I_2\)</span> and the denominator is <span class="math inline">\(1+\mathbf{v}^\top A^{-1}\mathbf{u}=1+\mathbf{1}_2^\top\mathbf{1}_2=1+2=3\)</span>, so <a href="#eq-mc-sm" class="quarto-xref">Equation&nbsp;<span>B.11</span></a> gives <span class="math display">\[
+\bigl(I_2+\mathbf{1}_2\mathbf{1}_2^\top\bigr)^{-1}
+=I_2-\tfrac{1}{3}\mathbf{1}_2\mathbf{1}_2^\top
+=\frac{1}{3}\begin{pmatrix}2&amp;-1\\ -1&amp;2\end{pmatrix}.
+\]</span> Direct check: <span class="math inline">\(\left(\begin{smallmatrix}2&amp;1\\ 1&amp;2\end{smallmatrix}\right)\cdot
+\tfrac{1}{3}\left(\begin{smallmatrix}2&amp;-1\\ -1&amp;2\end{smallmatrix}\right)\)</span> has first row <span class="math inline">\(\tfrac{1}{3}(2\cdot 2+1\cdot(-1),\ 2\cdot(-1)+1\cdot 2)=\tfrac{1}{3}(3,0)=(1,0)\)</span>, and similarly the second row is <span class="math inline">\((0,1)\)</span>, confirming the identity. This is the <span class="math inline">\(n=2\)</span> case of the compound-symmetry inverse computed in full in <a href="#sec-mc-example" class="quarto-xref"><span>Section B.8</span></a>.</p>
+</div>
+<div id="thm-woodbury" class="theorem">
+<p><span class="theorem-title"><strong>Theorem B.7 (Sherman-Morrison-Woodbury identity)</strong></span> Let <span class="math inline">\(A\in\mathbb{R}^{n\times n}\)</span> and <span class="math inline">\(C\in\mathbb{R}^{k\times k}\)</span> be invertible, and let <span class="math inline">\(U\in\mathbb{R}^{n\times k}\)</span>, <span class="math inline">\(V\in\mathbb{R}^{k\times n}\)</span>. If the <strong>capacitance matrix</strong> <span class="math inline">\(S:=C^{-1}+VA^{-1}U\in\mathbb{R}^{k\times k}\)</span> is invertible, then <span class="math inline">\(A+UCV\)</span> is invertible and <span id="eq-mc-woodbury"><span class="math display">\[
+\bigl(A+UCV\bigr)^{-1}
+=A^{-1}-A^{-1}U\bigl(C^{-1}+VA^{-1}U\bigr)^{-1}VA^{-1}.
+\tag{B.12}\]</span></span> The rank-one identity <a href="#eq-mc-sm" class="quarto-xref">Equation&nbsp;<span>B.11</span></a> is the case <span class="math inline">\(k=1\)</span>, <span class="math inline">\(C=[1]\)</span>, <span class="math inline">\(U=\mathbf{u}\)</span>, <span class="math inline">\(V=\mathbf{v}^\top\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Let <span class="math inline">\(B\)</span> denote the right-hand side of <a href="#eq-mc-woodbury" class="quarto-xref">Equation&nbsp;<span>B.12</span></a> and let <span class="math inline">\(M:=VA^{-1}U\in\mathbb{R}^{k\times k}\)</span>, so <span class="math inline">\(S=C^{-1}+M\)</span>. Multiply on the left by <span class="math inline">\(A+UCV\)</span> and expand: <span class="math display">\[
+(A+UCV)B=AB+UCVB.
+\]</span> The first term is <span class="math display">\[
+AB=I-US^{-1}VA^{-1}.
+\]</span> For the second term, factor <span class="math inline">\(VA^{-1}\)</span> on the right: <span class="math display">\[
+UCVB=UCVA^{-1}-UCVA^{-1}U S^{-1}VA^{-1}
+=UC\bigl(I-M S^{-1}\bigr)VA^{-1}.
+\]</span> Adding and collecting the common right factor <span class="math inline">\(VA^{-1}\)</span> and left factor <span class="math inline">\(U\)</span>, <span class="math display">\[
+(A+UCV)B
+=I+U\Bigl\{-S^{-1}+C-CM S^{-1}\Bigr\}VA^{-1}.
+\]</span> The braced <span class="math inline">\(k\times k\)</span> matrix vanishes: <span class="math display">\[
+-S^{-1}+C-CM S^{-1}
+=C-(I+CM)S^{-1}
+=C-C\bigl(C^{-1}+M\bigr)S^{-1}
+=C-C S S^{-1}
+=C-C=0,
+\]</span> using <span class="math inline">\(I+CM=C(C^{-1}+M)=CS\)</span>. Hence <span class="math inline">\((A+UCV)B=I\)</span>. A square matrix with a right inverse is invertible (<a href="../chapters/part1/01-linear-algebra-i.html#thm-invertibility-characterization" class="quarto-xref">Theorem&nbsp;<span>1.6</span></a>), so <span class="math inline">\((A+UCV)^{-1}=B\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Reader translation.</em> Woodbury is Sherman-Morrison for a rank-<span class="math inline">\(k\)</span> (rather than rank-one) correction: the <span class="math inline">\(n\times n\)</span> inversion of <span class="math inline">\(A+UCV\)</span> collapses to the <span class="math inline">\(k\times k\)</span> inversion of the capacitance matrix <span class="math inline">\(C^{-1}+VA^{-1}U\)</span>, a huge saving when <span class="math inline">\(k\ll n\)</span>. The name “capacitance” is borrowed from electrical network theory, where this Schur-complement matrix arises; in this book it carries no electrical meaning and is simply the small matrix you end up inverting. This is the identity that makes the marginal likelihood of a mixed model, a random-effects meta-analysis, or ML-NMR computable at scale.</p>
+<p>A companion identity handles the determinant, which is what the log-determinant term of a restricted likelihood requires. We first record the Schur-complement determinant formula, then specialize.</p>
+<div id="lem-mc-schur-det" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma B.6 (Block determinant via the Schur complement)</strong></span> Let <span class="math inline">\(P=\begin{pmatrix}A&amp;B\\ C&amp;D\end{pmatrix}\)</span> be a square block matrix with <span class="math inline">\(A\)</span> square and invertible. Then <span class="math display">\[
+\det P=\det(A)\,\det\bigl(D-CA^{-1}B\bigr).
+\]</span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Verify the block factorization <span class="math display">\[
+\begin{pmatrix}A&amp;B\\ C&amp;D\end{pmatrix}
+=\begin{pmatrix}I&amp;0\\ CA^{-1}&amp;I\end{pmatrix}
+\begin{pmatrix}A&amp;B\\ 0&amp;D-CA^{-1}B\end{pmatrix},
+\]</span> by multiplying the right side block by block. All four blocks check out: the <span class="math inline">\((1,1)\)</span> block is <span class="math inline">\(I\cdot A+0\cdot 0=A\)</span>; the <span class="math inline">\((1,2)\)</span> block is <span class="math inline">\(I\cdot B+0\cdot(D-CA^{-1}B)=B\)</span>; the <span class="math inline">\((2,1)\)</span> block is <span class="math inline">\(CA^{-1}\cdot A+I\cdot 0=C\)</span>; and the <span class="math inline">\((2,2)\)</span> block is <span class="math inline">\(CA^{-1}B+I\cdot(D-CA^{-1}B)=D\)</span>. So the factorization holds exactly. The first factor is block lower triangular with identity diagonal blocks, so its determinant is <span class="math inline">\(1\)</span>; the second is block upper triangular, so its determinant is the product <span class="math inline">\(\det(A)\det(D-CA^{-1}B)\)</span> of the diagonal blocks <span class="citation" data-cites="strang2016">(<a href="../references.html#ref-strang2016" role="doc-biblioref">Strang 2016</a>)</span>. Multiplicativity of the determinant gives the claim. <span class="math inline">\(\square\)</span></p>
+</div>
+<div id="cor-mc-matrix-determinant-lemma" class="theorem corollary">
+<p><span class="theorem-title"><strong>Corollary B.1 (Matrix determinant lemma)</strong></span> With <span class="math inline">\(A,C,U,V\)</span> as in <a href="#thm-woodbury" class="quarto-xref">Theorem&nbsp;<span>B.7</span></a> and <span class="math inline">\(A,C\)</span> invertible, <span id="eq-mc-detlemma"><span class="math display">\[
+\det\bigl(A+UCV\bigr)=\det(A)\,\det(C)\,\det\bigl(C^{-1}+VA^{-1}U\bigr).
+\tag{B.13}\]</span></span> In particular, for the rank-one update, <span class="math inline">\(\det\bigl(A+\mathbf{u}\mathbf{v}^\top\bigr)=\det(A)\,\bigl(1+\mathbf{v}^\top A^{-1}\mathbf{u}\bigr)\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Apply <a href="#lem-mc-schur-det" class="quarto-xref">Lemma&nbsp;<span>B.6</span></a> to the block matrix <span class="math inline">\(P=\begin{pmatrix}A&amp;U\\ -V&amp;C^{-1}\end{pmatrix}\)</span> in two ways. This particular block matrix is not pulled from nowhere: it is built so that eliminating one diagonal block produces the <em>small</em> capacitance matrix <span class="math inline">\(C^{-1}+VA^{-1}U\)</span>, while eliminating the other produces the <em>large</em> matrix <span class="math inline">\(A+UCV\)</span>. Computing <span class="math inline">\(\det P\)</span> both ways and equating the results is what links the two determinants. Taking first the Schur complement of the invertible top-left block <span class="math inline">\(A\)</span>, <span class="math display">\[
+\det P=\det(A)\,\det\bigl(C^{-1}-(-V)A^{-1}U\bigr)=\det(A)\,\det\bigl(C^{-1}+VA^{-1}U\bigr).
+\]</span> Taking instead the Schur complement of the invertible bottom-right block <span class="math inline">\(C^{-1}\)</span> (the same formula applied to the block matrix after swapping the roles of the two diagonal blocks), <span class="math display">\[
+\det P=\det\bigl(C^{-1}\bigr)\,\det\bigl(A-U\,(C^{-1})^{-1}(-V)\bigr)
+=\det\bigl(C^{-1}\bigr)\,\det\bigl(A+UCV\bigr).
+\]</span> Equating the two expressions and using <span class="math inline">\(\det(C^{-1})=1/\det(C)\)</span> gives <a href="#eq-mc-detlemma" class="quarto-xref">Equation&nbsp;<span>B.13</span></a>. The rank-one case is <span class="math inline">\(k=1\)</span>, <span class="math inline">\(C=[1]\)</span>, where <span class="math inline">\(\det(C)=1\)</span> and <span class="math inline">\(C^{-1}+\mathbf{v}^\top A^{-1}\mathbf{u}
+=1+\mathbf{v}^\top A^{-1}\mathbf{u}\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Reader translation.</em> The matrix determinant lemma is Woodbury for determinants: the determinant of the big matrix <span class="math inline">\(A+UCV\)</span> factors through the small capacitance determinant, so the <span class="math inline">\(\log\det\mathbf{V}\)</span> term of a likelihood (<a href="#eq-mc-mvn-loglik" class="quarto-xref">Equation&nbsp;<span>B.7</span></a>) is computed from a <span class="math inline">\(k\times k\)</span> determinant instead of an <span class="math inline">\(n\times n\)</span> one. The rank-one case <span class="math inline">\(\det(A+\mathbf{u}\mathbf{v}^\top)=\det(A)(1+\mathbf{v}^\top A^{-1}\mathbf{u})\)</span> is the one used in the compound-symmetry determinant of <a href="#sec-mc-example" class="quarto-xref"><span>Section B.8</span></a>.</p>
+</section>
+<section id="sec-mc-chain-rule" class="level2" data-number="B.7">
+<h2 data-number="B.7" class="anchored" data-anchor-id="sec-mc-chain-rule"><span class="header-section-number">B.7</span> The chain rule for matrix functions</h2>
+<p>Finally, the rule that lets all of the above be composed. We state it for vector compositions, where it is the workhorse of the delta method (<a href="../chapters/part1/05-inference.html#thm-delta-method" class="quarto-xref">Theorem&nbsp;<span>5.3</span></a>), and for a scalar parameter passing through a matrix, which is the form used for likelihood scores.</p>
+<div id="thm-chain-rule" class="theorem">
+<p><span class="theorem-title"><strong>Theorem B.8 (Chain rule)</strong></span> &nbsp;</p>
+<ol type="1">
+<li><strong>(Vector composition.)</strong> Let <span class="math inline">\(\mathbf{f}:\mathbb{R}^{n}\to\mathbb{R}^{m}\)</span> be differentiable at <span class="math inline">\(\mathbf{x}\)</span> and <span class="math inline">\(\mathbf{g}:\mathbb{R}^{m}\to\mathbb{R}^{p}\)</span> differentiable at <span class="math inline">\(\mathbf{f}(\mathbf{x})\)</span>. Then <span class="math inline">\(\mathbf{g}\circ\mathbf{f}\)</span> is differentiable at <span class="math inline">\(\mathbf{x}\)</span> with <span id="eq-mc-chain-jac"><span class="math display">\[
+J_{\mathbf{g}\circ\mathbf{f}}(\mathbf{x})
+=J_{\mathbf{g}}\bigl(\mathbf{f}(\mathbf{x})\bigr)\,J_{\mathbf{f}}(\mathbf{x}).
+\tag{B.14}\]</span></span> For a scalar outer function <span class="math inline">\(\phi:\mathbb{R}^{m}\to\mathbb{R}\)</span>, <span class="math inline">\(\nabla(\phi\circ\mathbf{f})(\mathbf{x})=J_{\mathbf{f}}(\mathbf{x})^\top\,
+\nabla\phi\bigl(\mathbf{f}(\mathbf{x})\bigr)\)</span>.</li>
+<li><strong>(Scalar parameter through a matrix.)</strong> Let <span class="math inline">\(X:\mathbb{R}\to\mathbb{R}^{m\times n}\)</span> be differentiable at <span class="math inline">\(t\)</span> and <span class="math inline">\(f:\mathbb{R}^{m\times n}\to\mathbb{R}\)</span> differentiable at <span class="math inline">\(X(t)\)</span>. Then <span class="math inline">\(\phi(t)=f(X(t))\)</span> is differentiable at <span class="math inline">\(t\)</span> with <span id="eq-mc-chain-scalar"><span class="math display">\[
+\phi'(t)=\Big\langle \tfrac{\partial f}{\partial X}\big(X(t)\big),\,\dot X(t)\Big\rangle_F
+=\operatorname{tr}\!\Bigl(\tfrac{\partial f}{\partial X}\big(X(t)\big)^{\!\top}\dot X(t)\Bigr).
+\tag{B.15}\]</span></span></li>
+</ol>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span><em>(1).</em> Differentiability of <span class="math inline">\(\mathbf{f}\)</span> gives <span class="math inline">\(\mathbf{f}(\mathbf{x}+\mathbf{h})=\mathbf{f}(\mathbf{x})+\mathbf{k}\)</span> with <span class="math inline">\(\mathbf{k}=J_{\mathbf{f}}\mathbf{h}+o(\|\mathbf{h}\|)\)</span>, so <span class="math inline">\(\|\mathbf{k}\|=O(\|\mathbf{h}\|)\)</span> and <span class="math inline">\(\mathbf{k}\to\mathbf{0}\)</span> as <span class="math inline">\(\mathbf{h}\to\mathbf{0}\)</span>. Differentiability of <span class="math inline">\(\mathbf{g}\)</span> at <span class="math inline">\(\mathbf{f}(\mathbf{x})\)</span> gives <span class="math display">\[
+\mathbf{g}\bigl(\mathbf{f}(\mathbf{x})+\mathbf{k}\bigr)
+=\mathbf{g}\bigl(\mathbf{f}(\mathbf{x})\bigr)+J_{\mathbf{g}}\,\mathbf{k}+o(\|\mathbf{k}\|)
+=\mathbf{g}\bigl(\mathbf{f}(\mathbf{x})\bigr)
++J_{\mathbf{g}}J_{\mathbf{f}}\,\mathbf{h}
++\underbrace{J_{\mathbf{g}}\,o(\|\mathbf{h}\|)+o(\|\mathbf{k}\|)}_{o(\|\mathbf{h}\|)}.
+\]</span> The error is <span class="math inline">\(o(\|\mathbf{h}\|)\)</span> because <span class="math inline">\(J_{\mathbf{g}}\,o(\|\mathbf{h}\|)=o(\|\mathbf{h}\|)\)</span> and <span class="math inline">\(o(\|\mathbf{k}\|)=o(O(\|\mathbf{h}\|))=o(\|\mathbf{h}\|)\)</span>. By <a href="#eq-mc-jac-def" class="quarto-xref">Equation&nbsp;<span>B.3</span></a> the Jacobian of the composition is <span class="math inline">\(J_{\mathbf{g}}J_{\mathbf{f}}\)</span>. The scalar case is <a href="#eq-mc-grad-is-jac-transpose" class="quarto-xref">Equation&nbsp;<span>B.4</span></a> applied to <span class="math inline">\(\phi\circ\mathbf{f}\)</span>: <span class="math inline">\(\nabla(\phi\circ\mathbf{f})=J_{\phi\circ\mathbf{f}}^\top
+=(J_\phi J_{\mathbf{f}})^\top=J_{\mathbf{f}}^\top\,\nabla\phi\)</span>.</p>
+<p><em>(2).</em> This is part (1) after flattening the matrix into a vector: identify <span class="math inline">\(\mathbb{R}^{m\times n}\)</span> with <span class="math inline">\(\mathbb{R}^{mn}\)</span> by stacking columns, under which the Frobenius inner product becomes the Euclidean inner product. The choice of stacking order does not matter: the conclusion <a href="#eq-mc-chain-scalar" class="quarto-xref">Equation&nbsp;<span>B.15</span></a> is written invariantly as a Frobenius inner product (equivalently a trace), and a trace is unchanged by any consistent relabeling of the entries, so every flattening gives the same scalar <span class="math inline">\(\phi'(t)\)</span>. Concretely, <span class="math inline">\(X(t+\delta)=X(t)+\delta\,\dot X(t)+o(\delta)\)</span>, so by <a href="#eq-mc-matder-def" class="quarto-xref">Equation&nbsp;<span>B.5</span></a> <span class="math display">\[
+\phi(t+\delta)=f\bigl(X(t)+\delta\dot X(t)+o(\delta)\bigr)
+=f(X(t))+\Big\langle\tfrac{\partial f}{\partial X},\,\delta\dot X(t)\Big\rangle_F+o(\delta),
+\]</span> and dividing by <span class="math inline">\(\delta\)</span> and letting <span class="math inline">\(\delta\to0\)</span> gives <a href="#eq-mc-chain-scalar" class="quarto-xref">Equation&nbsp;<span>B.15</span></a>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Reader translation.</em> The chain rule is what lets all the identities above be composed. Part (1) is the familiar “multiply the Jacobians” rule that powers the delta method (<a href="../chapters/part1/05-inference.html#thm-delta-method" class="quarto-xref">Theorem&nbsp;<span>5.3</span></a>): to move a variance through a chain of transformations, multiply the local linear maps. Part (2) is the version used for likelihood scores: when a scalar parameter <span class="math inline">\(t\)</span> (a variance component, say) enters a matrix, the derivative of any scalar function of that matrix is a single trace, <span class="math inline">\(\operatorname{tr}((\partial
+f/\partial X)^\top\dot X)\)</span>. The next remark applies it to exactly the two functions the Gaussian log-likelihood needs.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span>Two specializations of <a href="#eq-mc-chain-scalar" class="quarto-xref">Equation&nbsp;<span>B.15</span></a> were used in <a href="#sec-mc-trace-inverse-det" class="quarto-xref"><span>Section B.5</span></a>. With <span class="math inline">\(f(X)=\log\det X\)</span> and <span class="math inline">\(\partial f/\partial X=X^{-\top}\)</span>, <a href="#eq-mc-chain-scalar" class="quarto-xref">Equation&nbsp;<span>B.15</span></a> gives <span class="math inline">\(\frac{d}{dt}\log\det X(t)=\operatorname{tr}\bigl((X^{-\top})^\top\dot X\bigr)
+=\operatorname{tr}(X^{-1}\dot X)\)</span>. With <span class="math inline">\(f(X)=\mathbf{a}^\top X^{-1}\mathbf{a}\)</span> one combines <a href="#thm-inverse-derivative" class="quarto-xref">Theorem&nbsp;<span>B.5</span></a> with the chain rule to get <span class="math inline">\(\frac{d}{dt}\bigl(\mathbf{a}^\top X^{-1}\mathbf{a}\bigr)
+=-\mathbf{a}^\top X^{-1}\dot X X^{-1}\mathbf{a}\)</span>. These are exactly the building blocks of the restricted-likelihood score in Chapters 8 and 13. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>Rather than leave those building blocks unassembled, we now build the score, since assembling it is the single computation this whole section exists to enable.</p>
+<div id="exm-mc-variance-score" class="theorem example">
+<p><span class="theorem-title"><strong>Example B.5 (Assembling a variance-component score)</strong></span> Consider the Gaussian log-likelihood <a href="#eq-mc-mvn-loglik" class="quarto-xref">Equation&nbsp;<span>B.7</span></a> with residual <span class="math inline">\(\mathbf{r}\)</span> held fixed and a covariance <span class="math inline">\(\mathbf{V}=\mathbf{V}(\vartheta)\)</span> depending on a single variance parameter <span class="math inline">\(\vartheta\)</span> (for instance the between-study variance <span class="math inline">\(\tau^2\)</span>): <span class="math display">\[
+\ell(\vartheta)=-\tfrac{1}{2}\log\det\mathbf{V}(\vartheta)
+-\tfrac{1}{2}\,\mathbf{r}^\top\mathbf{V}(\vartheta)^{-1}\mathbf{r}+\text{const}.
+\]</span> Write <span class="math inline">\(\mathbf{V}_\vartheta:=\partial\mathbf{V}/\partial\vartheta\)</span>. Differentiate term by term. The first term uses <a href="#thm-logdet-derivative" class="quarto-xref">Theorem&nbsp;<span>B.6</span></a> through the chain rule <a href="#eq-mc-chain-scalar" class="quarto-xref">Equation&nbsp;<span>B.15</span></a>, <span class="math display">\[
+\frac{\partial}{\partial\vartheta}\Bigl(-\tfrac{1}{2}\log\det\mathbf{V}\Bigr)
+=-\tfrac{1}{2}\operatorname{tr}\bigl(\mathbf{V}^{-1}\mathbf{V}_\vartheta\bigr).
+\]</span> The second term uses the inverse-derivative rule <a href="#thm-inverse-derivative" class="quarto-xref">Theorem&nbsp;<span>B.5</span></a>, which supplies <span class="math inline">\(\partial\mathbf{V}^{-1}/\partial\vartheta=-\mathbf{V}^{-1}\mathbf{V}_\vartheta\mathbf{V}^{-1}\)</span>, so <span class="math display">\[
+\frac{\partial}{\partial\vartheta}\Bigl(-\tfrac{1}{2}\mathbf{r}^\top\mathbf{V}^{-1}\mathbf{r}\Bigr)
+=+\tfrac{1}{2}\,\mathbf{r}^\top\mathbf{V}^{-1}\mathbf{V}_\vartheta\mathbf{V}^{-1}\mathbf{r}.
+\]</span> Adding the two pieces gives the <strong>score for the variance parameter</strong>, <span id="eq-mc-variance-score"><span class="math display">\[
+\frac{\partial\ell}{\partial\vartheta}
+=-\tfrac{1}{2}\operatorname{tr}\bigl(\mathbf{V}^{-1}\mathbf{V}_\vartheta\bigr)
++\tfrac{1}{2}\,\mathbf{r}^\top\mathbf{V}^{-1}\mathbf{V}_\vartheta\mathbf{V}^{-1}\mathbf{r},
+\tag{B.16}\]</span></span> and setting it to zero yields the estimating equation <span class="math inline">\(\operatorname{tr}(\mathbf{V}^{-1}\mathbf{V}_\vartheta)
+=\mathbf{r}^\top\mathbf{V}^{-1}\mathbf{V}_\vartheta\mathbf{V}^{-1}\mathbf{r}\)</span>. The restricted (REML) log-likelihood adds a further term <span class="math inline">\(-\tfrac12\log\det(\mathbf{X}^\top\mathbf{V}^{-1}\mathbf{X})\)</span>, whose derivative is again a trace of the same shape by <a href="#thm-logdet-derivative" class="quarto-xref">Theorem&nbsp;<span>B.6</span></a> and <a href="#thm-inverse-derivative" class="quarto-xref">Theorem&nbsp;<span>B.5</span></a>; the mechanics are identical.</p>
+</div>
+<p><em>Reader translation.</em> Equation <a href="#eq-mc-variance-score" class="quarto-xref">Equation&nbsp;<span>B.16</span></a> is the payoff of the appendix for meta-analysis: it is the exact gradient that a random-effects model solves to estimate heterogeneity. Every symbol in it came from an identity proved above, the log-determinant derivative and the inverse derivative, glued by the chain rule. In the next section we evaluate every piece of it in closed form for the compound-symmetry covariance, where <span class="math inline">\(\mathbf{V}_\vartheta=\mathbf{1}_n\mathbf{1}_n^\top\)</span>.</p>
+</section>
+<section id="sec-mc-example" class="level2" data-number="B.8">
+<h2 data-number="B.8" class="anchored" data-anchor-id="sec-mc-example"><span class="header-section-number">B.8</span> A worked example: the compound-symmetry covariance</h2>
+<p>We assemble the rank-one inverse, the matrix determinant lemma, and the log-determinant derivative on the covariance matrix that governs the balanced one-way random-effects model and the random-effects meta-analysis of Chapter 13. Let <span class="math display">\[
+\mathbf{V}=\sigma^2 I_n+\tau^2\,\mathbf{1}_n\mathbf{1}_n^\top,
+\]</span> the <strong>compound-symmetry</strong> (equicorrelation) matrix, with <span class="math inline">\(\sigma^2&gt;0\)</span> and <span class="math inline">\(\tau^2\ge 0\)</span>. We compute its inverse, its determinant, and the derivative of <span class="math inline">\(\log\det\mathbf{V}\)</span> with respect to the between-study variance <span class="math inline">\(\tau^2\)</span>, all in closed form, and then verify the formulas numerically.</p>
+<p><em>What each symbol means for a meta-analysis.</em> This covariance is not an abstract choice; it is the exact marginal covariance of the estimates from <span class="math inline">\(n\)</span> studies in a random-effects meta-analysis, so it is worth translating every symbol. Here <span class="math inline">\(n\)</span> is the number of studies; <span class="math inline">\(\sigma^2\)</span> is the within-study (residual, sampling) variance, assumed common across studies in this balanced illustration; and <span class="math inline">\(\tau^2\)</span> is the between-study variance, the <strong>heterogeneity</strong>, the extra variability because the true effect differs from study to study. The vector <span class="math inline">\(\mathbf{1}_n=(1,\dots,1)^\top\)</span> is the <span class="math inline">\(n\)</span>-vector of ones, and the matrix <span class="math inline">\(\mathbf{1}_n\mathbf{1}_n^\top\)</span> (a matrix of all ones) encodes a <em>single shared random effect</em>: it says every study’s estimate is shifted by the same common random deviation, so all pairs of studies share the <span class="math inline">\(\tau^2\)</span> component of variance. That matrix has rank one, because it is the outer product of one vector with itself, and the rank-one structure is exactly what lets Sherman-Morrison and the matrix determinant lemma reduce an <span class="math inline">\(n\times n\)</span> inverse and determinant to <em>scalars</em>. The reason we care about the derivative with respect to <span class="math inline">\(\tau^2\)</span> is that estimating heterogeneity means solving the variance-component score <a href="#eq-mc-variance-score" class="quarto-xref">Equation&nbsp;<span>B.16</span></a>, and that score is built from precisely <span class="math inline">\(\partial\log\det\mathbf{V}/\partial\tau^2\)</span> and the inverse-quadratic derivative computed below.</p>
+<p><strong>Inverse.</strong> Apply <a href="#lem-sherman-morrison" class="quarto-xref">Lemma&nbsp;<span>B.5</span></a> with <span class="math inline">\(A=\sigma^2 I_n\)</span>, <span class="math inline">\(\mathbf{u}=\mathbf{1}_n\)</span>, and <span class="math inline">\(\mathbf{v}=\tau^2\mathbf{1}_n\)</span>, so that <span class="math inline">\(\mathbf{u}\mathbf{v}^\top=\tau^2\mathbf{1}_n\mathbf{1}_n^\top\)</span>. Here <span class="math inline">\(A^{-1}=\sigma^{-2}I_n\)</span> and <span class="math inline">\(\mathbf{v}^\top A^{-1}\mathbf{u}=\tau^2\sigma^{-2}\mathbf{1}_n^\top\mathbf{1}_n=n\tau^2/\sigma^2\)</span>, so <a href="#eq-mc-sm" class="quarto-xref">Equation&nbsp;<span>B.11</span></a> gives <span id="eq-mc-cs-inverse"><span class="math display">\[
+\mathbf{V}^{-1}
+=\frac{1}{\sigma^2}I_n-\frac{\tau^2/\sigma^4}{1+n\tau^2/\sigma^2}\,\mathbf{1}_n\mathbf{1}_n^\top
+=\frac{1}{\sigma^2}\Bigl(I_n-\frac{\tau^2/\sigma^2}{1+n\tau^2/\sigma^2}\,\mathbf{1}_n\mathbf{1}_n^\top\Bigr).
+\tag{B.17}\]</span></span></p>
+<p><strong>Determinant.</strong> The rank-one case of <a href="#cor-mc-matrix-determinant-lemma" class="quarto-xref">Corollary&nbsp;<span>B.1</span></a> gives <span id="eq-mc-cs-det"><span class="math display">\[
+\det\mathbf{V}=\det(\sigma^2 I_n)\,\bigl(1+\tau^2\,\mathbf{1}_n^\top(\sigma^2 I_n)^{-1}\mathbf{1}_n\bigr)
+=\sigma^{2n}\Bigl(1+\frac{n\tau^2}{\sigma^2}\Bigr).
+\tag{B.18}\]</span></span></p>
+<p><strong>Derivative of the log-determinant.</strong> From <a href="#eq-mc-cs-det" class="quarto-xref">Equation&nbsp;<span>B.18</span></a>, <span class="math inline">\(\log\det\mathbf{V}=n\log\sigma^2+\log\!\bigl(1+n\tau^2/\sigma^2\bigr)\)</span>, so directly <span class="math display">\[
+\frac{\partial}{\partial\tau^2}\log\det\mathbf{V}=\frac{n/\sigma^2}{1+n\tau^2/\sigma^2}.
+\]</span> The chain rule <a href="#eq-mc-chain-scalar" class="quarto-xref">Equation&nbsp;<span>B.15</span></a> with <a href="#thm-logdet-derivative" class="quarto-xref">Theorem&nbsp;<span>B.6</span></a> must agree. Since <span class="math inline">\(\partial\mathbf{V}/\partial\tau^2=\mathbf{1}_n\mathbf{1}_n^\top\)</span>, <span class="math display">\[
+\frac{\partial}{\partial\tau^2}\log\det\mathbf{V}
+=\operatorname{tr}\!\Bigl(\mathbf{V}^{-1}\frac{\partial\mathbf{V}}{\partial\tau^2}\Bigr)
+=\operatorname{tr}\bigl(\mathbf{V}^{-1}\mathbf{1}_n\mathbf{1}_n^\top\bigr)
+=\mathbf{1}_n^\top\mathbf{V}^{-1}\mathbf{1}_n.
+\]</span> Using <a href="#eq-mc-cs-inverse" class="quarto-xref">Equation&nbsp;<span>B.17</span></a> and <span class="math inline">\(\mathbf{1}_n^\top\mathbf{1}_n=n\)</span>, <span class="math display">\[
+\mathbf{1}_n^\top\mathbf{V}^{-1}\mathbf{1}_n
+=\frac{1}{\sigma^2}\Bigl(n-\frac{\tau^2/\sigma^2}{1+n\tau^2/\sigma^2}\,n^2\Bigr)
+=\frac{n}{\sigma^2}\cdot\frac{1}{1+n\tau^2/\sigma^2}
+=\frac{n/\sigma^2}{1+n\tau^2/\sigma^2},
+\]</span> in agreement.</p>
+<p><strong>Numerical check.</strong> Take <span class="math inline">\(n=3\)</span>, <span class="math inline">\(\sigma^2=1\)</span>, <span class="math inline">\(\tau^2=2\)</span>, so <span class="math inline">\(\mathbf{V}=I_3+2\,\mathbf{1}_3\mathbf{1}_3^\top=\left(\begin{smallmatrix}3&amp;2&amp;2\\2&amp;3&amp;2\\2&amp;2&amp;3\end{smallmatrix}\right)\)</span>. Formula <a href="#eq-mc-cs-inverse" class="quarto-xref">Equation&nbsp;<span>B.17</span></a> gives <span class="math inline">\(\mathbf{V}^{-1}=I_3-\tfrac{2}{7}\mathbf{1}_3\mathbf{1}_3^\top\)</span>, that is <span class="math display">\[
+\mathbf{V}^{-1}=\frac{1}{7}\begin{pmatrix}5&amp;-2&amp;-2\\-2&amp;5&amp;-2\\-2&amp;-2&amp;5\end{pmatrix}.
+\]</span> Direct multiplication confirms it: the first row of <span class="math inline">\(\mathbf{V}\)</span> dotted with the first column of <span class="math inline">\(\mathbf{V}^{-1}\)</span> is <span class="math inline">\((3\cdot5+2\cdot(-2)+2\cdot(-2))/7=(15-4-4)/7=1\)</span>, and with the second column is <span class="math inline">\((3\cdot(-2)+2\cdot5+2\cdot(-2))/7=(-6+10-4)/7=0\)</span>. Formula <a href="#eq-mc-cs-det" class="quarto-xref">Equation&nbsp;<span>B.18</span></a> gives <span class="math inline">\(\det\mathbf{V}=1^3(1+3\cdot2)=7\)</span>, matching the eigenvalue count: <span class="math inline">\(\mathbf{1}_3\mathbf{1}_3^\top\)</span> has eigenvalues <span class="math inline">\(3,0,0\)</span>, so <span class="math inline">\(\mathbf{V}=I_3+2\,\mathbf{1}_3\mathbf{1}_3^\top\)</span> has eigenvalues <span class="math inline">\(7,1,1\)</span> with product <span class="math inline">\(7\)</span>. Finally <span class="math inline">\(\partial\log\det\mathbf{V}/\partial\tau^2=\frac{3}{1+6}=\frac{3}{7}\)</span>, which equals <span class="math inline">\(\mathbf{1}_3^\top\mathbf{V}^{-1}\mathbf{1}_3=\)</span> (sum of all entries of <span class="math inline">\(\mathbf{V}^{-1}\)</span>) <span class="math inline">\(=(3\cdot5+6\cdot(-2))/7=(15-12)/7=\frac{3}{7}\)</span>. All three routes agree.</p>
+<p>This is precisely the arithmetic that makes the restricted maximum likelihood (REML) estimating equations for <span class="math inline">\(\tau^2\)</span> tractable in closed form for balanced designs, as used in Chapters 8 and 13: the Woodbury inverse and the matrix determinant lemma reduce an <span class="math inline">\(n\times n\)</span> problem to scalars, and the log-determinant and inverse derivatives produce the score.</p>
+</section>
+<section id="sec-mc-logistic" class="level2" data-number="B.9">
+<h2 data-number="B.9" class="anchored" data-anchor-id="sec-mc-logistic"><span class="header-section-number">B.9</span> A second worked example: the score of a logistic log-likelihood</h2>
+<p>The previous example served the variance-component side of the book. This one serves the side the target reader most often needs: the likelihood derivatives behind logistic regression, which underpin the binary-outcome likelihood of ML-NMR (Chapters 20 to 25) and the outcome model of an anchored indirect comparison. The phrase “the MAIC, STC, and ML-NMR derivations just follow from differentiating a likelihood” means, concretely, the computation below.</p>
+<p>Let <span class="math inline">\(y_i\in\{0,1\}\)</span> be binary outcomes for <span class="math inline">\(i=1,\dots,n\)</span>, with covariate rows <span class="math inline">\(\mathbf{x}_i\in\mathbb{R}^p\)</span> stacked into the design matrix <span class="math inline">\(\mathbf{X}\)</span> (rows <span class="math inline">\(\mathbf{x}_i^\top\)</span>). Logistic regression sets the linear predictor <span class="math inline">\(\eta_i=\mathbf{x}_i^\top\boldsymbol\beta\)</span> and the success probability <span class="math inline">\(p_i=\operatorname{expit}(\eta_i)=1/(1+e^{-\eta_i})\)</span>. The log-likelihood is <span class="math display">\[
+\ell(\boldsymbol\beta)=\sum_{i=1}^{n}\bigl[y_i\log p_i+(1-y_i)\log(1-p_i)\bigr]
+=\sum_{i=1}^{n}\bigl[y_i\,\eta_i-\log(1+e^{\eta_i})\bigr].
+\]</span></p>
+<p><strong>Score (gradient).</strong> Differentiate term by term in <span class="math inline">\(\boldsymbol\beta\)</span>. By the linear-form derivative <a href="#thm-linear-form-derivative" class="quarto-xref">Theorem&nbsp;<span>B.1</span></a>, <span class="math inline">\(\nabla_{\boldsymbol\beta}\eta_i=\mathbf{x}_i\)</span>; and by the chain rule (<a href="#thm-chain-rule" class="quarto-xref">Theorem&nbsp;<span>B.8</span></a>), <span class="math inline">\(\nabla_{\boldsymbol\beta}\log(1+e^{\eta_i})
+=\dfrac{e^{\eta_i}}{1+e^{\eta_i}}\,\mathbf{x}_i=p_i\,\mathbf{x}_i\)</span>. Hence <span id="eq-mc-logistic-score"><span class="math display">\[
+\mathbf{s}(\boldsymbol\beta)=\nabla_{\boldsymbol\beta}\ell
+=\sum_{i=1}^{n}(y_i-p_i)\,\mathbf{x}_i=\mathbf{X}^\top(\mathbf{y}-\mathbf{p}),
+\qquad \mathbf{p}=(p_1,\dots,p_n)^\top.
+\tag{B.19}\]</span></span> The score is the design matrix transpose times the residual vector <span class="math inline">\(\mathbf{y}-\mathbf{p}\)</span> (shape check: <span class="math inline">\(\mathbf{X}^\top\)</span> is <span class="math inline">\(p\times n\)</span>, <span class="math inline">\(\mathbf{y}-\mathbf{p}\)</span> is <span class="math inline">\(n\times 1\)</span>, so the score is <span class="math inline">\(p\times 1\)</span>, matching <span class="math inline">\(\boldsymbol\beta\)</span>).</p>
+<p><strong>Hessian (curvature) and Fisher information.</strong> The score is a sum of <span class="math inline">\(-p_i\mathbf{x}_i\)</span> plus constants; using <span class="math inline">\(\partial p_i/\partial\boldsymbol\beta^\top=p_i(1-p_i)\,\mathbf{x}_i^\top\)</span> (chain rule again, since <span class="math inline">\(\operatorname{expit}'=\operatorname{expit}(1-\operatorname{expit})\)</span>), <span id="eq-mc-logistic-hessian"><span class="math display">\[
+\nabla^2_{\boldsymbol\beta}\ell
+=-\sum_{i=1}^{n}p_i(1-p_i)\,\mathbf{x}_i\mathbf{x}_i^\top
+=-\mathbf{X}^\top W\mathbf{X},
+\qquad W=\operatorname{diag}\bigl(p_i(1-p_i)\bigr).
+\tag{B.20}\]</span></span> Because <span class="math inline">\(W\succeq 0\)</span>, the Hessian is negative semidefinite, so <span class="math inline">\(\ell\)</span> is concave and its stationary point is the maximum likelihood estimator. The Fisher information is the negative Hessian, <span class="math inline">\(\mathcal{I}(\boldsymbol\beta)=\mathbf{X}^\top W\mathbf{X}\)</span>, exactly the matrix inverted at each iteration of iteratively reweighted least squares (IRLS) in the GLM chapter; the weights <span class="math inline">\(W\)</span> are why it is <em>reweighted</em>.</p>
+<p><strong>Numerical instance.</strong> Take <span class="math inline">\(n=2\)</span>, <span class="math inline">\(p=2\)</span>, design rows <span class="math inline">\(\mathbf{x}_1=(1,0)^\top\)</span> and <span class="math inline">\(\mathbf{x}_2=(1,1)^\top\)</span> (an intercept and one covariate), outcomes <span class="math inline">\(\mathbf{y}=(1,0)^\top\)</span>, evaluated at <span class="math inline">\(\boldsymbol\beta=(0,0)^\top\)</span>. Then <span class="math inline">\(\eta_1=\eta_2=0\)</span> and <span class="math inline">\(p_1=p_2=\tfrac12\)</span>, so the residual is <span class="math inline">\(\mathbf{y}-\mathbf{p}=(\tfrac12,-\tfrac12)^\top\)</span> and <a href="#eq-mc-logistic-score" class="quarto-xref">Equation&nbsp;<span>B.19</span></a> gives <span class="math display">\[
+\mathbf{s}=\mathbf{X}^\top(\mathbf{y}-\mathbf{p})
+=\begin{pmatrix}1&amp;1\\ 0&amp;1\end{pmatrix}\begin{pmatrix}\tfrac12\\ -\tfrac12\end{pmatrix}
+=\begin{pmatrix}0\\ -\tfrac12\end{pmatrix}.
+\]</span> The weight matrix is <span class="math inline">\(W=\operatorname{diag}(\tfrac14,\tfrac14)\)</span>, so <a href="#eq-mc-logistic-hessian" class="quarto-xref">Equation&nbsp;<span>B.20</span></a> gives the Fisher information <span class="math display">\[
+\mathcal{I}=\mathbf{X}^\top W\mathbf{X}
+=\begin{pmatrix}1&amp;1\\ 0&amp;1\end{pmatrix}
+\begin{pmatrix}\tfrac14&amp;0\\ 0&amp;\tfrac14\end{pmatrix}
+\begin{pmatrix}1&amp;0\\ 1&amp;1\end{pmatrix}
+=\begin{pmatrix}\tfrac12&amp;\tfrac14\\ \tfrac14&amp;\tfrac14\end{pmatrix},
+\]</span> and the Hessian is <span class="math inline">\(-\mathcal{I}\)</span>. One Newton (Fisher scoring) step from <span class="math inline">\(\boldsymbol\beta=\mathbf{0}\)</span> is <span class="math inline">\(\boldsymbol\beta\mapsto\boldsymbol\beta+\mathcal{I}^{-1}\mathbf{s}\)</span>, the same update that drives the maximum likelihood fits in the GLM, MAIC, and ML-NMR chapters. This is the derivative computation the target reader came to this appendix for; it uses only <a href="#thm-linear-form-derivative" class="quarto-xref">Theorem&nbsp;<span>B.1</span></a> and <a href="#thm-chain-rule" class="quarto-xref">Theorem&nbsp;<span>B.8</span></a>.</p>
+</section>
+<section id="sec-mc-summary" class="level2" data-number="B.10">
+<h2 data-number="B.10" class="anchored" data-anchor-id="sec-mc-summary"><span class="header-section-number">B.10</span> Summary of identities</h2>
+<p>The table collects the results of this appendix for reference. Throughout, <span class="math inline">\(\mathbf{a}\)</span> is a constant vector, <span class="math inline">\(A\)</span> a constant matrix, and <span class="math inline">\(X\)</span> the matrix variable; the gradient and matrix derivative use the denominator (same-shape) layout of <a href="#sec-mc-conventions" class="quarto-xref"><span>Section B.2</span></a>. The “Used in the book for” column is the quick answer to “which identity do I need for least squares, the delta method, REML, or an ML-NMR likelihood?” and points at the chapter that consumes each result.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+<col style="width: 20%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Expression</th>
+<th>Variable</th>
+<th>Derivative</th>
+<th>Used in the book for</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\mathbf{a}^\top\mathbf{x}\)</span></td>
+<td><span class="math inline">\(\mathbf{x}\)</span></td>
+<td><span class="math inline">\(\mathbf{a}\)</span></td>
+<td>linear predictor; first step of every score</td>
+<td><a href="#thm-linear-form-derivative" class="quarto-xref">Theorem&nbsp;<span>B.1</span></a></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(A\mathbf{x}\)</span></td>
+<td><span class="math inline">\(\mathbf{x}\)</span></td>
+<td><span class="math inline">\(A\)</span> (Jacobian)</td>
+<td>delta method; MAIC/STC variance propagation</td>
+<td><a href="#thm-linear-form-derivative" class="quarto-xref">Theorem&nbsp;<span>B.1</span></a></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathbf{x}^\top A\mathbf{x}\)</span></td>
+<td><span class="math inline">\(\mathbf{x}\)</span></td>
+<td><span class="math inline">\((A+A^\top)\mathbf{x}\)</span>; Hessian <span class="math inline">\(A+A^\top\)</span></td>
+<td>least-squares normal equations and Hessian</td>
+<td><a href="#thm-quadratic-form-derivative" class="quarto-xref">Theorem&nbsp;<span>B.2</span></a></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathbf{x}^\top A\mathbf{y}\)</span></td>
+<td><span class="math inline">\(\mathbf{x};\,\mathbf{y};\,A\)</span></td>
+<td><span class="math inline">\(A\mathbf{y};\ A^\top\mathbf{x};\ \mathbf{x}\mathbf{y}^\top\)</span></td>
+<td>bilinear terms; seed for the trace rules</td>
+<td><a href="#thm-bilinear-form-derivative" class="quarto-xref">Theorem&nbsp;<span>B.3</span></a></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\operatorname{tr}(AX)\)</span></td>
+<td><span class="math inline">\(X\)</span></td>
+<td><span class="math inline">\(A^\top\)</span></td>
+<td>derivatives in a matrix parameter</td>
+<td><a href="#thm-trace-derivative" class="quarto-xref">Theorem&nbsp;<span>B.4</span></a></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\operatorname{tr}(X^\top A X)\)</span></td>
+<td><span class="math inline">\(X\)</span></td>
+<td><span class="math inline">\((A+A^\top)X\)</span></td>
+<td>quadratic matrix objectives</td>
+<td><a href="#thm-trace-derivative" class="quarto-xref">Theorem&nbsp;<span>B.4</span></a></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(X^{-1}\)</span></td>
+<td><span class="math inline">\(X\)</span></td>
+<td><span class="math inline">\(d(X^{-1})=-X^{-1}(dX)X^{-1}\)</span></td>
+<td>inverse-quadratic term of a REML/Gaussian score</td>
+<td><a href="#thm-inverse-derivative" class="quarto-xref">Theorem&nbsp;<span>B.5</span></a></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\det X\)</span></td>
+<td><span class="math inline">\(X\)</span></td>
+<td><span class="math inline">\(\det(X)\,X^{-\top}\)</span></td>
+<td>route to the log-determinant</td>
+<td><a href="#lem-mc-jacobi" class="quarto-xref">Lemma&nbsp;<span>B.4</span></a></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\log\det X\)</span></td>
+<td><span class="math inline">\(X\)</span></td>
+<td><span class="math inline">\(X^{-\top}\)</span> (<span class="math inline">\(=X^{-1}\)</span> if symmetric)</td>
+<td>REML and meta-analysis log-determinant term</td>
+<td><a href="#thm-logdet-derivative" class="quarto-xref">Theorem&nbsp;<span>B.6</span></a></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\((A+UCV)^{-1}\)</span></td>
+<td>low-rank update</td>
+<td><span class="math inline">\(A^{-1}-A^{-1}U(C^{-1}+VA^{-1}U)^{-1}VA^{-1}\)</span></td>
+<td>ML-NMR and mixed-model marginal inverse</td>
+<td><a href="#thm-woodbury" class="quarto-xref">Theorem&nbsp;<span>B.7</span></a></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\det(A+UCV)\)</span></td>
+<td>low-rank update</td>
+<td><span class="math inline">\(\det(A)\det(C)\det(C^{-1}+VA^{-1}U)\)</span></td>
+<td>low-rank log-determinant</td>
+<td><a href="#cor-mc-matrix-determinant-lemma" class="quarto-xref">Corollary&nbsp;<span>B.1</span></a></td>
+</tr>
+</tbody>
+</table>
+<p>For low-rank updates, <span class="math inline">\((A+UCV)^{-1}=A^{-1}-A^{-1}U(C^{-1}+VA^{-1}U)^{-1}VA^{-1}\)</span> (<a href="#thm-woodbury" class="quarto-xref">Theorem&nbsp;<span>B.7</span></a>) and <span class="math inline">\(\det(A+UCV)=\det(A)\det(C)\det(C^{-1}+VA^{-1}U)\)</span> (<a href="#cor-mc-matrix-determinant-lemma" class="quarto-xref">Corollary&nbsp;<span>B.1</span></a>), with the rank-one specializations <a href="#eq-mc-sm" class="quarto-xref">Equation&nbsp;<span>B.11</span></a> and <a href="#cor-mc-matrix-determinant-lemma" class="quarto-xref">Corollary&nbsp;<span>B.1</span></a>.</p>
+</section>
+<section id="sec-mc-notes" class="level2" data-number="B.11">
+<h2 data-number="B.11" class="anchored" data-anchor-id="sec-mc-notes"><span class="header-section-number">B.11</span> Notes and references</h2>
+<p>The conventions and identities of this appendix are standard matrix calculus. The differential method, which we adopted as the organizing principle, isolates the derivative as the unique matrix appearing in the canonical form <span class="math inline">\(\operatorname{tr}(G^\top\,dX)\)</span> (<a href="#lem-mc-identification" class="quarto-xref">Lemma&nbsp;<span>B.1</span></a>); it is the systematic development of Magnus and Neudecker, <em>Matrix Differential Calculus with Applications in Statistics and Econometrics</em>, and the same identities are cataloged, without proof, in Petersen and Pedersen, <em>The Matrix Cookbook</em>, and in Harville, <em>Matrix Algebra from a Statistician’s Perspective</em>. The linear-algebra prerequisites we invoked, namely the determinant, the cofactor expansion, the adjugate and Cramer’s rule, the multiplicativity of the determinant, the block-triangular determinant, and the characterization of invertibility, are developed in <span class="citation" data-cites="strang2016">Strang (<a href="../references.html#ref-strang2016" role="doc-biblioref">2016</a>)</span> and, in this book, in <a href="../chapters/part1/01-linear-algebra-i.html#thm-invertibility-characterization" class="quarto-xref">Theorem&nbsp;<span>1.6</span></a>, <a href="../chapters/part1/03-linear-algebra-iii.html#def-quadratic-form" class="quarto-xref">Definition&nbsp;<span>3.6</span></a>, and <a href="../chapters/part1/03-linear-algebra-iii.html#def-definiteness" class="quarto-xref">Definition&nbsp;<span>3.7</span></a>.</p>
+<p>The Sherman-Morrison formula (<a href="#lem-sherman-morrison" class="quarto-xref">Lemma&nbsp;<span>B.5</span></a>) and its generalization (<a href="#thm-woodbury" class="quarto-xref">Theorem&nbsp;<span>B.7</span></a>) are named for Sherman and Morrison (1950) and for Woodbury (1950); the matrix determinant lemma (<a href="#cor-mc-matrix-determinant-lemma" class="quarto-xref">Corollary&nbsp;<span>B.1</span></a>) is sometimes attributed to Sylvester. The proofs given here are by direct verification, which is the most transparent route and is self-checking. The compound-symmetry worked example of <a href="#sec-mc-example" class="quarto-xref"><span>Section B.8</span></a> is the elementary case underlying the closed-form restricted maximum likelihood estimators of the balanced one-way random-effects model; the general restricted likelihood, built from <span class="math inline">\(\log\det\mathbf{V}\)</span> and <span class="math inline">\(\mathbf{V}^{-1}\)</span>, appears in <span class="citation" data-cites="dias2018nma">Dias et al. (<a href="../references.html#ref-dias2018nma" role="doc-biblioref">2018</a>)</span> and is differentiated using exactly <a href="#thm-logdet-derivative" class="quarto-xref">Theorem&nbsp;<span>B.6</span></a> and <a href="#thm-inverse-derivative" class="quarto-xref">Theorem&nbsp;<span>B.5</span></a>.</p>
+<p>These identities have no separate counterpart in the companion <code>ITC_Coq</code> development, whose formalized results sit at the statistical and causal layer rather than at the level of matrix differentiation; accordingly, none carries a machine-checked tag. The downstream uses are pervasive: the gradient and Hessian of the least-squares objective (<a href="#thm-quadratic-form-derivative" class="quarto-xref">Theorem&nbsp;<span>B.2</span></a>) drive the normal equations and the Gauss-Markov theory of the regression chapter; the Jacobian and the chain rule (<a href="#thm-chain-rule" class="quarto-xref">Theorem&nbsp;<span>B.8</span></a>) are the analytic content of the delta method (<a href="../chapters/part1/05-inference.html#thm-delta-method" class="quarto-xref">Theorem&nbsp;<span>5.3</span></a>) and of the variance propagation in the population-adjustment chapters; and the trace, inverse, and log-determinant derivatives are the engine of the restricted-likelihood score equations in the hierarchical and meta-analytic models.</p>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-dias2018nma" class="csl-entry" role="listitem">
+Dias, Sofia, A. E. Ades, Nicky J. Welton, Jeroen P. Jansen, and Alexander J. Sutton. 2018. <em>Network Meta-Analysis for Decision-Making</em>. Statistics in Practice. Wiley.
+</div>
+<div id="ref-strang2016" class="csl-entry" role="listitem">
+Strang, Gilbert. 2016. <em>Introduction to Linear Algebra</em>. 5th ed. Wellesley-Cambridge Press.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/choxos\.github\.io\/Mathematics-of-ITC\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../appendices/A-notation-glossary.html" class="pagination-link" aria-label="Notation Glossary">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Notation Glossary</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../appendices/C-distributions.html" class="pagination-link" aria-label="Probability Distributions">
+        <span class="nav-page-text"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">Probability Distributions</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>30&nbsp; Machine-Checked Foundations: The Coq Formalization – The Mathematics of Indirect Treatment Comparisons</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../appendices/A-notation-glossary.html" rel="next">
+<link href="../../chapters/part6/29-simulation.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-aafe154f14b83768199b70e6209de778.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/part6/27-distance-matching.html">Part VI: Bias, Comparator Selection, and Rigor</a></li><li class="breadcrumb-item"><a href="../../chapters/part6/30-coq.html"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Machine-Checked Foundations: The Coq Formalization</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">The Mathematics of Indirect Treatment Comparisons</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/choxos/Mathematics-of-ITC" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../notation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Notation and Conventions</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part I: Mathematical Foundations</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/01-linear-algebra-i.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Linear Algebra I: Vector Spaces, Linear Maps, and Rank</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/02-linear-algebra-ii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Linear Algebra II: Orthogonality and the Projection Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/03-linear-algebra-iii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Linear Algebra III: Spectral Theory and Quadratic Forms</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/04-probability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Probability and Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/05-inference.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Statistical Inference</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/06-linear-regression.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Linear Regression from First Principles</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/07-glm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Generalized Linear Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/08-hierarchical-bayes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Hierarchical Models, Shrinkage, and Bayesian Inference</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Causal Inference and Estimands</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/09-potential-outcomes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Potential Outcomes and Identification</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/10-adjustment-methods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Adjustment Methods</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/11-effect-modification-collapsibility.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Effect Modification, Interaction, and Collapsibility</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/12-transportability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Transportability: The Estimand-Based Theory</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Meta-Analysis and Network Meta-Analysis</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/13-pairwise-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Pairwise Meta-Analysis</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/14-bucher.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Indirect Comparison and Bucher’s Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/15-network-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Network Meta-Analysis: Models and Identifiability</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/16-limits-of-nma.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">The Limits of Standard Network Meta-Analysis</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Population Adjustment: MAIC and STC</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/17-population-adjustment-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Population Adjustment Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/18-maic.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">Matching-Adjusted Indirect Comparison</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/19-stc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Simulated Treatment Comparison</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part V: Multilevel Network Meta-Regression</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/20-mlnmr-aggregation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression I: The Aggregation Principle</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/21-mlnmr-discrete.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression II: Discrete Outcomes and Approximation Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/22-mlnmr-integration.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression III: Numerical Integration Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/23-mlnmr-estimands.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression IV: Estimands, Identifiability, and Generality</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/24-computation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Bayesian Computation and Diagnostics</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/25-general-likelihoods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">General Likelihoods: Survival and Ordered Categorical Outcomes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/26-ml-umr.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Multilevel Unanchored Meta-Regression</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part VI: Bias, Comparator Selection, and Rigor</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/27-distance-matching.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Aggregate-Level Covariate-Distance Matching</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/28-qba.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Quantitative Bias Analysis for Indirect Comparisons</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/29-simulation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Simulation Study Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/30-coq.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Machine-Checked Foundations: The Coq Formalization</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/A-notation-glossary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Notation Glossary</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/B-matrix-calculus.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Matrix Calculus</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/C-distributions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">Probability Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/D-special-functions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">D</span>&nbsp; <span class="chapter-title">Special Functions for Numerical Integration</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/E-reference-implementations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">E</span>&nbsp; <span class="chapter-title">Reference Implementations: multinma, mlumr, and uitc</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/F-solutions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">F</span>&nbsp; <span class="chapter-title">Solutions to Selected Exercises</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/G-reading-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">G</span>&nbsp; <span class="chapter-title">Reading the Coq Proofs</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#sec-coq-intro" id="toc-sec-coq-intro" class="nav-link active" data-scroll-target="#sec-coq-intro"><span class="header-section-number">30.1</span> Introduction</a></li>
+  <li><a href="#sec-coq-why" id="toc-sec-coq-why" class="nav-link" data-scroll-target="#sec-coq-why"><span class="header-section-number">30.2</span> Why this matters for a health researcher</a></li>
+  <li><a href="#sec-coq-vocabulary" id="toc-sec-coq-vocabulary" class="nav-link" data-scroll-target="#sec-coq-vocabulary"><span class="header-section-number">30.3</span> A Coq vocabulary, and a one-line proof</a></li>
+  <li><a href="#sec-coq-twin" id="toc-sec-coq-twin" class="nav-link" data-scroll-target="#sec-coq-twin"><span class="header-section-number">30.4</span> A book theorem and its machine-checked twin</a></li>
+  <li><a href="#sec-coq-guarantees" id="toc-sec-coq-guarantees" class="nav-link" data-scroll-target="#sec-coq-guarantees"><span class="header-section-number">30.5</span> What a proof assistant guarantees, and what it does not</a></li>
+  <li><a href="#sec-coq-status" id="toc-sec-coq-status" class="nav-link" data-scroll-target="#sec-coq-status"><span class="header-section-number">30.6</span> The proof-status vocabulary</a></li>
+  <li><a href="#sec-coq-axioms" id="toc-sec-coq-axioms" class="nav-link" data-scroll-target="#sec-coq-axioms"><span class="header-section-number">30.7</span> The active axioms</a></li>
+  <li><a href="#sec-coq-structure" id="toc-sec-coq-structure" class="nav-link" data-scroll-target="#sec-coq-structure"><span class="header-section-number">30.8</span> The structure of the theories directory</a>
+  <ul class="collapse">
+  <li><a href="#sec-coq-foundations" id="toc-sec-coq-foundations" class="nav-link" data-scroll-target="#sec-coq-foundations"><span class="header-section-number">30.8.1</span> Phase 1: foundations</a></li>
+  <li><a href="#sec-coq-core" id="toc-sec-coq-core" class="nav-link" data-scroll-target="#sec-coq-core"><span class="header-section-number">30.8.2</span> Phase 2: conditional independence and balancing scores</a></li>
+  <li><a href="#sec-coq-estimators" id="toc-sec-coq-estimators" class="nav-link" data-scroll-target="#sec-coq-estimators"><span class="header-section-number">30.8.3</span> Phase 3: estimators</a></li>
+  <li><a href="#sec-coq-methods" id="toc-sec-coq-methods" class="nav-link" data-scroll-target="#sec-coq-methods"><span class="header-section-number">30.8.4</span> Phase 4: indirect-comparison methods</a></li>
+  <li><a href="#sec-coq-bucher" id="toc-sec-coq-bucher" class="nav-link" data-scroll-target="#sec-coq-bucher"><span class="header-section-number">30.8.5</span> Phase 5: indirect-comparison algebra</a></li>
+  </ul></li>
+  <li><a href="#sec-coq-boundary" id="toc-sec-coq-boundary" class="nav-link" data-scroll-target="#sec-coq-boundary"><span class="header-section-number">30.9</span> The named-hypothesis boundary and the discrete model</a></li>
+  <li><a href="#sec-coq-map" id="toc-sec-coq-map" class="nav-link" data-scroll-target="#sec-coq-map"><span class="header-section-number">30.10</span> From book theorem to Coq lemma: the cross-reference map</a></li>
+  <li><a href="#sec-coq-worked" id="toc-sec-coq-worked" class="nav-link" data-scroll-target="#sec-coq-worked"><span class="header-section-number">30.11</span> A worked example: tracing the ESS bound to the kernel</a></li>
+  <li><a href="#sec-coq-build" id="toc-sec-coq-build" class="nav-link" data-scroll-target="#sec-coq-build"><span class="header-section-number">30.12</span> Building and checking the development</a></li>
+  <li><a href="#sec-coq-scope" id="toc-sec-coq-scope" class="nav-link" data-scroll-target="#sec-coq-scope"><span class="header-section-number">30.13</span> What is and is not machine-checked</a></li>
+  <li><a href="#sec-coq-notes" id="toc-sec-coq-notes" class="nav-link" data-scroll-target="#sec-coq-notes"><span class="header-section-number">30.14</span> Notes and references</a></li>
+  <li><a href="#sec-coq-exercises" id="toc-sec-coq-exercises" class="nav-link" data-scroll-target="#sec-coq-exercises"><span class="header-section-number">30.15</span> Exercises</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/part6/27-distance-matching.html">Part VI: Bias, Comparator Selection, and Rigor</a></li><li class="breadcrumb-item"><a href="../../chapters/part6/30-coq.html"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Machine-Checked Foundations: The Coq Formalization</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Machine-Checked Foundations: The Coq Formalization</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="sec-coq-intro" class="level2" data-number="30.1">
+<h2 data-number="30.1" class="anchored" data-anchor-id="sec-coq-intro"><span class="header-section-number">30.1</span> Introduction</h2>
+<p>Every theorem in the preceding twenty-nine chapters has been proved in the ordinary mathematical sense: a chain of deductions, written for a competent reader, that the author believes is correct and that a referee can in principle check. This is the verification regime of all of mathematics, and it works because of a social apparatus of peer review, replication, and the slow accumulation of trust. It is also fallible. Long algebraic derivations like the multilevel network meta-regression aggregation identity (<a href="../part5/20-mlnmr-aggregation.html#thm-aggregation" class="quarto-xref">Theorem&nbsp;<span>20.1</span></a>), case analyses with many branches like the scale-specific population-adjustment theorems of Chapter 17, and arguments that turn on a single sign or a single cancellation like Bucher’s subtraction (<a href="../part3/14-bucher.html#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a>) are exactly the places where a human proof can hide an error that survives review.</p>
+<p>This chapter documents a second, independent verification track for part of the book: a companion formalization, the <strong>ITC_Coq development</strong>, in which a subset of the results is written in the language of the Coq (Rocq) proof assistant and checked, deduction by deduction, by a computer. A statement that compiles in Coq has been verified, relative to a small and explicit logical foundation, to follow from its stated hypotheses. No referee is trusted; no step is elided; the machine refuses to accept a proof with a gap. The development covers the algebraic and discrete-probabilistic core of population adjustment: the potential-outcomes calculus of Chapter 9, the propensity-score and inverse-probability-weighting theory of Chapter 10 (<a href="../part2/10-adjustment-methods.html#thm-ipw-unbiased" class="quarto-xref">Theorem&nbsp;<span>10.3</span></a>, <a href="../part2/10-adjustment-methods.html#thm-aipw-double-robust" class="quarto-xref">Theorem&nbsp;<span>10.5</span></a>), the Rosenbaum-Rubin balancing theorems, Bucher’s identity (<a href="../part3/14-bucher.html#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a>), the effect-modifier versus prognostic-variable distinction of Chapter 11 (<a href="../part2/11-effect-modification-collapsibility.html#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a>, <a href="../part2/11-effect-modification-collapsibility.html#def-prognostic-variable" class="quarto-xref">Definition&nbsp;<span>11.5</span></a>), the matching-adjusted indirect comparison effective-sample-size bound (<a href="../part4/18-maic.html#thm-maic-ess-bound" class="quarto-xref">Theorem&nbsp;<span>18.6</span></a>), and the collapsibility of the mean difference that underlies simulated treatment comparison (<a href="../part2/11-effect-modification-collapsibility.html#def-collapsibility" class="quarto-xref">Definition&nbsp;<span>11.6</span></a>).</p>
+<p>The chapter is <strong>documentary</strong>. It does not reprove the mathematics; Chapters 9 through 19 do that. Its job is to describe accurately what the formalization contains, to be precise about what a proof assistant does and does not certify, and to give the reader a map from the book’s tagged theorems to the Coq lemmas that machine-check them. Two pieces of vocabulary are introduced as permanent reference items: the <strong>proof-status tiers</strong> (<a href="#def-coq-proof-status" class="quarto-xref">Definition&nbsp;<span>30.1</span></a>), which classify how completely each catalogued result is formalized, and the <strong>active axioms</strong> (<a href="#def-active-axioms" class="quarto-xref">Definition&nbsp;<span>30.2</span></a>), the three classical-logic principles that the development inherits from its mathematics library and on which every machine-checked theorem ultimately rests. Every claim below about what is or is not formally proved has been checked against the source files of the development, including a direct query of the Coq kernel for the axioms each central theorem uses; that query is reproduced in the worked example of <a href="#sec-coq-worked" class="quarto-xref"><span>Section 30.11</span></a>.</p>
+</section>
+<section id="sec-coq-why" class="level2" data-number="30.2">
+<h2 data-number="30.2" class="anchored" data-anchor-id="sec-coq-why"><span class="header-section-number">30.2</span> Why this matters for a health researcher</h2>
+<p>This chapter is technical, so it is worth stating at the outset, in plain terms, why a reader who will never open a proof assistant should care, and anchoring the whole discussion in one small comparison that we return to at every step.</p>
+<p><strong>A running example: an indirect comparison for an assessment body.</strong> Suppose a health technology assessment (HTA) body must compare two drugs, <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span>, for a binary bad outcome such as disease relapse, and no head-to-head trial exists. Two trials share a common comparator <span class="math inline">\(C\)</span> (standard care): Trial 1 compares <span class="math inline">\(A\)</span> against <span class="math inline">\(C\)</span>, and Trial 2 compares <span class="math inline">\(B\)</span> against <span class="math inline">\(C\)</span>. On the log-odds-ratio scale Trial 1 reports <span class="math inline">\(\hat d_{AC} = -0.80\)</span> and Trial 2 reports <span class="math inline">\(\hat d_{BC} = -0.50\)</span> (a negative value means lower odds of relapse, hence a better drug). Trial 2 supplies individual patient data (IPD); Trial 1 is published only as aggregate summaries, and its patients are older and sicker, so before comparing we reweight Trial 2’s patients to match Trial 1’s covariate profile, a matching-adjusted indirect comparison (MAIC). To keep the arithmetic in view, take Trial 2 to have four patients whose matching weights come out <span class="math inline">\((2,1,1,0)\)</span>; the fourth patient, whose covariate profile lies outside Trial 1’s range, receives weight zero. This example reappears in the Bucher comparison of <a href="#sec-coq-twin" class="quarto-xref"><span>Section 30.4</span></a> and the worked example of <a href="#sec-coq-worked" class="quarto-xref"><span>Section 30.11</span></a>.</p>
+<p>Three numbers now carry the decision, and each is a result the companion Coq development machine-checks.</p>
+<ul>
+<li><strong>The indirect contrast</strong> <span class="math inline">\(d_{AB} = \hat d_{AC} - \hat d_{BC} = -0.80 - (-0.50) = -0.30\)</span>, Bucher’s subtraction (<a href="../part3/14-bucher.html#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a>): <span class="math inline">\(A\)</span> lowers the log-odds of relapse by <span class="math inline">\(0.30\)</span> relative to <span class="math inline">\(B\)</span>, an odds ratio of <span class="math inline">\(e^{-0.30} \approx 0.74\)</span>.</li>
+<li><strong>The effective sample size</strong> of the reweighted Trial 2, <span class="math inline">\(\mathrm{ESS} \le n\)</span> (<a href="../part4/18-maic.html#thm-maic-ess-bound" class="quarto-xref">Theorem&nbsp;<span>18.6</span></a>): the four patients carry the information of at most four, and with weights <span class="math inline">\((2,1,1,0)\)</span> only <span class="math inline">\(\mathrm{ESS} = 4^2/6 = 8/3 \approx 2.67\)</span>; the matched evidence is worth under three patients.</li>
+<li><strong>Double robustness</strong> of an augmented estimator (<a href="../part2/10-adjustment-methods.html#thm-aipw-double-robust" class="quarto-xref">Theorem&nbsp;<span>10.5</span></a>): a treatment-effect estimate stays valid if either the weighting model or the outcome model is correct.</li>
+</ul>
+<p>Here is the point of formalization, made concrete on these numbers. A proof assistant <em>can</em> rule out a class of mistakes.</p>
+<ul>
+<li>A <strong>sign slip.</strong> Writing <span class="math inline">\(\hat d_{BC} - \hat d_{AC} = +0.30\)</span> instead of <span class="math inline">\(-0.30\)</span> reports an odds ratio of <span class="math inline">\(1.35\)</span> and flips the recommendation from “<span class="math inline">\(A\)</span> is better” to “<span class="math inline">\(B\)</span> is better.” Bucher’s subtraction is a single line of algebra, and one flipped sign changes the clinical conclusion. The Coq theorem <code>bucher_unbiased</code> fixes the orientation once and for all.</li>
+<li>A <strong>vacuous safeguard.</strong> If the ESS bound were stated with a hypothesis that secretly already contained the conclusion, it would compile as “true” and mean nothing; the development’s discipline (<a href="#sec-coq-guarantees" class="quarto-xref"><span>Section 30.5</span></a>, illustrated in <a href="#exm-coq-vacuous" class="quarto-xref">Example&nbsp;<span>30.2</span></a>) is built to prevent exactly this.</li>
+</ul>
+<p>Equally, a proof assistant <em>cannot</em> rule out the judgments that matter most to a clinician: whether Trial 1 and Trial 2 populations are exchangeable, whether the covariates that drive relapse were measured, whether the log-odds scale is the intended one, or whether the analysis code that produced <span class="math inline">\(\hat d_{AC} = -0.80\)</span> was run correctly. Those are scientific and statistical questions; no proof assistant touches them.</p>
+<p>So the honest headline for a health researcher is this. <strong>You do not need to run Coq.</strong> You need to know that someone can, that the load-bearing algebra behind the ESS bound, Bucher’s subtraction, and double robustness has been checked deduction by deduction by a machine rather than trusted to the author’s care, and that the probabilistic steps the machine does not check are named in the open (<a href="#sec-coq-boundary" class="quarto-xref"><span>Section 30.9</span></a>), so you can see precisely where trust still rests on a paper proof. Three phrases recur in that claim, and they are worth pinning down in plain language now.</p>
+<ul>
+<li><strong>Machine-checked</strong>: a computer has verified every deductive step of the proof, not spot-checked it, relative to the axioms named in <a href="#sec-coq-axioms" class="quarto-xref"><span>Section 30.7</span></a>.</li>
+<li><strong>Zero admits</strong>: no proof in the development was skipped or left as a hole to be filled later; every stated theorem is proved to completion.</li>
+<li><strong>Zero (project) axioms</strong>: the development introduces no assumptions of its own; it borrows only the three generic logical axioms that all of classical mathematics already uses, and adds nothing about treatments, trials, or effects.</li>
+</ul>
+<p>None of the three says the mathematics is <em>clinically</em> true, or that a method is appropriate for a given dataset; they say the stated mathematics is airtight. Keeping that distinction sharp is the recurring theme of the chapter.</p>
+<p><strong>Why formalize at all, rather than just be careful?</strong> Peer review catches most errors, but not all, and the errors it misses cluster exactly where this book is hardest: long algebraic identities, many-branch case analyses, and arguments that turn on a single sign or a single cancellation. It is not hard to imagine a population-adjustment identity published with a mislabeled contrast or a quietly missing positivity condition, used in an assessment, and corrected only years later. For the fragment it covers, the machine removes that possibility: a slip of that kind cannot compile. That is a different and stronger kind of assurance than “the author and two referees believe it,” and it is available for precisely the parts where human proof is least reliable.</p>
+</section>
+<section id="sec-coq-vocabulary" class="level2" data-number="30.3">
+<h2 data-number="30.3" class="anchored" data-anchor-id="sec-coq-vocabulary"><span class="header-section-number">30.3</span> A Coq vocabulary, and a one-line proof</h2>
+<p>The rest of the chapter uses the working vocabulary of proof assistants. None of it is deep, but a reader meeting it for the first time deserves plain definitions before the words start doing work. The glossary below is informal on purpose; the precise versions appear where each term is used.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Plain meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Proof assistant</td>
+<td>A program in which you write a proof in a formal language it can check completely. Coq, renamed the <strong>Rocq Prover</strong> in 2025, is the one used here.</td>
+</tr>
+<tr class="even">
+<td>Type; term</td>
+<td>A <em>type</em> is a category an object can belong to (the reals <code>R</code>, the natural numbers, “proofs that <span class="math inline">\(1+1=2\)</span>”); a <em>term</em> is a specific object of a type. The notation <code>t : P</code> reads “<code>t</code> is a term of type <code>P</code>.”</td>
+</tr>
+<tr class="odd">
+<td>Proposition, <code>Prop</code></td>
+<td>A mathematical statement <em>is</em> a type: the type of its proofs. The statement is true exactly when that type has at least one term. <code>Prop</code> is the universe of such statement-types, as opposed to <code>bool</code>, the two-valued type of <code>true</code> and <code>false</code> used for decidable computation.</td>
+</tr>
+<tr class="even">
+<td>Dependent type</td>
+<td>A type that may depend on a value, such as “vectors of length <span class="math inline">\(n\)</span>,” a family indexed by the number <span class="math inline">\(n\)</span>. “Dependently typed” just means types this expressive are allowed.</td>
+</tr>
+<tr class="odd">
+<td>Inductive definition</td>
+<td>The way data and propositions are built from constructors by recursion (the naturals as zero and successor; equality as its single reflexivity proof). “Calculus of Inductive Constructions” is the name of Coq’s logic; its details are not needed here.</td>
+</tr>
+<tr class="even">
+<td><code>Theorem</code>, <code>Lemma</code></td>
+<td>Keywords introducing a named claim to prove. They are interchangeable; <code>Lemma</code> conventionally marks a smaller helper.</td>
+</tr>
+<tr class="odd">
+<td>Goal; hypothesis</td>
+<td>While a proof is built, the <em>goal</em> is what remains to show and the <em>hypotheses</em> are what may be used. A finished proof reduces the goal to nothing.</td>
+</tr>
+<tr class="even">
+<td>Tactic; proof script; Ltac</td>
+<td>A <em>tactic</em> is one command that transforms the goal (introduce an assumption, apply a known result, do algebra); a <em>proof script</em> is a sequence of tactics; <em>Ltac</em> is the small language for writing new tactics (the development defines two, <code>by_contra</code> and <code>classical_case</code>).</td>
+</tr>
+<tr class="odd">
+<td><code>Qed</code>; <code>Admitted</code>; <code>admit.</code></td>
+<td><code>Qed</code> ends a proof and triggers the kernel to check the term the tactics built; if it passes, the theorem is recorded. <code>Admitted</code> ends a proof by accepting it <em>unproved</em> (a hole); <code>admit.</code> is the tactic that leaves one hole. This development contains neither.</td>
+</tr>
+<tr class="even">
+<td>Axiom</td>
+<td>A statement declared true without proof. <code>Print Assumptions t</code> lists every axiom the proof of <code>t</code> ultimately depends on.</td>
+</tr>
+<tr class="odd">
+<td>Named premise</td>
+<td>An ordinary hypothesis of one theorem, standing for a fact proved on paper elsewhere. Unlike an axiom it is local to the theorem that names it (contrast <a href="#sec-coq-axioms" class="quarto-xref"><span>Section 30.7</span></a> with <a href="#sec-coq-boundary" class="quarto-xref"><span>Section 30.9</span></a>).</td>
+</tr>
+<tr class="even">
+<td>Kernel</td>
+<td>The small, fixed part of Coq that performs the final check; nothing else can make a false theorem accepted.</td>
+</tr>
+<tr class="odd">
+<td>mathcomp, ssreflect, mathcomp-analysis</td>
+<td>The external formal libraries the development builds on: Mathematical Components and its <code>ssreflect</code> proof language, and their analysis layer supplying reals, measure, and probability.</td>
+</tr>
+<tr class="even">
+<td><code>.vo</code> file</td>
+<td>The compiled, kernel-checked output for one source file; its existence certifies that file’s theorems type-check.</td>
+</tr>
+</tbody>
+</table>
+<p>To make “goal,” “tactic,” and “<code>Qed</code>” concrete, here is a complete Coq proof of the arithmetic fact <span class="math inline">\(1+1=2\)</span>, with the machine’s goal state shown as a comment after each step.</p>
+<pre class="coq"><code>Lemma one_plus_one : 1 + 1 = 2.
+Proof.
+  (* goal: 1 + 1 = 2 *)
+  simpl.        (* compute the sum; goal becomes 2 = 2 *)
+  reflexivity.  (* anything equals itself; goal closed *)
+Qed.            (* kernel checks the finished term; lemma recorded *)</code></pre>
+<p>Read it as: the claim is stated, two tactics reduce the goal to nothing, and <code>Qed</code> hands the finished proof term to the kernel. Every proof in the development, however long, has this shape; only the number and ingenuity of the tactics differ.</p>
+<p>It helps to picture where trust lives. Everything <em>above</em> the kernel may be arbitrarily complicated, and none of it is trusted; the kernel is the one component that must be correct, and the axioms and libraries <em>below</em> it are what the guarantee is stated relative to.</p>
+<pre class="text"><code>   your tactics / automation / notation        (untrusted: may be buggy)
+                     |
+                     v  produce
+              a proof term
+                     |
+                     v  is checked by
+   ============== THE KERNEL ==============    &lt;- trust boundary
+   |  a few thousand lines; if it accepts, |
+   |  the theorem follows from what is below|
+   ========================================
+                     |
+        rests on     v
+   three logical axioms                         named premises
+   (excluded middle, extensionality,            (paper-proved probability
+   choice)  +  mathcomp-analysis                facts, one theorem
+   (reals, measure, probability)                at a time)</code></pre>
+<p>The three logical axioms and the library sit <em>under</em> the kernel and are shared by all of classical mathematics (<a href="#sec-coq-axioms" class="quarto-xref"><span>Section 30.7</span></a>); the named premises sit to the <em>side</em>, one theorem at a time, and are the probability facts this project proves on paper rather than in Coq (<a href="#sec-coq-boundary" class="quarto-xref"><span>Section 30.9</span></a>). Keeping those two kinds of assumption visibly separate is the single distinction a first-time reader should carry forward: an <strong>axiom</strong> is a generic logical principle the whole library rests on, whereas a <strong>named premise</strong> is a specific mathematical fact one theorem borrows.</p>
+<p>Two libraries deserve a word, since a reader weighing trust will want their pedigree. The <code>ssreflect</code> proof language and the Mathematical Components (mathcomp) library grew out of the fully machine-checked proofs of the four-color theorem and the Feit-Thompson odd-order theorem, two of the largest formalization efforts ever completed; their analysis layer, mathcomp-analysis, is the widely used, separately maintained foundation on which this development’s real numbers and probability rest. And <code>Print Assumptions t</code>, the command used repeatedly below as a certificate, reports the <em>transitive closure</em> of the axioms the proof of <code>t</code> actually uses: not the ordinary inference rules of the logic (those are built into the kernel and are not axioms), but every declared axiom reached through the entire chain of lemmas. An empty list is possible and would signal a fully constructive proof; the lists reported for this development’s central theorems contain exactly three lines.</p>
+</section>
+<section id="sec-coq-twin" class="level2" data-number="30.4">
+<h2 data-number="30.4" class="anchored" data-anchor-id="sec-coq-twin"><span class="header-section-number">30.4</span> A book theorem and its machine-checked twin</h2>
+<p>With the vocabulary in hand, the quickest way to see what formalization does, and does not, do is to set one theorem beside its Coq counterpart. We use Bucher’s subtraction from the running example, the identity behind the indirect contrast <span class="math inline">\(d_{AB} = d_{AC} - d_{BC}\)</span>.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Aspect</th>
+<th>Book statement (<a href="../part3/14-bucher.html#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a>)</th>
+<th>Coq statement (<code>bucher_unbiased</code>)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Claim</td>
+<td>if two direct estimators are unbiased for the <span class="math inline">\(AC\)</span> and <span class="math inline">\(BC\)</span> contrasts, and the <span class="math inline">\(AB\)</span> contrast is their difference, then the subtracted estimator is unbiased for <span class="math inline">\(AB\)</span></td>
+<td>the same claim, stated for an abstract operator</td>
+</tr>
+<tr class="even">
+<td>The expectation</td>
+<td><span class="math inline">\(\mathbb{E}\)</span>, built in Chapter 4 from integration</td>
+<td>an abstract operator <code>E : (Omega -&gt; R) -&gt; R</code>, given only the property the proof uses (linearity) as a hypothesis</td>
+</tr>
+<tr class="odd">
+<td>Hypotheses</td>
+<td><span class="math inline">\(\mathbb{E}[\hat d_{AC}] = d_{AC}\)</span>; <span class="math inline">\(\mathbb{E}[\hat d_{BC}] = d_{BC}\)</span>; <span class="math inline">\(d_{AB} = d_{AC} - d_{BC}\)</span></td>
+<td>three explicit premises (verbatim below)</td>
+</tr>
+<tr class="even">
+<td>Conclusion</td>
+<td><span class="math inline">\(\mathbb{E}[\hat d_{AC} - \hat d_{BC}] = d_{AB}\)</span></td>
+<td><code>E (fun omega =&gt; d_AC_hat omega - d_BC_hat omega) = d_AB</code></td>
+</tr>
+<tr class="odd">
+<td>What the machine checks</td>
+<td>(nothing on paper)</td>
+<td>that the conclusion follows from the three hypotheses using only linearity of <code>E</code></td>
+</tr>
+<tr class="even">
+<td>What stays scientific judgment</td>
+<td>that the two trials estimate contrasts in exchangeable populations, that <span class="math inline">\(C\)</span> means the same thing in both, that the log-odds scale is intended</td>
+<td>identical, and outside Coq’s reach</td>
+</tr>
+</tbody>
+</table>
+<p>The Coq statement itself, read token by token, is</p>
+<pre class="coq"><code>Theorem bucher_unbiased (d_AB d_AC d_BC : R) :
+  E d_AC_hat = d_AC -&gt; E d_BC_hat = d_BC -&gt; d_AB = d_AC - d_BC -&gt;
+  E (fun omega =&gt; d_AC_hat omega - d_BC_hat omega) = d_AB.</code></pre>
+<p>where each piece reads as follows.</p>
+<ul>
+<li><code>Theorem bucher_unbiased</code> names the claim.</li>
+<li><code>(d_AB d_AC d_BC : R)</code> introduces three real numbers, the true contrasts.</li>
+<li>each <code>-&gt;</code> separates one hypothesis from what follows it; there are three hypotheses, then the conclusion, exactly the rows of the table.</li>
+<li><code>E d_AC_hat = d_AC</code> is the first hypothesis: the operator <code>E</code> applied to the random estimator <code>d_AC_hat</code> returns the true value <code>d_AC</code>, that is, Trial 1 is unbiased.</li>
+<li><code>fun omega =&gt; d_AC_hat omega - d_BC_hat omega</code> is the anonymous function sending an outcome <code>omega</code> to the subtracted estimate; <code>E</code> of it is its expectation.</li>
+<li>the line after the final <code>-&gt;</code> is the goal the proof must reach.</li>
+</ul>
+<p><strong>Why this matters.</strong> Read together, the table and the statement make “machine-checked” concrete. The machine has verified the <em>orientation and algebra</em> of the subtraction, so the sign error that would flip the running example’s recommendation cannot occur for this result; it has verified <em>nothing</em> about whether the two trials are comparable, which is the scientific premise the researcher must still defend. That division of labor, algebra certified and science reserved, is the pattern of the entire development, and every later section is an instance of it.</p>
+<div id="exm-coq-bucher-numeric" class="theorem example">
+<p><span class="theorem-title"><strong>Example 30.1 (Bucher’s subtraction with numbers)</strong></span> In the running example <span class="math inline">\(\hat d_{AC} = -0.80\)</span> and <span class="math inline">\(\hat d_{BC} = -0.50\)</span> on the log-odds-ratio scale, so the theorem gives <span class="math inline">\(d_{AB} = d_{AC} - d_{BC} = -0.80 - (-0.50) = -0.30\)</span>: drug <span class="math inline">\(A\)</span> lowers the log-odds of relapse relative to drug <span class="math inline">\(B\)</span>, an indirect odds ratio of <span class="math inline">\(e^{-0.30} \approx 0.74\)</span>. The reversed subtraction <span class="math inline">\(d_{BC} - d_{AC} = +0.30\)</span> would report an odds ratio of <span class="math inline">\(e^{0.30} \approx 1.35\)</span> and recommend <span class="math inline">\(B\)</span>; the two conclusions differ by exactly the sign the theorem pins down. What the kernel certifies is that <span class="math inline">\(\hat d_{AC} - \hat d_{BC}\)</span>, and not its negation, is unbiased for <span class="math inline">\(d_{AB}\)</span>; the value <span class="math inline">\(-0.30\)</span> is then plain arithmetic. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-coq-guarantees" class="level2" data-number="30.5">
+<h2 data-number="30.5" class="anchored" data-anchor-id="sec-coq-guarantees"><span class="header-section-number">30.5</span> What a proof assistant guarantees, and what it does not</h2>
+<p>Coq, renamed the Rocq Prover in 2025, is a dependently typed proof assistant built on a constructive type theory, the Calculus of Inductive Constructions. In the plain terms of <a href="#sec-coq-vocabulary" class="quarto-xref"><span>Section 30.3</span></a>: its types may depend on values (that is what “dependently typed” means), and “constructive” means it proves that something exists only by exhibiting a specific witness, until the classical axioms of <a href="#sec-coq-axioms" class="quarto-xref"><span>Section 30.7</span></a> are invoked. Its operating principle is the <strong>Curry-Howard correspondence</strong>: a mathematical proposition is encoded as a type, a proof of that proposition is a term of that type, and <em>verifying a proof is type-checking a term</em>. The one-line proof of <a href="#sec-coq-vocabulary" class="quarto-xref"><span>Section 30.3</span></a> is a concrete instance: the proposition <span class="math inline">\(1+1=2\)</span> is a type, and the term the two tactics build is a proof, a member of that type. The component that performs this type-checking is the <strong>kernel</strong>, a small program (a few thousand lines) that is the entire trusted computing base. Tactics, automation, notation, and the interactive interface may be arbitrarily complicated and even buggy; none of them can make the system accept a false theorem, because whatever proof term they produce must pass the kernel before the theorem is recorded. This is the strong soundness guarantee of the LCF tradition (named for Milner’s Logic for Computable Functions prover, the system whose design introduced this small-trusted-kernel pattern): the trustworthiness of a megabyte of proof script reduces to the trustworthiness of the kilobyte-scale kernel.</p>
+<p>The ITC_Coq development is built on <strong>mathcomp-analysis</strong>, the Mathematical Components extension for classical analysis, which supplies formalized real numbers, measure theory, Lebesgue integration, probability measures, and transition kernels. The development imports these structures rather than rebuilding them, so its real-analytic content stands on a large, widely used, separately maintained library.</p>
+<p>It is essential to state precisely what a successful compilation does and does not certify.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>What the kernel guarantees.</strong> If <code>Theorem t : P</code> compiles, then there is a term whose type is the encoding of <code>P</code>, accepted by the kernel, using only the inference rules of the type theory together with the axioms listed by <code>Print Assumptions</code> (<a href="#def-active-axioms" class="quarto-xref">Definition&nbsp;<span>30.2</span></a>). In ordinary language: <em>the statement <code>P</code> follows logically from its hypotheses and from the named axioms.</em> The guarantee is unconditional in the sense that it does not depend on trusting the author, the tactics, or the comments; it is conditional only on the soundness of the kernel and the consistency of the axioms. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>What the kernel does not guarantee.</strong> Four gaps remain, and honesty about formalization requires naming them.</p>
+<ol type="1">
+<li><p><em>Statement faithfulness.</em> The kernel checks that the proof proves the stated theorem; it cannot check that the stated theorem is the one the mathematician meant. A formalization of the wrong proposition, or of a proposition with an unintended hypothesis that makes it vacuous, type-checks just as readily as the intended one. Guarding against this is a human task: reading the Coq statement and confirming it says what the book says. The development addresses it by making every modeling hypothesis an explicit, visible premise (<a href="#sec-coq-boundary" class="quarto-xref"><span>Section 30.9</span></a>) rather than a hidden global assumption, and by avoiding <code>True</code>-valued placeholder definitions that would render downstream theorems vacuous.</p></li>
+<li><p><em>Model adequacy.</em> A theorem about a mathematical model of a clinical trial is a theorem about the model, not about the trial. That potential outcomes, exchangeability, and positivity capture the relevant features of a real comparison is a scientific judgment outside the reach of any proof assistant.</p></li>
+<li><p><em>Truth of hypotheses.</em> A conditional theorem <code>H -&gt; C</code> says nothing about whether <code>H</code> holds. When <code>H</code> is a probabilistic fact admitted as a named premise (the tower property, say), the machine certifies the implication, not the premise.</p></li>
+<li><p><em>Completeness.</em> The development formalizes a chosen subset of the book. Silence about a result is not a claim of any kind; <a href="#sec-coq-scope" class="quarto-xref"><span>Section 30.13</span></a> lists exactly what is in and what is out. <span class="math inline">\(\blacktriangleleft\)</span></p></li>
+</ol>
+</div>
+<p>Of the four gaps, statement faithfulness is the one a skeptical methodologist should learn to watch for, so it deserves a concrete illustration rather than a warning in the abstract.</p>
+<div id="exm-coq-vacuous" class="theorem example">
+<p><span class="theorem-title"><strong>Example 30.2 (A theorem that is true but empty)</strong></span> Imagine formalizing “MAIC is consistent” as the implication <code>assumption -&gt; (estimator = truth)</code>, but defining the premise as <code>Definition assumption : Prop := (estimator = truth)</code>, that is, letting the hypothesis simply <em>be</em> the conclusion. The implication <code>(estimator = truth) -&gt; (estimator = truth)</code> is trivially provable, compiles without complaint, and earns a proud-looking <code>Qed</code>, yet it says nothing: it has assumed exactly what it claims. A subtler version defines the premise as <code>True</code>, so every downstream theorem <code>True -&gt; C</code> reduces to <code>C</code> asserted for free. Both type-check; both are worthless. The kernel cannot catch either, because each <em>is</em> a valid proof of the sentence as written; only a human reading the premise can see that the sentence is empty. This is why the development refuses <code>True</code>-valued assumption definitions and writes every modeling hypothesis as a visible, contentful premise (<a href="#sec-coq-boundary" class="quarto-xref"><span>Section 30.9</span></a>), and why a skeptical reader’s first move on any formalization should be to read the hypotheses, not the proof. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>These limits are not peculiar to this project; they apply to all formalized mathematics. Stating them is what lets the positive claims of the chapter be read precisely.</p>
+</section>
+<section id="sec-coq-status" class="level2" data-number="30.6">
+<h2 data-number="30.6" class="anchored" data-anchor-id="sec-coq-status"><span class="header-section-number">30.6</span> The proof-status vocabulary</h2>
+<p>The last of the four gaps in <a href="#sec-coq-guarantees" class="quarto-xref"><span>Section 30.5</span></a>, completeness, leaves a question open: of the results that <em>are</em> formalized, how much of each does the machine actually carry? The proof-status tiers are the chapter’s structured response to that gap. The companion development distinguishes several degrees of formalization, because not every result in a book of this size is formalized to the same depth. The proof catalogue that accompanies the Coq tree assigns each catalogued result one of five status tiers. We adopt that vocabulary as a permanent reference, since it is used throughout this chapter and in the cross-reference table of <a href="#sec-coq-map" class="quarto-xref"><span>Section 30.10</span></a>.</p>
+<div id="def-coq-proof-status" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 30.1 (Proof-status tiers)</strong></span> Each result discussed in relation to the companion formalization carries exactly one of the following five status labels.</p>
+<ul>
+<li><strong>F (fully proved).</strong> A complete proof from foundations, machine-checked in Coq or derived in the proof catalogue using only standard library machinery, self-contained and depending on no project-specific unproved assertion.</li>
+<li><strong>P (partial).</strong> The result is stated and its substantive content proved under sufficient conditions, but some step is supplied as an explicit named hypothesis standing for a standard fact (catalogued with its justification), or cites a standard external theorem rather than deriving it. The machine-checked content is the algebra and logic around that hypothesis.</li>
+<li><strong>S (summarized).</strong> The result is stated and its role explained, but the full proof is referenced rather than derived; it is not formalized.</li>
+<li><strong>O (out of scope).</strong> Applied or empirical content (case studies, software-specific implementation detail) that is intentionally not formalized.</li>
+<li><strong>E (extension).</strong> Material beyond the 2019 thesis that frames the work; stated with proof where applicable but not part of the formalized core.</li>
+</ul>
+<p>Within the Coq tree itself every compiled statement is, in the kernel’s sense, fully proved: there are no admitted proofs. The tier distinction records how much of a <em>book</em> result a given Coq statement captures. A theorem proved in Coq with a probabilistic premise supplied as a named hypothesis is tier <strong>F</strong> as a Coq object (it compiles with no gap) and tier <strong>P</strong> as a formalization of the book theorem (the premise is named, not derived). The table of <a href="#sec-coq-map" class="quarto-xref"><span>Section 30.10</span></a> makes this two-level reading explicit for each entry. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p><strong>Reader translation.</strong> In one breath: <strong>F</strong> means the machine carries the whole result; <strong>P</strong> means the machine carries the algebra while one clearly named probability fact is proved on paper; <strong>S</strong> means only the statement and its role are recorded, the sharp proof living on paper; <strong>O</strong> and <strong>E</strong> mark material deliberately outside the formalized core. In compact form:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Tier</th>
+<th>Plain meaning</th>
+<th>Example in this development</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>F</td>
+<td>fully machine-checked, no project premise</td>
+<td>the ESS bound <code>ESS_upper_bound</code></td>
+</tr>
+<tr class="even">
+<td>P</td>
+<td>algebra machine-checked; one probability fact named as a premise</td>
+<td>IPW unbiasedness <code>mu1_IPW_unbiased</code></td>
+</tr>
+<tr class="odd">
+<td>S</td>
+<td>stated and situated; full proof referenced, not formalized</td>
+<td>the MAIC-STC equivalence</td>
+</tr>
+<tr class="even">
+<td>O</td>
+<td>applied or software detail, intentionally not formalized</td>
+<td>case-study specifics</td>
+</tr>
+<tr class="odd">
+<td>E</td>
+<td>extension beyond the framing thesis; proved where applicable, not in the core</td>
+<td>later transportability material</td>
+</tr>
+</tbody>
+</table>
+<p>The subtle point, and the one worth slowing down for, is that a single Coq theorem carries <em>two</em> readings. As a Coq object it is always fully proved: it compiled, so its own goal follows from its own hypotheses with no gap. As a <em>formalization of the book theorem</em> it may be only partial, because one of those hypotheses stands in for a book step that was proved on paper, not in Coq. The template below records both readings at once and is worth keeping in mind for the whole chapter.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Result</th>
+<th>What Coq proves</th>
+<th>Still supplied outside Coq</th>
+<th>Practical reading</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>ESS bound</td>
+<td>the arithmetic inequality <span class="math inline">\(\mathrm{ESS} \le n\)</span></td>
+<td>whether <span class="math inline">\(\mathrm{ESS}\)</span> is the right diagnostic at all</td>
+<td>a strong algebraic check</td>
+</tr>
+<tr class="even">
+<td>IPW unbiasedness</td>
+<td>the estimator algebra, given the premise</td>
+<td>the tower-property identification step</td>
+<td>a conditional check</td>
+</tr>
+</tbody>
+</table>
+<p>A health researcher should read a tier the way one reads a confidence interval: as information about <em>how much has been established</em>, never as a verdict on whether the method suits a particular dataset.</p>
+</section>
+<section id="sec-coq-axioms" class="level2" data-number="30.7">
+<h2 data-number="30.7" class="anchored" data-anchor-id="sec-coq-axioms"><span class="header-section-number">30.7</span> The active axioms</h2>
+<p>A constructive type theory proves a great deal without any axioms, but classical mathematics, and in particular measure-theoretic probability, needs a small classical extension: the law of the excluded middle, the ability to prove sets and functions equal from their pointwise behavior, and a form of the axiom of choice for selecting representatives and constructing conditional objects. The development does not declare these itself; it inherits them from mathcomp-analysis, whose <code>boolp</code> (“Boolean propositions”) module declares exactly three axioms from which the rest of classical reasoning is derived.</p>
+<div id="def-active-axioms" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 30.2 (The active classical axioms)</strong></span> Every machine-checked theorem in the companion development rests, beyond the rules of the type theory, on exactly the following three axioms imported from the <code>boolp</code> module of mathcomp-analysis. The statements are as the Coq kernel reports them.</p>
+<ol type="1">
+<li><p><strong>Propositional extensionality.</strong> Logically equivalent propositions are equal: <code>propositional_extensionality : forall P Q : Prop, (P &lt;-&gt; Q) -&gt; P = Q</code>. This licenses treating an event as the set of outcomes satisfying it, so that <span class="math inline">\(\{x : P(x)\} = \{x : Q(x)\}\)</span> whenever <span class="math inline">\(P \iff Q\)</span>.</p></li>
+<li><p><strong>Dependent functional extensionality.</strong> Functions that agree at every argument are equal: <code>functional_extensionality_dep : forall (A : Type) (B : A -&gt; Type) (f g : forall x, B x), (forall x, f x = g x) -&gt; f = g</code>. This licenses proving two random variables, densities, or conditional expectations equal by comparing their values pointwise; it is the workhorse behind almost every integrand rewrite in the tree.</p></li>
+<li><p><strong>Constructive indefinite description (choice).</strong> From a proof that a satisfying element exists, one may extract such an element: <code>constructive_indefinite_description : forall (A : Type) (P : A -&gt; Prop), (exists x, P x) -&gt; {x : A | P x}</code>. This is the type-theoretic axiom of choice on which mathcomp’s classical infrastructure is built; it underlies the existence of conditional expectations and the selection of representatives.</p></li>
+</ol>
+<p>The law of the excluded middle is <em>not</em> a separate axiom: it is a theorem, derived from these three by <strong>Diaconescu’s argument</strong> (the short classical construction that, given any proposition <span class="math inline">\(P\)</span>, builds two subsets of a two-element set whose membership is entangled with <span class="math inline">\(P\)</span>, uses the choice axiom to select an element from each, and uses extensionality to compare the selections; the comparison decides <span class="math inline">\(P\)</span> either way), and exported by <code>boolp</code> as <code>EM</code> and by the development’s <code>Axioms.v</code> as <code>excluded_middle</code>. Consequently a proof that uses classical case analysis adds no axiom beyond the three above. There are <strong>no project-specific axioms</strong> and <strong>no active admissions</strong>: the development declares no <code>Axiom</code> of its own and contains no <code>Admitted</code> proof or <code>admit</code> tactic. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>What each axiom buys, in the language of estimands.</strong> The three principles are generic, but each has a familiar shadow in this book’s mathematics, which makes them less forbidding.</p>
+<ul>
+<li><em>Propositional extensionality</em> lets an event be identified with the set of outcomes satisfying it: two events described by logically equivalent conditions are the <em>same</em> set to integrate over, so one may rewrite “relapsed, and on <span class="math inline">\(A\)</span> or on <span class="math inline">\(B\)</span>” into any logical equivalent without changing the probability.</li>
+<li><em>Functional extensionality</em> lets two functions be declared equal once they agree at every input: two predicted-outcome surfaces, say two fitted <span class="math inline">\(\mathbb{E}[Y\mid X=x]\)</span> functions, are the <em>same</em> object as soon as they match at every covariate profile <span class="math inline">\(x\)</span>. This is the workhorse that turns a pointwise rewrite of an integrand into an equation between whole estimands.</li>
+<li><em>Constructive indefinite description</em> (choice) lets one name and compute with an object known only to exist: from “a conditional expectation exists” one may select a version and use it, the same silent selection an analyst makes in picking a measurable <span class="math inline">\(\mathbb{E}[Y\mid X]\)</span>.</li>
+</ul>
+<p>And the distinction a first-time reader most needs: these three are <strong>logical axioms</strong>, principles of classical mathematics itself, sitting under the kernel and shared by every theorem. They are not the same as the <strong>named premises</strong> of <a href="#sec-coq-boundary" class="quarto-xref"><span>Section 30.9</span></a>, which are specific <em>probability</em> facts (the tower property, Jensen’s inequality) that individual theorems borrow. Conflating the two would make the formalization look circular; keeping them apart is what makes the trust claim honest. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Why these three are uncontroversial.</strong> The trio is the standard foundation of classical mathematics as practiced. Propositional and functional extensionality are conservative over, and validated by, set models of type theory; the choice principle is the same one used silently in every analysis textbook that picks a sequence realizing a limit or a measurable selection. They are jointly consistent with Coq’s type theory, a fact relied upon by the entire mathcomp-analysis ecosystem. Crucially, they are <em>generic</em> mathematical axioms, not assumptions about treatment effects: nothing causal, nothing about trials, and nothing that could quietly make a population-adjustment theorem come out the way one hoped. Every domain assumption in the development is instead a visible premise (<a href="#sec-coq-boundary" class="quarto-xref"><span>Section 30.9</span></a>). The contrast matters for trust: a reader who accepts ordinary classical analysis has already accepted everything the formalization assumes about logic. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>That the closure of the central theorems is exactly these three axioms, and nothing more, is not an article of faith: the Coq kernel will print the axioms a given theorem depends on, and <a href="#sec-coq-worked" class="quarto-xref"><span>Section 30.11</span></a> reproduces that output for six headline results.</p>
+</section>
+<section id="sec-coq-structure" class="level2" data-number="30.8">
+<h2 data-number="30.8" class="anchored" data-anchor-id="sec-coq-structure"><span class="header-section-number">30.8</span> The structure of the theories directory</h2>
+<p>The development is fifteen Coq source files in <code>theories/</code>, listed in <code>_CoqProject</code> in dependency order and grouped into five phases. We walk through them in that order, naming the load-bearing definitions and lemmas of each.</p>
+<p>A design choice recurs in every file and is worth understanding once. Many theorems are stated over an <strong>abstract expectation operator</strong> written <code>E : (Omega -&gt; R) -&gt; R</code>, a function that takes a random quantity (itself a function from outcomes <code>Omega</code> to reals) and returns a number. It plays the role of the book’s expectation <span class="math inline">\(\mathbb{E}\)</span> from the <a href="../../notation.html">Notation</a>, but it is deliberately <em>not</em> the same object: <span class="math inline">\(\mathbb{E}\)</span> is built in Chapter 4 out of integration, whereas <code>E</code> is left abstract and handed only the properties a given proof actually uses, chiefly linearity, as named hypotheses. Far from weakening the results, this isolates the <em>algebraic</em> part of an argument, which Coq then certifies completely, from the <em>measure-theoretic</em> part, which enters as a visible premise and is proved on paper. The gap is meant to be closed by later instantiating <code>E</code> with mathcomp-analysis’s Lebesgue integral; leaving it abstract for now keeps the checked content honest about exactly which step has been mechanized and which has not. The pattern was pioneered in <code>Bucher.v</code> and reused throughout. Note that <code>E</code> is a Coq identifier standing in for the book symbol <span class="math inline">\(\mathbb{E}\)</span>; the gap between them is the point, not a typographical accident.</p>
+<p><em>How to read this section.</em> What follows is an inventory, not a narrative to be memorized. A reader who will never open Coq should take three things from it: which ITC ideas have machine support at all, which are proved outright from nothing, and which lean on a named premise. The table gives that at a glance, one row per file; the prose after it names the individual lemmas for a reader who wants to open the source, and can be skimmed on a first pass.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>File</th>
+<th>What it protects, for ITC</th>
+<th>Key result(s)</th>
+<th>Status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>Axioms.v</code></td>
+<td>classical-logic plumbing shared by everything</td>
+<td><code>excluded_middle</code>, <code>fun_ext</code></td>
+<td>infrastructure</td>
+</tr>
+<tr class="even">
+<td><code>BasicTypes.v</code></td>
+<td>what a treatment, outcome, covariate <em>are</em></td>
+<td><code>treatment_01</code>, measurability facts</td>
+<td>infrastructure</td>
+</tr>
+<tr class="odd">
+<td><code>PotentialOutcomes.v</code></td>
+<td>the estimands (ATE, ATT) and the naive comparison’s bias</td>
+<td><code>ATE_split</code>, <code>selection_bias_decomposition</code></td>
+<td>F</td>
+</tr>
+<tr class="even">
+<td><code>CausalAssumptions.v</code></td>
+<td>when a treatment effect is identified (SUTVA, positivity, ignorability)</td>
+<td><code>ATE_identification</code>, <code>ATE_IPW_identification</code></td>
+<td>P</td>
+</tr>
+<tr class="odd">
+<td><code>ConditionalIndep.v</code></td>
+<td>conditional independence and the graphoid laws</td>
+<td><code>cond_indep_equiv</code>, <code>transfer_independence</code></td>
+<td>F (discrete)</td>
+</tr>
+<tr class="even">
+<td><code>BalancingScore.v</code></td>
+<td>why adjusting on a <em>score</em> can replace adjusting on all covariates</td>
+<td><code>balancing_score_sufficiency</code>, <code>propensity_is_coarsest</code></td>
+<td>F (discrete)</td>
+</tr>
+<tr class="odd">
+<td><code>PropensityScore.v</code></td>
+<td>the propensity score balances (Rosenbaum-Rubin 1, 3)</td>
+<td><code>propensity_score_is_balancing</code></td>
+<td>F (discrete)</td>
+</tr>
+<tr class="even">
+<td><code>IPWEstimator.v</code></td>
+<td>inverse-probability weighting is unbiased; the ESS variance bound</td>
+<td><code>ATE_IPW_unbiased</code>, <code>ESS_variance_bound</code></td>
+<td>P</td>
+</tr>
+<tr class="odd">
+<td><code>OutcomeRegression.v</code></td>
+<td>G-computation is unbiased</td>
+<td><code>ATE_as_averaged_CATE</code>, <code>OR_bias_formula</code></td>
+<td>P</td>
+</tr>
+<tr class="even">
+<td><code>DoublyRobust.v</code></td>
+<td>AIPW stays valid if <em>one</em> nuisance model is right</td>
+<td><code>AIPW1_pointwise</code>, <code>double_robustness</code></td>
+<td>F core, named residuals</td>
+</tr>
+<tr class="odd">
+<td><code>MAIC.v</code></td>
+<td>the <span class="math inline">\(\mathrm{ESS} \le n\)</span> bound behind MAIC uncertainty</td>
+<td><code>ESS_upper_bound</code></td>
+<td>F</td>
+</tr>
+<tr class="even">
+<td><code>STC.v</code></td>
+<td>why the mean difference is collapsible (STC’s plug-in)</td>
+<td><code>STC_collapse_linear</code></td>
+<td>F (linear direction)</td>
+</tr>
+<tr class="odd">
+<td><code>Comparison.v</code></td>
+<td>MAIC-versus-STC profiles; variance inflation <span class="math inline">\(\ge 1\)</span></td>
+<td><code>MAIC_variance_inflation_ge1</code></td>
+<td>F profiles, S equivalence</td>
+</tr>
+<tr class="even">
+<td><code>Bucher.v</code></td>
+<td>the indirect subtraction <span class="math inline">\(d_{AB}=d_{AC}-d_{BC}\)</span></td>
+<td><code>bucher_unbiased</code>, <code>bucher_variance</code></td>
+<td>F (abstract <code>E</code>)</td>
+</tr>
+<tr class="odd">
+<td><code>EffectModifiers.v</code></td>
+<td>effect modifier versus prognostic variable</td>
+<td><code>not_EM_does_not_imply_not_PV</code></td>
+<td>F</td>
+</tr>
+</tbody>
+</table>
+<p>The five phases below correspond to the horizontal bands of this table: foundations, then the balancing-score core, then the estimators, then the indirect-comparison methods, then the indirect-comparison algebra.</p>
+<section id="sec-coq-foundations" class="level3" data-number="30.8.1">
+<h3 data-number="30.8.1" class="anchored" data-anchor-id="sec-coq-foundations"><span class="header-section-number">30.8.1</span> Phase 1: foundations</h3>
+<p><em>For ITC, this phase fixes the vocabulary before any method appears: what treatments, outcomes, and causal estimands are, and when a treatment effect is even identifiable from data.</em></p>
+<p><strong><code>Axioms.v</code></strong> centralizes the classical-logic helpers over the three <code>boolp</code> axioms: <code>excluded_middle</code>, <code>proof_by_contradiction</code>, <code>double_negation</code>, the classical De Morgan equivalences (<code>not_and_or</code>, <code>not_or_and</code>), and the non-dependent functional-extensionality wrapper <code>fun_ext</code> used pervasively for integrand rewriting. It also defines the tactics <code>by_contra</code> and <code>classical_case</code>. It declares no axioms of its own.</p>
+<p><strong><code>BasicTypes.v</code></strong> fixes the foundational types: binary treatment as <code>bool</code> with the embedding <code>bool_to_R</code> into the reals, proved to take values in <span class="math inline">\(\{0,1\}\)</span> (<code>treatment_01</code>) with the complement identity <code>treatment_complement</code>; abstract probability spaces; outcome, treatment, and covariate random-variable types; and basic measurability facts (<code>measurable_composition</code>, <code>measurable_const</code>).</p>
+<p><strong><code>PotentialOutcomes.v</code></strong> builds the Rubin causal model on an abstract expectation. It defines the potential outcomes <span class="math inline">\(Y(0), Y(1)\)</span>, the individual treatment effect <code>ITE</code>, and the estimands <code>ATE</code>, <code>ATT</code>, <code>ATC</code>, and <code>naive_comparison</code>. The proved results include <code>ATE_split</code> (<span class="math inline">\(\mathrm{ATE} = \mathbb{E}[Y(1)] -
+\mathbb{E}[Y(0)]\)</span> from linearity), <code>ATE_decomposition</code> (the law of total expectation over the treatment partition, with <code>E_total</code> named), the consistency-conversion identities (<code>consistency_expectation</code>, <code>consistency_treated_mean</code>), and Holland’s <code>selection_bias_decomposition</code>, which exhibits the naive comparison as <span class="math inline">\(\mathrm{ATT}\)</span> plus an exactly identified selection-bias term. The fundamental problem of causal inference appears as <code>ITE_unobservable</code>: a concrete two-world counterexample over <span class="math inline">\(\Omega = \texttt{bool}\)</span> with identical observed data but different individual effects, proving that the ITE is not a function of the observables.</p>
+<p><strong><code>CausalAssumptions.v</code></strong> formalizes the identifying assumptions. SUTVA is made substantive: outcomes a priori depend on the whole treatment vector, <code>no_interference</code> is the stability condition, and <code>no_interference_unit_level</code> <em>proves</em> that under no interference a unit-level outcome function exists, licensing the two-potential-outcomes setup. Positivity (<code>weak_positivity</code>, <code>strong_positivity</code>), unconfoundedness, and strong ignorability are defined, with <code>strong_implies_weak_unconf</code> proved. The two identification theorems, <code>ATE_identification</code> (the g-formula) and <code>ATE_IPW_identification</code>, are proved with the per-arm probabilistic content supplied as named premises and the consistency conversion machine-checked pointwise.</p>
+</section>
+<section id="sec-coq-core" class="level3" data-number="30.8.2">
+<h3 data-number="30.8.2" class="anchored" data-anchor-id="sec-coq-core"><span class="header-section-number">30.8.2</span> Phase 2: conditional independence and balancing scores</h3>
+<p><em>This phase proves the propensity-score theory that licenses adjusting for a summary of the covariates instead of all of them, the backbone of every weighting method in Part II; it is also the part discharged outright, with no probabilistic premise, over a finite discrete model.</em></p>
+<p><strong><code>ConditionalIndep.v</code></strong> is the technical heart of the tree, and every statement in it is proved. At kernel level it defines conditional expectation against a probability kernel, <code>cond_exp</code>, and proves <code>cond_exp_linear</code> (from <code>integralD</code>, <code>integralZl</code>) and <code>cond_exp_const</code> (from <code>integral_cst</code> and the kernel normalization). Conditional independence is defined as rectangle factorization of the joint kernel (<code>cond_indep</code>), with <code>cond_indep_equiv</code> proving the equivalence to the indicator-expectation form in both directions; the extension to all bounded measurable test functions is a monotone-class argument documented as out of scope and neither assumed nor used. The graphoid properties are then proved over a <strong>discrete model</strong>, a finite joint probability mass function in cross-multiplied, division-free form: <code>cond_indep_weak_union</code> and <code>cond_indep_contraction</code>, with no positivity assumptions, zero-mass conditioning events handled by marginal monotonicity. The engine of the propensity-score theory is <code>transfer_independence</code>, proved from a within-fiber pointwise identity (<code>transfer_pointwise</code>) summed over the fiber.</p>
+<p><strong><code>BalancingScore.v</code></strong> defines <code>is_balancing_score</code> and proves Rosenbaum-Rubin Theorem 2, <code>balancing_score_sufficiency</code>: unconfoundedness given <span class="math inline">\(X\)</span> together with the balancing property of a score <span class="math inline">\(b\)</span> implies unconfoundedness given <span class="math inline">\(b(X)\)</span>, by direct instantiation of the transfer lemma. It also proves <code>identity_is_balancing</code> and <code>propensity_is_coarsest</code>, the statement that every balancing score refines the propensity score.</p>
+<p><strong><code>PropensityScore.v</code></strong> proves the kernel-level facts <code>propensity_score_range</code> (<span class="math inline">\(0 \le e(x) \le 1\)</span>) and <code>propensity_as_conditional_expectation</code> (<span class="math inline">\(e(x) = \mathbb{E}[T \mid X = x]\)</span>), and then the discrete Rosenbaum-Rubin theorems with complete proofs and no axioms: <code>propensity_score_is_balancing</code> (Theorem 1, the propensity score is a balancing score, valid even at zero-mass covariate points because of the mathcomp-analysis library convention that a real division by zero returns zero, safe here for the reason given in <a href="#sec-coq-boundary" class="quarto-xref"><span>Section 30.9</span></a>: the theorem is written in a cross-multiplied form where such a point makes both sides zero rather than dividing by it) and <code>propensity_score_sufficiency_discrete</code> (Theorem 3, by composing Theorem 1 with the transfer lemma).</p>
+</section>
+<section id="sec-coq-estimators" class="level3" data-number="30.8.3">
+<h3 data-number="30.8.3" class="anchored" data-anchor-id="sec-coq-estimators"><span class="header-section-number">30.8.3</span> Phase 3: estimators</h3>
+<p><em>Here are the three estimators a researcher actually computes, inverse-probability weighting, G-computation, and their doubly robust combination, each shown unbiased. Their algebra is machine-checked; the identification steps enter as the named premises of <a href="#sec-coq-boundary" class="quarto-xref"><span>Section 30.9</span></a>.</em></p>
+<p><strong><code>IPWEstimator.v</code></strong> defines the inverse-probability-weighting estimators <code>mu1_IPW</code>, <code>mu0_IPW</code>, <code>ATE_IPW</code>, their Hajek normalizers, and the variance objects. It proves <code>mu1_IPW_unbiased</code>, <code>mu0_IPW_unbiased</code>, and <code>ATE_IPW_unbiased</code> with the consistency conversion machine-checked and the tower-property premise named; <code>var_mu1_IPW_ge0</code> and <code>ESS_variance_bound</code> (the population effective-sample-size fraction is at most one) from the L2 Jensen hypothesis <code>E_jensen_sqr</code>, the formal counterpart of <a href="../part1/04-probability.html#thm-jensen" class="quarto-xref">Theorem&nbsp;<span>4.6</span></a>; and <code>IPW_bias_formula</code>, the misspecification bias in difference-of-inverses form, by pure linearity.</p>
+<p><strong><code>OutcomeRegression.v</code></strong> defines the G-computation estimators <code>mu1_OR</code>, <code>mu0_OR</code>, <code>ATE_OR</code> and proves <code>ATE_as_averaged_CATE</code> (by linearity alone), the per-arm unbiasedness theorems under named identification premises, and <code>OR_bias_formula</code>.</p>
+<p><strong><code>DoublyRobust.v</code></strong> defines the augmented estimators <code>mu1_AIPW</code>, <code>mu0_AIPW</code>, <code>ATE_AIPW</code>. Its core is the pointwise cancellation identity <code>AIPW1_pointwise</code> (with control mirror <code>AIPW0_pointwise</code>), proved by case analysis with total division and no positivity. Double robustness is then genuine: <code>AIPW_consistent_correct_PS</code> and <code>AIPW_consistent_correct_OR</code> each conclude consistency from one named mean-zero-residual premise, <code>double_robustness</code> is the honest case split over the disjunction, and <code>ATE_AIPW_double_robust</code> assembles both arms via <code>ATE_split</code>. These are the formal counterparts of <a href="../part2/10-adjustment-methods.html#thm-aipw-double-robust" class="quarto-xref">Theorem&nbsp;<span>10.5</span></a>.</p>
+</section>
+<section id="sec-coq-methods" class="level3" data-number="30.8.4">
+<h3 data-number="30.8.4" class="anchored" data-anchor-id="sec-coq-methods"><span class="header-section-number">30.8.4</span> Phase 4: indirect-comparison methods</h3>
+<p><em>This phase reaches the population-adjustment methods themselves, and the results the running example uses: the MAIC effective-sample-size bound, the collapsibility that makes STC’s plug-in valid, and the MAIC-versus-STC contrast.</em></p>
+<p><strong><code>MAIC.v</code></strong> defines the entropy-balanced weight <code>maic_weight_fn x := expR (linpred x)</code>, proved positive (<code>maic_weight_pos</code>), and the effective sample size <code>ESS</code>. Its mathematical content is the effective-sample-size bound, proved from scratch: the termwise arithmetic-geometric-mean inequality <code>two_mul_le_sqr</code>, assembled by induction into <code>cauchy_schwarz_ones</code>, specialized to the weight vector as <code>cauchy_schwarz_n_weights</code>, and divided through to give <code>ESS_upper_bound</code> (<span class="math inline">\(\mathrm{ESS} \le n\)</span>). This is the machine-checked counterpart of <a href="../part4/18-maic.html#thm-maic-ess-bound" class="quarto-xref">Theorem&nbsp;<span>18.6</span></a> and the worked example of <a href="#sec-coq-worked" class="quarto-xref"><span>Section 30.11</span></a>. The four MAIC assumptions are abstract named propositions, deliberately not defined as <code>True</code>; the consistency argument itself is the paper proof of Chapter 18.</p>
+<p><strong><code>STC.v</code></strong> defines the marginal simulated-treatment-comparison estimator over a target-population expectation <code>E2</code> and proves <code>STC_collapse_linear</code>: for a linear outcome model <span class="math inline">\(\mu(t,x) = \alpha + \beta x
++ \gamma\mathbf{1}\{t\}\)</span>, the marginal contrast equals <span class="math inline">\(\gamma\)</span>, using only linearity and the constant rule. This is the machine-checked core of why the mean difference is collapsible (<a href="../part2/11-effect-modification-collapsibility.html#def-collapsibility" class="quarto-xref">Definition&nbsp;<span>11.6</span></a>, <a href="../part1/07-glm.html#def-non-collapsibility" class="quarto-xref">Definition&nbsp;<span>7.7</span></a>): the proof uses <em>exactly</em> the linearity that a nonlinear link destroys. The consistency theorem <code>STC_consistent</code> holds under named identification premises.</p>
+<p><strong><code>Comparison.v</code></strong> records the MAIC-versus-STC method profiles as decidable records and proves the profile-level facts <code>assumption_difference</code>, <code>MAIC_robust_to_outcome_model</code>, and <code>STC_robust_to_poor_overlap</code> by computation; <code>methods_agree_when_correct</code>, that the two estimates coincide when both identification hypotheses hold; and <code>MAIC_variance_inflation_ge1</code>, the quantitative statement that the variance inflation factor <span class="math inline">\(n/\mathrm{ESS}\)</span> is at least one whenever <span class="math inline">\(0 &lt; \mathrm{ESS} \le n\)</span>.</p>
+</section>
+<section id="sec-coq-bucher" class="level3" data-number="30.8.5">
+<h3 data-number="30.8.5" class="anchored" data-anchor-id="sec-coq-bucher"><span class="header-section-number">30.8.5</span> Phase 5: indirect-comparison algebra</h3>
+<p><em>The final phase certifies the pure algebra of indirect comparison: Bucher’s subtraction from the running example, and the effect-modifier versus prognostic-variable distinction that decides when anchored adjustment is even needed.</em></p>
+<p><strong><code>Bucher.v</code></strong> proves <code>transitivity_subtract</code>, <code>bucher_identity</code> (the exact-estimate form), <code>bucher_unbiased</code> (the expectation form over an abstract linear <code>E</code>, the counterpart of <a href="../part3/14-bucher.html#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a>), and <code>bucher_variance</code> (additivity of variances under zero covariance). This file established the abstract-operator pattern reused by the rest of the tree.</p>
+<p><strong><code>EffectModifiers.v</code></strong> formalizes the effect-modifier versus prognostic-variable distinction (<a href="../part2/11-effect-modification-collapsibility.html#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a>, <a href="../part2/11-effect-modification-collapsibility.html#def-prognostic-variable" class="quarto-xref">Definition&nbsp;<span>11.5</span></a>). It defines <code>not_EM</code> (the conditional contrast does not depend on the covariate) and <code>not_PV_for_A</code>/<code>not_PV_for_C</code>, proves <code>anchored_PV_cancellation</code> (if a covariate is not an effect modifier, the conditional contrast is constant in it, so anchored adjustment is unaffected by its distribution), and exhibits the separation <code>not_EM_does_not_imply_not_PV</code> by the concrete counterexample <span class="math inline">\(\mu_A(x,w) = \mu_C(x,w) = \mathbf{1}\{w\}\)</span> over <span class="math inline">\(X_{\mathrm{unmeasured}} =
+\texttt{bool}\)</span>: the contrast is identically zero (so <code>not_EM</code> holds) while each surface depends on <span class="math inline">\(w\)</span> (so <code>not_PV_for_A</code> fails). The inequality <span class="math inline">\(1 \ne 0\)</span> is discharged by <code>Num.Theory.ltr01</code>.</p>
+<div id="exm-coq-em-separation" class="theorem example">
+<p><span class="theorem-title"><strong>Example 30.3 (Effect modifier versus prognostic variable, with numbers)</strong></span> Take the unmeasured covariate <span class="math inline">\(w \in \{0,1\}\)</span> and outcome surfaces <span class="math inline">\(\mu_A(w) = \mu_C(w) = \mathbf{1}\{w=1\}\)</span>, so each surface equals <span class="math inline">\(0\)</span> when <span class="math inline">\(w=0\)</span> and <span class="math inline">\(1\)</span> when <span class="math inline">\(w=1\)</span>. The conditional contrast is <span class="math inline">\(\mu_A(w) - \mu_C(w) = 0\)</span> for both <span class="math inline">\(w=0\)</span> and <span class="math inline">\(w=1\)</span>: the contrast does not depend on <span class="math inline">\(w\)</span>, so <span class="math inline">\(w\)</span> is <em>not</em> an effect modifier (<code>not_EM</code> holds). Yet each surface itself moves from <span class="math inline">\(0\)</span> to <span class="math inline">\(1\)</span> as <span class="math inline">\(w\)</span> goes <span class="math inline">\(0 \to 1\)</span>, so <span class="math inline">\(w\)</span> <em>is</em> prognostic (<code>not_PV_for_A</code> fails). One covariate, two roles. This is the separation the Coq lemma <code>not_EM_does_not_imply_not_PV</code> certifies, and it is why anchored indirect comparison may ignore the distribution of a pure prognostic variable while unanchored comparison cannot; the single inequality the proof needs, <span class="math inline">\(1 \ne 0\)</span>, is the one discharged by <code>Num.Theory.ltr01</code>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+</section>
+<section id="sec-coq-boundary" class="level2" data-number="30.9">
+<h2 data-number="30.9" class="anchored" data-anchor-id="sec-coq-boundary"><span class="header-section-number">30.9</span> The named-hypothesis boundary and the discrete model</h2>
+<p>The design decision that makes a gap-free development possible is the treatment of probabilistic content. Rather than postulate measure-theoretic facts as global axioms, the development admits them as <strong>named section hypotheses</strong> displayed in each theorem’s own statement, so that what is assumed is always visible and never hidden.</p>
+<p>For a health researcher this visibility is the useful part: instead of a method that works “under standard assumptions,” one sees, printed in the theorem, exactly where exchangeability, positivity, a tower-property step, or a mean-zero-residual condition enters, and therefore exactly which judgment is carrying the weight. The cost of the design deserves stating as plainly as the benefit. A theorem that names its probabilistic premises is, <em>as a formalization of the book result</em>, weaker than one that derives them: the machine certifies the algebra around the premise, not the premise itself. What is bought is a gap-free, fully visible account of which steps are mechanized; what is deferred is the machine-checking of the probability facts, which stay paper-proved in the chapters cited. The table below is therefore also a map of where trust still rests on human proof.</p>
+<p>The recurring hypotheses, each standing for a standard probability fact whose paper proof lives in the catalogue, are summarized below.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Named hypothesis</th>
+<th>Stands for</th>
+<th>Catalogue</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>E_linearity</code>, <code>E2_const</code></td>
+<td>linearity of expectation; expectation of a constant</td>
+<td>A.4</td>
+</tr>
+<tr class="even">
+<td><code>E_total</code></td>
+<td>law of total expectation over the treatment partition</td>
+<td>A.5</td>
+</tr>
+<tr class="odd">
+<td><code>E_T1_congr</code>, <code>E_T0_congr</code></td>
+<td>locality of conditional expectation</td>
+<td>A.5</td>
+</tr>
+<tr class="even">
+<td><code>E_jensen_sqr</code></td>
+<td>the L2 Jensen inequality <span class="math inline">\((\mathbb{E}f)^2 \le \mathbb{E}(f^2)\)</span></td>
+<td>A.6</td>
+</tr>
+<tr class="odd">
+<td><code>Hipw1</code>, <code>Hipw0</code></td>
+<td>tower-property consequence of unconfoundedness and positivity</td>
+<td>B.7</td>
+</tr>
+<tr class="even">
+<td><code>Hid1</code>, <code>Hid0</code></td>
+<td>per-arm g-formula identification</td>
+<td>B.6</td>
+</tr>
+<tr class="odd">
+<td><code>H_PS0</code>, <code>H_OR0</code></td>
+<td>mean-zero weighted residual when one nuisance model is correct</td>
+<td>B.9</td>
+</tr>
+<tr class="even">
+<td><code>Hstc_A</code>, <code>Hstc_C</code></td>
+<td>marginal STC identification per arm</td>
+<td>G.6</td>
+</tr>
+</tbody>
+</table>
+<p>The right-hand column cites the <strong>proof catalogue</strong> that ships with the development, in the <code>proofs/</code> directory of the ITC_Coq repository. Its files are lettered by Part, <code>A</code> through <code>O</code>, and each result is numbered within its Part, so <code>A.4</code> is the fourth result of Part A (basic probability) and <code>B.7</code> the seventh of Part B (identification); the catalogue holds the pen-and-paper proof of each named premise. This is the same identifier scheme used in the cross-reference table of <a href="#sec-coq-map" class="quarto-xref"><span>Section 30.10</span></a>.</p>
+<p>This is the source of the two-level reading of <a href="#def-coq-proof-status" class="quarto-xref">Definition&nbsp;<span>30.1</span></a>: a theorem such as <code>mu1_IPW_unbiased</code> is a fully proved Coq object, but as a formalization of <a href="../part2/10-adjustment-methods.html#thm-ipw-unbiased" class="quarto-xref">Theorem&nbsp;<span>10.3</span></a> it is tier <strong>P</strong>, because the tower-property step is named (<code>Hipw1</code>) rather than derived inside Coq.</p>
+<p>There is one important class of results where the probabilistic content is <em>not</em> deferred but discharged outright: the Rosenbaum-Rubin theorems and the graphoid properties. These are proved over a finite discrete model, a joint probability mass function over finite types, with conditional independence written in cross-multiplied form such as <span id="eq-coq-dci"><span class="math display">\[
+q_{XYZ}(x,y,z)\, q_Z(z) \;=\; q_{XZ}(x,z)\, q_{YZ}(y,z).
+\tag{30.1}\]</span></span> In this form the proofs need no positivity assumptions: a zero conditioning mass annihilates both sides by marginal monotonicity (every marginal is dominated by the conditioning mass).</p>
+<p>The reason is elementary and worth spelling out, since it is the whole point of the cross-multiplication. Written as a division, conditional independence would read <span class="math inline">\(q_{XYZ}/q_Z = (q_{XZ}/q_Z)(q_{YZ}/q_Z)\)</span>, which is meaningless at a stratum <span class="math inline">\(z\)</span> where the conditioning mass <span class="math inline">\(q_Z(z)\)</span> is zero. Written as the product identity <a href="#eq-coq-dci" class="quarto-xref">Equation&nbsp;<span>30.1</span></a>, that same stratum forces every factor on both sides to be zero (a marginal can never exceed the total mass it is a marginal of; this domination is the “marginal monotonicity” invoked), so the line reads <span class="math inline">\(0 = 0\)</span> and holds with nothing to prove. The cross-multiplication converts a potential division by zero into a trivially true equation, which is exactly why no positivity assumption is needed.</p>
+<div id="exm-coq-zero-stratum" class="theorem example">
+<p><span class="theorem-title"><strong>Example 30.4 (An empty covariate cell)</strong></span> Take a covariate stratum <span class="math inline">\(z\)</span> that no trial patient occupies, so <span class="math inline">\(q_Z(z) = 0\)</span>: an age-by-comorbidity cell that happens to be empty. Then <span class="math inline">\(q_{XZ}(x,z) = 0\)</span> for every <span class="math inline">\(x\)</span>, <span class="math inline">\(q_{YZ}(y,z) = 0\)</span> for every <span class="math inline">\(y\)</span>, and <span class="math inline">\(q_{XYZ}(x,y,z) = 0\)</span>, so <a href="#eq-coq-dci" class="quarto-xref">Equation&nbsp;<span>30.1</span></a> reads <span class="math inline">\(0 \cdot 0 = 0 \cdot 0\)</span> and the propensity-score balancing theorem holds at this cell automatically. This is exactly the behavior one wants: an empty stratum should neither break the theorem nor have to be excluded by a positivity assumption. The divided form would instead stumble on <span class="math inline">\(0/0\)</span> at precisely this cell, which is why the continuous version, lacking the cross-multiplication trick, must currently assume positivity or defer the step. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>The transfer lemma <code>transfer_independence</code>, Theorem 1 (<code>propensity_score_is_balancing</code>), Theorem 3 (<code>propensity_score_sufficiency_discrete</code>), and the graphoid laws <code>cond_indep_weak_union</code> and <code>cond_indep_contraction</code> are therefore tier <strong>F</strong> with no named probabilistic premise at all. Lifting these discrete proofs to the continuous kernel model awaits a conditional-expectation and disintegration library (a <em>disintegration</em> is the measure-theoretic operation that slices a joint distribution into a family of conditional distributions, one for each value of the conditioning variable; it is what makes <span class="math inline">\(\mathbb{E}[Y\mid X=x]\)</span> rigorous when <span class="math inline">\(X\)</span> is continuous) that mathcomp-analysis does not yet provide; the kernel-level statements in the tree are shaped to receive that lift, taking the disintegration compatibility as an explicit hypothesis in the interim.</p>
+</section>
+<section id="sec-coq-map" class="level2" data-number="30.10">
+<h2 data-number="30.10" class="anchored" data-anchor-id="sec-coq-map"><span class="header-section-number">30.10</span> From book theorem to Coq lemma: the cross-reference map</h2>
+<p>The table below maps the book’s tagged theorems and definitions to the Coq objects that machine-check them, with the Coq file, the exact Coq name, and the proof-status reading (<a href="#def-coq-proof-status" class="quarto-xref">Definition&nbsp;<span>30.1</span></a>). The “Coq status” column distinguishes results proved outright in Coq from those proved modulo a named premise and those whose Coq counterpart captures a complement or an abstract form of the book statement. Every name in the table has been confirmed against the source files.</p>
+<p>For quick recall, the book results named in the table are: <a href="../part3/14-bucher.html#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a>, the unbiasedness of the indirect subtraction; <a href="../part2/10-adjustment-methods.html#thm-ipw-unbiased" class="quarto-xref">Theorem&nbsp;<span>10.3</span></a>, the unbiasedness of inverse-probability weighting; <a href="../part2/10-adjustment-methods.html#thm-aipw-double-robust" class="quarto-xref">Theorem&nbsp;<span>10.5</span></a>, double robustness; <a href="../part4/18-maic.html#thm-maic-ess-bound" class="quarto-xref">Theorem&nbsp;<span>18.6</span></a>, the bound <span class="math inline">\(\mathrm{ESS} \le n\)</span>; <a href="../part2/11-effect-modification-collapsibility.html#def-collapsibility" class="quarto-xref">Definition&nbsp;<span>11.6</span></a> and <a href="../part1/07-glm.html#def-non-collapsibility" class="quarto-xref">Definition&nbsp;<span>7.7</span></a>, the collapsibility (or not) of a marginal contrast; <a href="../part2/11-effect-modification-collapsibility.html#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a> and <a href="../part2/11-effect-modification-collapsibility.html#def-prognostic-variable" class="quarto-xref">Definition&nbsp;<span>11.5</span></a>, the two roles a covariate can play; and <a href="../part5/20-mlnmr-aggregation.html#thm-aggregation" class="quarto-xref">Theorem&nbsp;<span>20.1</span></a>, the ML-NMR aggregation identity.</p>
+<p>How to read the “Coq status” column: <strong>F</strong> means proved outright in Coq from the three active axioms only; <strong>P</strong> means the algebra is proved in Coq but one clearly identified probability fact is supplied as a named premise; <strong>complement F</strong> means the Coq proof covers a complementary or special case (for instance the collapsible linear direction, not the nonlinear counterexample); <strong>S</strong> means the Coq statement is an abstract version and the sharp result is paper-only; <strong>none / n.a.</strong> means not formalized. A status of <strong>F</strong> does not mean the clinical claim is settled, only that the stated mathematics is machine-checked; a status of <strong>P</strong> does not mean the theorem is weak, only that one identified step is proved on paper. Read the column as <em>how much of the result the machine carries</em>, never as <em>how good the method is</em>.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Book result</th>
+<th>Coq file</th>
+<th>Coq name</th>
+<th>Coq status</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="../part3/14-bucher.html#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a></td>
+<td><code>Bucher.v</code></td>
+<td><code>bucher_unbiased</code></td>
+<td>F (algebra over abstract linear <code>E</code>; transitivity and unbiasedness explicit)</td>
+</tr>
+<tr class="even">
+<td><a href="../part2/10-adjustment-methods.html#thm-ipw-unbiased" class="quarto-xref">Theorem&nbsp;<span>10.3</span></a></td>
+<td><code>IPWEstimator.v</code></td>
+<td><code>mu1_IPW_unbiased</code>, <code>ATE_IPW_unbiased</code></td>
+<td>P (consistency conversion checked; tower premise named, B.7)</td>
+</tr>
+<tr class="odd">
+<td><a href="../part2/10-adjustment-methods.html#thm-aipw-double-robust" class="quarto-xref">Theorem&nbsp;<span>10.5</span></a></td>
+<td><code>DoublyRobust.v</code></td>
+<td><code>double_robustness</code>, <code>ATE_AIPW_double_robust</code></td>
+<td>F cancellation (<code>AIPW1_pointwise</code>) + genuine case split; residual premises named (B.9)</td>
+</tr>
+<tr class="even">
+<td><a href="../part4/18-maic.html#thm-maic-ess-bound" class="quarto-xref">Theorem&nbsp;<span>18.6</span></a></td>
+<td><code>MAIC.v</code></td>
+<td><code>ESS_upper_bound</code></td>
+<td>F (no premise beyond the active axioms)</td>
+</tr>
+<tr class="odd">
+<td><a href="../part4/18-maic.html#thm-maic-exponential-weights" class="quarto-xref">Theorem&nbsp;<span>18.1</span></a></td>
+<td><code>MAIC.v</code></td>
+<td><code>maic_weight_fn</code>, <code>maic_weight_pos</code></td>
+<td>P (weight form and positivity formalized; KKT and duality are paper-only, F.3)</td>
+</tr>
+<tr class="even">
+<td><a href="../part4/19-stc.html#thm-stc-noncollapsibility-counterexample" class="quarto-xref">Theorem&nbsp;<span>19.4</span></a></td>
+<td><code>STC.v</code></td>
+<td><code>STC_collapse_linear</code></td>
+<td>complement F (the collapsible linear direction is proved; the nonlinear counterexample is paper-only)</td>
+</tr>
+<tr class="odd">
+<td><a href="../part4/19-stc.html#thm-maic-stc-equivalence" class="quarto-xref">Theorem&nbsp;<span>19.7</span></a></td>
+<td><code>Comparison.v</code></td>
+<td><code>methods_agree_when_correct</code></td>
+<td>S (abstract “agree when both correct”; the linear-model equivalence is paper-only)</td>
+</tr>
+<tr class="even">
+<td><a href="../part2/11-effect-modification-collapsibility.html#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a>, <a href="../part2/11-effect-modification-collapsibility.html#def-prognostic-variable" class="quarto-xref">Definition&nbsp;<span>11.5</span></a></td>
+<td><code>EffectModifiers.v</code></td>
+<td><code>not_EM</code>, <code>not_PV_for_A</code>, <code>not_EM_does_not_imply_not_PV</code></td>
+<td>F (definitions and separation counterexample)</td>
+</tr>
+<tr class="odd">
+<td><a href="../part2/11-effect-modification-collapsibility.html#def-collapsibility" class="quarto-xref">Definition&nbsp;<span>11.6</span></a>, <a href="../part1/07-glm.html#def-non-collapsibility" class="quarto-xref">Definition&nbsp;<span>7.7</span></a></td>
+<td><code>STC.v</code></td>
+<td><code>STC_collapse_linear</code></td>
+<td>F (linear-model collapsibility)</td>
+</tr>
+<tr class="even">
+<td><a href="../part2/12-transportability.html#def-transportability" class="quarto-xref">Definition&nbsp;<span>12.3</span></a>, <a href="../part2/12-transportability.html#thm-sema-insufficient" class="quarto-xref">Theorem&nbsp;<span>12.6</span></a></td>
+<td>none</td>
+<td>n/a</td>
+<td>not formalized (paper-only; Chapter 12)</td>
+</tr>
+<tr class="odd">
+<td><a href="../part5/20-mlnmr-aggregation.html#thm-aggregation" class="quarto-xref">Theorem&nbsp;<span>20.1</span></a>, <a href="../part5/20-mlnmr-aggregation.html#thm-aggregation-bias" class="quarto-xref">Theorem&nbsp;<span>20.2</span></a></td>
+<td>none</td>
+<td>n/a</td>
+<td>not formalized (ML-NMR is paper-only; Chapter 20)</td>
+</tr>
+<tr class="even">
+<td><a href="../part1/05-inference.html#def-sandwich-variance" class="quarto-xref">Definition&nbsp;<span>5.11</span></a></td>
+<td>none</td>
+<td>n/a</td>
+<td>not formalized (Chapter 5)</td>
+</tr>
+<tr class="odd">
+<td><a href="../part1/05-inference.html#thm-cramer-rao" class="quarto-xref">Theorem&nbsp;<span>5.7</span></a>, <a href="../part1/05-inference.html#thm-mle-asymptotic-normality" class="quarto-xref">Theorem&nbsp;<span>5.6</span></a></td>
+<td>none</td>
+<td>n/a</td>
+<td>not formalized (Chapter 5)</td>
+</tr>
+</tbody>
+</table>
+<p>The g-formula and selection-bias results of Chapter 9, and the Rosenbaum-Rubin balancing theorems, are machine-checked as <code>ATE_identification</code>, <code>selection_bias_decomposition</code>, <code>balancing_score_sufficiency</code>, <code>propensity_score_is_balancing</code>, and <code>propensity_score_sufficiency_discrete</code>; they are discussed in <a href="#sec-coq-structure" class="quarto-xref"><span>Section 30.8</span></a> but omitted from the table because their book counterparts are referenced in prose rather than by a tag this chapter owns.</p>
+</section>
+<section id="sec-coq-worked" class="level2" data-number="30.11">
+<h2 data-number="30.11" class="anchored" data-anchor-id="sec-coq-worked"><span class="header-section-number">30.11</span> A worked example: tracing the ESS bound to the kernel</h2>
+<p>To make the abstract guarantee concrete, we follow a single book theorem all the way into the machine: the effective-sample-size bound <span class="math inline">\(\mathrm{ESS} \le n\)</span> of <a href="../part4/18-maic.html#thm-maic-ess-bound" class="quarto-xref">Theorem&nbsp;<span>18.6</span></a>. It is an ideal specimen because it depends on no probabilistic premise, only on classical logic and arithmetic, so its machine-checked closure is the cleanest possible illustration of <a href="#def-active-axioms" class="quarto-xref">Definition&nbsp;<span>30.2</span></a>.</p>
+<p>Recall from Chapter 18 the definition of the effective sample size of a nonnegative weight vector <span class="math inline">\(\mathbf{w} = (w_1,\dots,w_n)\)</span>, <span id="eq-coq-ess"><span class="math display">\[
+\mathrm{ESS} \;=\; \frac{\big(\sum_{i=1}^n w_i\big)^2}{\sum_{i=1}^n w_i^2},
+\tag{30.2}\]</span></span> and the claim <span class="math inline">\(\mathrm{ESS} \le n\)</span>, with equality iff the weights are equal (this is F.8 in the proof catalogue). In <code>MAIC.v</code> the quantities and the theorem read as follows, verbatim.</p>
+<pre class="coq"><code>Definition ESS : R :=
+  if (0 &lt; sum_w2)%R then (sum_w)^+2 / sum_w2 else 0.
+
+Theorem ESS_upper_bound :
+  0 &lt; sum_w2 -&gt; ESS &lt;= n%:R.</code></pre>
+<p>The proof is built bottom-up from three lemmas. The base case is the termwise arithmetic-geometric-mean inequality, itself a one-line consequence of <span class="math inline">\(0 \le (x-y)^2\)</span>:</p>
+<pre class="coq"><code>Lemma two_mul_le_sqr (x y : R) : x * y *+ 2 &lt;= x ^+ 2 + y ^+ 2.</code></pre>
+<p>This is summed, by induction on the number of terms, into a Cauchy-Schwarz inequality against the all-ones vector:</p>
+<pre class="coq"><code>Lemma cauchy_schwarz_ones (m : nat) (f : 'I_m -&gt; R) :
+  (\sum_(i &lt; m) f i) ^+ 2 &lt;= m%:R * \sum_(i &lt; m) (f i) ^+ 2.</code></pre>
+<p>In the inductive step, the cross term <span class="math inline">\(2 S a\)</span> produced by expanding <span class="math inline">\((S + a)^2\)</span> is bounded summand by summand using <code>two_mul_le_sqr</code>, and the pieces reassemble into the <span class="math inline">\((m+1)\)</span>-term bound. Specializing the test function to the weights gives <span class="math inline">\((\sum_i w_i)^2 \le n \sum_i w_i^2\)</span> (<code>cauchy_schwarz_n_weights</code>), and dividing by the positive quantity <span class="math inline">\(\sum_i w_i^2\)</span> gives exactly <span class="math inline">\(\mathrm{ESS} \le n\)</span>. No nonnegativity of the weights is even required for the inequality; positivity enters only to license the division.</p>
+<p>Now the decisive step, the one a paper proof cannot perform: ask the kernel which axioms the finished theorem actually uses. Loading the compiled development and issuing <code>Print Assumptions ESS_upper_bound</code> produces</p>
+<pre class="text"><code>Axioms:
+boolp.propositional_extensionality : forall P Q : Prop, P &lt;-&gt; Q -&gt; P = Q
+boolp.functional_extensionality_dep :
+  forall (A : Type) (B : A -&gt; Type) (f g : forall x : A, B x),
+  (forall x : A, f x = g x) -&gt; f = g
+boolp.constructive_indefinite_description :
+  forall (A : Type) (P : A -&gt; Prop), (exists x : A, P x) -&gt; {x : A | P x}</code></pre>
+<p>exactly the three axioms of <a href="#def-active-axioms" class="quarto-xref">Definition&nbsp;<span>30.2</span></a> and nothing else: no project axiom, no admitted lemma, no hidden assumption. The same query on <code>cauchy_schwarz_ones</code>, <code>bucher_unbiased</code>, <code>not_EM_does_not_imply_not_PV</code>, <code>propensity_score_is_balancing</code>, and <code>double_robustness</code> returns the identical three-line list. This is the verification, run against the compiled tree, that backs every “machine-checked” claim in this book.</p>
+<div id="exm-coq-ess-numeric" class="theorem example">
+<p><span class="theorem-title"><strong>Example 30.5 (The certified inequality by hand)</strong></span> To close the loop with a hand computation, take <span class="math inline">\(n = 4\)</span>. Uniform weights <span class="math inline">\(\mathbf{w} = (1,1,1,1)\)</span> give <span class="math inline">\(\sum_i w_i = 4\)</span> and <span class="math inline">\(\sum_i w_i^2 = 4\)</span>, so <span class="math inline">\(\mathrm{ESS} = 16/4 = 4 = n\)</span>: the bound is attained exactly, as the equality case predicts. The imbalanced weights <span class="math inline">\(\mathbf{w} = (2,1,1,0)\)</span> give <span class="math inline">\(\sum_i w_i = 4\)</span> and <span class="math inline">\(\sum_i w_i^2 = 4 + 1 + 1 = 6\)</span>, so <span class="math inline">\(\mathrm{ESS} = 16/6 = 8/3 \approx 2.667 &lt; 4\)</span>, and the variance inflation factor is <span class="math inline">\(n/\mathrm{ESS} = 4/(8/3) = 3/2\)</span>, consistent with <code>MAIC_variance_inflation_ge1</code>. Every arithmetic step here is an instance of the inequality the kernel certified. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>For the running example this is the difference between counting patients and counting <em>information</em>. Trial 2’s four patients, after matching to Trial 1, carry an effective sample size of <span class="math inline">\(8/3 \approx 2.67\)</span>, and the fourth patient, with weight zero, contributes nothing at all: her covariate profile lay outside Trial 1’s range, so matching could not place her in the target population. Uneven weights are the signature of poor overlap between the two trials; poor overlap means less effective information, which means a larger variance inflation factor <span class="math inline">\(n/\mathrm{ESS} = 3/2\)</span>, which means a wider interval on the transported effect and a less stable population adjustment. The bound <span class="math inline">\(\mathrm{ESS} \le n\)</span> is thus no technicality: it is the certified statement that reweighting can only <em>spend</em> information, never create it, so an assessment body reading a MAIC can treat the reported ESS as a hard ceiling on how much the matched evidence is worth. The machine has verified the ceiling; whether the matching was appropriate in the first place remains, as always, a scientific judgment.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>What the example does and does not show.</strong> The kernel has certified that <span class="math inline">\(\mathrm{ESS} \le n\)</span> follows from arithmetic and the three axioms; it has <em>not</em> certified that <span class="math inline">\(\mathrm{ESS}\)</span> as defined in <a href="#eq-coq-ess" class="quarto-xref">Equation&nbsp;<span>30.2</span></a> is the right diagnostic for weighted estimation, nor that the entropy weights of <a href="../part4/18-maic.html#thm-maic-exponential-weights" class="quarto-xref">Theorem&nbsp;<span>18.1</span></a>, whose derivation is paper-only, are the weights one should use. The mathematics of <em>why</em> this quantity governs variance is Chapter 18; the machine guarantees only the inequality, which is precisely the load-bearing algebra. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-coq-build" class="level2" data-number="30.12">
+<h2 data-number="30.12" class="anchored" data-anchor-id="sec-coq-build"><span class="header-section-number">30.12</span> Building and checking the development</h2>
+<p>The development is self-contained and reproducible. The build is driven by <code>coq_makefile</code> from the file list in <code>_CoqProject</code>, which also declares the logical mapping <code>-R theories ITC</code>, so that the modules are addressed as <code>ITC.Bucher</code>, <code>ITC.MAIC</code>, and so on. The toolchain requirements, as declared in <code>_CoqProject</code> and the project <code>README</code>, are Coq (Rocq) 9.1 or later, mathcomp-ssreflect 2.0 or later, mathcomp-algebra, mathcomp-analysis 1.9 or later, and Hierarchy Builder 1.6 or later; the development was checked with the Rocq Prover 9.1.0.</p>
+<p>To compile and check the whole tree, from the repository root:</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a><span class="fu">make</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The top-level <code>Makefile</code> regenerates <code>Makefile.coq</code> from <code>_CoqProject</code> if needed and then compiles all fifteen <code>.v</code> files; a clean rebuild is <code>make clean &amp;&amp; make</code>. A successful run produces a <code>.vo</code> (compiled, kernel-checked) object for each source file and exits without error, which is itself the certificate that every theorem in the tree type-checks. A health researcher is not expected to read the Coq scripts or even to run this build; the value of quoting the commands is that they exist and are cheap. The assurance does not depend on the reader executing them, only on their being executable by anyone who wishes to, which is what makes the result independent of trust in the author.</p>
+<p>The inventory claims of this chapter can be reproduced directly. That there are no admitted proofs and no project axioms is confirmed by</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb9"><pre class="sourceCode sh code-with-copy"><code class="sourceCode bash"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">grep</span> <span class="at">-nE</span> <span class="st">"Admitted|^Axiom|admit\."</span> theories/<span class="pp">*</span>.v   <span class="co"># no output</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>which returns nothing across the fifteen files. Reading the search pattern: <code>Admitted</code> is Coq’s keyword for a proof abandoned and accepted unproved, <code>Axiom</code> declares a new unproved assumption, and <code>admit.</code> is the tactic that leaves a single hole in an otherwise finished proof; the command looks for any of the three in every <code>.v</code> file. Its empty output is the evidence that the tree contains no abandoned proof and no project-specific axiom, the two ways a formalization could quietly accept something on trust. The axiom closure of any individual theorem is confirmed, as in <a href="#sec-coq-worked" class="quarto-xref"><span>Section 30.11</span></a>, by a short script that requires the relevant module and calls <code>Print Assumptions</code> on the theorem of interest; for the central results this reports exactly the three <code>boolp</code> axioms of <a href="#def-active-axioms" class="quarto-xref">Definition&nbsp;<span>30.2</span></a>. The canonical inventory, the named-hypothesis catalogue, and these verification commands are recorded in <code>theories/AXIOMS.md</code> within the development.</p>
+</section>
+<section id="sec-coq-scope" class="level2" data-number="30.13">
+<h2 data-number="30.13" class="anchored" data-anchor-id="sec-coq-scope"><span class="header-section-number">30.13</span> What is and is not machine-checked</h2>
+<p>We close with an explicit accounting, so that the silence noted in <a href="#sec-coq-guarantees" class="quarto-xref"><span>Section 30.5</span></a> is filled in.</p>
+<p><strong>Machine-checked, depending only on the three active axioms:</strong> the classical-logic foundations; the real causal estimands and their algebra (ATE split and decomposition, Holland’s selection-bias decomposition, the consistency conversions); the fundamental problem of causal inference by concrete counterexample; the SUTVA representation lemma; conditional-expectation linearity and the constant rule at kernel level; the factorization-versus-indicator-expectation equivalence; the graphoid weak-union and contraction laws over the discrete model with no positivity; the transfer lemma; Rosenbaum-Rubin Theorems 1, 2, and 3 over the discrete model; kernel-level propensity-score range and its conditional-expectation characterization; the IPW, G-computation, and AIPW estimator algebra, the AIPW cancellation identity, and double robustness as a genuine case split; Bucher’s identity in expectation and variance form; the anchored cancellation and the effect-modifier versus prognostic-variable separation; Cauchy-Schwarz and the <span class="math inline">\(\mathrm{ESS} \le n\)</span> bound; and the linear-model collapsibility of the marginal contrast.</p>
+<p><strong>Machine-checked modulo named probabilistic premises</strong> (tier P): IPW, G-computation, and AIPW unbiasedness and identification, where the tower property, the law of total expectation, conditional-expectation locality, L2 Jensen, and the mean-zero-residual facts enter as the explicit hypotheses catalogued in <a href="#sec-coq-boundary" class="quarto-xref"><span>Section 30.9</span></a>. The paper proofs of these premises are in Parts A and B of the catalogue and in Chapters 4, 9, and 10.</p>
+<p><strong>Paper proof only</strong> (tiers S, O, E), not formalized: the probability and inference foundations beyond the algebra above (Chapters 1 through 5, including <a href="../part1/05-inference.html#thm-cramer-rao" class="quarto-xref">Theorem&nbsp;<span>5.7</span></a>, <a href="../part1/05-inference.html#thm-mle-asymptotic-normality" class="quarto-xref">Theorem&nbsp;<span>5.6</span></a>, and <a href="../part1/05-inference.html#def-sandwich-variance" class="quarto-xref">Definition&nbsp;<span>5.11</span></a>); standard and network meta-analysis (Chapters 13 through 16); the scale-specific anchored and unanchored population-adjustment theorems and the transportability framework (Chapters 12 and 17, including <a href="../part2/12-transportability.html#thm-sema-insufficient" class="quarto-xref">Theorem&nbsp;<span>12.6</span></a>, <a href="../part2/12-transportability.html#def-transportability" class="quarto-xref">Definition&nbsp;<span>12.3</span></a>, <a href="../part4/17-population-adjustment-theory.html#def-sema" class="quarto-xref">Definition&nbsp;<span>17.6</span></a>, <a href="../part4/17-population-adjustment-theory.html#thm-unanchored-paic-consistency" class="quarto-xref">Theorem&nbsp;<span>17.2</span></a>); the MAIC consistency and entropy-balancing derivation (Chapter 18), of which only the weight form, positivity, and the ESS bound are formalized; the STC plug-in bias and the MAIC-STC equivalence (<a href="../part4/19-stc.html#thm-maic-stc-equivalence" class="quarto-xref">Theorem&nbsp;<span>19.7</span></a>, Chapter 19); the entire multilevel network meta-regression development, including the aggregation theory (<a href="../part5/20-mlnmr-aggregation.html#thm-aggregation" class="quarto-xref">Theorem&nbsp;<span>20.1</span></a>, <a href="../part5/20-mlnmr-aggregation.html#thm-aggregation-bias" class="quarto-xref">Theorem&nbsp;<span>20.2</span></a>), the Poisson-binomial approximations, the quasi-Monte-Carlo theory (<a href="../part5/22-mlnmr-integration.html#thm-koksma-hlawka" class="quarto-xref">Theorem&nbsp;<span>22.3</span></a>), and the copula material (<a href="../part5/22-mlnmr-integration.html#def-gaussian-copula" class="quarto-xref">Definition&nbsp;<span>22.5</span></a>) of Chapters 20 through 25; the multilevel unanchored extension (<a href="../part5/26-ml-umr.html#def-spfa" class="quarto-xref">Definition&nbsp;<span>26.2</span></a>, <a href="../part5/26-ml-umr.html#thm-pseudo-ipd-reconstruction" class="quarto-xref">Theorem&nbsp;<span>26.5</span></a>, Chapter 26); the distance-matching algebra of Chapter 27; the quantitative-bias-analysis machinery of Chapter 28; and the simulation theory of Chapter 29. These are proved in full in the chapters cited; their absence from the Coq tree reflects the current reach of the underlying analysis library and the project’s choice to formalize the algebraic and discrete core first, not any doubt about the results.</p>
+<p>The two tracks are complementary. The machine checks the parts that are pure algebra and discrete probability, where a hidden slip is most likely and least visible; the paper proofs carry the measure-theoretic and asymptotic arguments that the library does not yet support. A reader who wants the strongest available assurance for, say, double robustness or the ESS bound can compile the development and read the kernel’s verdict; a reader who wants the full sweep of the theory reads the book.</p>
+</section>
+<section id="sec-coq-notes" class="level2" data-number="30.14">
+<h2 data-number="30.14" class="anchored" data-anchor-id="sec-coq-notes"><span class="header-section-number">30.14</span> Notes and references</h2>
+<p>The companion formalization is the <strong>ITC_Coq development</strong> (the repository <code>https://github.com/choxos/ITC_Coq</code>), whose <code>theories/</code> directory contains the fifteen Coq source files described here, with <code>theories/AXIOMS.md</code> the canonical assumption inventory and the manuscript chapter <code>manuscript/16_coq.md</code> a file-by-file walk-through on which this chapter is based. The development is released under the GPL-3 license. All lemma names, the axiom closure reported in <a href="#sec-coq-worked" class="quarto-xref"><span>Section 30.11</span></a>, and the inventory of <a href="#sec-coq-axioms" class="quarto-xref"><span>Section 30.7</span></a> were confirmed against that source by compiling the tree with the Rocq Prover 9.1.0 and issuing <code>Print Assumptions</code> on the central theorems.</p>
+<p>The Coq, now Rocq, proof assistant implements the Calculus of Inductive Constructions; the LCF-style architecture, in which soundness reduces to a small trusted kernel, is the design that makes the guarantee of <a href="#sec-coq-guarantees" class="quarto-xref"><span>Section 30.5</span></a> meaningful. The classical foundations are inherited from the mathcomp-analysis library, whose <code>boolp</code> module declares the three axioms of <a href="#def-active-axioms" class="quarto-xref">Definition&nbsp;<span>30.2</span></a>; Diaconescu’s theorem, that excluded middle follows from propositional extensionality together with a choice principle, is why excluded middle is a derived lemma rather than a fourth axiom. The arithmetic-geometric-mean and Cauchy-Schwarz inequalities of <a href="#sec-coq-worked" class="quarto-xref"><span>Section 30.11</span></a> are classical; the effective-sample-size formula and its bound appear as Eq. (6.1) of <span class="citation" data-cites="phillippo2019thesis">Phillippo (<a href="../../references.html#ref-phillippo2019thesis" role="doc-biblioref">2019</a>)</span> and as F.8 in the proof catalogue.</p>
+<p>The mathematics formalized here is, in its original sources, due to the authors cited in the relevant chapters: the potential-outcomes calculus and the g-formula to the causal-inference literature surveyed in <span class="citation" data-cites="hernan2020whatif">Hernán and Robins (<a href="../../references.html#ref-hernan2020whatif" role="doc-biblioref">2020</a>)</span>; the propensity score and the balancing theorems to <span class="citation" data-cites="rosenbaum1983">Rosenbaum and Rubin (<a href="../../references.html#ref-rosenbaum1983" role="doc-biblioref">1983</a>)</span>; inverse probability weighting and augmented, doubly robust estimation to <span class="citation" data-cites="robins1994">Robins et al. (<a href="../../references.html#ref-robins1994" role="doc-biblioref">1994</a>)</span> and <span class="citation" data-cites="bangrobins2005">Bang and Robins (<a href="../../references.html#ref-bangrobins2005" role="doc-biblioref">2005</a>)</span>; the indirect comparison to <span class="citation" data-cites="bucher1997">Bucher et al. (<a href="../../references.html#ref-bucher1997" role="doc-biblioref">1997</a>)</span>; matching-adjusted indirect comparison to <span class="citation" data-cites="signorovitch2010maic">Signorovitch et al. (<a href="../../references.html#ref-signorovitch2010maic" role="doc-biblioref">2010</a>)</span>; and simulated treatment comparison to <span class="citation" data-cites="caro2010stc">Caro and Ishak (<a href="../../references.html#ref-caro2010stc" role="doc-biblioref">2010</a>)</span>. The placement of all of this within the population-adjustment framework follows <span class="citation" data-cites="phillippo2019thesis">Phillippo (<a href="../../references.html#ref-phillippo2019thesis" role="doc-biblioref">2019</a>)</span>. The proof-status vocabulary of <a href="#def-coq-proof-status" class="quarto-xref">Definition&nbsp;<span>30.1</span></a> is the status legend of the proof catalogue that accompanies the development.</p>
+<p>There is no machine-checked counterpart for the documentary content of this chapter itself; it is, by nature, a description of the other chapters’ formal counterparts. The results it points to are tagged in their home chapters, and the cross-reference table of <a href="#sec-coq-map" class="quarto-xref"><span>Section 30.10</span></a> is the consolidated index. This chapter corresponds to the walk-through of <code>theories/</code> in the proof catalogue and to manuscript Chapter 16 of the ITC_Coq development.</p>
+</section>
+<section id="sec-coq-exercises" class="level2" data-number="30.15">
+<h2 data-number="30.15" class="anchored" data-anchor-id="sec-coq-exercises"><span class="header-section-number">30.15</span> Exercises</h2>
+<p>A <code>$\star$</code> marks an exercise with a full solution in Appendix F. The set is ordered from plain interpretation to formal synthesis: the first three need no Coq at all, the middle ones ask you to read Coq statements, and the starred pair calls for genuine conceptual synthesis.</p>
+<div id="exr-coq-why-care" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 30.1</strong></span> <strong>(Warm-up, interpretation) What machine-checking does and does not tell you.</strong> In one short paragraph, explain to a colleague who has never heard of Coq what the sentence “the bound <span class="math inline">\(\mathrm{ESS} \le n\)</span> is machine-checked” does and does not tell them about a MAIC analysis they are reviewing. Name one kind of mistake the machine-checking rules out and one kind it cannot.</p>
+</div>
+<div id="exr-coq-vocab-match" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 30.2</strong></span> <strong>(Warm-up) The vocabulary.</strong> Match each term to its plain meaning. Terms: kernel; tactic; <code>Qed</code>; named premise; axiom. Meanings: (i) a single command that transforms the goal; (ii) the small trusted checker that must be correct; (iii) the keyword that ends a proof and triggers checking; (iv) a hypothesis standing for a fact proved on paper elsewhere; (v) a statement accepted as true without proof.</p>
+</div>
+<div id="exr-coq-ipw-plain" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 30.3</strong></span> <strong>(Interpretation) Reading a tier-P result in words.</strong> In plain English, state what <code>mu1_IPW_unbiased</code> claims about the inverse-probability-weighting estimator. Then, using <a href="#sec-coq-boundary" class="quarto-xref"><span>Section 30.9</span></a>, name the single named premise it relies on and say which book assumption from Chapter 10 that premise stands for. Explain in one sentence why this makes it tier <strong>P</strong> rather than tier <strong>F</strong> as a formalization of <a href="../part2/10-adjustment-methods.html#thm-ipw-unbiased" class="quarto-xref">Theorem&nbsp;<span>10.3</span></a>.</p>
+</div>
+<div id="exr-coq-ess-compute" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 30.4</strong></span> <strong>(Computation) Computing the bound by hand.</strong> For <span class="math inline">\(n = 5\)</span>, compute <span class="math inline">\(\mathrm{ESS}\)</span> from <a href="#eq-coq-ess" class="quarto-xref">Equation&nbsp;<span>30.2</span></a> for the weight vectors <span class="math inline">\(\mathbf{w} = (1,1,1,1,1)\)</span>, <span class="math inline">\(\mathbf{w} = (2,2,1,1,0)\)</span>, and <span class="math inline">\(\mathbf{w} = (4,1,0,0,0)\)</span>. Verify in each case that <span class="math inline">\(\mathrm{ESS} \le 5\)</span>, identify which vector attains the bound and why, and report the variance inflation factor <span class="math inline">\(n/\mathrm{ESS}\)</span> for the third vector. Confirm that the ordering of the three effective sample sizes matches the intuition that more uneven weights carry less information.</p>
+</div>
+<div id="exr-coq-read-statement" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 30.5</strong></span> <strong>(Interpretation) Reading a Coq statement.</strong> The theorem <code>bucher_unbiased</code> has the Coq statement</p>
+<pre class="coq"><code>Theorem bucher_unbiased (d_AB d_AC d_BC : R) :
+  E d_AC_hat = d_AC -&gt; E d_BC_hat = d_BC -&gt; d_AB = d_AC - d_BC -&gt;
+  E (fun omega =&gt; d_AC_hat omega - d_BC_hat omega) = d_AB.</code></pre>
+<p>Identify the three hypotheses and the conclusion, say in words which book assumption each hypothesis encodes (compare <a href="../part3/14-bucher.html#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a>), and explain why the only structural property of the operator <code>E</code> used in the proof is linearity. State what would have to change in the hypotheses to express Bucher’s <em>variance</em> result instead.</p>
+</div>
+<div id="exr-coq-status-tier" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 30.6</strong></span> <strong>(Interpretation) Assigning a tier.</strong> Using <a href="#def-coq-proof-status" class="quarto-xref">Definition&nbsp;<span>30.1</span></a>, assign a proof-status tier to each of the following as a <em>formalization of the corresponding book theorem</em>, and justify each in one sentence: (a) <code>ESS_upper_bound</code>; (b) <code>mu1_IPW_unbiased</code>; (c) <code>STC_collapse_linear</code> as a formalization of <a href="../part4/19-stc.html#thm-stc-noncollapsibility-counterexample" class="quarto-xref">Theorem&nbsp;<span>19.4</span></a>; (d) the ML-NMR aggregation identity <a href="../part5/20-mlnmr-aggregation.html#thm-aggregation" class="quarto-xref">Theorem&nbsp;<span>20.1</span></a>. Explain why (a) and (b) can both be “fully proved Coq objects” yet receive different tiers as formalizations.</p>
+</div>
+<div id="exr-coq-print-assumptions" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 30.7</strong></span> <strong>(Reasoning) Predicting the kernel’s verdict.</strong> Without running it, predict the output of <code>Print Assumptions STC_collapse_linear</code>, and justify your prediction from the fact that the proof uses only <code>E2_linearity</code>, <code>E2_const</code>, and <code>fun_ext</code>. Then explain why excluded middle, although used freely elsewhere in the development, never appears in such an output as a separate axiom. (Hint: <a href="#def-active-axioms" class="quarto-xref">Definition&nbsp;<span>30.2</span></a> and Diaconescu’s theorem.)</p>
+</div>
+<div id="exr-coq-discrete-vs-named" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 30.8</strong></span> <strong>(<span class="math inline">\(\star\)</span>) (Challenge) Why the discrete model needs no premise.</strong> Contrast <code>propensity_score_is_balancing</code>, which is tier <strong>F</strong> with no probabilistic premise, against <code>mu1_IPW_unbiased</code>, which is tier <strong>P</strong> with the named premise <code>Hipw1</code>. Explain, referring to <a href="#sec-coq-boundary" class="quarto-xref"><span>Section 30.9</span></a>, why the cross-multiplied discrete formulation <a href="#eq-coq-dci" class="quarto-xref">Equation&nbsp;<span>30.1</span></a> lets the balancing theorem be proved outright (including at zero-mass covariate points) whereas the continuous IPW identity must currently defer its tower-property step to a named hypothesis. Describe what mathematical library development would be required to discharge <code>Hipw1</code> inside Coq, and state which book results (by chapter) supply the paper proof of the premise in the meantime.</p>
+</div>
+<div id="exr-coq-faithfulness" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 30.9</strong></span> <strong>(<span class="math inline">\(\star\)</span>) (Challenge) Statement faithfulness and the placeholder trap.</strong> Building on <a href="#exm-coq-vacuous" class="quarto-xref">Example&nbsp;<span>30.2</span></a>: <a href="#sec-coq-guarantees" class="quarto-xref"><span>Section 30.5</span></a> warns that a proof assistant cannot certify that a stated theorem is the intended one. Suppose a developer had defined the four MAIC assumptions as <code>Definition conditional_constancy : Prop := True</code> instead of as abstract named propositions. Show that a “consistency theorem” of the form <code>conditional_constancy -&gt; (estimator = truth)</code> would then be provable with no real content, and explain precisely which guarantee of <a href="#sec-coq-guarantees" class="quarto-xref"><span>Section 30.5</span></a> this violates. Relate this to the development’s stated policy, recorded in <code>MAIC.v</code> and <code>STC.v</code>, of refusing <code>True</code>-valued assumption definitions, and argue why making every modeling assumption a visible premise (<a href="#sec-coq-boundary" class="quarto-xref"><span>Section 30.9</span></a>) is the structural defense against this failure mode.</p>
+</div>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-bangrobins2005" class="csl-entry" role="listitem">
+Bang, Heejung, and James M. Robins. 2005. <span>“Doubly Robust Estimation in Missing Data and Causal Inference Models.”</span> <em>Biometrics</em> 61 (4): 962–73.
+</div>
+<div id="ref-bucher1997" class="csl-entry" role="listitem">
+Bucher, Heiner C., Gordon H. Guyatt, Lauren E. Griffith, and Stephen D. Walter. 1997. <span>“The Results of Direct and Indirect Treatment Comparisons in Meta-Analysis of Randomized Controlled Trials.”</span> <em>Journal of Clinical Epidemiology</em> 50 (6): 683–91.
+</div>
+<div id="ref-caro2010stc" class="csl-entry" role="listitem">
+Caro, J. Jaime, and K. Jack Ishak. 2010. <span>“No Head-to-Head Trial? Simulate the Missing Arms.”</span> <em>PharmacoEconomics</em> 28 (10): 957–67.
+</div>
+<div id="ref-hernan2020whatif" class="csl-entry" role="listitem">
+Hernán, Miguel A., and James M. Robins. 2020. <em>Causal Inference: What If</em>. Chapman &amp; Hall/CRC.
+</div>
+<div id="ref-phillippo2019thesis" class="csl-entry" role="listitem">
+Phillippo, David Mark. 2019. <span>“Calibration of Treatment Effects in Network Meta-Analysis Using Individual Patient Data.”</span> PhD thesis, University of Bristol.
+</div>
+<div id="ref-robins1994" class="csl-entry" role="listitem">
+Robins, James M., Andrea Rotnitzky, and Lue Ping Zhao. 1994. <span>“Estimation of Regression Coefficients When Some Regressors Are Not Always Observed.”</span> <em>Journal of the American Statistical Association</em> 89 (427): 846–66.
+</div>
+<div id="ref-rosenbaum1983" class="csl-entry" role="listitem">
+Rosenbaum, Paul R., and Donald B. Rubin. 1983. <span>“The Central Role of the Propensity Score in Observational Studies for Causal Effects.”</span> <em>Biometrika</em> 70 (1): 41–55.
+</div>
+<div id="ref-signorovitch2010maic" class="csl-entry" role="listitem">
+Signorovitch, James E., Eric Q. Wu, Andrew P. Yu, et al. 2010. <span>“Comparative Effectiveness Without Head-to-Head Trials: A Method for Matching-Adjusted Indirect Comparisons.”</span> <em>PharmacoEconomics</em> 28 (10): 935–45.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/choxos\.github\.io\/Mathematics-of-ITC\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../chapters/part6/29-simulation.html" class="pagination-link" aria-label="Simulation Study Theory">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Simulation Study Theory</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../appendices/A-notation-glossary.html" class="pagination-link" aria-label="Notation Glossary">
+        <span class="nav-page-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Notation Glossary</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

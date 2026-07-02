@@ -1,0 +1,2154 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Appendix E — Reference Implementations: multinma, mlumr, and uitc – The Mathematics of Indirect Treatment Comparisons</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for syntax highlighting */
+html { -webkit-text-size-adjust: 100%; }
+pre > code.sourceCode { white-space: pre; position: relative; }
+pre > code.sourceCode > span { display: inline-block; line-height: 1.25; }
+pre > code.sourceCode > span:empty { height: 1.2em; }
+.sourceCode { overflow: visible; }
+code.sourceCode > span { color: inherit; text-decoration: inherit; }
+div.sourceCode { margin: 1em 0; }
+pre.sourceCode { margin: 0; }
+@media screen {
+div.sourceCode { overflow: auto; }
+}
+@media print {
+pre > code.sourceCode { white-space: pre-wrap; }
+pre > code.sourceCode > span { text-indent: -5em; padding-left: 5em; }
+}
+pre.numberSource code
+  { counter-reset: source-line 0; }
+pre.numberSource code > span
+  { position: relative; left: -4em; counter-increment: source-line; }
+pre.numberSource code > span > a:first-child::before
+  { content: counter(source-line);
+    position: relative; left: -1em; text-align: right; vertical-align: baseline;
+    border: none; display: inline-block;
+    -webkit-touch-callout: none; -webkit-user-select: none;
+    -khtml-user-select: none; -moz-user-select: none;
+    -ms-user-select: none; user-select: none;
+    padding: 0 4px; width: 4em;
+  }
+pre.numberSource { margin-left: 3em;  padding-left: 4px; }
+div.sourceCode
+  {   }
+@media screen {
+pre > code.sourceCode > span > a:first-child::before { text-decoration: underline; }
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../appendices/F-solutions.html" rel="next">
+<link href="../appendices/D-special-functions.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-aafe154f14b83768199b70e6209de778.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../appendices/A-notation-glossary.html">Appendices</a></li><li class="breadcrumb-item"><a href="../appendices/E-reference-implementations.html"><span class="chapter-number">E</span>&nbsp; <span class="chapter-title">Reference Implementations: multinma, mlumr, and uitc</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">The Mathematics of Indirect Treatment Comparisons</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/choxos/Mathematics-of-ITC" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Notation and Conventions</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part I: Mathematical Foundations</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/01-linear-algebra-i.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Linear Algebra I: Vector Spaces, Linear Maps, and Rank</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/02-linear-algebra-ii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Linear Algebra II: Orthogonality and the Projection Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/03-linear-algebra-iii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Linear Algebra III: Spectral Theory and Quadratic Forms</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/04-probability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Probability and Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/05-inference.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Statistical Inference</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/06-linear-regression.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Linear Regression from First Principles</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/07-glm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Generalized Linear Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/08-hierarchical-bayes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Hierarchical Models, Shrinkage, and Bayesian Inference</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Causal Inference and Estimands</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part2/09-potential-outcomes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Potential Outcomes and Identification</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part2/10-adjustment-methods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Adjustment Methods</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part2/11-effect-modification-collapsibility.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Effect Modification, Interaction, and Collapsibility</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part2/12-transportability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Transportability: The Estimand-Based Theory</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Meta-Analysis and Network Meta-Analysis</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part3/13-pairwise-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Pairwise Meta-Analysis</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part3/14-bucher.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Indirect Comparison and Bucher’s Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part3/15-network-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Network Meta-Analysis: Models and Identifiability</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part3/16-limits-of-nma.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">The Limits of Standard Network Meta-Analysis</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Population Adjustment: MAIC and STC</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part4/17-population-adjustment-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Population Adjustment Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part4/18-maic.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">Matching-Adjusted Indirect Comparison</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part4/19-stc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Simulated Treatment Comparison</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part V: Multilevel Network Meta-Regression</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/20-mlnmr-aggregation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression I: The Aggregation Principle</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/21-mlnmr-discrete.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression II: Discrete Outcomes and Approximation Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/22-mlnmr-integration.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression III: Numerical Integration Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/23-mlnmr-estimands.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression IV: Estimands, Identifiability, and Generality</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/24-computation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Bayesian Computation and Diagnostics</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/25-general-likelihoods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">General Likelihoods: Survival and Ordered Categorical Outcomes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/26-ml-umr.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Multilevel Unanchored Meta-Regression</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part VI: Bias, Comparator Selection, and Rigor</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part6/27-distance-matching.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Aggregate-Level Covariate-Distance Matching</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part6/28-qba.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Quantitative Bias Analysis for Indirect Comparisons</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part6/29-simulation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Simulation Study Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part6/30-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Machine-Checked Foundations: The Coq Formalization</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/A-notation-glossary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Notation Glossary</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/B-matrix-calculus.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Matrix Calculus</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/C-distributions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">Probability Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/D-special-functions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">D</span>&nbsp; <span class="chapter-title">Special Functions for Numerical Integration</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/E-reference-implementations.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">E</span>&nbsp; <span class="chapter-title">Reference Implementations: multinma, mlumr, and uitc</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/F-solutions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">F</span>&nbsp; <span class="chapter-title">Solutions to Selected Exercises</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/G-reading-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">G</span>&nbsp; <span class="chapter-title">Reading the Coq Proofs</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#sec-impl-scope" id="toc-sec-impl-scope" class="nav-link active" data-scroll-target="#sec-impl-scope"><span class="header-section-number">E.1</span> Purpose and scope</a></li>
+  <li><a href="#sec-impl-orientation" id="toc-sec-impl-orientation" class="nav-link" data-scroll-target="#sec-impl-orientation"><span class="header-section-number">E.2</span> Orientation for the first-time reader</a>
+  <ul class="collapse">
+  <li><a href="#sec-impl-which-package" id="toc-sec-impl-which-package" class="nav-link" data-scroll-target="#sec-impl-which-package"><span class="header-section-number">E.2.1</span> Which package answers which question</a></li>
+  <li><a href="#sec-impl-data-needed" id="toc-sec-impl-data-needed" class="nav-link" data-scroll-target="#sec-impl-data-needed"><span class="header-section-number">E.2.2</span> What data each method needs</a></li>
+  <li><a href="#sec-impl-glossary" id="toc-sec-impl-glossary" class="nav-link" data-scroll-target="#sec-impl-glossary"><span class="header-section-number">E.2.3</span> Terms used in this appendix</a></li>
+  </ul></li>
+  <li><a href="#sec-impl-multinma" id="toc-sec-impl-multinma" class="nav-link" data-scroll-target="#sec-impl-multinma"><span class="header-section-number">E.3</span> multinma: multilevel network meta-regression</a>
+  <ul class="collapse">
+  <li><a href="#sec-impl-multinma-pipeline" id="toc-sec-impl-multinma-pipeline" class="nav-link" data-scroll-target="#sec-impl-multinma-pipeline"><span class="header-section-number">E.3.1</span> The pipeline</a></li>
+  <li><a href="#sec-impl-multinma-aggregation" id="toc-sec-impl-multinma-aggregation" class="nav-link" data-scroll-target="#sec-impl-multinma-aggregation"><span class="header-section-number">E.3.2</span> The aggregation integral</a></li>
+  <li><a href="#sec-impl-multinma-qmc" id="toc-sec-impl-multinma-qmc" class="nav-link" data-scroll-target="#sec-impl-multinma-qmc"><span class="header-section-number">E.3.3</span> Quasi-Monte Carlo integration</a></li>
+  <li><a href="#sec-impl-multinma-estimand" id="toc-sec-impl-multinma-estimand" class="nav-link" data-scroll-target="#sec-impl-multinma-estimand"><span class="header-section-number">E.3.4</span> The target-population estimand</a></li>
+  <li><a href="#sec-impl-multinma-map" id="toc-sec-impl-multinma-map" class="nav-link" data-scroll-target="#sec-impl-multinma-map"><span class="header-section-number">E.3.5</span> Object-to-code map</a></li>
+  <li><a href="#sec-impl-multinma-stan" id="toc-sec-impl-multinma-stan" class="nav-link" data-scroll-target="#sec-impl-multinma-stan"><span class="header-section-number">E.3.6</span> Stan model files</a></li>
+  </ul></li>
+  <li><a href="#sec-impl-mlumr" id="toc-sec-impl-mlumr" class="nav-link" data-scroll-target="#sec-impl-mlumr"><span class="header-section-number">E.4</span> mlumr: multilevel unanchored meta-regression</a>
+  <ul class="collapse">
+  <li><a href="#sec-impl-mlumr-pipeline" id="toc-sec-impl-mlumr-pipeline" class="nav-link" data-scroll-target="#sec-impl-mlumr-pipeline"><span class="header-section-number">E.4.1</span> The pipeline</a></li>
+  <li><a href="#sec-impl-mlumr-models" id="toc-sec-impl-mlumr-models" class="nav-link" data-scroll-target="#sec-impl-mlumr-models"><span class="header-section-number">E.4.2</span> SPFA and relaxed models</a></li>
+  <li><a href="#sec-impl-mlumr-benchmarks" id="toc-sec-impl-mlumr-benchmarks" class="nav-link" data-scroll-target="#sec-impl-mlumr-benchmarks"><span class="header-section-number">E.4.3</span> The benchmarks: naive and stc</a></li>
+  <li><a href="#sec-impl-mlumr-survival" id="toc-sec-impl-mlumr-survival" class="nav-link" data-scroll-target="#sec-impl-mlumr-survival"><span class="header-section-number">E.4.4</span> Survival outcomes</a></li>
+  <li><a href="#sec-impl-mlumr-map" id="toc-sec-impl-mlumr-map" class="nav-link" data-scroll-target="#sec-impl-mlumr-map"><span class="header-section-number">E.4.5</span> Object-to-code map</a></li>
+  </ul></li>
+  <li><a href="#sec-impl-uitc" id="toc-sec-impl-uitc" class="nav-link" data-scroll-target="#sec-impl-uitc"><span class="header-section-number">E.5</span> uitc: unanchored PAIC and bias analysis</a>
+  <ul class="collapse">
+  <li><a href="#sec-impl-uitc-dispatch" id="toc-sec-impl-uitc-dispatch" class="nav-link" data-scroll-target="#sec-impl-uitc-dispatch"><span class="header-section-number">E.5.1</span> The dispatcher</a></li>
+  <li><a href="#sec-impl-uitc-maic" id="toc-sec-impl-uitc-maic" class="nav-link" data-scroll-target="#sec-impl-uitc-maic"><span class="header-section-number">E.5.2</span> MAIC (Chapter 18)</a></li>
+  <li><a href="#sec-impl-uitc-dr" id="toc-sec-impl-uitc-dr" class="nav-link" data-scroll-target="#sec-impl-uitc-dr"><span class="header-section-number">E.5.3</span> STC and the doubly-robust estimator (Chapters 19, 10)</a></li>
+  <li><a href="#sec-impl-uitc-qba" id="toc-sec-impl-uitc-qba" class="nav-link" data-scroll-target="#sec-impl-uitc-qba"><span class="header-section-number">E.5.4</span> Quantitative bias analysis (Chapter 28)</a></li>
+  <li><a href="#sec-impl-uitc-map" id="toc-sec-impl-uitc-map" class="nav-link" data-scroll-target="#sec-impl-uitc-map"><span class="header-section-number">E.5.5</span> Object-to-code map</a></li>
+  </ul></li>
+  <li><a href="#sec-impl-together" id="toc-sec-impl-together" class="nav-link" data-scroll-target="#sec-impl-together"><span class="header-section-number">E.6</span> Using the three packages together</a></li>
+  <li><a href="#sec-impl-notes" id="toc-sec-impl-notes" class="nav-link" data-scroll-target="#sec-impl-notes"><span class="header-section-number">E.7</span> Notes and references</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../appendices/A-notation-glossary.html">Appendices</a></li><li class="breadcrumb-item"><a href="../appendices/E-reference-implementations.html"><span class="chapter-number">E</span>&nbsp; <span class="chapter-title">Reference Implementations: multinma, mlumr, and uitc</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">Appendix E — Reference Implementations: multinma, mlumr, and uitc</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="sec-impl-scope" class="level2" data-number="E.1">
+<h2 data-number="E.1" class="anchored" data-anchor-id="sec-impl-scope"><span class="header-section-number">E.1</span> Purpose and scope</h2>
+<p>The preceding thirty chapters built the mathematics of indirect treatment comparison from linear algebra to machine-checked proof. This appendix is the bridge to computation. It maps the objects the book <em>defines and proves</em> onto the functions, arguments, and Stan model files that <em>evaluate</em> them in three R packages: <code>multinma</code> for multilevel network meta-regression (ML-NMR) on connected networks <span class="citation" data-cites="phillippo2020mlnmr">(<a href="../references.html#ref-phillippo2020mlnmr" role="doc-biblioref">Phillippo et al. 2020</a>)</span>, <code>mlumr</code> for multilevel unanchored meta-regression (ML-UMR) on disconnected two-treatment evidence <span class="citation" data-cites="chandler2025mlumr">(<a href="../references.html#ref-chandler2025mlumr" role="doc-biblioref">Chandler and Ishak 2026</a>)</span>, and <code>uitc</code>, an umbrella for unanchored population-adjusted indirect comparison (PAIC) that bundles matching-adjusted indirect comparison (MAIC), simulated treatment comparison (STC), a doubly-robust estimator, and quantitative bias analysis (QBA). All three estimate their Bayesian models in Stan <span class="citation" data-cites="carpenter2017stan">(<a href="../references.html#ref-carpenter2017stan" role="doc-biblioref">Carpenter et al. 2017</a>)</span>.</p>
+<p>This is a map, not a tutorial. Code is kept to the minimum needed to locate each mathematical object in the software; the package vignettes are the place to learn the workflows end to end. Symbols follow <a href="../notation.html">Notation</a> throughout: <span class="math inline">\(\eta_{ijk}\)</span> is the linear predictor, <span class="math inline">\(g^{-1}\)</span> the inverse link, <span class="math inline">\(\theta_{ijk}=g^{-1}(\eta_{ijk})\)</span> the conditional mean on the outcome scale, <span class="math inline">\(f_j\)</span> the covariate density in study <span class="math inline">\(j\)</span>, <span class="math inline">\(\bar{\mathbf{x}}_j\)</span> and <span class="math inline">\(\boldsymbol{\Sigma}_j\)</span> its mean and covariance, and <span class="math inline">\(d_{ab(\mathcal{P})}\)</span> the marginal relative effect of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span> in target population <span class="math inline">\(\mathcal{P}\)</span>.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span>The correspondence in this appendix is at the level of mathematical object, not source line. Package versions move; the function signatures shown were read from <code>multinma</code>, <code>mlumr</code>, and <code>uitc</code> at the time of writing and may drift. What does not drift is the underlying mathematics: each computational object named below implements a specific definition, equation, or theorem proved in the chapters, and that linkage is what the tables record. Where a formula is reproduced here it is reproduced exactly; verify argument names against the installed help pages before relying on them.</p>
+</div>
+</section>
+<section id="sec-impl-orientation" class="level2" data-number="E.2">
+<h2 data-number="E.2" class="anchored" data-anchor-id="sec-impl-orientation"><span class="header-section-number">E.2</span> Orientation for the first-time reader</h2>
+<p>Read this appendix <em>alongside</em> the chapters, not instead of them. Each chapter answers <em>why</em> a method is built the way it is and <em>proves</em> that it works; this appendix answers <em>where</em> that mathematics lives in the software and <em>which</em> function evaluates it. The intended use is lookup and verification: when you have read the aggregation theorem of Chapter 20 and want to see the line of Stan that computes it, or when you are about to call <code>nma()</code> and want to know which equation each argument controls, this is the page to open. A few subsections (the Stan-file inventories, the adjusted-binomial reparametrization) are there mainly for readers checking that the code faithfully implements the proofs; a first-time user can skim them and return later. Everything else is meant to be read on a first pass.</p>
+<p>If you are new to these methods, a good order is: read this orientation, choose your package from the decision guide in <a href="#sec-impl-which-package" class="quarto-xref"><span>Section E.2.1</span></a>, read that package’s pipeline table, and follow the prose pointers back into the chapters whenever a term or symbol is unfamiliar. The three object-to-code maps (<a href="#sec-impl-multinma-map" class="quarto-xref"><span>Section E.3.5</span></a>, <a href="#sec-impl-mlumr-map" class="quarto-xref"><span>Section E.4.5</span></a>, <a href="#sec-impl-uitc-map" class="quarto-xref"><span>Section E.5.5</span></a>) are the reference cards to return to once you know the workflow.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>A running example, used throughout.</strong> To keep the symbols attached to something concrete, we carry one small scenario through the appendix. The outcome is a binary treatment response (PASI 75, meaning at least a 75 percent reduction in a psoriasis severity score at week 12: <code>1</code> if achieved, <code>0</code> if not). The covariates are patient <code>age</code> in years (continuous) and <code>sex</code> (binary, coded <code>1</code> for female). Three treatments appear: drug <code>A</code>, our new treatment, for which we hold individual patient data (IPD, one row per patient); drug <code>B</code>, a competitor, for which we have only a published aggregate summary (mean age, percent female, and responders out of total); and placebo <code>P</code>, a possible common comparator. The goal is the relative effect of <code>A</code> versus <code>B</code> in a decision target population with mean age 48 and 40 percent female. Two data situations recur:</p>
+<ul>
+<li><em>Connected (anchored) network:</em> trial 1 reports IPD on <code>A</code> versus <code>P</code>; trial 2 reports aggregate data (AgD) on <code>B</code> versus <code>P</code>. They share the placebo arm <code>P</code>, so the network is <em>connected</em> and the <code>A</code> versus <code>B</code> contrast is <em>anchored</em> through <code>P</code>. This is the <code>multinma</code> setting.</li>
+<li><em>Disconnected (unanchored) network:</em> trial 1 reports IPD on <code>A</code>, trial 2 reports AgD on <code>B</code>, and the two share no common arm. The network is <em>disconnected</em>, the contrast is <em>unanchored</em>, and it is identified only by adjusting the IPD to the comparator population. This is the <code>mlumr</code> and <code>uitc</code> setting.</li>
+</ul>
+</div>
+<p>Two words recur and decide everything below, so fix them here. An <em>anchored</em> comparison estimates <code>A</code> versus <code>B</code> indirectly through a shared reference arm that both trials contain (in the example, placebo <code>P</code>); the shared arm cancels study-level nuisance terms, which is why a connected network can be analyzed with the trial-level contrasts of Chapter 14 and Chapter 15. An <em>unanchored</em> comparison has no shared arm, so nothing cancels; the entire between-study difference in outcomes must be explained by adjusting for covariates, a much stronger assumption (Chapter 12, Chapter 26). Whenever the appendix says “anchored” or “unanchored” it means exactly this.</p>
+<section id="sec-impl-which-package" class="level3" data-number="E.2.1">
+<h3 data-number="E.2.1" class="anchored" data-anchor-id="sec-impl-which-package"><span class="header-section-number">E.2.1</span> Which package answers which question</h3>
+<p>Choose the package from the shape of your evidence, not from the method name. The rule is the network structure, summarized here and repeated as a routing table in <a href="#sec-impl-together" class="quarto-xref"><span>Section E.6</span></a>.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Your situation (running example)</th>
+<th>Network</th>
+<th>Method</th>
+<th>Package</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>IPD on <code>A</code> vs <code>P</code>, AgD on <code>B</code> vs <code>P</code>, shared arm <code>P</code></td>
+<td>connected, anchored</td>
+<td>ML-NMR</td>
+<td><code>multinma</code></td>
+</tr>
+<tr class="even">
+<td>IPD on <code>A</code>, AgD on <code>B</code>, no shared arm</td>
+<td>disconnected, unanchored</td>
+<td>ML-UMR</td>
+<td><code>mlumr</code></td>
+</tr>
+<tr class="odd">
+<td>Same unanchored data, but you also want MAIC, STC, doubly-robust, and a bias analysis side by side</td>
+<td>unanchored</td>
+<td>PAIC and QBA</td>
+<td><code>uitc</code></td>
+</tr>
+</tbody>
+</table>
+<p>In health-technology-assessment (HTA) terms, the three packages answer three versions of the same submission question, “what is the effect of our drug <code>A</code> versus competitor <code>B</code> in the population our decision is about?”</p>
+<ul>
+<li><strong><code>multinma</code> (ML-NMR).</strong> You have at least one IPD trial and the network of trials is connected through shared treatments. You want the anchored <code>A</code> versus <code>B</code> effect, transported to a chosen target population. Reach for <code>multinma</code>. This is the statistically strongest situation, because the shared arm protects you.</li>
+<li><strong><code>mlumr</code> (ML-UMR).</strong> Your IPD trial and the competitor’s trial share no arm, so the network is broken. You must lean entirely on covariate adjustment to bridge the gap. Reach for <code>mlumr</code>, and expect to defend the adjustment assumptions carefully, because there is no anchor to fall back on.</li>
+<li><strong><code>uitc</code> (PAIC plus QBA).</strong> The same broken network, but you want to run the established population-adjustment methods (MAIC, STC), a doubly-robust combination, and a quantitative bias analysis on one data object, so you can report an estimate next to its sensitivity analysis. Reach for <code>uitc</code>.</li>
+</ul>
+</section>
+<section id="sec-impl-data-needed" class="level3" data-number="E.2.2">
+<h3 data-number="E.2.2" class="anchored" data-anchor-id="sec-impl-data-needed"><span class="header-section-number">E.2.2</span> What data each method needs</h3>
+<p>Before any of these calls will run, the data must be in a specific shape. The following table answers the practical question “what do I need in hand?” Details of each field appear with the relevant pipeline below.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Method (package)</th>
+<th>Network</th>
+<th>IPD needed</th>
+<th>AgD outcome summary</th>
+<th>Covariate summary</th>
+<th>Survival input</th>
+<th>Main output</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>ML-NMR (<code>multinma</code>)</td>
+<td>connected</td>
+<td>one row per patient: study, treatment, outcome, covariates</td>
+<td>per arm: responders <code>r</code> and arm size <code>n</code> (or mean and standard error)</td>
+<td>for each AgD covariate: a distribution, e.g.&nbsp;mean and standard deviation, or a proportion</td>
+<td>KM curve digitized to pseudo-IPD via <code>set_agd_surv()</code></td>
+<td>anchored contrasts and transported marginal effects</td>
+</tr>
+<tr class="even">
+<td>ML-UMR (<code>mlumr</code>)</td>
+<td>disconnected</td>
+<td>one row per patient on index treatment <code>A</code>: outcome, covariates</td>
+<td>comparator <code>B</code> only: responders and total (or mean, standard error)</td>
+<td>comparator covariate means, and a type per covariate (<code>continuous</code>/<code>binary</code>)</td>
+<td>digitized KM curve for <code>B</code> via <code>set_agd_surv()</code></td>
+<td>unanchored marginal <code>A</code> vs <code>B</code> effect in each population</td>
+</tr>
+<tr class="odd">
+<td>MAIC (<code>uitc</code>)</td>
+<td>disconnected</td>
+<td>index <code>A</code> IPD: outcome, covariates</td>
+<td>comparator <code>B</code> outcome summary</td>
+<td>comparator covariate <em>means</em> to match</td>
+<td>(as <code>mlumr</code>)</td>
+<td>weighted effect, effective sample size, balance diagnostics</td>
+</tr>
+<tr class="even">
+<td>STC (<code>uitc</code>/<code>mlumr</code>)</td>
+<td>disconnected</td>
+<td>index <code>A</code> IPD: outcome, covariates</td>
+<td>comparator <code>B</code> outcome summary</td>
+<td>comparator covariate means (and covariance if simulating)</td>
+<td>(as <code>mlumr</code>)</td>
+<td>G-computation effect</td>
+</tr>
+<tr class="odd">
+<td>Doubly-robust (<code>uitc</code>)</td>
+<td>disconnected</td>
+<td>index <code>A</code> IPD: outcome, covariates</td>
+<td>comparator <code>B</code> outcome summary</td>
+<td>comparator covariate means and covariance</td>
+<td>not applicable</td>
+<td>doubly-robust effect with bootstrap interval</td>
+</tr>
+<tr class="even">
+<td>QBA (<code>uitc</code>)</td>
+<td>any</td>
+<td>the fitted estimate and its inputs</td>
+<td>as for the base method</td>
+<td>as for the base method, plus a hypothesized unmeasured covariate</td>
+<td>as for the base method</td>
+<td>E-value, tipping point, or probabilistic bias interval</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="sec-impl-glossary" class="level3" data-number="E.2.3">
+<h3 data-number="E.2.3" class="anchored" data-anchor-id="sec-impl-glossary"><span class="header-section-number">E.2.3</span> Terms used in this appendix</h3>
+<p>Every term here is defined and used in the chapters; this table is a one-line reminder so the appendix reads without flipping back. Each row points to the chapter that develops it.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>One-line meaning</th>
+<th>Developed in</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>IPD, AgD</td>
+<td>individual patient data (one row per patient) versus aggregate data (per-arm summaries)</td>
+<td>Chapter 17</td>
+</tr>
+<tr class="even">
+<td>anchored / unanchored</td>
+<td>with / without a shared reference arm linking the two treatments</td>
+<td>Chapter 14, Chapter 26</td>
+</tr>
+<tr class="odd">
+<td>connected / disconnected network</td>
+<td>the trials do / do not form one linked graph of shared treatments</td>
+<td>Chapter 15, Chapter 16</td>
+</tr>
+<tr class="even">
+<td>effect modifier (EM)</td>
+<td>a covariate that changes the <em>treatment effect</em>, so it must be balanced across populations</td>
+<td>Chapter 11</td>
+</tr>
+<tr class="odd">
+<td>prognostic variable (PV)</td>
+<td>a covariate that predicts <em>outcome</em> regardless of treatment</td>
+<td>Chapter 11</td>
+</tr>
+<tr class="even">
+<td>SPFA</td>
+<td>shared prognostic factor assumption: prognostic effects are the same under both treatments</td>
+<td>Chapter 26</td>
+</tr>
+<tr class="odd">
+<td>SEMA</td>
+<td>shared effect modifier assumption: effect-modifier interactions are shared across studies</td>
+<td>Chapter 17</td>
+</tr>
+<tr class="even">
+<td>conditional effect</td>
+<td>a contrast for patients with fixed covariate values (a within-subgroup effect)</td>
+<td>Chapter 11, Chapter 23</td>
+</tr>
+<tr class="odd">
+<td>marginal effect</td>
+<td>a contrast averaged over a whole target population</td>
+<td>Chapter 11, Chapter 23</td>
+</tr>
+<tr class="even">
+<td>collapsible / non-collapsible</td>
+<td>whether the marginal effect equals the average of conditional effects on that scale</td>
+<td>Chapter 11</td>
+</tr>
+<tr class="odd">
+<td>G-computation</td>
+<td>fit the outcome model on IPD, then average its predictions over a target covariate distribution</td>
+<td>Chapter 19</td>
+</tr>
+<tr class="even">
+<td>effective sample size (ESS)</td>
+<td>the equivalent number of unweighted patients after weighting, <span class="math inline">\((\sum_i w_i)^2/\sum_i w_i^2\)</span></td>
+<td>Chapter 18</td>
+</tr>
+<tr class="odd">
+<td>QMC</td>
+<td>quasi-Monte Carlo, a low-discrepancy grid used to average a model over a covariate distribution</td>
+<td>Chapter 22</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="sec-impl-multinma" class="level2" data-number="E.3">
+<h2 data-number="E.3" class="anchored" data-anchor-id="sec-impl-multinma"><span class="header-section-number">E.3</span> multinma: multilevel network meta-regression</h2>
+<p><code>multinma</code> fits the ML-NMR model of Chapters 20 to 25: one individual-level regression <span id="eq-impl-mlnmr-model"><span class="math display">\[
+g\big(\theta_{ijk}\big)=\eta_{ijk}=\mu_j+\boldsymbol{\beta}_1^\top\mathbf{x}_{ij}+\big(\boldsymbol{\beta}_{2,k}^\top\mathbf{x}_{ij}+\gamma_k\big)
+\tag{E.1}\]</span></span> shared across a <em>connected</em> network, fitted to individual patient data (IPD) directly and to aggregate data (AgD) through the aggregation integral. The package is the reference implementation accompanying <span class="citation" data-cites="phillippo2020mlnmr">Phillippo et al. (<a href="../references.html#ref-phillippo2020mlnmr" role="doc-biblioref">2020</a>)</span> and its survival extension <span class="citation" data-cites="phillippo2025general">Phillippo et al. (<a href="../references.html#ref-phillippo2025general" role="doc-biblioref">2025</a>)</span>.</p>
+<p>Read <a href="#eq-impl-mlnmr-model" class="quarto-xref">Equation&nbsp;<span>E.1</span></a> one term at a time; it is the whole model, and every <code>multinma</code> argument sets one of its pieces. The left side <span class="math inline">\(g(\theta_{ijk})\)</span> is the response of patient <span class="math inline">\(i\)</span> in study <span class="math inline">\(j\)</span> on treatment <span class="math inline">\(k\)</span>, mapped to the linear-predictor scale by the link <span class="math inline">\(g\)</span> (for a binary outcome <span class="math inline">\(g\)</span> is the logit, so <span class="math inline">\(\eta_{ijk}\)</span> is a log-odds). The right side builds that log-odds from four parts.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Term</th>
+<th>Name</th>
+<th>What it does (running example)</th>
+<th><code>multinma</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\mu_j\)</span></td>
+<td>study baseline</td>
+<td>the outcome level in study <span class="math inline">\(j\)</span>’s control arm; a separate intercept per trial</td>
+<td>fitted per study automatically</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\boldsymbol{\beta}_1^\top\mathbf{x}_{ij}\)</span></td>
+<td>prognostic effects</td>
+<td>how age and sex shift outcome <em>regardless of treatment</em></td>
+<td>main effects added via <code>regression =</code></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\boldsymbol{\beta}_{2,k}^\top\mathbf{x}_{ij}\)</span></td>
+<td>effect modification</td>
+<td>how age and sex shift the <em>treatment</em> effect of arm <span class="math inline">\(k\)</span></td>
+<td>the <code>:.trt</code> interaction in <code>regression =</code></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\gamma_k\)</span></td>
+<td>treatment effect</td>
+<td>the effect of treatment <span class="math inline">\(k\)</span> versus the network reference, at the reference covariate values</td>
+<td>the treatment coefficients</td>
+</tr>
+</tbody>
+</table>
+<p>In words: a patient’s modeled log-odds of response is their study’s baseline, plus a prognostic shift for being older or female, plus (only on an active arm) an effect-modifying shift and the drug’s own effect. The single most important feature is that <em>the same</em> <span class="math inline">\(\boldsymbol{\beta}_1\)</span>, <span class="math inline">\(\boldsymbol{\beta}_{2,k}\)</span>, and <span class="math inline">\(\gamma_k\)</span> are shared across every study in the network; that sharing is what lets an IPD trial and an AgD trial inform one regression, and it is licensed by the shared-effect-modifier assumption (SEMA) of Chapter 17. When a covariate modifies the effect (its <span class="math inline">\(\boldsymbol{\beta}_{2,k}\)</span> is nonzero), the <code>A</code> versus <code>B</code> contrast genuinely depends on the population’s age and sex mix, which is the entire reason population adjustment is needed.</p>
+<section id="sec-impl-multinma-pipeline" class="level3" data-number="E.3.1">
+<h3 data-number="E.3.1" class="anchored" data-anchor-id="sec-impl-multinma-pipeline"><span class="header-section-number">E.3.1</span> The pipeline</h3>
+<p>Six functions carry an analysis from data to fitted model. Each one realizes a construction from the book.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Mathematical role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>set_ipd()</code></td>
+<td>Register an IPD study: rows are individuals, with outcome and covariates entering <a href="#eq-impl-mlnmr-model" class="quarto-xref">Equation&nbsp;<span>E.1</span></a> directly.</td>
+</tr>
+<tr class="even">
+<td><code>set_agd_arm()</code></td>
+<td>Register an arm-based AgD study: summary outcomes per arm, to be matched by the aggregation integral (<a href="../chapters/part5/20-mlnmr-aggregation.html#thm-aggregation" class="quarto-xref">Theorem&nbsp;<span>20.1</span></a>).</td>
+</tr>
+<tr class="odd">
+<td><code>set_agd_contrast()</code></td>
+<td>Register a contrast-based AgD study: relative effects with a covariance, the meta-analytic likelihood of Chapter 13.</td>
+</tr>
+<tr class="even">
+<td><code>set_agd_surv()</code></td>
+<td>Register AgD with reconstructed survival data (Kaplan-Meier curves digitized to pseudo-IPD), the general-likelihood survival branch of Chapter 25.</td>
+</tr>
+<tr class="odd">
+<td><code>combine_network()</code></td>
+<td>Assemble the registered studies into one network object; checks connectivity (the precondition removed only in Chapter 26).</td>
+</tr>
+<tr class="even">
+<td><code>add_integration()</code></td>
+<td>Attach quasi-Monte Carlo (QMC) integration points to every AgD study (Chapter 22).</td>
+</tr>
+<tr class="odd">
+<td><code>nma()</code></td>
+<td>Build the Stan data, choose the likelihood and link, and sample the posterior (Chapter 24).</td>
+</tr>
+</tbody>
+</table>
+<p>Before any of this runs, the data must be in the shape those functions expect: IPD is one row per patient, arm-based AgD is one row per arm. For the running example the two inputs look like this (a few rows shown; the column names are what matter).</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb1"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb1-1"><a href="#cb1-1" aria-hidden="true" tabindex="-1"></a><span class="co"># ipd_data: one row per patient in the IPD trial of A vs P</span></span>
+<span id="cb1-2"><a href="#cb1-2" aria-hidden="true" tabindex="-1"></a>  study    trt   r  age  sex</span>
+<span id="cb1-3"><a href="#cb1-3" aria-hidden="true" tabindex="-1"></a>  Trial1     P   <span class="dv">0</span>   <span class="dv">52</span>    <span class="dv">0</span></span>
+<span id="cb1-4"><a href="#cb1-4" aria-hidden="true" tabindex="-1"></a>  Trial1     A   <span class="dv">1</span>   <span class="dv">47</span>    <span class="dv">1</span></span>
+<span id="cb1-5"><a href="#cb1-5" aria-hidden="true" tabindex="-1"></a>  Trial1     A   <span class="dv">0</span>   <span class="dv">61</span>    <span class="dv">0</span></span>
+<span id="cb1-6"><a href="#cb1-6" aria-hidden="true" tabindex="-1"></a><span class="co"># ... one row per patient ...</span></span>
+<span id="cb1-7"><a href="#cb1-7" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb1-8"><a href="#cb1-8" aria-hidden="true" tabindex="-1"></a><span class="co"># agd_data: one row per arm in the AgD trial of B vs P</span></span>
+<span id="cb1-9"><a href="#cb1-9" aria-hidden="true" tabindex="-1"></a>  study    trt    r    n  age_mean  age_sd  sex_prop</span>
+<span id="cb1-10"><a href="#cb1-10" aria-hidden="true" tabindex="-1"></a>  Trial2     P   <span class="dv">58</span>  <span class="dv">200</span>      <span class="fl">49.1</span>    <span class="fl">11.8</span>      <span class="fl">0.42</span></span>
+<span id="cb1-11"><a href="#cb1-11" aria-hidden="true" tabindex="-1"></a>  Trial2     B   <span class="dv">96</span>  <span class="dv">201</span>      <span class="fl">48.6</span>    <span class="fl">12.1</span>      <span class="fl">0.39</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>Here <code>r</code> is the outcome column (a responder indicator <code>1</code>/<code>0</code> per patient in IPD, a responder <em>count</em> per arm in AgD), <code>n</code> is the arm size, <code>study</code> and <code>trt</code> are the study and treatment labels, and the <code>age_*</code> and <code>sex_prop</code> columns are the covariate summaries the AgD trial publishes. The canonical call sequence is</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb2"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb2-1"><a href="#cb2-1" aria-hidden="true" tabindex="-1"></a>net <span class="ot">&lt;-</span> <span class="fu">combine_network</span>(</span>
+<span id="cb2-2"><a href="#cb2-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_ipd</span>(ipd_data, study, trt, <span class="at">r =</span> r),</span>
+<span id="cb2-3"><a href="#cb2-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">set_agd_arm</span>(agd_data, study, trt, <span class="at">r =</span> r, <span class="at">n =</span> n)</span>
+<span id="cb2-4"><a href="#cb2-4" aria-hidden="true" tabindex="-1"></a>)</span>
+<span id="cb2-5"><a href="#cb2-5" aria-hidden="true" tabindex="-1"></a>net <span class="ot">&lt;-</span> <span class="fu">add_integration</span>(net, <span class="at">age =</span> <span class="fu">distr</span>(qnorm, <span class="at">mean =</span> age_mean, <span class="at">sd =</span> age_sd),</span>
+<span id="cb2-6"><a href="#cb2-6" aria-hidden="true" tabindex="-1"></a>                            <span class="at">sex =</span> <span class="fu">distr</span>(qbern, <span class="at">prob =</span> sex_prop), <span class="at">n_int =</span> <span class="dv">64</span>L)</span>
+<span id="cb2-7"><a href="#cb2-7" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">nma</span>(net, <span class="at">regression =</span> <span class="sc">~</span> (age <span class="sc">+</span> sex)<span class="sc">:</span>.trt, <span class="at">likelihood =</span> <span class="st">"bernoulli2"</span>,</span>
+<span id="cb2-8"><a href="#cb2-8" aria-hidden="true" tabindex="-1"></a>           <span class="at">link =</span> <span class="st">"logit"</span>, <span class="at">trt_effects =</span> <span class="st">"fixed"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>The regression formula <code>~ (age + sex):.trt</code> encodes the effect-modifier interactions <span class="math inline">\(\boldsymbol{\beta}_{2,k}\)</span>; the special term <code>.trt</code> is the treatment factor. Prognostic main effects <span class="math inline">\(\boldsymbol{\beta}_1\)</span> are added automatically with <code>center = TRUE</code>.</p>
+<p>Each argument of that call controls one modeling choice. In ordinary trial language:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Argument</th>
+<th>Plain meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>study</code>, <code>trt</code></td>
+<td>the columns naming the study and the treatment arm</td>
+</tr>
+<tr class="even">
+<td><code>r = r</code></td>
+<td>set the model’s responder input to the data column named <code>r</code>; the left <code>r</code> is the fixed argument name, the right <code>r</code> is your column name</td>
+</tr>
+<tr class="odd">
+<td><code>n = n</code></td>
+<td>the arm size column (AgD only; IPD has one patient per row)</td>
+</tr>
+<tr class="even">
+<td><code>regression = ~ (age + sex):.trt</code></td>
+<td>which covariates are effect modifiers; <code>.trt</code> is the placeholder for the treatment factor, so <code>(age + sex):.trt</code> means “let age and sex modify the treatment effect”</td>
+</tr>
+<tr class="odd">
+<td><code>likelihood = "bernoulli2"</code></td>
+<td>the outcome family; <code>bernoulli2</code> is the two-parameter binary likelihood of <a href="#sec-impl-multinma-aggregation" class="quarto-xref"><span>Section E.3.2</span></a></td>
+</tr>
+<tr class="even">
+<td><code>link = "logit"</code></td>
+<td>the link <span class="math inline">\(g\)</span>; <code>logit</code> makes <span class="math inline">\(\eta\)</span> a log-odds</td>
+</tr>
+<tr class="odd">
+<td><code>trt_effects = "fixed"</code></td>
+<td>fixed-effect (common-effect) treatment effects, one <span class="math inline">\(\gamma_k\)</span> shared across studies, as opposed to <code>"random"</code> for treatment effects that vary by study</td>
+</tr>
+</tbody>
+</table>
+<p>The note that main effects are added “with <code>center = TRUE</code>” means the covariates are centered before entering the model, so that the treatment coefficients <span class="math inline">\(\gamma_k\)</span> read as effects <em>at the average covariate values of the network</em>, not at age zero. Centering does not change the fitted contrasts in any target population; it only fixes what the raw <span class="math inline">\(\gamma_k\)</span> mean and improves the sampler’s geometry. Which population the final estimand refers to is set later, by <code>relative_effects()</code> and <code>marginal_effects()</code> (<a href="#sec-impl-multinma-estimand" class="quarto-xref"><span>Section E.3.4</span></a>), not by centering.</p>
+</section>
+<section id="sec-impl-multinma-aggregation" class="level3" data-number="E.3.2">
+<h3 data-number="E.3.2" class="anchored" data-anchor-id="sec-impl-multinma-aggregation"><span class="header-section-number">E.3.2</span> The aggregation integral</h3>
+<p>Start with the reason this section exists. The obvious way to predict an aggregate arm’s response rate is to plug the arm’s <em>mean</em> covariates into the fitted model: evaluate <span class="math inline">\(g^{-1}\)</span> at mean age and percent female. For any nonlinear link (a logit, a log) this is <em>wrong</em>, and Chapter 20 proves it is wrong; the error is <a href="../chapters/part5/20-mlnmr-aggregation.html#thm-aggregation-bias" class="quarto-xref">Theorem&nbsp;<span>20.2</span></a>. Averaging a curved function is not the same as the function of the average. So <code>multinma</code> never does that; instead it averages <em>patient-level</em> predictions, which is the content of <a href="../chapters/part5/20-mlnmr-aggregation.html#thm-aggregation" class="quarto-xref">Theorem&nbsp;<span>20.1</span></a>.</p>
+<p>Concretely, the correct aggregate-level mean is the <em>average of the inverse-linked individual means</em>, not the inverse link of the average linear predictor. For an arm <span class="math inline">\(k\)</span> in AgD study <span class="math inline">\(j\)</span>, <span id="eq-impl-aggregation"><span class="math display">\[
+\bar\theta_{jk}=\int_{\mathcal{X}} g^{-1}\!\big(\eta_{jk}(\mathbf{x})\big)\,f_j(\mathbf{x})\,d\mathbf{x}
+\;\approx\;\frac{1}{N}\sum_{m=1}^{N} g^{-1}\!\big(\eta_{jk}(\mathbf{x}^{(m)})\big),
+\qquad \mathbf{x}^{(m)}\sim f_j ,
+\tag{E.2}\]</span></span> which is <a href="../chapters/part5/20-mlnmr-aggregation.html#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> evaluated at the <span class="math inline">\(N\)</span> integration points of <a href="#sec-impl-multinma-qmc" class="quarto-xref"><span>Section E.3.3</span></a>. Read the right side as a recipe: generate <span class="math inline">\(N\)</span> synthetic patients whose covariates follow the AgD study’s reported distribution <span class="math inline">\(f_j\)</span>, predict each one’s response probability from the shared regression, then average those probabilities. That average, not the prediction at the average patient, is what the arm’s observed responder count is matched to. In <code>inst/stan/binomial_1par.stan</code> this is the single line (the comments are ours)</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb3"><pre class="sourceCode stan code-with-copy"><code class="sourceCode stan"><span id="cb3-1"><a href="#cb3-1" aria-hidden="true" tabindex="-1"></a><span class="co">// theta_agd_arm_ii stacks every arm's N per-patient predicted probabilities end to end.</span></span>
+<span id="cb3-2"><a href="#cb3-2" aria-hidden="true" tabindex="-1"></a><span class="co">// This slice pulls out the block belonging to AgD arm i, then averages it: exactly the integral above.</span></span>
+<span id="cb3-3"><a href="#cb3-3" aria-hidden="true" tabindex="-1"></a>theta_agd_arm_bar[i] = mean(theta_agd_arm_ii[(<span class="dv">1</span> + (i<span class="dv">-1</span>)*nint):(i*nint)]);</span>
+<span id="cb3-4"><a href="#cb3-4" aria-hidden="true" tabindex="-1"></a><span class="co">// "~" is Stan's sampling statement (a likelihood contribution, not an assignment):</span></span>
+<span id="cb3-5"><a href="#cb3-5" aria-hidden="true" tabindex="-1"></a><span class="co">// the observed responder count is binomial with size n and the integrated probability.</span></span>
+<span id="cb3-6"><a href="#cb3-6" aria-hidden="true" tabindex="-1"></a>agd_arm_r ~ binomial(agd_arm_n, theta_agd_arm_bar);</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>where <code>theta_agd_arm_ii</code> holds the <span class="math inline">\(N\)</span> values <span class="math inline">\(g^{-1}(\eta_{jk}(\mathbf{x}^{(m)}))\)</span> and <code>nint</code> is <span class="math inline">\(N\)</span>. (The index arithmetic <code>(1 + (i-1)*nint):(i*nint)</code> is just “rows <span class="math inline">\((i-1)N+1\)</span> through <span class="math inline">\(iN\)</span>,” the contiguous block for the <span class="math inline">\(i\)</span>-th arm in a stacked array.)</p>
+<p>The two-parameter file <code>binomial_2par.stan</code> refines the likelihood, and the reason is a variance mismatch worth spelling out. The aggregate arm is a <em>mixture</em>: the model assigns patients with different covariates different response probabilities <span class="math inline">\(\theta_m\)</span>, so summarizing the arm by the single number <span class="math inline">\(\bar\theta_{jk}\)</span> discards the spread of those probabilities. A plain binomial with probability <span class="math inline">\(\bar\theta_{jk}\)</span> ignores that spread and can understate the dispersion. The first two moments of the per-patient probabilities are <span class="math display">\[
+\bar\theta_{jk}=\frac1N\sum_m\theta_m,\qquad \overline{\theta^2}_{jk}=\frac1N\sum_m\theta_m^2,
+\]</span> and their gap <span class="math inline">\(\overline{\theta^2}_{jk}-\bar\theta_{jk}^{\,2}\ge 0\)</span> is precisely the variance of those probabilities (zero only if every patient has the same <span class="math inline">\(\theta\)</span>). To carry that extra dispersion while keeping the same mean, <code>binomial_2par.stan</code> matches both moments with an adjusted binomial, <span id="eq-impl-adjusted-binomial"><span class="math display">\[
+n'_{jk}=n_{jk}\,\frac{\bar\theta_{jk}^{\,2}}{\overline{\theta^2}_{jk}},
+\qquad
+p'_{jk}=\frac{\overline{\theta^2}_{jk}}{\bar\theta_{jk}},
+\qquad\text{so that } n'_{jk}\,p'_{jk}=n_{jk}\,\bar\theta_{jk},
+\tag{E.3}\]</span></span> which preserves the integrated mean <span class="math inline">\(n_{jk}\bar\theta_{jk}\)</span> (the product <span class="math inline">\(n'p'\)</span> is unchanged) while using <span class="math inline">\(p'_{jk}=\overline{\theta^2}_{jk}/\bar\theta_{jk}\ge\bar\theta_{jk}\)</span> to widen the variance toward the mixture’s. This is the implementation of the aggregate likelihood <a href="../chapters/part5/20-mlnmr-aggregation.html#eq-agg-aggregate-likelihood" class="quarto-xref">Equation&nbsp;<span>20.5</span></a>. Contrast all of this with the <em>naive</em> plug-in <span class="math inline">\(g^{-1}(\eta_{jk}(\bar{\mathbf{x}}_j))\)</span> of <a href="../chapters/part5/20-mlnmr-aggregation.html#eq-agg-naive" class="quarto-xref">Equation&nbsp;<span>20.6</span></a>, whose bias <a href="../chapters/part5/20-mlnmr-aggregation.html#thm-aggregation-bias" class="quarto-xref">Theorem&nbsp;<span>20.2</span></a> quantifies; <code>multinma</code> never forms the naive quantity for a nonlinear link.</p>
+</section>
+<section id="sec-impl-multinma-qmc" class="level3" data-number="E.3.3">
+<h3 data-number="E.3.3" class="anchored" data-anchor-id="sec-impl-multinma-qmc"><span class="header-section-number">E.3.3</span> Quasi-Monte Carlo integration</h3>
+<p>Here is the practical problem this machinery solves. A published trial almost never releases its patients’ covariates; it reports summaries, a mean age, a standard deviation, a percent female, sometimes a correlation. To evaluate the aggregation integral <a href="#eq-impl-aggregation" class="quarto-xref">Equation&nbsp;<span>E.2</span></a> we nonetheless need a <em>cloud of covariate profiles</em> that reproduces those summaries. <code>add_integration()</code> manufactures exactly that: a grid of <span class="math inline">\(N\)</span> synthetic covariate vectors whose marginal distributions and correlations match the reported summaries, so that averaging model predictions across the grid approximates averaging over the real (but unpublished) patient distribution. “Quasi-Monte Carlo” (QMC) just means the grid is a cleverly spread low-discrepancy set rather than random draws, which makes the average converge faster.</p>
+<p><code>add_integration()</code> builds the points <span class="math inline">\(\{\mathbf{x}^{(m)}\}_{m=1}^N\)</span> that turn <a href="#eq-impl-aggregation" class="quarto-xref">Equation&nbsp;<span>E.2</span></a> into a finite sum. It implements the pipeline of Chapter 22: a Sobol’ net (<a href="../chapters/part5/22-mlnmr-integration.html#def-sobol-net" class="quarto-xref">Definition&nbsp;<span>22.3</span></a>) pushed through a Gaussian copula (<a href="../chapters/part5/22-mlnmr-integration.html#def-gaussian-copula" class="quarto-xref">Definition&nbsp;<span>22.5</span></a>) and the marginal quantile functions (<a href="../chapters/part5/22-mlnmr-integration.html#thm-inverse-cdf" class="quarto-xref">Theorem&nbsp;<span>22.4</span></a>), <span id="eq-impl-qmc"><span class="math display">\[
+\mathbf{x}^{(m)}=\Big(F_{j,1}^{-1}\big(u_1^{(m)}\big),\dots,F_{j,d}^{-1}\big(u_d^{(m)}\big)\Big),
+\qquad
+u_q^{(m)}=\Phi\!\big((L\,\mathbf{z}^{(m)})_q\big),\quad
+\mathbf{z}^{(m)}=\Phi^{-1}\!\big(\mathbf{a}^{(m)}\big),
+\tag{E.4}\]</span></span> where <span class="math inline">\(\{\mathbf{a}^{(m)}\}\subset[0,1)^d\)</span> is the Sobol’ sequence and <span class="math inline">\(LL^\top=\Omega\)</span> is the Cholesky factor of the copula correlation matrix (this is <a href="../chapters/part5/22-mlnmr-integration.html#eq-qmc-pipeline" class="quarto-xref">Equation&nbsp;<span>22.17</span></a>). Written as nested transformations the display is dense, so read it as a four-step pipeline, each step feeding the next in the order the data flows.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Step</th>
+<th>Transformation</th>
+<th>Produces</th>
+<th>Set by</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1. spread</td>
+<td><span class="math inline">\(\mathbf{a}^{(m)}\in[0,1)^d\)</span>, a Sobol’ low-discrepancy point</td>
+<td>an evenly spread point in the unit cube</td>
+<td><code>n_int</code> (how many points <span class="math inline">\(N\)</span>)</td>
+</tr>
+<tr class="even">
+<td>2. to normal scores</td>
+<td><span class="math inline">\(\mathbf{z}^{(m)}=\Phi^{-1}(\mathbf{a}^{(m)})\)</span></td>
+<td>independent standard-normal coordinates</td>
+<td>(internal)</td>
+</tr>
+<tr class="odd">
+<td>3. correlate, back to uniform</td>
+<td><span class="math inline">\(u_q^{(m)}=\Phi\big((L\mathbf{z}^{(m)})_q\big)\)</span>, with <span class="math inline">\(LL^\top=\Omega\)</span></td>
+<td>correlated uniforms with the target dependence</td>
+<td><code>cor</code>, <code>cor_adjust</code> (build <span class="math inline">\(\Omega\)</span>, then <span class="math inline">\(L\)</span>)</td>
+</tr>
+<tr class="even">
+<td>4. to covariate scale</td>
+<td><span class="math inline">\(x_q^{(m)}=F_{j,q}^{-1}(u_q^{(m)})\)</span></td>
+<td>a synthetic patient’s covariate values</td>
+<td><code>&lt;cov&gt; = distr(qfun, ...)</code> (the marginal <span class="math inline">\(F_{j,q}^{-1}\)</span>)</td>
+</tr>
+</tbody>
+</table>
+<p>The Gaussian copula (step 3) is the device that lets us glue <em>arbitrary</em> marginal distributions (age maybe normal, a biomarker maybe skewed) together with a <em>chosen</em> correlation: it imposes the dependence in a normal latent space, then maps each coordinate back to its own marginal in step 4. If the copula is new to you, read it as “a correlation structure applied to uniforms, so any marginals can be attached afterward,” and see the picture in Chapter 22. The pieces map to arguments as follows.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Argument of <code>add_integration()</code></th>
+<th>Mathematical object</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>&lt;cov&gt; = distr(qfun, ...)</code></td>
+<td>the marginal quantile function <span class="math inline">\(F_{j,q}^{-1}\)</span> of covariate <span class="math inline">\(q\)</span> (<code>distr</code> wraps a base-R <code>q*</code> function).</td>
+</tr>
+<tr class="even">
+<td><code>n_int</code></td>
+<td>the number of integration points <span class="math inline">\(N\)</span>; error decays like <span class="math inline">\(N^{-1}(\log N)^d\)</span> by Koksma-Hlawka (<a href="../chapters/part5/22-mlnmr-integration.html#thm-koksma-hlawka" class="quarto-xref">Theorem&nbsp;<span>22.3</span></a>), beating the <span class="math inline">\(N^{-1/2}\)</span> Monte Carlo rate (<a href="../chapters/part5/22-mlnmr-integration.html#cor-tensor-quadrature-curse" class="quarto-xref">Corollary&nbsp;<span>22.1</span></a>).</td>
+</tr>
+<tr class="odd">
+<td><code>cor</code></td>
+<td>the input covariate correlation matrix used to build <span class="math inline">\(\Omega\)</span>.</td>
+</tr>
+<tr class="even">
+<td><code>cor_adjust</code></td>
+<td>the rule converting <code>cor</code> (Spearman or Pearson) to the Gaussian-copula correlation <span class="math inline">\(\Omega\)</span> (Sklar’s theorem, <a href="../chapters/part5/22-mlnmr-integration.html#thm-sklar" class="quarto-xref">Theorem&nbsp;<span>22.5</span></a>).</td>
+</tr>
+</tbody>
+</table>
+<p>The <code>distr()</code> wrapper deserves a word, since it appears with no introduction in the call above. <code>distr(qfun, ...)</code> bundles a base-R quantile function with its parameters into the marginal <span class="math inline">\(F_{j,q}^{-1}\)</span> that step 4 needs. For instance <code>distr(qnorm, mean = 48, sd = 12)</code> represents an age marginal that is normal with mean 48 and standard deviation 12: given a uniform <span class="math inline">\(u\)</span> it returns <code>qnorm(u, mean = 48, sd = 12)</code>, the age at quantile <span class="math inline">\(u\)</span>. Likewise <code>distr(qbern, prob = 0.40)</code> encodes a binary covariate that is female with probability 0.40. You supply one <code>distr()</code> per covariate, using the summaries the AgD trial reported.</p>
+<p>How many points? <code>n_int</code> is <span class="math inline">\(N\)</span>, and 64 is a common default. Because the Koksma-Hlawka rate (<a href="../chapters/part5/22-mlnmr-integration.html#thm-koksma-hlawka" class="quarto-xref">Theorem&nbsp;<span>22.3</span></a>) is roughly <span class="math inline">\(N^{-1}\)</span> up to a log factor that grows with the covariate dimension <span class="math inline">\(d\)</span>, more covariates need more points; the honest way to choose <span class="math inline">\(N\)</span> is empirical. Fit with <code>n_int = 64L</code>, refit with it doubled, and confirm the estimand you care about moves by less than your tolerance; <code>plot_integration_error()</code> automates this check as the empirical analogue of the Koksma-Hlawka bound. Cost grows linearly in <span class="math inline">\(N\)</span>, so doubling the points doubles the integration work, not more.</p>
+</section>
+<section id="sec-impl-multinma-estimand" class="level3" data-number="E.3.4">
+<h3 data-number="E.3.4" class="anchored" data-anchor-id="sec-impl-multinma-estimand"><span class="header-section-number">E.3.4</span> The target-population estimand</h3>
+<p>A fitted <code>stan_nma</code> object stores the conditional parameters <span class="math inline">\((\mu_j,\boldsymbol{\beta}_1,\boldsymbol{\beta}_{2,k},\gamma_k)\)</span>. The estimand machinery of Chapter 23 turns these into a contrast in <em>any</em> target population, via the target-population integral <a href="../chapters/part5/23-mlnmr-estimands.html#thm-target-population-integral" class="quarto-xref">Theorem&nbsp;<span>23.1</span></a>.</p>
+<p>Two kinds of answer come out of the same fit, and confusing them is a common error, so fix the distinction first (if it is unclear, reread Chapter 23 before calling these functions). A <em>conditional</em> effect is for patients with <em>given</em> covariates: the <code>A</code> versus <code>B</code> log-odds ratio for a 55-year-old woman. A <em>marginal</em> effect is <em>averaged over a whole population</em>: the <code>A</code> versus <code>B</code> effect seen across the entire target population’s age and sex mix. On a nonlinear scale such as the odds ratio these differ, because the odds ratio is non-collapsible (Chapter 11); the population-average effect is not the average of subgroup effects. For an HTA submission the reported number is almost always the <em>marginal</em> effect in the decision population, since that is the effect a payer would experience in practice. So <code>relative_effects()</code> gives the conditional building blocks, and <code>marginal_effects()</code> gives the reportable population summary.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Returns</th>
+<th>Book object</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>relative_effects()</code></td>
+<td>conditional contrasts <span class="math inline">\(\delta_{j,\,t_1 t_k}\)</span> in a study or <code>newdata</code> population</td>
+<td><a href="../chapters/part5/23-mlnmr-estimands.html#eq-mlnmr-est-cond" class="quarto-xref">Equation&nbsp;<span>23.6</span></a>, the conditional estimand of <a href="../chapters/part5/23-mlnmr-estimands.html#def-mlnmr-target-contrast" class="quarto-xref">Definition&nbsp;<span>23.1</span></a></td>
+</tr>
+<tr class="even">
+<td><code>predict()</code></td>
+<td>absolute outcomes <span class="math inline">\(\bar\theta\)</span> on the response scale (<code>type = "response"</code>) in a target population</td>
+<td>the population mean of <a href="#eq-impl-aggregation" class="quarto-xref">Equation&nbsp;<span>E.2</span></a> in <span class="math inline">\(\mathcal{P}^{*}\)</span></td>
+</tr>
+<tr class="odd">
+<td><code>marginal_effects()</code></td>
+<td>marginal contrasts <span class="math inline">\(d_{ab(\mathcal{P}^{*})}\)</span> (difference, ratio, or link scale)</td>
+<td><a href="../chapters/part5/23-mlnmr-estimands.html#eq-mlnmr-est-marg" class="quarto-xref">Equation&nbsp;<span>23.5</span></a>, the marginal estimand</td>
+</tr>
+</tbody>
+</table>
+<p>In the running example, <code>relative_effects()</code> might report a conditional log-odds ratio for <code>A</code> versus <code>B</code> of, say, <span class="math inline">\(-0.82\)</span> (95 percent credible interval <span class="math inline">\(-1.21\)</span> to <span class="math inline">\(-0.43\)</span>) at the network’s average covariates, <code>predict(type = "response")</code> the absolute response probabilities in each arm of the target population, and <code>marginal_effects()</code> the population-averaged <code>A</code> versus <code>B</code> contrast to put in the submission. (These numbers are illustrative, not from a real fit.)</p>
+<p>Supplying <code>newdata</code> (with its own <code>add_integration()</code> points) is exactly the change of target population <span class="math inline">\(\mathcal{P}\mapsto\mathcal{P}^{*}\)</span> that <a href="../chapters/part5/23-mlnmr-estimands.html#thm-target-population-integral" class="quarto-xref">Theorem&nbsp;<span>23.1</span></a> licenses; with no <code>newdata</code> the estimand defaults to each study’s own population. So the <em>same</em> fitted model produces different reported effects for different target populations, and choosing that population is a substantive decision, not a default.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Sanity check: ML-NMR contains NMA.</strong> When every study is AgD and no covariates enter the regression, the aggregation integral is trivial and the model collapses to standard network meta-analysis; a call like <code>nma(net, trt_effects = "fixed")</code> with no <code>regression =</code> reproduces the Chapter 15 estimator. This is the computational witness of <a href="../chapters/part5/23-mlnmr-estimands.html#thm-mlnmr-generalizes-nma" class="quarto-xref">Theorem&nbsp;<span>23.4</span></a>, and it is a good first check that a network is set up correctly: turn off the regression and confirm you recover the familiar NMA result.</p>
+</div>
+</section>
+<section id="sec-impl-multinma-map" class="level3" data-number="E.3.5">
+<h3 data-number="E.3.5" class="anchored" data-anchor-id="sec-impl-multinma-map"><span class="header-section-number">E.3.5</span> Object-to-code map</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Book object</th>
+<th>Chapter result</th>
+<th><code>multinma</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Individual model <a href="#eq-impl-mlnmr-model" class="quarto-xref">Equation&nbsp;<span>E.1</span></a></td>
+<td><a href="../chapters/part5/20-mlnmr-aggregation.html#def-individual-model" class="quarto-xref">Definition&nbsp;<span>20.1</span></a></td>
+<td><code>nma(regression = ...)</code></td>
+</tr>
+<tr class="even">
+<td>Aggregation integral <span class="math inline">\(\bar\theta_{jk}\)</span></td>
+<td><a href="../chapters/part5/20-mlnmr-aggregation.html#thm-aggregation" class="quarto-xref">Theorem&nbsp;<span>20.1</span></a>, <a href="../chapters/part5/20-mlnmr-aggregation.html#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a></td>
+<td><code>theta_agd_arm_bar</code> in the Stan files</td>
+</tr>
+<tr class="odd">
+<td>Adjusted aggregate likelihood</td>
+<td><a href="../chapters/part5/20-mlnmr-aggregation.html#eq-agg-aggregate-likelihood" class="quarto-xref">Equation&nbsp;<span>20.5</span></a></td>
+<td><code>binomial_2par.stan</code> (<span class="math inline">\(n',p'\)</span>)</td>
+</tr>
+<tr class="even">
+<td>QMC points and copula</td>
+<td><a href="../chapters/part5/22-mlnmr-integration.html#def-sobol-net" class="quarto-xref">Definition&nbsp;<span>22.3</span></a>, <a href="../chapters/part5/22-mlnmr-integration.html#def-gaussian-copula" class="quarto-xref">Definition&nbsp;<span>22.5</span></a>, <a href="../chapters/part5/22-mlnmr-integration.html#eq-qmc-pipeline" class="quarto-xref">Equation&nbsp;<span>22.17</span></a></td>
+<td><code>add_integration()</code></td>
+</tr>
+<tr class="odd">
+<td>Integration error control</td>
+<td><a href="../chapters/part5/22-mlnmr-integration.html#thm-koksma-hlawka" class="quarto-xref">Theorem&nbsp;<span>22.3</span></a></td>
+<td><code>n_int</code>, <code>plot_integration_error()</code></td>
+</tr>
+<tr class="even">
+<td>Conditional estimand</td>
+<td><a href="../chapters/part5/23-mlnmr-estimands.html#eq-mlnmr-est-cond" class="quarto-xref">Equation&nbsp;<span>23.6</span></a></td>
+<td><code>relative_effects()</code></td>
+</tr>
+<tr class="odd">
+<td>Marginal / target-population estimand</td>
+<td><a href="../chapters/part5/23-mlnmr-estimands.html#thm-target-population-integral" class="quarto-xref">Theorem&nbsp;<span>23.1</span></a>, <a href="../chapters/part5/23-mlnmr-estimands.html#eq-mlnmr-est-marg" class="quarto-xref">Equation&nbsp;<span>23.5</span></a></td>
+<td><code>marginal_effects(newdata=)</code>, <code>predict()</code></td>
+</tr>
+<tr class="even">
+<td>Posterior sampling and diagnostics</td>
+<td>Chapter 24</td>
+<td><code>nma(...)</code>, <code>as.stanfit()</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="sec-impl-multinma-stan" class="level3" data-number="E.3.6">
+<h3 data-number="E.3.6" class="anchored" data-anchor-id="sec-impl-multinma-stan"><span class="header-section-number">E.3.6</span> Stan model files</h3>
+<p>This subsection is for readers verifying implementation fidelity or extending the package; an ordinary user never edits these files, because <code>nma()</code> selects the right one automatically. It is listed so that a reader checking the book’s theorems against the code knows exactly which file to open. The likelihood is selected by <code>nma(likelihood = , link = )</code>; each choice loads one model file under <code>inst/stan/</code>.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>File</th>
+<th>Outcome family</th>
+<th>Used for</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>binomial_1par.stan</code></td>
+<td>Bernoulli (IPD) and binomial (AgD)</td>
+<td>binary outcomes, integrated mean probability</td>
+</tr>
+<tr class="even">
+<td><code>binomial_2par.stan</code></td>
+<td>as above with variance matching</td>
+<td>binary outcomes, adjusted binomial <a href="#eq-impl-adjusted-binomial" class="quarto-xref">Equation&nbsp;<span>E.3</span></a></td>
+</tr>
+<tr class="odd">
+<td><code>normal.stan</code></td>
+<td>Gaussian</td>
+<td>continuous outcomes (identity link is exact, <a href="../chapters/part5/20-mlnmr-aggregation.html#thm-identity-link-exact" class="quarto-xref">Theorem&nbsp;<span>20.3</span></a>)</td>
+</tr>
+<tr class="even">
+<td><code>poisson.stan</code></td>
+<td>Poisson</td>
+<td>rates and counts with time at risk</td>
+</tr>
+<tr class="odd">
+<td><code>ordered_multinomial.stan</code></td>
+<td>ordered multinomial</td>
+<td>ordered categorical outcomes</td>
+</tr>
+<tr class="even">
+<td><code>survival_param.stan</code></td>
+<td>parametric survival</td>
+<td>exponential, Weibull, Gompertz, generalized gamma, and AFT families (Chapter 25)</td>
+</tr>
+<tr class="odd">
+<td><code>survival_mspline.stan</code></td>
+<td>M-spline baseline hazard</td>
+<td>flexible time-to-event baseline; <code>rmst_mspline()</code> returns restricted mean survival time</td>
+</tr>
+</tbody>
+</table>
+<p>Shared blocks live in <code>inst/stan/include/</code>: <code>transformed_parameters_common.stan</code> assembles <span class="math inline">\(\eta\)</span> and the integrated means for both IPD and AgD, and <code>prior_select.stan</code> implements the prior families exported by <code>normal()</code>, <code>half_normal()</code>, <code>cauchy()</code>, and the rest.</p>
+</section>
+</section>
+<section id="sec-impl-mlumr" class="level2" data-number="E.4">
+<h2 data-number="E.4" class="anchored" data-anchor-id="sec-impl-mlumr"><span class="header-section-number">E.4</span> mlumr: multilevel unanchored meta-regression</h2>
+<p><code>mlumr</code> implements ML-UMR (Chapter 26): the unanchored, two-treatment specialization of ML-NMR for a <em>disconnected</em> network (<a href="../chapters/part5/26-ml-umr.html#def-unanchored-network" class="quarto-xref">Definition&nbsp;<span>26.1</span></a>), IPD on one index treatment <span class="math inline">\(A\)</span>, AgD on one comparator <span class="math inline">\(B\)</span>, and no common arm. It reuses the QMC and copula machinery of <code>multinma</code> and adds Stan likelihoods for the unanchored problem <span class="citation" data-cites="chandler2025mlumr">(<a href="../references.html#ref-chandler2025mlumr" role="doc-biblioref">Chandler and Ishak 2026</a>)</span>.</p>
+<p>Recall from <a href="#sec-impl-orientation" class="quarto-xref"><span>Section E.2</span></a> what <em>unanchored</em> means here: the index IPD trial (drug <code>A</code>) and the comparator AgD trial (drug <code>B</code>) share no arm, so there is no reference treatment to difference away the study-level baselines. Everything separating the two trials’ outcomes, prognosis and effect modification alike, must be explained by covariate adjustment. That is a strong assumption, and it is why ML-UMR needs both the shared-prognostic-factor machinery below and the honest caveats of Chapter 26. The <code>add_integration()</code> step is the same construction as in <code>multinma</code> (<a href="#sec-impl-multinma-qmc" class="quarto-xref"><span>Section E.3.3</span></a>), but its job is narrower here: rather than integrating several AgD studies across a connected network, it builds the single covariate cloud that represents the <em>comparator</em> population <span class="math inline">\(f_B\)</span>, the population the index data must be bridged to.</p>
+<section id="sec-impl-mlumr-pipeline" class="level3" data-number="E.4.1">
+<h3 data-number="E.4.1" class="anchored" data-anchor-id="sec-impl-mlumr-pipeline"><span class="header-section-number">E.4.1</span> The pipeline</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Mathematical role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>set_ipd()</code></td>
+<td>Register the index IPD: individual outcomes and covariates for the individual model <a href="../chapters/part5/26-ml-umr.html#eq-mlumr-model-ind" class="quarto-xref">Equation&nbsp;<span>26.7</span></a>.</td>
+</tr>
+<tr class="even">
+<td><code>set_agd()</code></td>
+<td>Register the comparator AgD: summary outcome and covariate moments <span class="math inline">\((\bar{\mathbf{x}}_B,\boldsymbol{\Sigma}_B)\)</span>.</td>
+</tr>
+<tr class="odd">
+<td><code>set_agd_surv()</code></td>
+<td>Register comparator survival pseudo-IPD reconstructed from a digitized KM curve (<a href="../chapters/part5/26-ml-umr.html#thm-pseudo-ipd-reconstruction" class="quarto-xref">Theorem&nbsp;<span>26.5</span></a>).</td>
+</tr>
+<tr class="even">
+<td><code>combine_data()</code></td>
+<td>Bind index and comparator into one <code>mlumr_data</code>.</td>
+</tr>
+<tr class="odd">
+<td><code>add_integration()</code></td>
+<td>Generate the QMC points over <span class="math inline">\(f_B\)</span> (the same construction as <a href="#eq-impl-qmc" class="quarto-xref">Equation&nbsp;<span>E.4</span></a>).</td>
+</tr>
+<tr class="even">
+<td><code>mlumr()</code></td>
+<td>Fit the SPFA or relaxed Bayesian model via Stan.</td>
+</tr>
+</tbody>
+</table>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb4"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb4-1"><a href="#cb4-1" aria-hidden="true" tabindex="-1"></a>ipd <span class="ot">&lt;-</span> <span class="fu">set_ipd</span>(ipd_df, <span class="at">treatment =</span> <span class="st">"trt"</span>, <span class="at">outcome =</span> <span class="st">"y"</span>,</span>
+<span id="cb4-2"><a href="#cb4-2" aria-hidden="true" tabindex="-1"></a>               <span class="at">covariates =</span> <span class="fu">c</span>(<span class="st">"age"</span>, <span class="st">"sex"</span>))</span>
+<span id="cb4-3"><a href="#cb4-3" aria-hidden="true" tabindex="-1"></a>agd <span class="ot">&lt;-</span> <span class="fu">set_agd</span>(agd_df, <span class="at">treatment =</span> <span class="st">"trt"</span>, <span class="at">outcome_n =</span> <span class="st">"n"</span>, <span class="at">outcome_r =</span> <span class="st">"r"</span>,</span>
+<span id="cb4-4"><a href="#cb4-4" aria-hidden="true" tabindex="-1"></a>               <span class="at">cov_means =</span> <span class="fu">c</span>(<span class="st">"age_mean"</span>, <span class="st">"sex_mean"</span>),</span>
+<span id="cb4-5"><a href="#cb4-5" aria-hidden="true" tabindex="-1"></a>               <span class="at">cov_types =</span> <span class="fu">c</span>(<span class="st">"continuous"</span>, <span class="st">"binary"</span>))</span>
+<span id="cb4-6"><a href="#cb4-6" aria-hidden="true" tabindex="-1"></a>dat <span class="ot">&lt;-</span> <span class="fu">add_integration</span>(<span class="fu">combine_data</span>(ipd, agd), <span class="at">n_int =</span> <span class="dv">64</span>L,</span>
+<span id="cb4-7"><a href="#cb4-7" aria-hidden="true" tabindex="-1"></a>                       <span class="at">age =</span> <span class="fu">distr</span>(qnorm, <span class="at">mean =</span> age_mean, <span class="at">sd =</span> age_sd),</span>
+<span id="cb4-8"><a href="#cb4-8" aria-hidden="true" tabindex="-1"></a>                       <span class="at">sex =</span> <span class="fu">distr</span>(qbern, <span class="at">prob =</span> sex_mean))</span>
+<span id="cb4-9"><a href="#cb4-9" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">mlumr</span>(dat, <span class="at">model =</span> <span class="st">"spfa"</span>)</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+</section>
+<section id="sec-impl-mlumr-models" class="level3" data-number="E.4.2">
+<h3 data-number="E.4.2" class="anchored" data-anchor-id="sec-impl-mlumr-models"><span class="header-section-number">E.4.2</span> SPFA and relaxed models</h3>
+<p>The two model strings select the identification assumption of Chapter 26. The assumption is not a technical switch; it encodes what you are willing to believe about how covariates act across treatments, so decide it deliberately. The <em>shared prognostic factor assumption</em> (SPFA) says that a covariate affects <em>outcome</em> the same way under both treatments: if age raises risk, it raises it by the same amount under <code>A</code> and under <code>B</code>. Under SPFA a single coefficient vector <span class="math inline">\(\boldsymbol{\beta}\)</span> serves both arms. The <em>relaxed</em> model drops that and lets prognosis differ by treatment, carrying separate <span class="math inline">\(\boldsymbol{\beta}_A\)</span> and <span class="math inline">\(\boldsymbol{\beta}_B\)</span>; the gap <span class="math inline">\(\Delta\boldsymbol{\beta}=\boldsymbol{\beta}_A-\boldsymbol{\beta}_B\)</span> is exactly effect modification (a covariate whose influence differs by treatment is, by definition, an effect modifier). Concretely: if age predicts response similarly whether a patient took <code>A</code> or <code>B</code>, the SPFA is reasonable and <code>model = "spfa"</code> is the primary analysis; if you believe age helps under <code>A</code> but not under <code>B</code>, that difference is what <code>model = "relaxed"</code> is trying to estimate.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th><code>model =</code></th>
+<th>Assumption</th>
+<th>Coefficients</th>
+<th>Book object</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>"spfa"</code></td>
+<td>shared prognostic factors, no effect modification</td>
+<td>one <span class="math inline">\(\boldsymbol{\beta}\)</span> for both treatments</td>
+<td><a href="../chapters/part5/26-ml-umr.html#def-spfa" class="quarto-xref">Definition&nbsp;<span>26.2</span></a>, <a href="../chapters/part5/26-ml-umr.html#eq-spfa" class="quarto-xref">Equation&nbsp;<span>26.3</span></a></td>
+</tr>
+<tr class="even">
+<td><code>"relaxed"</code></td>
+<td>treatment-specific prognostic effects</td>
+<td><span class="math inline">\(\boldsymbol{\beta}_A,\boldsymbol{\beta}_B\)</span>, with <span class="math inline">\(\Delta\boldsymbol{\beta}=\boldsymbol{\beta}_A-\boldsymbol{\beta}_B\)</span></td>
+<td><a href="../chapters/part5/26-ml-umr.html#thm-spfa-relaxation" class="quarto-xref">Theorem&nbsp;<span>26.2</span></a>, <a href="../chapters/part5/26-ml-umr.html#eq-spfa-relaxed-agg" class="quarto-xref">Equation&nbsp;<span>26.10</span></a></td>
+</tr>
+</tbody>
+</table>
+<p>In <code>inst/stan/mlumr_binary_spfa.stan</code> the comparator AgD likelihood is the aggregation integral <a href="#eq-impl-aggregation" class="quarto-xref">Equation&nbsp;<span>E.2</span></a> written for one comparator arm,</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb5"><pre class="sourceCode stan code-with-copy"><code class="sourceCode stan"><span id="cb5-1"><a href="#cb5-1" aria-hidden="true" tabindex="-1"></a><span class="co">// Xq_int[k] is the N-by-p matrix of integration points for comparator arm k, and beta_tilde the shared</span></span>
+<span id="cb5-2"><a href="#cb5-2" aria-hidden="true" tabindex="-1"></a><span class="co">// coefficient vector, so Xq_int[k] * beta_tilde is the N linear predictors; inv_link_binary_vec applies</span></span>
+<span id="cb5-3"><a href="#cb5-3" aria-hidden="true" tabindex="-1"></a><span class="co">// g^{-1} (here the inverse logit) to each, giving the N per-patient probabilities p_int.</span></span>
+<span id="cb5-4"><a href="#cb5-4" aria-hidden="true" tabindex="-1"></a><span class="dt">vector</span>[n_int] p_int = inv_link_binary_vec(Xq_int[k] * beta_tilde, link);</span>
+<span id="cb5-5"><a href="#cb5-5" aria-hidden="true" tabindex="-1"></a><span class="co">// "~" is a sampling statement: the comparator responder count is binomial with size n_agd[k] and the</span></span>
+<span id="cb5-6"><a href="#cb5-6" aria-hidden="true" tabindex="-1"></a><span class="co">// integrated (averaged) probability mean(p_int), i.e. the aggregation integral for one arm.</span></span>
+<span id="cb5-7"><a href="#cb5-7" aria-hidden="true" tabindex="-1"></a>r_agd[k] ~ binomial(n_agd[k], mean(p_int));</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>which is <a href="../chapters/part5/26-ml-umr.html#eq-mlumr-model-agg" class="quarto-xref">Equation&nbsp;<span>26.8</span></a> and the joint likelihood of <a href="../chapters/part5/26-ml-umr.html#thm-mlumr-joint-likelihood" class="quarto-xref">Theorem&nbsp;<span>26.6</span></a> (the IPD Bernoulli term times this integrated binomial term). The relaxed file carries a second coefficient block and reports <code>delta_beta = beta_index - beta_comparator</code>, the estimated effect modification of <a href="../chapters/part5/26-ml-umr.html#thm-spfa-relaxation" class="quarto-xref">Theorem&nbsp;<span>26.2</span></a>; its prior is set with <code>prior_beta_comparator</code>, since <span class="math inline">\(\boldsymbol{\beta}_B\)</span> is identified only through the AgD. Both files compute, in their <code>generated quantities</code>, the response-scale population means in <em>both</em> target populations, the index (IPD covariates) and the comparator (integration points weighted by AgD sample size), and from them the marginal log odds ratio, risk difference, and risk ratio. This is <a href="../chapters/part5/26-ml-umr.html#eq-mlumr-estimand" class="quarto-xref">Equation&nbsp;<span>26.1</span></a> and the target functionals <a href="../chapters/part5/26-ml-umr.html#eq-mlumr-target-functionals" class="quarto-xref">Equation&nbsp;<span>26.21</span></a>; the choice is exposed through <code>marginal_effects(fit, population = , effect = )</code>. <code>conditional_effects()</code> returns the covariate-conditional contrasts instead.</p>
+<p>What to look at after a fit: <code>marginal_effects(fit, population = , effect = )</code> is the headline, the marginal <code>A</code> versus <code>B</code> contrast (as a log odds ratio, risk difference, or risk ratio) in whichever population you name; <code>conditional_effects()</code> gives the covariate-conditional version if you need it. Fit under <code>model = "spfa"</code> for the primary estimate, and if you also fit <code>"relaxed"</code>, inspect <code>delta_beta</code>: a credible interval comfortably covering zero supports the SPFA, while one clearly away from zero warns that effect modification is present and the SPFA estimate may be biased.</p>
+</section>
+<section id="sec-impl-mlumr-benchmarks" class="level3" data-number="E.4.3">
+<h3 data-number="E.4.3" class="anchored" data-anchor-id="sec-impl-mlumr-benchmarks"><span class="header-section-number">E.4.3</span> The benchmarks: naive and stc</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Method</th>
+<th>Book object</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>naive()</code></td>
+<td>unadjusted comparison of crude outcome summaries</td>
+<td>the naive estimator <a href="../chapters/part5/20-mlnmr-aggregation.html#eq-agg-naive" class="quarto-xref">Equation&nbsp;<span>20.6</span></a> (and the bias it incurs, <a href="../chapters/part5/20-mlnmr-aggregation.html#thm-aggregation-bias" class="quarto-xref">Theorem&nbsp;<span>20.2</span></a>)</td>
+</tr>
+<tr class="even">
+<td><code>stc()</code></td>
+<td>frequentist parametric G-computation with delta-method standard errors</td>
+<td>STC (Chapter 19); <a href="../chapters/part4/19-stc.html#prp-stc-gcomp" class="quarto-xref">Proposition&nbsp;<span>19.1</span></a>, the marginal estimand <a href="../chapters/part4/19-stc.html#eq-stc-marg-mean" class="quarto-xref">Equation&nbsp;<span>19.14</span></a></td>
+</tr>
+</tbody>
+</table>
+<p>“G-computation,” the phrase attached to <code>stc()</code>, is causal-inference shorthand for a two-step recipe: fit the outcome model on the IPD, then average its predictions over the target (here, comparator) covariate distribution. It is the frequentist sibling of what the Bayesian model does inside its <code>generated quantities</code> block.</p>
+<p><code>stc()</code> fits the outcome regression on the IPD and integrates the fitted model over the comparator covariate distribution, the G-computation form <a href="../chapters/part4/19-stc.html#prp-stc-gcomp" class="quarto-xref">Proposition&nbsp;<span>19.1</span></a>; <a href="../chapters/part5/26-ml-umr.html#thm-mlumr-stc-equivalence" class="quarto-xref">Theorem&nbsp;<span>26.8</span></a> shows that ML-UMR under SPFA and STC target the same estimand, so the two should agree up to Monte Carlo and posterior error when the SPFA holds. Always run <code>naive()</code> alongside the adjusted methods as the unadjusted reference point.</p>
+<p>How to read the three together. Treat <code>naive()</code> as the unadjusted baseline, <code>stc()</code> and <code>mlumr(model = "spfa")</code> as two routes to the <em>same</em> adjusted estimand (<a href="../chapters/part5/26-ml-umr.html#thm-mlumr-stc-equivalence" class="quarto-xref">Theorem&nbsp;<span>26.8</span></a>), and <code>mlumr(model = "relaxed")</code> as the stress test. Reassuring pattern: <code>stc()</code> and <code>mlumr("spfa")</code> agree (they should, when the SPFA holds), and both differ from <code>naive()</code> in the direction the covariate imbalance predicts, showing the adjustment did something. Concerning pattern: <code>stc()</code> and <code>mlumr("spfa")</code> disagree materially, which points to a modeling or convergence problem since they target one estimand; or the <code>"relaxed"</code> fit moves the estimate a lot and its <code>delta_beta</code> excludes zero, signaling effect modification the SPFA ignores. None of these is a hypothesis test; they are consistency checks that tell you whether to trust the adjusted number or investigate further.</p>
+</section>
+<section id="sec-impl-mlumr-survival" class="level3" data-number="E.4.4">
+<h3 data-number="E.4.4" class="anchored" data-anchor-id="sec-impl-mlumr-survival"><span class="header-section-number">E.4.4</span> Survival outcomes</h3>
+<p>This subsection locates the survival functions; it is dense because each piece is a chapter of its own. If you are implementing a survival ITC for the first time, read Chapter 25 (general likelihoods and survival) and the <code>mlumr</code> survival vignette before relying on the calls below. The shape of the workflow is as follows.</p>
+<p>The input problem is that a published survival trial reports a <em>Kaplan-Meier curve</em> (a step plot of the fraction still event-free over time), not patient records. <code>set_agd_surv()</code> reconstructs approximate patient-level data from it: you supply points read off the curve (time and survival-probability pairs, typically extracted with a plot digitizer) together with the numbers at risk printed under the axis, and the function inverts the curve into individual event and censoring times. This reconstruction is <a href="../chapters/part5/26-ml-umr.html#thm-pseudo-ipd-reconstruction" class="quarto-xref">Theorem&nbsp;<span>26.5</span></a>, the inversion <a href="../chapters/part5/26-ml-umr.html#eq-km-inversion" class="quarto-xref">Equation&nbsp;<span>26.19</span></a>; more digitized points and reported at-risk tables give a more faithful reconstruction. The result is <em>pseudo-IPD</em> for the comparator arm, which the model then treats like real IPD.</p>
+<p>The hazard is modeled with one of nine parametric families (<code>distribution = "weibull"</code>, <code>"gompertz"</code>, accelerated-failure-time variants, and so on) or a flexible baseline (<code>"mspline"</code>, an M-spline hazard, or <code>"pexp"</code>, a piecewise-exponential hazard), with spline knots placed by <code>make_knots()</code>. As a rule of thumb: a simple parametric family is easiest to interpret and extrapolate but assumes a rigid hazard shape; the flexible <code>"mspline"</code> and <code>"pexp"</code> baselines fit curved or non-monotone hazards at the cost of extra parameters. Choose by checking fit against the reconstructed curve and by how far beyond the observed follow-up you must extrapolate.</p>
+<p>The reporting is shaped by <em>collapsibility</em>. The hazard ratio (HR) is <em>non-collapsible</em> (Chapter 11): the population-average HR is not the average of subgroup HRs, and it can drift over time even under a constant treatment effect, so a single number understates the story. Accordingly <code>marginal_effects(fit, effect = "hr")</code> reports the HR at the start of follow-up, and the time-varying curve comes from <code>predict(type = "loghr")</code>. Restricted mean survival time (RMST, the average event-free time up to a horizon) is <em>collapsible</em> and transports more cleanly, which is why it is often the better headline for an HTA: <code>predict(type = "rmst")</code> and the RMST difference and ratio implement the transported restricted-mean functionals <a href="../chapters/part5/26-ml-umr.html#thm-mlumr-target-survival" class="quarto-xref">Theorem&nbsp;<span>26.7</span></a> and <a href="../chapters/part5/26-ml-umr.html#eq-mlumr-rmst-transport" class="quarto-xref">Equation&nbsp;<span>26.17</span></a>. When in doubt, report an RMST contrast at a clinically meaningful horizon alongside the HR.</p>
+</section>
+<section id="sec-impl-mlumr-map" class="level3" data-number="E.4.5">
+<h3 data-number="E.4.5" class="anchored" data-anchor-id="sec-impl-mlumr-map"><span class="header-section-number">E.4.5</span> Object-to-code map</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Book object</th>
+<th>Chapter result</th>
+<th><code>mlumr</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Unanchored network</td>
+<td><a href="../chapters/part5/26-ml-umr.html#def-unanchored-network" class="quarto-xref">Definition&nbsp;<span>26.1</span></a></td>
+<td><code>combine_data(ipd, agd)</code></td>
+</tr>
+<tr class="even">
+<td>Individual model</td>
+<td><a href="../chapters/part5/26-ml-umr.html#eq-mlumr-model-ind" class="quarto-xref">Equation&nbsp;<span>26.7</span></a></td>
+<td><code>set_ipd(...)</code>, <code>mlumr()</code></td>
+</tr>
+<tr class="odd">
+<td>SPFA aggregate model</td>
+<td><a href="../chapters/part5/26-ml-umr.html#def-spfa" class="quarto-xref">Definition&nbsp;<span>26.2</span></a>, <a href="../chapters/part5/26-ml-umr.html#eq-mlumr-model-agg" class="quarto-xref">Equation&nbsp;<span>26.8</span></a></td>
+<td><code>mlumr(model = "spfa")</code></td>
+</tr>
+<tr class="even">
+<td>Relaxed model and effect modification</td>
+<td><a href="../chapters/part5/26-ml-umr.html#thm-spfa-relaxation" class="quarto-xref">Theorem&nbsp;<span>26.2</span></a></td>
+<td><code>mlumr(model = "relaxed")</code>, <code>delta_beta</code></td>
+</tr>
+<tr class="odd">
+<td>Joint likelihood</td>
+<td><a href="../chapters/part5/26-ml-umr.html#thm-mlumr-joint-likelihood" class="quarto-xref">Theorem&nbsp;<span>26.6</span></a></td>
+<td>the Stan <code>model</code> block</td>
+</tr>
+<tr class="even">
+<td>QMC marginalization</td>
+<td><a href="../chapters/part5/26-ml-umr.html#eq-mlumr-qmc" class="quarto-xref">Equation&nbsp;<span>26.12</span></a></td>
+<td><code>add_integration()</code></td>
+</tr>
+<tr class="odd">
+<td>Marginal estimands in two populations</td>
+<td><a href="../chapters/part5/26-ml-umr.html#eq-mlumr-estimand" class="quarto-xref">Equation&nbsp;<span>26.1</span></a>, <a href="../chapters/part5/26-ml-umr.html#eq-mlumr-target-functionals" class="quarto-xref">Equation&nbsp;<span>26.21</span></a></td>
+<td><code>marginal_effects(population=)</code></td>
+</tr>
+<tr class="even">
+<td>STC equivalence</td>
+<td><a href="../chapters/part5/26-ml-umr.html#thm-mlumr-stc-equivalence" class="quarto-xref">Theorem&nbsp;<span>26.8</span></a></td>
+<td><code>stc()</code> vs <code>mlumr(model = "spfa")</code></td>
+</tr>
+<tr class="odd">
+<td>KM reconstruction, RMST</td>
+<td><a href="../chapters/part5/26-ml-umr.html#thm-pseudo-ipd-reconstruction" class="quarto-xref">Theorem&nbsp;<span>26.5</span></a>, <a href="../chapters/part5/26-ml-umr.html#thm-mlumr-target-survival" class="quarto-xref">Theorem&nbsp;<span>26.7</span></a></td>
+<td><code>set_agd_surv()</code>, <code>predict(type = "rmst")</code></td>
+</tr>
+</tbody>
+</table>
+<p>Stan files live in <code>inst/stan/</code> as <code>mlumr_&lt;family&gt;_&lt;model&gt;.stan</code> for <code>&lt;family&gt;</code> in <code>{binary, normal, poisson, survival, survival_mspline}</code> and <code>&lt;model&gt;</code> in <code>{spfa, relaxed}</code>, ten files in all; shared blocks (<code>numerical_functions.stan</code>, <code>priors_functions.stan</code>, <code>survival_functions.stan</code>) are in <code>inst/stan/include/</code>.</p>
+</section>
+</section>
+<section id="sec-impl-uitc" class="level2" data-number="E.5">
+<h2 data-number="E.5" class="anchored" data-anchor-id="sec-impl-uitc"><span class="header-section-number">E.5</span> uitc: unanchored PAIC and bias analysis</h2>
+<p><code>uitc</code> is an umbrella over the unanchored PAIC methods, with a single dispatcher and a QBA toolkit. It maps onto Chapter 18 (MAIC), Chapter 19 (STC), the augmented estimators of Chapter 10, and Chapter 28 (QBA).</p>
+<p>Note the change of purpose here. <code>multinma</code> and <code>mlumr</code> each fit <em>one</em> Bayesian model; <code>uitc</code> is instead an organizer that runs <em>several</em> unanchored adjustment and sensitivity workflows around the same comparator problem, so you can lay an estimate next to its alternatives and its bias analysis. Its input is an <code>mlumr_data</code> object, the same bundle <code>mlumr::combine_data()</code> produces: it holds the index IPD, the comparator AgD summary, the covariate definitions, and (after <code>add_integration()</code>) the integration points. Because every <code>uitc</code> method reads that one object, a single data setup feeds MAIC, STC, ML-UMR, naive, doubly-robust, and QBA in turn.</p>
+<section id="sec-impl-uitc-dispatch" class="level3" data-number="E.5.1">
+<h3 data-number="E.5.1" class="anchored" data-anchor-id="sec-impl-uitc-dispatch"><span class="header-section-number">E.5.1</span> The dispatcher</h3>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb6"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb6-1"><a href="#cb6-1" aria-hidden="true" tabindex="-1"></a><span class="fu">uitc</span>(dat, <span class="at">method =</span> <span class="fu">c</span>(<span class="st">"maic"</span>, <span class="st">"stc"</span>, <span class="st">"mlumr"</span>, <span class="st">"naive"</span>, <span class="st">"dr"</span>))</span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p><code>dat</code> is an <code>mlumr_data</code> object built by <code>mlumr::combine_data()</code>. The <code>stc</code>, <code>mlumr</code>, and <code>naive</code> methods delegate to <code>mlumr</code> (mapped in <a href="#sec-impl-mlumr" class="quarto-xref"><span>Section E.4</span></a>); the <code>maic</code> and <code>dr</code> methods are native to <code>uitc</code> and are described next. All delegated methods return a standardized <code>uitc_result</code> with <code>estimate</code>, <code>se</code>, and an interval.</p>
+</section>
+<section id="sec-impl-uitc-maic" class="level3" data-number="E.5.2">
+<h3 data-number="E.5.2" class="anchored" data-anchor-id="sec-impl-uitc-maic"><span class="header-section-number">E.5.2</span> MAIC (Chapter 18)</h3>
+<p>MAIC reweights the IPD so that its weighted covariate moments match the comparator’s, then estimates the treatment effect on the reweighted sample.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Mathematical role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>prepare_maic()</code> / <code>estimate_weights()</code></td>
+<td>Solve the entropy-balancing (method-of-moments) problem for the weights.</td>
+</tr>
+<tr class="even">
+<td><code>check_weights()</code></td>
+<td>Report the effective sample size and weight diagnostics.</td>
+</tr>
+<tr class="odd">
+<td><code>calculate_balance_smd()</code> / <code>balance_table()</code> / <code>love_plot()</code></td>
+<td>Standardized mean differences before and after weighting.</td>
+</tr>
+<tr class="even">
+<td><code>maic_unanchored()</code></td>
+<td>Fit the weighted outcome model and return the effect with a robust standard error.</td>
+</tr>
+</tbody>
+</table>
+<p>The weights are the exponential-tilting solution <a href="../chapters/part4/18-maic.html#thm-maic-exponential-weights" class="quarto-xref">Theorem&nbsp;<span>18.1</span></a>: after centering the IPD covariates on the comparator means, <span class="math inline">\(w_i=\exp(\boldsymbol{\beta}^\top \mathbf{x}_i^{c})\)</span>, where <span class="math inline">\(\boldsymbol{\beta}\)</span> minimizes the strictly convex dual objective <span class="math inline">\(Q(\boldsymbol{\beta})=\sum_i \exp(\boldsymbol{\beta}^\top \mathbf{x}_i^{c})\)</span> (<a href="../chapters/part4/18-maic.html#eq-maic-dual" class="quarto-xref">Equation&nbsp;<span>18.6</span></a>), whose stationary condition is exactly the moment balance <a href="../chapters/part4/18-maic.html#eq-maic-moment-balance" class="quarto-xref">Equation&nbsp;<span>18.1</span></a>; existence and uniqueness are <a href="../chapters/part4/18-maic.html#thm-maic-existence-uniqueness" class="quarto-xref">Theorem&nbsp;<span>18.2</span></a>. <code>estimate_weights(method = "BFGS")</code> performs this minimization. In pseudocode the whole solve is short (the package does this internally; you never write it, but seeing it demystifies “call BFGS”):</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb7"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb7-1"><a href="#cb7-1" aria-hidden="true" tabindex="-1"></a>Xc    <span class="ot">&lt;-</span> <span class="fu">sweep</span>(X_ipd, <span class="dv">2</span>, comparator_means)              <span class="co"># center IPD covariates on comparator means: x_i^c</span></span>
+<span id="cb7-2"><a href="#cb7-2" aria-hidden="true" tabindex="-1"></a>Q     <span class="ot">&lt;-</span> <span class="cf">function</span>(b) <span class="fu">sum</span>(<span class="fu">exp</span>(Xc <span class="sc">%*%</span> b))                 <span class="co"># the convex dual objective Q(beta)</span></span>
+<span id="cb7-3"><a href="#cb7-3" aria-hidden="true" tabindex="-1"></a>grad  <span class="ot">&lt;-</span> <span class="cf">function</span>(b) <span class="fu">colSums</span>(<span class="fu">as.vector</span>(<span class="fu">exp</span>(Xc <span class="sc">%*%</span> b)) <span class="sc">*</span> Xc)  <span class="co"># gradient = weighted covariate imbalance</span></span>
+<span id="cb7-4"><a href="#cb7-4" aria-hidden="true" tabindex="-1"></a>b_hat <span class="ot">&lt;-</span> <span class="fu">optim</span>(<span class="fu">rep</span>(<span class="dv">0</span>, <span class="fu">ncol</span>(Xc)), Q, grad, <span class="at">method =</span> <span class="st">"BFGS"</span>)<span class="sc">$</span>par</span>
+<span id="cb7-5"><a href="#cb7-5" aria-hidden="true" tabindex="-1"></a>w     <span class="ot">&lt;-</span> <span class="fu">exp</span>(Xc <span class="sc">%*%</span> b_hat)                              <span class="co"># the MAIC weights w_i = exp(beta^T x_i^c)</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<p>At the optimum the gradient is zero, and the <code>grad</code> line set to zero says <span class="math inline">\(\sum_i w_i\mathbf{x}_i^{c}=\mathbf 0\)</span>: the weighted covariate means equal the comparator means, which <em>is</em> the moment balance <a href="../chapters/part4/18-maic.html#eq-maic-moment-balance" class="quarto-xref">Equation&nbsp;<span>18.1</span></a>. So minimizing <span class="math inline">\(Q\)</span> and balancing the covariates are the same act, the content of <a href="../chapters/part4/18-maic.html#thm-maic-exponential-weights" class="quarto-xref">Theorem&nbsp;<span>18.1</span></a>. The reported effective sample size <span class="math inline">\(\mathrm{ESS}=(\sum_i w_i)^2/\sum_i w_i^2\)</span> is <a href="../chapters/part4/18-maic.html#def-maic-ess" class="quarto-xref">Definition&nbsp;<span>18.3</span></a> and <a href="../chapters/part4/18-maic.html#eq-maic-ess" class="quarto-xref">Equation&nbsp;<span>18.20</span></a>, with the upper bound of <a href="../chapters/part4/18-maic.html#thm-maic-ess-bound" class="quarto-xref">Theorem&nbsp;<span>18.6</span></a>. <code>maic_unanchored()</code> returns the sandwich (robust) standard error of <a href="../chapters/part4/18-maic.html#thm-maic-sandwich-variance" class="quarto-xref">Theorem&nbsp;<span>18.9</span></a>, the correct accounting for the estimated weights. The unanchored point estimate it targets, and the conditional-constancy assumption it needs, are <a href="../chapters/part4/18-maic.html#thm-unanchored-maic-consistency" class="quarto-xref">Theorem&nbsp;<span>18.5</span></a>.</p>
+<p>Two diagnostics decide whether to trust a MAIC. The <em>effective sample size</em> (ESS) is the equivalent number of unweighted patients the weighted sample is worth, <span class="math inline">\((\sum_i w_i)^2/\sum_i w_i^2\)</span>; it falls below the actual sample size whenever the weights are uneven, and a small ESS (a large drop) warns that a few patients dominate and the estimate is fragile. <code>check_weights()</code> reports it. <em>Covariate balance</em> is the other: <code>balance_table()</code> and <code>love_plot()</code> show the standardized mean difference (SMD) of each covariate between the weighted IPD and the comparator, before and after weighting. A love plot is a dot plot of those SMDs; you want every after-weighting point pulled close to zero, with a common rule of thumb of <span class="math inline">\(|\mathrm{SMD}|&lt;0.1\)</span>. Good balance together with an adequate ESS is the license to report the <code>maic_unanchored()</code> effect; poor balance or a collapsed ESS is a signal to drop a covariate or reconsider the comparison.</p>
+</section>
+<section id="sec-impl-uitc-dr" class="level3" data-number="E.5.3">
+<h3 data-number="E.5.3" class="anchored" data-anchor-id="sec-impl-uitc-dr"><span class="header-section-number">E.5.3</span> STC and the doubly-robust estimator (Chapters 19, 10)</h3>
+<p><code>method = "stc"</code> delegates to <code>mlumr::stc()</code> (Chapter 19, mapped in <a href="#sec-impl-mlumr-benchmarks" class="quarto-xref"><span>Section E.4.3</span></a>).</p>
+<p><code>dr_estimator()</code> (also <code>method = "dr"</code>) combines the two adjustment strategies into one estimator that is consistent if <em>either</em> the weighting model or the outcome model is correctly specified, the double-robustness property of the augmented inverse-probability-weighting (AIPW) estimator of Chapter 10. Plainly, it gives you <em>two chances to be right</em>: if either the weighting model or the outcome model is correct, the estimate is consistent. A minimal call is</p>
+<div class="code-copy-outer-scaffold"><div class="sourceCode" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>dr <span class="ot">&lt;-</span> <span class="fu">dr_estimator</span>(dat,</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>                   <span class="at">weighting    =</span> <span class="st">"maic"</span>,           <span class="co"># get weights from MAIC (Chapter 18)</span></span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>                   <span class="at">augmentation =</span> <span class="st">"weighted_gcomp"</span>,  <span class="co"># correct with a G-computation term (Chapter 19)</span></span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>                   <span class="at">cor_method   =</span> <span class="st">"spearman"</span>,        <span class="co"># correlation used by the NORTA comparator simulation</span></span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n_sim        =</span> <span class="dv">1000</span>,              <span class="co"># NORTA draws of the comparator covariate profile</span></span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>                   <span class="at">n_boot       =</span> <span class="dv">1000</span>)              <span class="co"># bootstrap resamples for the standard error</span></span></code></pre></div><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></div>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Argument</th>
+<th>Mathematical role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>weighting = c("maic", "iow")</code></td>
+<td>the propensity-type model: MAIC entropy weights (Chapter 18) or inverse-odds weights.</td>
+</tr>
+<tr class="even">
+<td><code>augmentation = c("residual", "weighted_gcomp")</code></td>
+<td>the outcome-regression correction: the G-computation term of Chapter 19.</td>
+</tr>
+<tr class="odd">
+<td><code>cor_method</code>, <code>n_sim</code></td>
+<td>the NORTA simulation of the comparator covariate profile (the Gaussian-copula construction <a href="../chapters/part6/28-qba.html#thm-norta-copula" class="quarto-xref">Theorem&nbsp;<span>28.2</span></a>) used to evaluate the augmentation.</td>
+</tr>
+</tbody>
+</table>
+<p>The point estimate is the weighting estimate plus a mean-zero (under either model) augmentation; the weighting piece is <a href="../chapters/part4/18-maic.html#thm-maic-exponential-weights" class="quarto-xref">Theorem&nbsp;<span>18.1</span></a> and the augmentation piece is the G-computation functional <a href="../chapters/part4/19-stc.html#prp-stc-gcomp" class="quarto-xref">Proposition&nbsp;<span>19.1</span></a>. Standard errors come from the bootstrap (<code>n_boot</code>).</p>
+<p>The two <code>augmentation</code> choices are two ways to write the same correction: <code>"residual"</code> adds the weighted mean IPD residual from the outcome model, while <code>"weighted_gcomp"</code> forms the G-computation prediction over the simulated comparator covariates and corrects toward it; both have mean zero when the outcome model is correct, so they agree in large samples and differ mainly in finite-sample behavior. The two integer knobs serve different stages and should not be confused: <code>n_sim</code> sets how many comparator covariate profiles the NORTA step simulates to evaluate the augmentation, whereas <code>n_int</code> (from <code>add_integration()</code>) sets the QMC grid used inside the Bayesian fits; raising either reduces a different Monte Carlo error.</p>
+</section>
+<section id="sec-impl-uitc-qba" class="level3" data-number="E.5.4">
+<h3 data-number="E.5.4" class="anchored" data-anchor-id="sec-impl-uitc-qba"><span class="header-section-number">E.5.4</span> Quantitative bias analysis (Chapter 28)</h3>
+<p>Two families of QBA ship with <code>uitc</code>. The ITC-specific functions act on the unanchored estimand and ask how an <em>unmeasured</em> covariate would move it; the classical functions act on a <span class="math inline">\(2\times2\)</span> table. In practice the QBA functions form a ladder you climb only as far as you need: start with the E-value as a one-number screening calculation (how strong would an unmeasured confounder have to be to overturn the result?); if that is not reassuring, run an explicit sensitivity analysis with <code>qba_unmeasured_itc()</code> or <code>qba_tipping_itc()</code>; and if you can put priors on the bias, escalate to the probabilistic analysis <code>qba_prob_itc()</code>. The classical <span class="math inline">\(2\times2\)</span> functions are for the separate case of a single contingency table rather than the unanchored estimand.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function</th>
+<th>Method</th>
+<th>Book object</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><code>confounders_evalue()</code></td>
+<td>E-value for the minimum unmeasured association that could explain away the effect</td>
+<td><a href="../chapters/part6/28-qba.html#def-itc-evalue" class="quarto-xref">Definition&nbsp;<span>28.2</span></a>, <a href="../chapters/part6/28-qba.html#thm-evalue-derivation" class="quarto-xref">Theorem&nbsp;<span>28.1</span></a>, <a href="../chapters/part6/28-qba.html#eq-qba-evalue" class="quarto-xref">Equation&nbsp;<span>28.9</span></a></td>
+</tr>
+<tr class="even">
+<td><code>qba_unmeasured_itc()</code></td>
+<td>simulate an unmeasured confounder jointly with the measured covariates by NORTA, re-estimate</td>
+<td><a href="../chapters/part6/28-qba.html#thm-norta-copula" class="quarto-xref">Theorem&nbsp;<span>28.2</span></a>, <a href="../chapters/part6/28-qba.html#eq-qba-norta" class="quarto-xref">Equation&nbsp;<span>28.12</span></a>, the correction <a href="../chapters/part6/28-qba.html#eq-qba-correction" class="quarto-xref">Equation&nbsp;<span>28.1</span></a></td>
+</tr>
+<tr class="odd">
+<td><code>qba_tipping_itc()</code></td>
+<td>find the sensitivity-parameter value at which the corrected estimate crosses a threshold</td>
+<td><a href="../chapters/part6/28-qba.html#def-tipping-point" class="quarto-xref">Definition&nbsp;<span>28.3</span></a>, <a href="../chapters/part6/28-qba.html#eq-qba-tipping" class="quarto-xref">Equation&nbsp;<span>28.15</span></a>, monotone <a href="../chapters/part6/28-qba.html#prp-qba-tipping-monotone" class="quarto-xref">Proposition&nbsp;<span>28.2</span></a></td>
+</tr>
+<tr class="even">
+<td><code>qba_prob_itc()</code></td>
+<td>probabilistic bias analysis: priors on the bias parameters, Monte Carlo over the bias-corrected estimand</td>
+<td><a href="../chapters/part6/28-qba.html#def-probabilistic-bias-analysis" class="quarto-xref">Definition&nbsp;<span>28.4</span></a>, <a href="../chapters/part6/28-qba.html#thm-qba-pba-convergence" class="quarto-xref">Theorem&nbsp;<span>28.3</span></a></td>
+</tr>
+<tr class="odd">
+<td><code>probsens()</code>, <code>confounders()</code>, <code>misclass()</code>, <code>selection()</code></td>
+<td>classical epidemiologic QBA on a <span class="math inline">\(2\times2\)</span> table</td>
+<td><a href="../chapters/part6/28-qba.html#def-quantitative-bias-analysis" class="quarto-xref">Definition&nbsp;<span>28.1</span></a>, the bias factor <a href="../chapters/part6/28-qba.html#eq-qba-bias-factor" class="quarto-xref">Equation&nbsp;<span>28.2</span></a></td>
+</tr>
+</tbody>
+</table>
+<p>For the E-value, <code>confounders_evalue(case, type = "RR")</code> returns <span class="math inline">\(E=\mathrm{RR}+\sqrt{\mathrm{RR}(\mathrm{RR}-1)}\)</span> for <span class="math inline">\(\mathrm{RR}\ge 1\)</span> (and the reciprocal-scale version otherwise), the closed form derived in <a href="../chapters/part6/28-qba.html#thm-evalue-derivation" class="quarto-xref">Theorem&nbsp;<span>28.1</span></a>. The NORTA procedure <code>qba_unmeasured_itc()</code> draws an unmeasured covariate with a prescribed correlation to the measured ones through a Gaussian copula, exactly the construction whose validity is <a href="../chapters/part6/28-qba.html#thm-norta-copula" class="quarto-xref">Theorem&nbsp;<span>28.2</span></a>, then propagates it through the unanchored estimand <a href="../chapters/part6/28-qba.html#eq-qba-unanchored-estimand" class="quarto-xref">Equation&nbsp;<span>28.10</span></a>. Tipping-point and probabilistic outputs are visualized with <code>plot_tipping_curve()</code>, <code>plot_sensitivity_curve()</code>, and <code>plot_sensitivity_contour()</code>.</p>
+<p>The distinction between <code>qba_tipping_itc()</code> and <code>qba_prob_itc()</code> is load-bearing and easy to miss. A <em>tipping-point</em> analysis is deterministic root-finding: it varies a single sensitivity parameter (say the strength of the unmeasured confounder) and reports the exact value at which the corrected estimate crosses a threshold, for example loses significance; there is one number, “it tips here” (<a href="../chapters/part6/28-qba.html#def-tipping-point" class="quarto-xref">Definition&nbsp;<span>28.3</span></a>, <a href="../chapters/part6/28-qba.html#eq-qba-tipping" class="quarto-xref">Equation&nbsp;<span>28.15</span></a>), and its monotone behavior is <a href="../chapters/part6/28-qba.html#prp-qba-tipping-monotone" class="quarto-xref">Proposition&nbsp;<span>28.2</span></a>. A <em>probabilistic bias analysis</em> instead puts a prior distribution on the bias parameters and Monte-Carlos over it, returning a whole distribution of bias-corrected estimates and an interval that folds in bias uncertainty (<a href="../chapters/part6/28-qba.html#def-probabilistic-bias-analysis" class="quarto-xref">Definition&nbsp;<span>28.4</span></a>, <a href="../chapters/part6/28-qba.html#thm-qba-pba-convergence" class="quarto-xref">Theorem&nbsp;<span>28.3</span></a>). Use tipping when you want a single crisp “how bad would it have to be” answer; use probabilistic when you can express honest uncertainty about the bias and want that propagated.</p>
+<p>Comparator selection by covariate distance (Chapter 27) is also available: <code>covariate_distance()</code> and <code>match_comparator()</code> compute the Euclidean, standardized, Mahalanobis, and Gower distances of <a href="../chapters/part6/27-distance-matching.html#def-distance-variants" class="quarto-xref">Definition&nbsp;<span>27.4</span></a>, the Mahalanobis whitening of <a href="../chapters/part6/27-distance-matching.html#thm-mahalanobis-whitening" class="quarto-xref">Theorem&nbsp;<span>27.1</span></a> being the scale-invariant choice (<a href="../chapters/part6/27-distance-matching.html#thm-distance-scale-invariance" class="quarto-xref">Theorem&nbsp;<span>27.2</span></a>). As Chapter 27 stresses, these are diagnostics for closeness, not certificates of validity (<a href="../chapters/part6/27-distance-matching.html#prp-distance-diagnostic-not-validity" class="quarto-xref">Proposition&nbsp;<span>27.4</span></a>).</p>
+</section>
+<section id="sec-impl-uitc-map" class="level3" data-number="E.5.5">
+<h3 data-number="E.5.5" class="anchored" data-anchor-id="sec-impl-uitc-map"><span class="header-section-number">E.5.5</span> Object-to-code map</h3>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Book object</th>
+<th>Chapter result</th>
+<th><code>uitc</code></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>MAIC weights</td>
+<td><a href="../chapters/part4/18-maic.html#thm-maic-exponential-weights" class="quarto-xref">Theorem&nbsp;<span>18.1</span></a>, <a href="../chapters/part4/18-maic.html#eq-maic-dual" class="quarto-xref">Equation&nbsp;<span>18.6</span></a></td>
+<td><code>estimate_weights()</code>, <code>prepare_maic()</code></td>
+</tr>
+<tr class="even">
+<td>Effective sample size</td>
+<td><a href="../chapters/part4/18-maic.html#def-maic-ess" class="quarto-xref">Definition&nbsp;<span>18.3</span></a></td>
+<td><code>check_weights()</code></td>
+</tr>
+<tr class="odd">
+<td>MAIC robust variance</td>
+<td><a href="../chapters/part4/18-maic.html#thm-maic-sandwich-variance" class="quarto-xref">Theorem&nbsp;<span>18.9</span></a></td>
+<td><code>maic_unanchored()</code></td>
+</tr>
+<tr class="even">
+<td>STC G-computation</td>
+<td><a href="../chapters/part4/19-stc.html#prp-stc-gcomp" class="quarto-xref">Proposition&nbsp;<span>19.1</span></a></td>
+<td><code>uitc(method = "stc")</code></td>
+</tr>
+<tr class="odd">
+<td>Doubly-robust (AIPW)</td>
+<td>Chapter 10; <a href="../chapters/part4/18-maic.html#thm-maic-exponential-weights" class="quarto-xref">Theorem&nbsp;<span>18.1</span></a> + <a href="../chapters/part4/19-stc.html#prp-stc-gcomp" class="quarto-xref">Proposition&nbsp;<span>19.1</span></a></td>
+<td><code>dr_estimator()</code></td>
+</tr>
+<tr class="even">
+<td>E-value</td>
+<td><a href="../chapters/part6/28-qba.html#thm-evalue-derivation" class="quarto-xref">Theorem&nbsp;<span>28.1</span></a>, <a href="../chapters/part6/28-qba.html#eq-qba-evalue" class="quarto-xref">Equation&nbsp;<span>28.9</span></a></td>
+<td><code>confounders_evalue()</code></td>
+</tr>
+<tr class="odd">
+<td>NORTA bias analysis</td>
+<td><a href="../chapters/part6/28-qba.html#thm-norta-copula" class="quarto-xref">Theorem&nbsp;<span>28.2</span></a>, <a href="../chapters/part6/28-qba.html#eq-qba-norta" class="quarto-xref">Equation&nbsp;<span>28.12</span></a></td>
+<td><code>qba_unmeasured_itc()</code></td>
+</tr>
+<tr class="even">
+<td>Tipping point</td>
+<td><a href="../chapters/part6/28-qba.html#def-tipping-point" class="quarto-xref">Definition&nbsp;<span>28.3</span></a>, <a href="../chapters/part6/28-qba.html#eq-qba-tipping" class="quarto-xref">Equation&nbsp;<span>28.15</span></a></td>
+<td><code>qba_tipping_itc()</code></td>
+</tr>
+<tr class="odd">
+<td>Probabilistic bias analysis</td>
+<td><a href="../chapters/part6/28-qba.html#thm-qba-pba-convergence" class="quarto-xref">Theorem&nbsp;<span>28.3</span></a></td>
+<td><code>qba_prob_itc()</code>, <code>probsens()</code></td>
+</tr>
+<tr class="even">
+<td>Comparator distance</td>
+<td><a href="../chapters/part6/27-distance-matching.html#def-distance-variants" class="quarto-xref">Definition&nbsp;<span>27.4</span></a>, <a href="../chapters/part6/27-distance-matching.html#thm-mahalanobis-whitening" class="quarto-xref">Theorem&nbsp;<span>27.1</span></a></td>
+<td><code>covariate_distance()</code>, <code>match_comparator()</code></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="sec-impl-together" class="level2" data-number="E.6">
+<h2 data-number="E.6" class="anchored" data-anchor-id="sec-impl-together"><span class="header-section-number">E.6</span> Using the three packages together</h2>
+<p>The packages partition the problem by network type, and that partition is the decision rule for which to load.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Network</th>
+<th>Method</th>
+<th>Package</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Connected, anchored, IPD and AgD</td>
+<td>ML-NMR</td>
+<td><code>multinma</code></td>
+</tr>
+<tr class="even">
+<td>Disconnected, unanchored, two treatments</td>
+<td>ML-UMR</td>
+<td><code>mlumr</code></td>
+</tr>
+<tr class="odd">
+<td>Unanchored, with MAIC, STC, doubly-robust, and QBA in one umbrella</td>
+<td>PAIC and QBA</td>
+<td><code>uitc</code> (delegating the Bayesian fits to <code>mlumr</code>)</td>
+</tr>
+</tbody>
+</table>
+<p>When you run several unanchored estimates on one <code>uitc</code> data object, read them as a panel, not a menu to pick a winner from after the fact. <code>naive()</code> is the unadjusted anchor point; MAIC, STC, ML-UMR under the SPFA, and the doubly-robust estimator are four adjusted routes that should land near one another <em>if</em> their shared assumptions hold, because they target the same marginal estimand by different means (weighting, outcome regression, a Bayesian joint model, and a combination). Broad agreement among the adjusted methods, all shifted away from <code>naive()</code> in the direction the covariate imbalance predicts, is reassuring. Wide disagreement is diagnostic: MAIC drifting from STC points to weight instability (check the ESS and the love plot of <a href="#sec-impl-uitc-maic" class="quarto-xref"><span>Section E.5.2</span></a>); the doubly-robust estimate sitting apart from both suggests one of its two models is misspecified; and the <code>relaxed</code> ML-UMR fit moving far from <code>spfa</code> flags effect modification the simpler methods assume away. Pre-specify the primary method, use the others as sensitivity analyses, and report the spread.</p>
+<p>Because <code>mlumr</code> deliberately reuses <code>multinma</code>’s function names (<code>set_ipd()</code>, <code>set_agd()</code>, <code>add_integration()</code>, <code>distr()</code>, <code>marginal_effects()</code>), the safe practice is one package per session, matched to the network type, or namespacing with <code>multinma::</code> and <code>mlumr::</code> when both must be attached. <code>uitc</code> consumes <code>mlumr_data</code> objects directly, so a single <code>combine_data()</code> result feeds MAIC, STC, ML-UMR, naive, doubly-robust, and the QBA sensitivity analyses in turn, which is the recommended way to run the adjusted estimate and its bias analysis side by side.</p>
+</section>
+<section id="sec-impl-notes" class="level2" data-number="E.7">
+<h2 data-number="E.7" class="anchored" data-anchor-id="sec-impl-notes"><span class="header-section-number">E.7</span> Notes and references</h2>
+<p><code>multinma</code> is the reference implementation of ML-NMR <span class="citation" data-cites="phillippo2020mlnmr">(<a href="../references.html#ref-phillippo2020mlnmr" role="doc-biblioref">Phillippo et al. 2020</a>)</span> and its general-likelihood and survival extension <span class="citation" data-cites="phillippo2025general">(<a href="../references.html#ref-phillippo2025general" role="doc-biblioref">Phillippo et al. 2025</a>)</span>; the QMC and copula integration it shares with <code>mlumr</code> follows the Sobol’ sequence of <span class="citation" data-cites="sobol1967">Sobol’ (<a href="../references.html#ref-sobol1967" role="doc-biblioref">1967</a>)</span> and the copula construction of <span class="citation" data-cites="sklar1959">Sklar (<a href="../references.html#ref-sklar1959" role="doc-biblioref">1959</a>)</span> (Chapter 22). <code>mlumr</code> implements ML-UMR <span class="citation" data-cites="chandler2025mlumr">(<a href="../references.html#ref-chandler2025mlumr" role="doc-biblioref">Chandler and Ishak 2026</a>)</span> for disconnected two-treatment evidence, with the Kaplan-Meier reconstruction of <span class="citation" data-cites="guyot2012">Guyot et al. (<a href="../references.html#ref-guyot2012" role="doc-biblioref">2012</a>)</span> for survival comparators (Chapter 25, Chapter 26). <code>uitc</code> collects the matching method of <span class="citation" data-cites="signorovitch2010maic">Signorovitch et al. (<a href="../references.html#ref-signorovitch2010maic" role="doc-biblioref">2010</a>)</span> (Chapter 18), the simulated treatment comparison of <span class="citation" data-cites="caro2010stc">Caro and Ishak (<a href="../references.html#ref-caro2010stc" role="doc-biblioref">2010</a>)</span> (Chapter 19), and the bias-analysis machinery of <span class="citation" data-cites="lash2021qba">Lash et al. (<a href="../references.html#ref-lash2021qba" role="doc-biblioref">2021</a>)</span> and the E-value of <span class="citation" data-cites="vanderweele2017evalue">VanderWeele and Ding (<a href="../references.html#ref-vanderweele2017evalue" role="doc-biblioref">2017</a>)</span> (Chapter 28). All three estimate their Bayesian models in Stan <span class="citation" data-cites="carpenter2017stan">(<a href="../references.html#ref-carpenter2017stan" role="doc-biblioref">Carpenter et al. 2017</a>)</span> (Chapter 24). The mathematics each package computes is proved in the chapters cited in the maps above; this appendix only records the correspondence.</p>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-caro2010stc" class="csl-entry" role="listitem">
+Caro, J. Jaime, and K. Jack Ishak. 2010. <span>“No Head-to-Head Trial? Simulate the Missing Arms.”</span> <em>PharmacoEconomics</em> 28 (10): 957–67.
+</div>
+<div id="ref-carpenter2017stan" class="csl-entry" role="listitem">
+Carpenter, Bob, Andrew Gelman, Matthew D. Hoffman, et al. 2017. <span>“Stan: A Probabilistic Programming Language.”</span> <em>Journal of Statistical Software</em> 76 (1).
+</div>
+<div id="ref-chandler2025mlumr" class="csl-entry" role="listitem">
+Chandler, Conor, and K. Jack Ishak. 2026. <span>“Anchors Away: Navigating Unanchored Indirect Comparisons with Multilevel Unanchored Meta-Regression.”</span> <em>arXiv Preprint arXiv:2606.20341</em>.
+</div>
+<div id="ref-guyot2012" class="csl-entry" role="listitem">
+Guyot, Patricia, A. E. Ades, Mario J. N. M. Ouwens, and Nicky J. Welton. 2012. <span>“Enhanced Secondary Analysis of Survival Data: Reconstructing the Data from Published Kaplan-Meier Survival Curves.”</span> <em>BMC Medical Research Methodology</em> 12: 9.
+</div>
+<div id="ref-lash2021qba" class="csl-entry" role="listitem">
+Lash, Timothy L., Matthew P. Fox, and Richard F. MacLehose. 2021. <em>Applying Quantitative Bias Analysis to Epidemiologic Data</em>. 2nd ed. Springer.
+</div>
+<div id="ref-phillippo2020mlnmr" class="csl-entry" role="listitem">
+Phillippo, David M., Sofia Dias, A. E. Ades, et al. 2020. <span>“Multilevel Network Meta-Regression for Population-Adjusted Treatment Comparisons.”</span> <em>Journal of the Royal Statistical Society: Series A</em> 183 (3): 1189–210. <a href="https://doi.org/10.1111/rssa.12579">https://doi.org/10.1111/rssa.12579</a>.
+</div>
+<div id="ref-phillippo2025general" class="csl-entry" role="listitem">
+Phillippo, David M., Sofia Dias, A. E. Ades, and Nicky J. Welton. 2025. <span>“Multilevel Network Meta-Regression for General Likelihoods.”</span> <em>Journal of the Royal Statistical Society: Series A</em>, ahead of print. <a href="https://doi.org/10.1093/jrsssa/qnaf169">https://doi.org/10.1093/jrsssa/qnaf169</a>.
+</div>
+<div id="ref-signorovitch2010maic" class="csl-entry" role="listitem">
+Signorovitch, James E., Eric Q. Wu, Andrew P. Yu, et al. 2010. <span>“Comparative Effectiveness Without Head-to-Head Trials: A Method for Matching-Adjusted Indirect Comparisons.”</span> <em>PharmacoEconomics</em> 28 (10): 935–45.
+</div>
+<div id="ref-sklar1959" class="csl-entry" role="listitem">
+Sklar, Abe. 1959. <span>“Fonctions de r<span>é</span>partition <span class="nocase">à</span> <span class="math inline">\(n\)</span> Dimensions Et Leurs Marges.”</span> <em>Publications de l’Institut de Statistique de l’Universit<span>é</span> de Paris</em> 8: 229–31.
+</div>
+<div id="ref-sobol1967" class="csl-entry" role="listitem">
+Sobol’, Ilya M. 1967. <span>“On the Distribution of Points in a Cube and the Approximate Evaluation of Integrals.”</span> <em>USSR Computational Mathematics and Mathematical Physics</em> 7 (4): 86–112.
+</div>
+<div id="ref-vanderweele2017evalue" class="csl-entry" role="listitem">
+VanderWeele, Tyler J., and Peng Ding. 2017. <span>“Sensitivity Analysis in Observational Research: Introducing the e-Value.”</span> <em>Annals of Internal Medicine</em> 167 (4): 268–74.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/choxos\.github\.io\/Mathematics-of-ITC\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../appendices/D-special-functions.html" class="pagination-link" aria-label="Special Functions for Numerical Integration">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">D</span>&nbsp; <span class="chapter-title">Special Functions for Numerical Integration</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../appendices/F-solutions.html" class="pagination-link" aria-label="Solutions to Selected Exercises">
+        <span class="nav-page-text"><span class="chapter-number">F</span>&nbsp; <span class="chapter-title">Solutions to Selected Exercises</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -6,10 +6,8 @@
 
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
 
-<meta name="author" content="Ahmad Sofi-Mahmudi">
-<meta name="dcterms.date" content="2026-07-02">
 
-<title>The Mathematics of Indirect Treatment Comparisons</title>
+<title>Notation and Conventions – The Mathematics of Indirect Treatment Comparisons</title>
 <style>
 /* Default styles provided by pandoc.
 ** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
@@ -35,7 +33,8 @@ ul.task-list li input[type="checkbox"] {
 <script src="site_libs/quarto-search/fuse.min.js"></script>
 <script src="site_libs/quarto-search/quarto-search.js"></script>
 <meta name="quarto:offset" content="./">
-<link href="./notation.html" rel="next">
+<link href="./chapters/part1/01-linear-algebra-i.html" rel="next">
+<link href="./index.html" rel="prev">
 <script src="site_libs/quarto-html/quarto.js" type="module"></script>
 <script src="site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
 <script src="site_libs/quarto-html/popper.min.js"></script>
@@ -74,6 +73,35 @@ ul.task-list li input[type="checkbox"] {
   }
 }</script>
 
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
 
 </head>
 
@@ -86,7 +114,7 @@ ul.task-list li input[type="checkbox"] {
       <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
         <i class="bi bi-layout-text-sidebar-reverse"></i>
       </button>
-        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./index.html">Preface</a></li></ol></nav>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="./notation.html">Notation and Conventions</a></li></ol></nav>
         <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
         </a>
       <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
@@ -116,13 +144,13 @@ ul.task-list li input[type="checkbox"] {
     <ul class="list-unstyled mt-1">
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./index.html" class="sidebar-item-text sidebar-link active">
+  <a href="./index.html" class="sidebar-item-text sidebar-link">
  <span class="menu-text">Preface</span></a>
   </div>
 </li>
         <li class="sidebar-item">
   <div class="sidebar-item-container"> 
-  <a href="./notation.html" class="sidebar-item-text sidebar-link">
+  <a href="./notation.html" class="sidebar-item-text sidebar-link active">
  <span class="menu-text">Notation and Conventions</span></a>
   </div>
 </li>
@@ -441,13 +469,17 @@ ul.task-list li input[type="checkbox"] {
     <h2 id="toc-title">Table of contents</h2>
    
   <ul>
-  <li><a href="#preface" id="toc-preface" class="nav-link active" data-scroll-target="#preface">Preface</a>
-  <ul class="collapse">
-  <li><a href="#who-this-book-is-for" id="toc-who-this-book-is-for" class="nav-link" data-scroll-target="#who-this-book-is-for">Who this book is for</a></li>
-  <li><a href="#the-contract-between-us" id="toc-the-contract-between-us" class="nav-link" data-scroll-target="#the-contract-between-us">The contract between us</a></li>
-  <li><a href="#how-the-book-is-organized" id="toc-how-the-book-is-organized" class="nav-link" data-scroll-target="#how-the-book-is-organized">How the book is organized</a></li>
-  <li><a href="#how-to-read-it" id="toc-how-to-read-it" class="nav-link" data-scroll-target="#how-to-read-it">How to read it</a></li>
-  </ul></li>
+  <li><a href="#conventions" id="toc-conventions" class="nav-link active" data-scroll-target="#conventions">Conventions</a></li>
+  <li><a href="#linear-algebra-and-matrices" id="toc-linear-algebra-and-matrices" class="nav-link" data-scroll-target="#linear-algebra-and-matrices">Linear algebra and matrices</a></li>
+  <li><a href="#regression-and-least-squares" id="toc-regression-and-least-squares" class="nav-link" data-scroll-target="#regression-and-least-squares">Regression and least squares</a></li>
+  <li><a href="#probability-and-random-variables" id="toc-probability-and-random-variables" class="nav-link" data-scroll-target="#probability-and-random-variables">Probability and random variables</a></li>
+  <li><a href="#statistical-inference" id="toc-statistical-inference" class="nav-link" data-scroll-target="#statistical-inference">Statistical inference</a></li>
+  <li><a href="#bayesian-computation-and-model-comparison" id="toc-bayesian-computation-and-model-comparison" class="nav-link" data-scroll-target="#bayesian-computation-and-model-comparison">Bayesian computation and model comparison</a></li>
+  <li><a href="#causal-inference" id="toc-causal-inference" class="nav-link" data-scroll-target="#causal-inference">Causal inference</a></li>
+  <li><a href="#studies-treatments-and-populations" id="toc-studies-treatments-and-populations" class="nav-link" data-scroll-target="#studies-treatments-and-populations">Studies, treatments, and populations</a></li>
+  <li><a href="#outcome-models-and-likelihoods" id="toc-outcome-models-and-likelihoods" class="nav-link" data-scroll-target="#outcome-models-and-likelihoods">Outcome models and likelihoods</a></li>
+  <li><a href="#population-adjustment-maic-stc-ml-nmr-ml-umr" id="toc-population-adjustment-maic-stc-ml-nmr-ml-umr" class="nav-link" data-scroll-target="#population-adjustment-maic-stc-ml-nmr-ml-umr">Population adjustment: MAIC, STC, ML-NMR, ML-UMR</a></li>
+  <li><a href="#abbreviations" id="toc-abbreviations" class="nav-link" data-scroll-target="#abbreviations">Abbreviations</a></li>
   </ul>
 </nav>
     </div>
@@ -456,27 +488,14 @@ ul.task-list li input[type="checkbox"] {
 
 <header id="title-block-header" class="quarto-title-block default">
 <div class="quarto-title">
-<h1 class="title">The Mathematics of Indirect Treatment Comparisons</h1>
-<p class="subtitle lead">Population Adjustment, Transportability, and Comparative Effect Estimation</p>
+<h1 class="title"><span id="sec-notation" class="quarto-section-identifier">Notation and Conventions</span></h1>
 </div>
 
 
 
 <div class="quarto-title-meta">
 
-    <div>
-    <div class="quarto-title-meta-heading">Author</div>
-    <div class="quarto-title-meta-contents">
-             <p>Ahmad Sofi-Mahmudi </p>
-          </div>
-  </div>
     
-    <div>
-    <div class="quarto-title-meta-heading">Published</div>
-    <div class="quarto-title-meta-contents">
-      <p class="date">July 2, 2026</p>
-    </div>
-  </div>
   
     
   </div>
@@ -486,44 +505,631 @@ ul.task-list li input[type="checkbox"] {
 </header>
 
 
-<section id="preface" class="level1 unnumbered">
-<h1 class="unnumbered">Preface</h1>
-<p>This book is about the mathematics of comparing treatments that have never been studied head to head.</p>
-<p>When two treatments have been compared against a common comparator in separate randomized trials, but never against each other, we can still learn something about how they compare. When the populations enrolled in those trials differ in ways that change the size of a treatment effect, the naive indirect comparison becomes biased, and we need population adjustment. When we want the answer not for a trial population but for a decision population that neither trial sampled, we need transportability. The methods that do this work, network meta-analysis, matching-adjusted indirect comparison, simulated treatment comparison, multilevel network meta-regression, and multilevel unanchored meta-regression, are the subject of this book. Our goal is to develop all of them as mathematics: from definitions, through lemmas, to theorems with proofs.</p>
-<section id="who-this-book-is-for" class="level2">
-<h2 class="anchored" data-anchor-id="who-this-book-is-for">Who this book is for</h2>
-<p>The book is written for the reader who wants to understand indirect treatment comparison from the ground up and emerge able to derive, criticize, and extend the methods rather than only run them. We assume no more than comfort with calculus and the willingness to follow a proof. Everything else is built here. A reader who has asked “why do we minimize the sum of squared residuals, and what makes that the right thing to do,” or “what exactly is being assumed when an indirect comparison is called valid,” is the reader we are writing for.</p>
-<p>We begin with linear algebra and probability, build ordinary least squares and the generalized linear model from first principles, develop the causal inference machinery of potential outcomes and transportability, and only then turn to evidence synthesis and the population-adjustment methods that are the heart of the book. By the final part the same reader who started at the definition of a vector space will be reading the aggregation integral of multilevel network meta-regression and the identification theory of unanchored comparisons.</p>
-</section>
-<section id="the-contract-between-us" class="level2">
-<h2 class="anchored" data-anchor-id="the-contract-between-us">The contract between us</h2>
-<p>This is a pure mathematics text. Every substantive claim is either proved in full or explicitly marked as cited or assumed. We hold ourselves to three rules.</p>
+<p>This chapter is the single source of truth for the symbols used throughout the book. Symbols listed here are used in later chapters without reintroduction. The notation extends the system of the companion proof catalogue so that the two can be read together.</p>
+<section id="conventions" class="level2">
+<h2 class="anchored" data-anchor-id="conventions">Conventions</h2>
 <ol type="1">
-<li><p><strong>Foundations are stated rigorously and the load-bearing ones are proved.</strong> From linear regression onward, results are proved in full. For the prerequisite linear algebra and real analysis, we state every result precisely and prove the ones the later theory rests upon, such as the orthogonal projection theorem and the spectral theorem, while citing standard references for routine facts.</p></li>
-<li><p><strong>Assumptions are never hidden.</strong> Each theorem displays its hypotheses. Where a result holds only on a particular scale, or only for a collapsible effect measure, or only under a shared effect modifier assumption, the statement says so. A recurring lesson of this book is that in indirect comparison the validity of a method is inseparable from the scale and the estimand on which it is asserted.</p></li>
-<li><p><strong>Where a result has been verified by machine, we say so.</strong> A companion formal development in the Coq proof assistant checks many of the central theorems of this book with no admitted steps. Results with a machine-checked counterpart carry a tag pointing to the corresponding formal lemma, and the final chapter explains the formalization and exactly what it assumes.</p></li>
+<li>Bold lowercase letters such as <span class="math inline">\(\mathbf{x}\)</span> and <span class="math inline">\(\boldsymbol{\beta}\)</span> denote vectors. Bold uppercase letters such as <span class="math inline">\(\mathbf{X}\)</span> and <span class="math inline">\(\boldsymbol{\Sigma}\)</span> denote matrices. Plain letters denote scalars or abstract elements.</li>
+<li>Random variables are capitalized when the distinction from a realized value matters, as in <span class="math inline">\(X\)</span> versus <span class="math inline">\(x\)</span>. Vectors of random variables follow the same rule.</li>
+<li>Integrals <span class="math inline">\(\int f(x)\,dx\)</span> are taken over the natural domain, with respect to Lebesgue measure unless stated otherwise. For discrete covariates, sums replace integrals throughout.</li>
+<li>A probability statement without an explicit subscript refers to the population under discussion in the current section. When several populations are in play they are named explicitly.</li>
+<li>The word “effect” without qualification means the relative effect on the linear-predictor scale, that is, the contrast in the linear predictor <span class="math inline">\(\eta\)</span>. The marginal versus conditional distinction and the identity-scale versus link-scale distinction are made explicit wherever they matter.</li>
+<li>The symbol <span class="math inline">\(\square\)</span> marks the end of a proof. The symbol <span class="math inline">\(\blacktriangleleft\)</span> marks the end of a definition, example, or remark when needed for clarity.</li>
+<li>A theorem with a machine-checked counterpart carries a tag of the form <code>[machine-checked: theories/File.v, Theorem name]</code>, referring to the companion Coq development.</li>
 </ol>
 </section>
-<section id="how-the-book-is-organized" class="level2">
-<h2 class="anchored" data-anchor-id="how-the-book-is-organized">How the book is organized</h2>
-<p>The book has six parts.</p>
-<ul>
-<li><p><strong>Part I, Mathematical Foundations</strong>, builds linear algebra, probability, statistical inference, ordinary least squares, the generalized linear model, and hierarchical and Bayesian modeling. This part is self-contained and proved from the basics.</p></li>
-<li><p><strong>Part II, Causal Inference and Estimands</strong>, develops potential outcomes, identification, the adjustment estimators, effect modification, collapsibility, and the estimand-based theory of transportability that frames the rest of the book.</p></li>
-<li><p><strong>Part III, Meta-Analysis and Network Meta-Analysis</strong>, covers pairwise meta-analysis, the Bucher indirect comparison, the network meta-analysis model and its identifiability, and the precise way standard network meta-analysis fails under effect modification.</p></li>
-<li><p><strong>Part IV, Population Adjustment</strong>, is the theory of matching-adjusted indirect comparison and simulated treatment comparison, including the derivation of the matching weights, the effective sample size bound, and the non-collapsibility pitfall.</p></li>
-<li><p><strong>Part V, Multilevel Network Meta-Regression</strong>, derives multilevel network meta-regression from the individual-level model by integration, develops the approximation and numerical-integration theory it requires, and extends it to general likelihoods and to the unanchored setting of multilevel unanchored meta-regression.</p></li>
-<li><p><strong>Part VI, Bias, Comparator Selection, and Rigor</strong>, treats covariate-distance matching, quantitative bias analysis for indirect comparison, simulation-study theory, and the machine-checked formalization.</p></li>
-</ul>
-<p>Appendices collect the notation glossary, matrix calculus, a distributions reference, the special functions used in numerical integration, the mapping from the mathematics to the reference software, and solutions to selected exercises.</p>
+<section id="linear-algebra-and-matrices" class="level2">
+<h2 class="anchored" data-anchor-id="linear-algebra-and-matrices">Linear algebra and matrices</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\mathbb{R}, \mathbb{R}^n, \mathbb{R}^{m\times n}\)</span></td>
+<td>reals, real <span class="math inline">\(n\)</span>-vectors, real <span class="math inline">\(m \times n\)</span> matrices</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(V, W\)</span></td>
+<td>vector spaces over <span class="math inline">\(\mathbb{R}\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\dim V\)</span>, <span class="math inline">\(\mathrm{span}(S)\)</span></td>
+<td>dimension of <span class="math inline">\(V\)</span>, linear span of a set <span class="math inline">\(S\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathbf{e}_i\)</span></td>
+<td><span class="math inline">\(i\)</span>-th standard basis vector</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathbf{1}_n\)</span>, <span class="math inline">\(\mathbf{0}_n\)</span></td>
+<td><span class="math inline">\(n\)</span>-vectors of ones and of zeros</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(I_n\)</span>, <span class="math inline">\(J_n = \mathbf{1}_n\mathbf{1}_n^\top\)</span></td>
+<td><span class="math inline">\(n\times n\)</span> identity, <span class="math inline">\(n\times n\)</span> all-ones matrix</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(A^\top\)</span>, <span class="math inline">\(A^{-1}\)</span>, <span class="math inline">\(A^{+}\)</span></td>
+<td>transpose, inverse, Moore–Penrose pseudoinverse</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathrm{rank}(A)\)</span>, <span class="math inline">\(\det(A)\)</span>, <span class="math inline">\(\mathrm{tr}(A)\)</span></td>
+<td>rank, determinant, trace</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathcal{C}(A)\)</span>, <span class="math inline">\(\mathcal{N}(A)\)</span></td>
+<td>column space and null space of <span class="math inline">\(A\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\langle \mathbf{x},\mathbf{y}\rangle = \mathbf{x}^\top\mathbf{y}\)</span></td>
+<td>Euclidean inner product</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\|\mathbf{x}\|_2 = \sqrt{\mathbf{x}^\top\mathbf{x}}\)</span></td>
+<td>Euclidean norm; <span class="math inline">\(\|\mathbf{x}\|_A=\sqrt{\mathbf{x}^\top A\,\mathbf{x}}\)</span> a quadratic-form norm</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(P_{\mathcal{M}}\)</span>, <span class="math inline">\(P^{\perp}_{\mathcal{M}}=I-P_{\mathcal{M}}\)</span></td>
+<td>orthogonal projection onto subspace <span class="math inline">\(\mathcal{M}\)</span> and its complement</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(A \succeq 0\)</span>, <span class="math inline">\(A \succ 0\)</span></td>
+<td>positive semidefinite, positive definite</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\lambda_i(A)\)</span>, <span class="math inline">\(\sigma_i(A)\)</span></td>
+<td><span class="math inline">\(i\)</span>-th eigenvalue, <span class="math inline">\(i\)</span>-th singular value of <span class="math inline">\(A\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(A = Q\Lambda Q^\top\)</span>, <span class="math inline">\(A=U\Sigma V^\top\)</span></td>
+<td>spectral decomposition, singular value decomposition</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathcal{M}^{\perp}=\{\mathbf{z}:\mathbf{z}^\top\mathbf{m}=0\ \forall\,\mathbf{m}\in\mathcal{M}\}\)</span></td>
+<td>orthogonal complement of a subspace <span class="math inline">\(\mathcal{M}\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\langle\mathbf{x},\mathbf{y}\rangle_A=\mathbf{x}^\top A\,\mathbf{y}\)</span></td>
+<td>weighted (<span class="math inline">\(A\)</span>-)inner product, <span class="math inline">\(A \succ 0\)</span>; induces the norm <span class="math inline">\(\|\mathbf{x}\|_A\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(A \prec 0\)</span>, <span class="math inline">\(A \preceq 0\)</span></td>
+<td>negative definite, negative semidefinite</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(A^{1/2}\)</span>, <span class="math inline">\(A^{-1/2}\)</span></td>
+<td>symmetric positive semidefinite square root and its inverse</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\chi_A(t)=\det(tI-A)\)</span></td>
+<td>characteristic polynomial of <span class="math inline">\(A\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathrm{spec}(A)\)</span>, <span class="math inline">\(E_\lambda=\mathcal{N}(A-\lambda I)\)</span></td>
+<td>spectrum (set of eigenvalues) and the <span class="math inline">\(\lambda\)</span>-eigenspace</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\langle A,B\rangle_F=\mathrm{tr}(A^\top B)\)</span>, <span class="math inline">\(\|A\|_2\)</span>, <span class="math inline">\(\|A\|_F\)</span></td>
+<td>Frobenius inner product; operator (spectral) and Frobenius norms</td>
+</tr>
+</tbody>
+</table>
 </section>
-<section id="how-to-read-it" class="level2">
-<h2 class="anchored" data-anchor-id="how-to-read-it">How to read it</h2>
-<p>A first reading can follow the conceptual spine: the preface, then the notation chapter, then Chapters 6, 9, 11, 12, 14, 16, 17, and 20. These carry the main ideas. A reader who wants the full development should read in order. A reader who already knows the foundations may start at Part II and treat Part I as reference. Each method chapter is written to be readable once its prerequisites in Parts I and II are in hand.</p>
-<p>A note on the notation chapter that follows: it is the single source of truth for symbols used throughout the book. We recommend reading it once and returning to it as needed.</p>
+<section id="regression-and-least-squares" class="level2">
+<h2 class="anchored" data-anchor-id="regression-and-least-squares">Regression and least squares</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\mathbf{X} \in \mathbb{R}^{n\times p}\)</span></td>
+<td>design (model) matrix; rows are observations, columns are regressors</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathbf{y}\)</span>, <span class="math inline">\(\hat{\mathbf{y}}\)</span></td>
+<td>response vector, fitted values</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\boldsymbol{\beta}\)</span>, <span class="math inline">\(\hat{\boldsymbol{\beta}}\)</span></td>
+<td>regression coefficient vector and its estimator</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\boldsymbol{\varepsilon}\)</span>, <span class="math inline">\(\mathbf{r}=\mathbf{y}-\hat{\mathbf{y}}\)</span></td>
+<td>error vector, residual vector</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(H = \mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\)</span></td>
+<td>hat matrix (orthogonal projection onto <span class="math inline">\(\mathcal{C}(\mathbf{X})\)</span>)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(M = I - H\)</span></td>
+<td>residual maker (projection onto the orthogonal complement)</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathrm{RSS}\)</span>, <span class="math inline">\(\mathrm{TSS}\)</span>, <span class="math inline">\(\mathrm{ESS}_{\mathrm{reg}}\)</span></td>
+<td>residual, total, and explained sums of squares</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\sigma^2\)</span>, <span class="math inline">\(s^2\)</span></td>
+<td>error variance and its unbiased estimator</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(R^2\)</span></td>
+<td>coefficient of determination</td>
+</tr>
+</tbody>
+</table>
+<p>The abbreviation <span class="math inline">\(\mathrm{ESS}_{\mathrm{reg}}\)</span> for the explained regression sum of squares is written with a subscript to distinguish it from the effective sample size <span class="math inline">\(\mathrm{ESS}\)</span> of weighting methods, defined below.</p>
+</section>
+<section id="probability-and-random-variables" class="level2">
+<h2 class="anchored" data-anchor-id="probability-and-random-variables">Probability and random variables</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\((\Omega,\mathcal{F},P)\)</span></td>
+<td>probability space: sample space, <span class="math inline">\(\sigma\)</span>-algebra, probability measure</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathbb{E}[X]\)</span>, <span class="math inline">\(\mathbb{E}[X\mid Z]\)</span></td>
+<td>expectation, conditional expectation</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathrm{Var}(X)\)</span>, <span class="math inline">\(\mathrm{Cov}(X,Y)\)</span>, <span class="math inline">\(\boldsymbol{\Sigma}\)</span></td>
+<td>variance, covariance, covariance matrix</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(X \perp Y \mid Z\)</span></td>
+<td>conditional independence of <span class="math inline">\(X\)</span> and <span class="math inline">\(Y\)</span> given <span class="math inline">\(Z\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathcal{N}(\mu,\sigma^2)\)</span>, <span class="math inline">\(\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})\)</span></td>
+<td>univariate and <span class="math inline">\(p\)</span>-variate normal</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathrm{Bin}(n,p)\)</span>, <span class="math inline">\(\mathrm{Poi}(\lambda)\)</span>, <span class="math inline">\(\mathrm{Ber}(p)\)</span></td>
+<td>binomial, Poisson, Bernoulli</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathrm{PoBin}(\mathbf{p})\)</span></td>
+<td>Poisson binomial with success-probability vector <span class="math inline">\(\mathbf{p}\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(F_X\)</span>, <span class="math inline">\(F_X^{-1}\)</span></td>
+<td>cumulative distribution function and its generalized inverse (quantile)</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\Phi\)</span>, <span class="math inline">\(\phi\)</span></td>
+<td>standard normal distribution function and density</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(M_X(\mathbf{t})=\mathbb{E}[e^{\mathbf{t}^\top X}]\)</span></td>
+<td>moment generating function</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\|\mu-\nu\|_{\mathrm{TV}}\)</span></td>
+<td>total variation distance between measures <span class="math inline">\(\mu\)</span> and <span class="math inline">\(\nu\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\xrightarrow{p}\)</span>, <span class="math inline">\(\xrightarrow{d}\)</span>, <span class="math inline">\(\xrightarrow{\text{a.s.}}\)</span></td>
+<td>convergence in probability, in distribution, almost surely</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(O_p\)</span>, <span class="math inline">\(o_p\)</span>, <span class="math inline">\(O(\cdot)\)</span>, <span class="math inline">\(o(\cdot)\)</span></td>
+<td>stochastic and deterministic order symbols</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="statistical-inference" class="level2">
+<h2 class="anchored" data-anchor-id="statistical-inference">Statistical inference</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(L(\boldsymbol{\theta})\)</span>, <span class="math inline">\(\ell(\boldsymbol{\theta})=\log L(\boldsymbol{\theta})\)</span></td>
+<td>likelihood and log-likelihood</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathbf{s}(\boldsymbol{\theta})=\nabla\ell(\boldsymbol{\theta})\)</span></td>
+<td>score function</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathcal{I}(\boldsymbol{\theta})\)</span></td>
+<td>Fisher information matrix</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\hat{\boldsymbol{\theta}}_{\mathrm{MLE}}\)</span></td>
+<td>maximum likelihood estimator</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathbb{V}\)</span></td>
+<td>sandwich or robust variance estimator (M-estimation)</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="bayesian-computation-and-model-comparison" class="level2">
+<h2 class="anchored" data-anchor-id="bayesian-computation-and-model-comparison">Bayesian computation and model comparison</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\pi(\boldsymbol{\xi})\)</span>, <span class="math inline">\(\pi(\boldsymbol{\xi}\mid\mathbf{y})\)</span></td>
+<td>prior and posterior density of the parameter vector</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(p(\mathbf{y}\mid\boldsymbol{\xi})\)</span></td>
+<td>likelihood of the data given the parameters</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\Pi\)</span></td>
+<td>prior probability measure (used when the prior has no density)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\tau^2\)</span></td>
+<td>between-study heterogeneity variance</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\hat R\)</span></td>
+<td>Gelman-Rubin potential scale reduction statistic (near <span class="math inline">\(1\)</span> at convergence)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(N_{\mathrm{eff}}\)</span></td>
+<td>effective sample size of an autocorrelated MCMC chain, distinct from the weighting <span class="math inline">\(\mathrm{ESS}\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\bar D\)</span>, <span class="math inline">\(D(\bar{\boldsymbol{\theta}})\)</span>, <span class="math inline">\(p_D\)</span></td>
+<td>posterior mean deviance, deviance at the posterior mean, and effective number of parameters <span class="math inline">\(p_D=\bar D-D(\bar{\boldsymbol{\theta}})\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathrm{lppd}\)</span>, <span class="math inline">\(\widehat{\mathrm{elpd}}\)</span></td>
+<td>log pointwise predictive density and estimated expected log pointwise predictive density</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathrm{WAIC}\)</span>, <span class="math inline">\(\mathrm{LOO}\)</span></td>
+<td>widely applicable information criterion and leave-one-out cross-validation scores</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathrm{PSIS}\)</span>, <span class="math inline">\(\widehat k\)</span></td>
+<td>Pareto-smoothed importance sampling and its per-observation tail-index diagnostic</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="causal-inference" class="level2">
+<h2 class="anchored" data-anchor-id="causal-inference">Causal inference</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(Y(0), Y(1)\)</span></td>
+<td>potential outcomes under control and active treatment</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(T \in \{0,1\}\)</span></td>
+<td>treatment indicator</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(Y = TY(1)+(1-T)Y(0)\)</span></td>
+<td>observed outcome (consistency under SUTVA)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(X \in \mathcal{X}\)</span></td>
+<td>baseline covariates</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(e(x)=P(T=1\mid X=x)\)</span></td>
+<td>propensity score</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mu_t(x)=\mathbb{E}[Y(t)\mid X=x]\)</span></td>
+<td>conditional mean outcome under treatment <span class="math inline">\(t\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\tau(x)=\mu_1(x)-\mu_0(x)\)</span></td>
+<td>conditional average treatment effect</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\tau=\mathbb{E}[\tau(X)]\)</span></td>
+<td>average treatment effect</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(S\)</span></td>
+<td>study or population membership indicator (used in transportability)</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="studies-treatments-and-populations" class="level2">
+<h2 class="anchored" data-anchor-id="studies-treatments-and-populations">Studies, treatments, and populations</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(j\)</span></td>
+<td>study index, for example <span class="math inline">\(j=AB,\,BC\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(k\)</span></td>
+<td>treatment index, or arm</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(i\)</span></td>
+<td>individual index within a study or arm</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathcal{P}, \mathcal{P}^{*}\)</span></td>
+<td>populations; a population is a distribution over <span class="math inline">\(\mathcal{X}\)</span>, with density <span class="math inline">\(f_{\mathcal{P}}\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(f_j(x)\)</span>, <span class="math inline">\(F_j(x)\)</span></td>
+<td>covariate density and distribution function in study <span class="math inline">\(j\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\bar{\mathbf{x}}_j=\int \mathbf{x}\,f_j(x)\,dx\)</span>, <span class="math inline">\(\boldsymbol{\Sigma}_j\)</span></td>
+<td>covariate mean and covariance in study <span class="math inline">\(j\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(d_{ab(\mathcal{P})}\)</span></td>
+<td>marginal relative effect of treatment <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span> in population <span class="math inline">\(\mathcal{P}\)</span> on a stated scale</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\hat d_{ab(j)}\)</span></td>
+<td>estimator of <span class="math inline">\(d_{ab}\)</span> from study <span class="math inline">\(j\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\delta_{j,\,t_1 t_k}\)</span></td>
+<td>study-<span class="math inline">\(j\)</span> contrast of treatment <span class="math inline">\(t_k\)</span> versus <span class="math inline">\(t_1\)</span></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="outcome-models-and-likelihoods" class="level2">
+<h2 class="anchored" data-anchor-id="outcome-models-and-likelihoods">Outcome models and likelihoods</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(g\)</span>, <span class="math inline">\(g^{-1}\)</span></td>
+<td>link function and its inverse</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\eta_{ijk}\)</span></td>
+<td>linear predictor for individual <span class="math inline">\(i\)</span> in study <span class="math inline">\(j\)</span> on arm <span class="math inline">\(k\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\theta_{ijk}=g^{-1}(\eta_{ijk})\)</span></td>
+<td>conditional mean on the outcome scale</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mu_j\)</span></td>
+<td>study-<span class="math inline">\(j\)</span> baseline (intercept)</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\boldsymbol{\beta}_1\)</span></td>
+<td>main (prognostic) covariate effects</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\boldsymbol{\beta}_{2,k}\)</span></td>
+<td>treatment-by-covariate interactions for arm <span class="math inline">\(k\)</span> (effect modification)</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\gamma_k\)</span></td>
+<td>treatment main effect relative to the reference treatment</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(L_i(\boldsymbol{\xi};y_i)\)</span>, <span class="math inline">\(\bar L_j(\boldsymbol{\xi};\bar y_j)\)</span></td>
+<td>individual and aggregate-level likelihood contributions</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\boldsymbol{\xi}\)</span></td>
+<td>full parameter vector</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="population-adjustment-maic-stc-ml-nmr-ml-umr" class="level2">
+<h2 class="anchored" data-anchor-id="population-adjustment-maic-stc-ml-nmr-ml-umr">Population adjustment: MAIC, STC, ML-NMR, ML-UMR</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(w_i\)</span>, <span class="math inline">\(w(x)\)</span></td>
+<td>matching weight for individual <span class="math inline">\(i\)</span>, or weight function at <span class="math inline">\(x\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathrm{ESS}=\left(\sum_i w_i\right)^2 / \sum_i w_i^2\)</span></td>
+<td>effective sample size of a weighted sample</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\alpha, \boldsymbol{\beta}\)</span></td>
+<td>matching-weight parameters in <span class="math inline">\(w_i=\exp(\alpha+\boldsymbol{\beta}^\top \mathbf{x}_i)\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\hat\mu_t^{\mathrm{STC}}\)</span></td>
+<td>simulated treatment comparison predicted mean under treatment <span class="math inline">\(t\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(C(u_1,\dots,u_d)\)</span></td>
+<td>copula</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(C_\Omega(\mathbf{u})=\Phi_\Omega\!\big(\Phi^{-1}(u_1),\dots,\Phi^{-1}(u_d)\big)\)</span></td>
+<td>Gaussian copula with correlation matrix <span class="math inline">\(\Omega\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(V_{\mathrm{HK}}(f)\)</span></td>
+<td>Hardy–Krause variation of <span class="math inline">\(f\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(D_N^{*}(P)\)</span></td>
+<td>star discrepancy of a point set <span class="math inline">\(P\)</span></td>
+</tr>
+<tr class="odd">
+<td>SEMA, SPFA</td>
+<td>shared effect modifier assumption, shared prognostic factor assumption</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="abbreviations" class="level2">
+<h2 class="anchored" data-anchor-id="abbreviations">Abbreviations</h2>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Short form</th>
+<th>Expansion</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>ITC</td>
+<td>indirect treatment comparison</td>
+</tr>
+<tr class="even">
+<td>PAIC</td>
+<td>population-adjusted indirect comparison</td>
+</tr>
+<tr class="odd">
+<td>(N)MA</td>
+<td>(network) meta-analysis</td>
+</tr>
+<tr class="even">
+<td>MAIC</td>
+<td>matching-adjusted indirect comparison</td>
+</tr>
+<tr class="odd">
+<td>STC</td>
+<td>simulated treatment comparison</td>
+</tr>
+<tr class="even">
+<td>ML-NMR</td>
+<td>multilevel network meta-regression</td>
+</tr>
+<tr class="odd">
+<td>ML-UMR</td>
+<td>multilevel unanchored meta-regression</td>
+</tr>
+<tr class="even">
+<td>IPD, AgD</td>
+<td>individual patient data, aggregate data</td>
+</tr>
+<tr class="odd">
+<td>EM, PV</td>
+<td>effect modifier, prognostic variable</td>
+</tr>
+<tr class="even">
+<td>ATE, CATE</td>
+<td>average treatment effect, conditional average treatment effect</td>
+</tr>
+<tr class="odd">
+<td>IPW, AIPW</td>
+<td>inverse probability weighting, augmented inverse probability weighting</td>
+</tr>
+<tr class="even">
+<td>OR, RR, HR, RD</td>
+<td>odds ratio, risk ratio, hazard ratio, risk difference</td>
+</tr>
+<tr class="odd">
+<td>RMST</td>
+<td>restricted mean survival time</td>
+</tr>
+<tr class="even">
+<td>QMC</td>
+<td>quasi-Monte Carlo</td>
+</tr>
+<tr class="odd">
+<td>HTA</td>
+<td>health technology assessment</td>
+</tr>
+</tbody>
+</table>
 
 
-</section>
 </section>
 
 </main> <!-- /main -->
@@ -929,10 +1535,13 @@ ul.task-list li input[type="checkbox"] {
   </script>
 <nav class="page-navigation">
   <div class="nav-page nav-page-previous">
+      <a href="./index.html" class="pagination-link" aria-label="Preface">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text">Preface</span>
+      </a>          
   </div>
   <div class="nav-page nav-page-next">
-      <a href="./notation.html" class="pagination-link" aria-label="Notation and Conventions">
-        <span class="nav-page-text">Notation and Conventions</span> <i class="bi bi-arrow-right-short"></i>
+      <a href="./chapters/part1/01-linear-algebra-i.html" class="pagination-link" aria-label="Linear Algebra I: Vector Spaces, Linear Maps, and Rank">
+        <span class="nav-page-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Linear Algebra I: Vector Spaces, Linear Maps, and Rank</span></span> <i class="bi bi-arrow-right-short"></i>
       </a>
   </div>
 </nav>

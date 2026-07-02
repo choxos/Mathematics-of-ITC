@@ -1,0 +1,1687 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>14&nbsp; Indirect Comparison and Bucher’s Theorem – The Mathematics of Indirect Treatment Comparisons</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../chapters/part3/15-network-meta-analysis.html" rel="next">
+<link href="../../chapters/part3/13-pairwise-meta-analysis.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-aafe154f14b83768199b70e6209de778.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/part3/13-pairwise-meta-analysis.html">Part III: Meta-Analysis and Network Meta-Analysis</a></li><li class="breadcrumb-item"><a href="../../chapters/part3/14-bucher.html"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Indirect Comparison and Bucher’s Theorem</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">The Mathematics of Indirect Treatment Comparisons</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/choxos/Mathematics-of-ITC" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../notation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Notation and Conventions</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part I: Mathematical Foundations</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/01-linear-algebra-i.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Linear Algebra I: Vector Spaces, Linear Maps, and Rank</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/02-linear-algebra-ii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Linear Algebra II: Orthogonality and the Projection Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/03-linear-algebra-iii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Linear Algebra III: Spectral Theory and Quadratic Forms</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/04-probability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Probability and Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/05-inference.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Statistical Inference</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/06-linear-regression.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Linear Regression from First Principles</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/07-glm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Generalized Linear Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/08-hierarchical-bayes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Hierarchical Models, Shrinkage, and Bayesian Inference</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Causal Inference and Estimands</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/09-potential-outcomes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Potential Outcomes and Identification</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/10-adjustment-methods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Adjustment Methods</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/11-effect-modification-collapsibility.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Effect Modification, Interaction, and Collapsibility</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/12-transportability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Transportability: The Estimand-Based Theory</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Meta-Analysis and Network Meta-Analysis</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/13-pairwise-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Pairwise Meta-Analysis</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/14-bucher.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Indirect Comparison and Bucher’s Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/15-network-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Network Meta-Analysis: Models and Identifiability</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/16-limits-of-nma.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">The Limits of Standard Network Meta-Analysis</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Population Adjustment: MAIC and STC</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/17-population-adjustment-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Population Adjustment Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/18-maic.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">Matching-Adjusted Indirect Comparison</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/19-stc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Simulated Treatment Comparison</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part V: Multilevel Network Meta-Regression</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/20-mlnmr-aggregation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression I: The Aggregation Principle</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/21-mlnmr-discrete.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression II: Discrete Outcomes and Approximation Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/22-mlnmr-integration.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression III: Numerical Integration Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/23-mlnmr-estimands.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression IV: Estimands, Identifiability, and Generality</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/24-computation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Bayesian Computation and Diagnostics</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/25-general-likelihoods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">General Likelihoods: Survival and Ordered Categorical Outcomes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/26-ml-umr.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Multilevel Unanchored Meta-Regression</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part VI: Bias, Comparator Selection, and Rigor</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/27-distance-matching.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Aggregate-Level Covariate-Distance Matching</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/28-qba.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Quantitative Bias Analysis for Indirect Comparisons</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/29-simulation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Simulation Study Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/30-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Machine-Checked Foundations: The Coq Formalization</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/A-notation-glossary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Notation Glossary</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/B-matrix-calculus.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Matrix Calculus</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/C-distributions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">Probability Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/D-special-functions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">D</span>&nbsp; <span class="chapter-title">Special Functions for Numerical Integration</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/E-reference-implementations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">E</span>&nbsp; <span class="chapter-title">Reference Implementations: multinma, mlumr, and uitc</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/F-solutions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">F</span>&nbsp; <span class="chapter-title">Solutions to Selected Exercises</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/G-reading-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">G</span>&nbsp; <span class="chapter-title">Reading the Coq Proofs</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#sec-bucher-intro" id="toc-sec-bucher-intro" class="nav-link active" data-scroll-target="#sec-bucher-intro"><span class="header-section-number">14.1</span> Introduction</a></li>
+  <li><a href="#sec-bucher-running" id="toc-sec-bucher-running" class="nav-link" data-scroll-target="#sec-bucher-running"><span class="header-section-number">14.2</span> A running example and a map of the argument</a></li>
+  <li><a href="#sec-bucher-scale" id="toc-sec-bucher-scale" class="nav-link" data-scroll-target="#sec-bucher-scale"><span class="header-section-number">14.3</span> The relative effect and its scale</a>
+  <ul class="collapse">
+  <li><a href="#sec-bucher-singletrial" id="toc-sec-bucher-singletrial" class="nav-link" data-scroll-target="#sec-bucher-singletrial"><span class="header-section-number">14.3.1</span> The single trial as a source of an unbiased contrast</a></li>
+  </ul></li>
+  <li><a href="#sec-bucher-algebra" id="toc-sec-bucher-algebra" class="nav-link" data-scroll-target="#sec-bucher-algebra"><span class="header-section-number">14.4</span> The algebra of contrasts</a></li>
+  <li><a href="#sec-bucher-transitivity" id="toc-sec-bucher-transitivity" class="nav-link" data-scroll-target="#sec-bucher-transitivity"><span class="header-section-number">14.5</span> Constancy of relative effects and transitivity</a></li>
+  <li><a href="#sec-bucher-anchored" id="toc-sec-bucher-anchored" class="nav-link" data-scroll-target="#sec-bucher-anchored"><span class="header-section-number">14.6</span> The anchored indirect comparison</a></li>
+  <li><a href="#sec-bucher-unbiased" id="toc-sec-bucher-unbiased" class="nav-link" data-scroll-target="#sec-bucher-unbiased"><span class="header-section-number">14.7</span> Bucher’s theorem: unbiasedness</a></li>
+  <li><a href="#sec-bucher-variance" id="toc-sec-bucher-variance" class="nav-link" data-scroll-target="#sec-bucher-variance"><span class="header-section-number">14.8</span> The Bucher variance</a></li>
+  <li><a href="#sec-bucher-cancellation" id="toc-sec-bucher-cancellation" class="nav-link" data-scroll-target="#sec-bucher-cancellation"><span class="header-section-number">14.9</span> The common comparator cancels baseline differences</a></li>
+  <li><a href="#sec-bucher-logodds" id="toc-sec-bucher-logodds" class="nav-link" data-scroll-target="#sec-bucher-logodds"><span class="header-section-number">14.10</span> The variance of an empirical log-odds</a></li>
+  <li><a href="#sec-bucher-example" id="toc-sec-bucher-example" class="nav-link" data-scroll-target="#sec-bucher-example"><span class="header-section-number">14.11</span> A worked Bucher comparison on the log odds-ratio scale</a></li>
+  <li><a href="#sec-bucher-failure" id="toc-sec-bucher-failure" class="nav-link" data-scroll-target="#sec-bucher-failure"><span class="header-section-number">14.12</span> When transitivity fails</a></li>
+  <li><a href="#sec-bucher-notes" id="toc-sec-bucher-notes" class="nav-link" data-scroll-target="#sec-bucher-notes"><span class="header-section-number">14.13</span> Notes and references</a></li>
+  <li><a href="#sec-bucher-exercises" id="toc-sec-bucher-exercises" class="nav-link" data-scroll-target="#sec-bucher-exercises"><span class="header-section-number">14.14</span> Exercises</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/part3/13-pairwise-meta-analysis.html">Part III: Meta-Analysis and Network Meta-Analysis</a></li><li class="breadcrumb-item"><a href="../../chapters/part3/14-bucher.html"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Indirect Comparison and Bucher’s Theorem</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Indirect Comparison and Bucher’s Theorem</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="sec-bucher-intro" class="level2" data-number="14.1">
+<h2 data-number="14.1" class="anchored" data-anchor-id="sec-bucher-intro"><span class="header-section-number">14.1</span> Introduction</h2>
+<p>A health technology assessment routinely faces a question that the available trials never asked. A regulator must decide whether a new drug <span class="math inline">\(A\)</span> is better than an established drug <span class="math inline">\(B\)</span>, but the two have never been compared head to head. To keep a concrete picture in view throughout the chapter, let <span class="math inline">\(A\)</span> be a <em>new</em> statin and <span class="math inline">\(B\)</span> an <em>established</em> statin, each tested in its own randomized trial against the <em>same</em> comparator <span class="math inline">\(C\)</span> (a placebo or standard of care), with an unfavorable cardiovascular event as the outcome. What does exist is a trial of <span class="math inline">\(A\)</span> against <span class="math inline">\(C\)</span>, and a separate trial of <span class="math inline">\(B\)</span> against the same comparator <span class="math inline">\(C\)</span>. The clinical question is about <span class="math inline">\(A\)</span> versus <span class="math inline">\(B\)</span>; the evidence speaks only about <span class="math inline">\(A\)</span> versus <span class="math inline">\(C\)</span> and <span class="math inline">\(B\)</span> versus <span class="math inline">\(C\)</span>. The task of this chapter is to make precise the simplest device that bridges the gap: the <strong>anchored indirect comparison</strong>, and the theorem of <span class="citation" data-cites="bucher1997">Bucher et al. (<a href="../../references.html#ref-bucher1997" role="doc-biblioref">1997</a>)</span> that governs it.</p>
+<p>The idea is disarmingly simple. If the effect of <span class="math inline">\(A\)</span> relative to <span class="math inline">\(C\)</span> is <span class="math inline">\(d_{AC}\)</span> and the effect of <span class="math inline">\(B\)</span> relative to <span class="math inline">\(C\)</span> is <span class="math inline">\(d_{BC}\)</span>, both measured on a scale where contrasts add, then the effect of <span class="math inline">\(A\)</span> relative to <span class="math inline">\(B\)</span> ought to be the difference <span class="math inline">\(d_{AC}-d_{BC}\)</span>, because the common comparator <span class="math inline">\(C\)</span> cancels. Replacing the unknown true effects by their trial estimates gives the <strong>Bucher estimator</strong> <span class="math inline">\(\hat d_{AB}=\hat d_{AC}-\hat d_{BC}\)</span>. The algebra is the algebra of a triangle. What makes the chapter a piece of mathematics rather than a piece of arithmetic is the question of <em>when the algebra is licensed</em>. The estimator is unbiased only if the true effect of <span class="math inline">\(A\)</span> versus <span class="math inline">\(C\)</span> is the same quantity in the <span class="math inline">\(A\)</span> versus <span class="math inline">\(C\)</span> trial as it would be in the (hypothetical) population where we want to report <span class="math inline">\(A\)</span> versus <span class="math inline">\(B\)</span>, and likewise for <span class="math inline">\(B\)</span> versus <span class="math inline">\(C\)</span>. That requirement is the <strong>transitivity</strong> assumption, equivalently the <strong>constancy of relative effects</strong>. It is the load-bearing hypothesis of every method in this book, and the rest of the book is, in a precise sense, the study of what to do when it fails.</p>
+<p>We prove four things in full. First, that the relative effects on a fixed scale obey an antisymmetry law and an additivity law within any single population, so that <span class="math inline">\(d_{AC}-d_{BC}=d_{AB}\)</span> is a tautology <em>inside one population</em> (<a href="#lem-relative-effect-algebra" class="quarto-xref">Lemma&nbsp;<span>14.1</span></a>). Second, that under transitivity the same identity holds <em>across</em> the three trial populations, which is the content of constancy (<a href="#prp-transitivity-consistency" class="quarto-xref">Proposition&nbsp;<span>14.2</span></a>). Third, that the Bucher estimator is then unbiased for the cross-population contrast (<a href="#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a>), with variance equal to the sum of the two direct variances under independence (<a href="#thm-bucher-variance" class="quarto-xref">Theorem&nbsp;<span>14.2</span></a>). Fourth, that the common comparator is exactly what cancels the study-specific baselines, so that the anchored comparison is protected against a bias that destroys the naive single-arm comparison (<a href="#prp-baseline-cancellation" class="quarto-xref">Proposition&nbsp;<span>14.4</span></a>, <a href="#prp-unanchored-bias" class="quarto-xref">Proposition&nbsp;<span>14.5</span></a>). A fully worked example on the log odds-ratio scale, computed from raw two-by-two tables, closes the development.</p>
+<p>Throughout we use the relative-effect notation of <a href="../../notation.html">Notation</a>: <span class="math inline">\(d_{ab(\mathcal P)}\)</span> is the marginal effect of treatment <span class="math inline">\(b\)</span> versus treatment <span class="math inline">\(a\)</span> in population <span class="math inline">\(\mathcal P\)</span>, on a stated scale, and <span class="math inline">\(\hat d_{ab(j)}\)</span> is its estimator from study <span class="math inline">\(j\)</span>. The potential-outcome machinery of Chapter 9 (<a href="../part2/09-potential-outcomes.html#def-potential-outcome" class="quarto-xref">Definition&nbsp;<span>9.1</span></a>, <a href="../part2/09-potential-outcomes.html#def-ate" class="quarto-xref">Definition&nbsp;<span>9.4</span></a>, <a href="../part2/09-potential-outcomes.html#thm-ate-identification" class="quarto-xref">Theorem&nbsp;<span>9.3</span></a>) supplies the meaning of a single trial’s relative effect; the inference tools of Chapter 5 (<a href="../part1/05-inference.html#thm-delta-method" class="quarto-xref">Theorem&nbsp;<span>5.3</span></a>, <a href="../part1/05-inference.html#thm-mle-asymptotic-normality" class="quarto-xref">Theorem&nbsp;<span>5.6</span></a>) supply its standard error. This chapter corresponds to results D.1 to D.4 of the proof catalogue.</p>
+</section>
+<section id="sec-bucher-running" class="level2" data-number="14.2">
+<h2 data-number="14.2" class="anchored" data-anchor-id="sec-bucher-running"><span class="header-section-number">14.2</span> A running example and a map of the argument</h2>
+<p>Before any formalism, fix the picture we will return to at every turn. Two randomized trials share the comparator <span class="math inline">\(C\)</span> (placebo):</p>
+<ul>
+<li>Trial <span class="math inline">\(AC\)</span> compares the new statin <span class="math inline">\(A\)</span> with placebo <span class="math inline">\(C\)</span> and reports an odds ratio of the cardiovascular event of <span class="math inline">\(2\)</span> for <span class="math inline">\(C\)</span> versus <span class="math inline">\(A\)</span>; on the log scale, <span class="math inline">\(\hat d_{AC}=\log 2\approx 0.69\)</span>. In words, placebo patients had twice the odds of the event, so <span class="math inline">\(A\)</span> is protective.</li>
+<li>Trial <span class="math inline">\(BC\)</span> compares the established statin <span class="math inline">\(B\)</span> with placebo <span class="math inline">\(C\)</span> and reports an odds ratio of <span class="math inline">\(1.5\)</span> for <span class="math inline">\(C\)</span> versus <span class="math inline">\(B\)</span>; on the log scale, <span class="math inline">\(\hat d_{BC}=\log 1.5\approx 0.41\)</span>. Placebo patients had one and a half times the odds, so <span class="math inline">\(B\)</span> is protective too, but less so.</li>
+</ul>
+<p>We will compute the full example from raw counts in <a href="#sec-bucher-example" class="quarto-xref"><span>Section 14.11</span></a>; the two trials there produce exactly these numbers.</p>
+<p><strong>What “population” means here.</strong> By a <em>population</em> we do not mean the specific people enrolled, but the <em>distribution</em> of their baseline characteristics: the mix of ages, disease severities, and risk factors a trial would draw from. Formally it is a probability distribution over the covariate space <span class="math inline">\(\mathcal X\)</span>. The two trials draw from two different such distributions, <span class="math inline">\(\mathcal P_{AC}\)</span> and <span class="math inline">\(\mathcal P_{BC}\)</span>, and we will also speak of a third, <span class="math inline">\(\mathcal P_{AB}\)</span>: the population in which we actually want the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> answer, typically the patients who would receive the drug in routine care. No trial was ever run in <span class="math inline">\(\mathcal P_{AB}\)</span> for <span class="math inline">\(A\)</span> against <span class="math inline">\(B\)</span>; that absence is the entire reason an indirect comparison is needed.</p>
+<p><strong>Two recurring words.</strong> A <strong>contrast</strong> is a difference of two positions on the chosen scale, such as <span class="math inline">\(\eta_B-\eta_A\)</span>; it is the mathematical form of the phrase “relative effect.” The <strong>link scale</strong> is the transformed scale (log-odds for a probability, log for a rate or hazard, or the untransformed mean for a continuous outcome) on which we agree to do all subtraction, chosen precisely so that contrasts add along a path.</p>
+<p>The available and missing comparisons form a triangle:</p>
+<pre><code>              A  - - - - - - - - -  B        target contrast d_AB
+               \                   /            (dashed: NO A-vs-B trial)
+                \                 /
+          d_AC   \               /   d_BC
+       (trial AC) \             / (trial BC)
+                   \           /
+                    \         /
+                     \       /
+                        C                     common comparator (the anchor)</code></pre>
+<p>The two solid legs <span class="math inline">\(A\!-\!C\)</span> and <span class="math inline">\(B\!-\!C\)</span> are the trials we have; the dashed edge <span class="math inline">\(A\!-\!B\)</span> is the comparison we want. Bucher walks the triangle: go from <span class="math inline">\(A\)</span> down to <span class="math inline">\(C\)</span>, then from <span class="math inline">\(C\)</span> up to <span class="math inline">\(B\)</span>, and the detour through <span class="math inline">\(C\)</span> recovers the missing edge.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>The object, stated once, up front.</strong> Everything below serves one formula. Writing <span class="math inline">\(\hat d_{AC}\)</span> and <span class="math inline">\(\hat d_{BC}\)</span> for the two trials’ estimated log-scale effects against the shared comparator <span class="math inline">\(C\)</span>, the <strong>Bucher estimator</strong> of the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> effect is the single subtraction <span class="math display">\[
+\hat d_{AB}=\hat d_{AC}-\hat d_{BC},
+\]</span> with standard error <span class="math inline">\(\sqrt{\mathrm{SE}_{AC}^2+\mathrm{SE}_{BC}^2}\)</span> when the two trials are independent. In the running example <span class="math inline">\(\hat d_{AC}=\log 2\)</span> and <span class="math inline">\(\hat d_{BC}=\log 1.5\)</span>, so <span class="math inline">\(\hat d_{AB}=\log 2-\log 1.5=\log\tfrac43\approx 0.29\)</span>: the indirect odds ratio of the event for <span class="math inline">\(B\)</span> versus <span class="math inline">\(A\)</span> is <span class="math inline">\(\tfrac43\)</span>. The rest of the chapter answers one question: <em>when is this subtraction allowed?</em> <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p><strong>Orientation, once and for all.</strong> The single most common source of confusion in indirect comparison is sign. We follow <a href="../../notation.html">Notation</a>: <span class="math inline">\(d_{ab}=\eta_b-\eta_a\)</span> places the <em>reference</em> treatment first and the <em>active</em> treatment second. Because the outcome is unfavorable, a <em>positive</em> contrast flags <em>higher, hence worse,</em> odds for the treatment in the second slot. The following table translates between the applied phrasing and this chapter’s symbols; keep it at hand.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Applied phrasing</th>
+<th>This chapter’s symbol</th>
+<th>Equals</th>
+<th>A positive value means</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>effect of <span class="math inline">\(C\)</span> relative to <span class="math inline">\(A\)</span></td>
+<td><span class="math inline">\(d_{AC}\)</span></td>
+<td><span class="math inline">\(\eta_C-\eta_A\)</span></td>
+<td><span class="math inline">\(C\)</span> has higher (worse) event odds than <span class="math inline">\(A\)</span>, so <span class="math inline">\(A\)</span> is protective</td>
+</tr>
+<tr class="even">
+<td>“<span class="math inline">\(A\)</span> versus <span class="math inline">\(C\)</span>” (common applied phrasing)</td>
+<td><span class="math inline">\(-d_{AC}\)</span></td>
+<td><span class="math inline">\(\eta_A-\eta_C\)</span></td>
+<td><span class="math inline">\(A\)</span> has higher (worse) event odds than <span class="math inline">\(C\)</span></td>
+</tr>
+<tr class="odd">
+<td>effect of <span class="math inline">\(B\)</span> relative to <span class="math inline">\(A\)</span> (the <strong>target</strong>)</td>
+<td><span class="math inline">\(d_{AB}\)</span></td>
+<td><span class="math inline">\(\eta_B-\eta_A\)</span></td>
+<td><span class="math inline">\(B\)</span> has higher (worse) event odds than <span class="math inline">\(A\)</span>, so <span class="math inline">\(A\)</span> is the better statin</td>
+</tr>
+<tr class="even">
+<td>the Bucher combination</td>
+<td><span class="math inline">\(d_{AB}=d_{AC}-d_{BC}\)</span></td>
+<td><span class="math inline">\((\eta_C-\eta_A)-(\eta_C-\eta_B)\)</span></td>
+<td>the shared <span class="math inline">\(\eta_C\)</span> cancels</td>
+</tr>
+</tbody>
+</table>
+<p>In the running example <span class="math inline">\(\hat d_{AC}=\log 2&gt;0\)</span> says placebo is worse than <span class="math inline">\(A\)</span>; <span class="math inline">\(\hat d_{AB}=\log\tfrac43&gt;0\)</span> says <span class="math inline">\(B\)</span> has slightly higher event odds than <span class="math inline">\(A\)</span>, so on this evidence <span class="math inline">\(A\)</span> is the better statin.</p>
+<p><strong>Map of the argument.</strong> The chapter has one destination (the subtraction is licensed and its variance is known) reached through five results. This table is a scaffold; each entry is proved below.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Result</th>
+<th>Plain statement</th>
+<th>Its job in the indirect comparison</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><a href="#lem-relative-effect-algebra" class="quarto-xref">Lemma&nbsp;<span>14.1</span></a></td>
+<td>contrasts reverse sign and add along a path</td>
+<td>makes <span class="math inline">\(d_{AC}-d_{BC}=d_{AB}\)</span> arithmetic <em>inside one population</em></td>
+</tr>
+<tr class="even">
+<td><a href="#def-transitivity" class="quarto-xref">Definition&nbsp;<span>14.3</span></a>, <a href="#prp-transitivity-consistency" class="quarto-xref">Proposition&nbsp;<span>14.2</span></a></td>
+<td>the relevant effects are the same in every trial population</td>
+<td>lets that subtraction carry <em>across</em> the three populations</td>
+</tr>
+<tr class="odd">
+<td><a href="#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a></td>
+<td>the Bucher estimator has the right expectation</td>
+<td>the indirect estimate is on target</td>
+</tr>
+<tr class="even">
+<td><a href="#thm-bucher-variance" class="quarto-xref">Theorem&nbsp;<span>14.2</span></a></td>
+<td>its variance is the sum of the two direct variances</td>
+<td>indirect evidence is less precise than direct</td>
+</tr>
+<tr class="odd">
+<td><a href="#prp-baseline-cancellation" class="quarto-xref">Proposition&nbsp;<span>14.4</span></a>, <a href="#prp-unanchored-bias" class="quarto-xref">Proposition&nbsp;<span>14.5</span></a></td>
+<td>the anchor cancels the study baselines</td>
+<td>anchored comparison beats the naive single-arm one</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="sec-bucher-scale" class="level2" data-number="14.3">
+<h2 data-number="14.3" class="anchored" data-anchor-id="sec-bucher-scale"><span class="header-section-number">14.3</span> The relative effect and its scale</h2>
+<p>The goal of this section is modest but easy to lose sight of: we want to put every treatment arm on a single additive scale, a number <span class="math inline">\(\eta_k\)</span> we can subtract, so that “effect” becomes “difference.” Everything in the section is machinery for doing that honestly when the outcome is binary or a survival time rather than a plain average.</p>
+<p>Fix three treatments <span class="math inline">\(A\)</span>, <span class="math inline">\(B\)</span>, <span class="math inline">\(C\)</span> and a strictly increasing, differentiable <strong>link function</strong> <span class="math inline">\(g\)</span> (<a href="../part1/07-glm.html#def-link-function" class="quarto-xref">Definition&nbsp;<span>7.2</span></a>) that maps a mean outcome to a “linear-predictor” scale on which effects are to be reported: the logit for binary outcomes (giving log odds ratios), the log for rates and hazards (giving log rate or hazard ratios), and the identity for continuous outcomes (giving mean differences). For a treatment <span class="math inline">\(k\in\{A,B,C\}\)</span> write <span class="math inline">\(\mu_k(x)=\mathbb E[Y(k)\mid X=x]\)</span> for the conditional mean of the potential outcome under <span class="math inline">\(k\)</span> (<a href="../part2/09-potential-outcomes.html#def-potential-outcome" class="quarto-xref">Definition&nbsp;<span>9.1</span></a>), as a function of the baseline covariates <span class="math inline">\(x\in\mathcal X\)</span>.</p>
+<div id="def-marginal-link-position" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 14.1 (Marginal link-scale position)</strong></span> Let <span class="math inline">\(\mathcal P\)</span> be a population with covariate density <span class="math inline">\(f_{\mathcal P}\)</span>. The <strong>marginal mean</strong> of treatment <span class="math inline">\(k\)</span> in <span class="math inline">\(\mathcal P\)</span> is <span class="math inline">\(\bar\mu_{k(\mathcal P)}=\int \mu_k(x)\,f_{\mathcal P}(x)\,dx\)</span>, and its <strong>marginal link-scale position</strong> is <span id="eq-bucher-eta"><span class="math display">\[
+\eta_{k(\mathcal P)} \;=\; g\!\left(\bar\mu_{k(\mathcal P)}\right)
+\;=\; g\!\left(\int \mu_k(x)\,f_{\mathcal P}(x)\,dx\right).
+\tag{14.1}\]</span></span> The <strong>marginal relative effect</strong> of treatment <span class="math inline">\(b\)</span> versus treatment <span class="math inline">\(a\)</span> in <span class="math inline">\(\mathcal P\)</span> (<a href="../part2/11-effect-modification-collapsibility.html#def-marginal-effect" class="quarto-xref">Definition&nbsp;<span>11.2</span></a>) is the contrast of link-scale positions, <span id="eq-bucher-reldef"><span class="math display">\[
+d_{ab(\mathcal P)} \;=\; \eta_{b(\mathcal P)}-\eta_{a(\mathcal P)}
+\;=\; g\!\left(\bar\mu_{b(\mathcal P)}\right)-g\!\left(\bar\mu_{a(\mathcal P)}\right).
+\tag{14.2}\]</span></span> <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Reader translation.</strong> The phrase “link-scale position” is jargon coined here; take it to mean “the arm’s adjusted location on the report scale, before we subtract two arms.” The object <span class="math inline">\(\eta_{k(\mathcal P)}\)</span> is a two-step recipe. Step one: in population <span class="math inline">\(\mathcal P\)</span>, work out the <em>average</em> outcome you would see if everyone took treatment <span class="math inline">\(k\)</span>; this is the inner integral <span class="math inline">\(\bar\mu_{k(\mathcal P)}\)</span>, an ordinary population mean. Step two: push that single average through the link <span class="math inline">\(g\)</span> to land on the additive scale (the logit of a probability, the log of a rate). The relative effect <span class="math inline">\(d_{ab(\mathcal P)}\)</span> is then just the gap between two such numbers. One notational caution: <span class="math inline">\(\eta_{k(\mathcal P)}\)</span> is a <em>population-level</em> (marginal) quantity indexed by a treatment and a population; it is <strong>not</strong> the individual-level linear predictor <span class="math inline">\(\eta_{ijk}\)</span> of <a href="../../notation.html">Notation</a>, which carries a person, study, and arm subscript. Same Greek letter, a coarser object. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>Two further points of interpretation deserve emphasis before we use <a href="#eq-bucher-reldef" class="quarto-xref">Equation&nbsp;<span>14.2</span></a>.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Marginal, not conditional.</strong> Equation <a href="#eq-bucher-reldef" class="quarto-xref">Equation&nbsp;<span>14.2</span></a> marginalizes the conditional means <em>first</em> (the inner integral) and applies the link <em>second</em>. This is the effect a trial reports when it compares arm-level summaries: the marginal odds ratio, the marginal hazard ratio. It is in general not equal to the conditional effect <span class="math inline">\(g(\mu_b(x))-g(\mu_a(x))\)</span> averaged over <span class="math inline">\(x\)</span>, because a nonlinear <span class="math inline">\(g\)</span> does not commute with averaging. Here is the phenomenon in one line of arithmetic: if half a population has event probability <span class="math inline">\(0.9\)</span> and half has <span class="math inline">\(0.1\)</span>, the average probability is <span class="math inline">\(0.5\)</span> with logit <span class="math inline">\(0\)</span>, whereas the average of the two logits is <span class="math inline">\(\tfrac12\operatorname{logit}(0.9)+\tfrac12\operatorname{logit}(0.1)=0\)</span> only by the symmetry of this toy case; shift the split to <span class="math inline">\(0.8\)</span> and <span class="math inline">\(0.1\)</span> and <span class="math inline">\(g\)</span> of the average (<span class="math inline">\(\operatorname{logit}0.45=-0.20\)</span>) no longer equals the average of the <span class="math inline">\(g\)</span>’s (<span class="math inline">\(\tfrac12\operatorname{logit}0.8+\tfrac12\operatorname{logit}0.1\approx-0.40\)</span>). For the identity link the two always coincide; for the logit and log links they differ, the phenomenon of non-collapsibility (<a href="../part1/07-glm.html#def-non-collapsibility" class="quarto-xref">Definition&nbsp;<span>7.7</span></a>, <a href="../part2/11-effect-modification-collapsibility.html#def-collapsibility" class="quarto-xref">Definition&nbsp;<span>11.6</span></a>, <a href="../part2/11-effect-modification-collapsibility.html#thm-noncollapsibility-or-hr" class="quarto-xref">Theorem&nbsp;<span>11.2</span></a>). The Bucher construction operates on whatever marginal effects the trials report, and the transitivity assumption below is a statement about those marginal effects. We return to the interaction between non-collapsibility and indirect comparison in Chapter 16. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Why a scale on which contrasts add.</strong> The whole construction lives on the link scale precisely because on that scale a relative effect is a <em>difference</em> of two positions, and differences subtract cleanly. On the natural outcome scale the same information is multiplicative: an odds ratio of <span class="math inline">\(A\)</span> versus <span class="math inline">\(C\)</span> times the odds ratio of <span class="math inline">\(C\)</span> versus <span class="math inline">\(B\)</span> gives the odds ratio of <span class="math inline">\(A\)</span> versus <span class="math inline">\(B\)</span>. Taking logarithms turns the product into the sum <a href="#eq-bucher-reldef" class="quarto-xref">Equation&nbsp;<span>14.2</span></a>. The risk difference is the one common effect measure that adds on the identity scale directly. We make the additive structure a lemma in <a href="#sec-bucher-algebra" class="quarto-xref"><span>Section 14.4</span></a>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<section id="sec-bucher-singletrial" class="level3" data-number="14.3.1">
+<h3 data-number="14.3.1" class="anchored" data-anchor-id="sec-bucher-singletrial"><span class="header-section-number">14.3.1</span> The single trial as a source of an unbiased contrast</h3>
+<p>A randomized trial comparing two of the treatments in a population <span class="math inline">\(\mathcal P\)</span> delivers an (approximately) unbiased estimator of the corresponding marginal relative effect <a href="#eq-bucher-reldef" class="quarto-xref">Equation&nbsp;<span>14.2</span></a>. We record this as the input to everything that follows; the proof is the identification argument of Chapter 9. The reader who wants only the upshot may read the proposition, skip its proof, and note the plain-language remark that follows it.</p>
+<div id="prp-trial-unbiased" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 14.1 (A randomized trial estimates its own marginal contrast)</strong></span> Let study <span class="math inline">\(j\)</span> randomize patients drawn from population <span class="math inline">\(\mathcal P_j\)</span> between arms <span class="math inline">\(a\)</span> and <span class="math inline">\(b\)</span>, with randomization probability <span class="math inline">\(P(T=b\mid X=x)=\pi\in(0,1)\)</span> independent of <span class="math inline">\(x\)</span>. Then the arms satisfy ignorability and positivity (<a href="../part2/09-potential-outcomes.html#def-ignorability" class="quarto-xref">Definition&nbsp;<span>9.7</span></a>, <a href="../part2/09-potential-outcomes.html#def-positivity" class="quarto-xref">Definition&nbsp;<span>9.8</span></a>) by design, the arm means identify the marginal potential-outcome means <span class="math inline">\(\bar\mu_{a(\mathcal P_j)}\)</span> and <span class="math inline">\(\bar\mu_{b(\mathcal P_j)}\)</span> (<a href="../part2/09-potential-outcomes.html#thm-ate-identification" class="quarto-xref">Theorem&nbsp;<span>9.3</span></a>), and any estimator <span class="math inline">\(\hat d_{ab(j)}\)</span> formed by applying <span class="math inline">\(g\)</span> to consistent arm-mean estimators is consistent for <span class="math inline">\(d_{ab(\mathcal P_j)}\)</span>, with <span class="math inline">\(\mathbb E[\hat d_{ab(j)}]\to d_{ab(\mathcal P_j)}\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Randomization makes the treatment indicator <span class="math inline">\(T\)</span> independent of the potential outcomes <span class="math inline">\((Y(a),Y(b))\)</span> and of the covariates <span class="math inline">\(X\)</span>; in particular <span class="math inline">\(T\perp (Y(a),Y(b))\mid X\)</span> holds with the conditioning on <span class="math inline">\(X\)</span> vacuous, which is ignorability (<a href="../part2/09-potential-outcomes.html#def-ignorability" class="quarto-xref">Definition&nbsp;<span>9.7</span></a>), and <span class="math inline">\(\pi\in(0,1)\)</span> is positivity (<a href="../part2/09-potential-outcomes.html#def-positivity" class="quarto-xref">Definition&nbsp;<span>9.8</span></a>). By the identification theorem (<a href="../part2/09-potential-outcomes.html#thm-ate-identification" class="quarto-xref">Theorem&nbsp;<span>9.3</span></a>) applied within <span class="math inline">\(\mathcal P_j\)</span>, the observed mean in arm <span class="math inline">\(a\)</span>, namely <span class="math inline">\(\mathbb E[Y\mid T=a]\)</span>, equals <span class="math inline">\(\mathbb E[Y(a)]=\bar\mu_{a(\mathcal P_j)}\)</span>, and likewise for <span class="math inline">\(b\)</span>. An estimator that plugs consistent arm-mean estimators <span class="math inline">\(\widehat{\bar\mu}_{a(j)},\widehat{\bar\mu}_{b(j)}\)</span> into <span class="math inline">\(g\)</span> and differences them is, by the continuous mapping theorem and the differentiability of <span class="math inline">\(g\)</span>, consistent for <span class="math inline">\(g(\bar\mu_{b(\mathcal P_j)})-g(\bar\mu_{a(\mathcal P_j)})=d_{ab(\mathcal P_j)}\)</span>; its bias vanishes in the limit, and to first order in the delta-method expansion of <a href="#sec-bucher-logodds" class="quarto-xref"><span>Section 14.10</span></a> it is unbiased. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>What the proof said, in plain words.</strong> <em>Ignorability</em> means that, thanks to randomization, which treatment a patient received tells you nothing about how they would have fared under either treatment; the two arms are exchangeable. Because the coin flip is independent of everything about the patient, the conditioning on <span class="math inline">\(X\)</span> is “vacuous,” that is, unnecessary. <em>Positivity</em> is just <span class="math inline">\(\pi\in(0,1)\)</span>: everyone had a genuine chance of either arm. Together these are what a randomized trial buys you by design, so the arm averages estimate the population averages you would have seen if everyone had taken that treatment. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Consistent, and unbiased to first order.</strong> A subtlety worth stating plainly: the empirical log odds-ratio is <em>not exactly</em> unbiased in a finite sample. What <a href="#prp-trial-unbiased" class="quarto-xref">Proposition&nbsp;<span>14.1</span></a> delivers is (i) <em>consistency</em>, meaning that as the arm sizes grow, <span class="math inline">\(\hat d_{ab(j)}\)</span> converges in probability to the true contrast, and (ii) <em>first-order (asymptotic) unbiasedness</em>, meaning the leading term of its bias vanishes as the sample grows. Every use of the word “unbiased” in this chapter, including in the statement of Bucher’s theorem below, is meant in this large-sample sense, which is the scale on which all Bucher calculations operate. For trials of realistic size the distinction is harmless; we flag it only so the word is not over-read. A separate warning about the word <em>consistent</em>: in <a href="#prp-trial-unbiased" class="quarto-xref">Proposition&nbsp;<span>14.1</span></a> it is the statistical sense (an estimator converging to its target); in <a href="#eq-bucher-consistency" class="quarto-xref">Equation&nbsp;<span>14.6</span></a> below it is the network-meta-analysis sense (direct and indirect estimates <em>agreeing</em>). The two senses are unrelated; context disambiguates. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>The phrase “unbiased estimator of <span class="math inline">\(d_{AC}\)</span>” in Bucher’s theorem is shorthand for the conclusion of <a href="#prp-trial-unbiased" class="quarto-xref">Proposition&nbsp;<span>14.1</span></a>: each trial estimates <em>its own</em> population’s marginal contrast without (first-order) bias. The entire subtlety of indirect comparison is that the trial estimates the contrast in <em>its</em> population <span class="math inline">\(\mathcal P_j\)</span>, whereas we wish to combine the trials into a statement about a single contrast. Bridging the populations is the work of the transitivity assumption.</p>
+</section>
+</section>
+<section id="sec-bucher-algebra" class="level2" data-number="14.4">
+<h2 data-number="14.4" class="anchored" data-anchor-id="sec-bucher-algebra"><span class="header-section-number">14.4</span> The algebra of contrasts</h2>
+<p>Inside a single population the relative effects <a href="#eq-bucher-reldef" class="quarto-xref">Equation&nbsp;<span>14.2</span></a> are differences of three numbers <span class="math inline">\(\eta_{A},\eta_{B},\eta_{C}\)</span> (suppressing the population subscript), and therefore satisfy two elementary laws. They are the entire algebraic content of Bucher’s identity; the statistics enters only through <a href="#prp-trial-unbiased" class="quarto-xref">Proposition&nbsp;<span>14.1</span></a> and the variance bookkeeping of <a href="#sec-bucher-variance" class="quarto-xref"><span>Section 14.8</span></a>.</p>
+<p>It is fair to ask why a book states a theorem for something so elementary. The reason is that this trivial algebra is the <em>entire</em> mathematical skeleton of the Bucher estimator: the variance result (<a href="#thm-bucher-variance" class="quarto-xref">Theorem&nbsp;<span>14.2</span></a>), the cancellation of baselines (<a href="#prp-baseline-cancellation" class="quarto-xref">Proposition&nbsp;<span>14.4</span></a>), and the unbiasedness theorem (<a href="#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a>) all reduce to the two laws below applied on the right scale. Naming them now lets those later proofs cite them by name rather than re-derive them.</p>
+<div id="lem-relative-effect-algebra" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 14.1 (Antisymmetry and additivity of contrasts)</strong></span> Fix a population <span class="math inline">\(\mathcal P\)</span> and let <span class="math inline">\(d_{ab}=\eta_{b}-\eta_{a}\)</span> for <span class="math inline">\(a,b\in\{A,B,C\}\)</span> as in <a href="#eq-bucher-reldef" class="quarto-xref">Equation&nbsp;<span>14.2</span></a>. Then for all treatments <span class="math inline">\(a,b,c\)</span>:</p>
+<ol type="1">
+<li><p><strong>Antisymmetry (reversal):</strong> <span class="math inline">\(d_{ab}=-d_{ba}\)</span>, and in particular <span class="math inline">\(d_{aa}=0\)</span>.</p></li>
+<li><p><strong>Additivity (the triangle identity):</strong> <span id="eq-bucher-additivity"><span class="math display">\[
+d_{ac} \;=\; d_{ab}+d_{bc}, \qquad\text{equivalently}\qquad d_{ab}=d_{ac}-d_{bc}.
+\tag{14.3}\]</span></span></p></li>
+</ol>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Both laws are immediate from the representation <span class="math inline">\(d_{ab}=\eta_b-\eta_a\)</span>. For antisymmetry, <span class="math inline">\(d_{ab}=\eta_b-\eta_a=-(\eta_a-\eta_b)=-d_{ba}\)</span>, and setting <span class="math inline">\(b=a\)</span> gives <span class="math inline">\(d_{aa}=\eta_a-\eta_a=0\)</span>. For additivity, <span class="math display">\[
+d_{ab}+d_{bc}=(\eta_b-\eta_a)+(\eta_c-\eta_b)=\eta_c-\eta_a=d_{ac}.
+\]</span> Adding <span class="math inline">\(-d_{bc}\)</span> to both sides of <span class="math inline">\(d_{ac}=d_{ab}+d_{bc}\)</span> and using antisymmetry rearranges this to <span class="math inline">\(d_{ab}=d_{ac}-d_{bc}\)</span>. The middle term <span class="math inline">\(\eta_b\)</span> cancels because it enters <span class="math inline">\(d_{ab}\)</span> with a plus sign and <span class="math inline">\(d_{bc}\)</span> with a minus sign; this cancellation of the intermediate treatment’s link-scale position is the algebraic seed of the indirect comparison. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Why this matters.</strong> Read the triangle identity with the roles of the running example: setting <span class="math inline">\(a=A,b=C,c=B\)</span> in <span class="math inline">\(d_{ab}=d_{ac}-d_{bc}\)</span> gives exactly <span class="math inline">\(d_{AB}=d_{AC}-d_{BC}\)</span>, the Bucher combination. The lemma says this is a <em>tautology</em> whenever all three contrasts live in one population; the whole difficulty, taken up next, is that our three contrasts come from three different populations. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>A note on index order and the clinical convention.</strong> With the convention of <a href="../../notation.html">Notation</a>, <span class="math inline">\(d_{ab}=\eta_b-\eta_a\)</span> places the <em>reference</em> treatment first and the <em>active</em> treatment second. The common comparator of an anchored comparison is <span class="math inline">\(C\)</span>, so the two trial contrasts that involve <span class="math inline">\(C\)</span> are <span class="math inline">\(d_{AC}=\eta_C-\eta_A\)</span> and <span class="math inline">\(d_{BC}=\eta_C-\eta_B\)</span>, in which <span class="math inline">\(C\)</span> occupies the second slot; the target contrast between the two new treatments is <span class="math inline">\(d_{AB}=\eta_B-\eta_A\)</span>. Much applied writing uses the opposite order, “<span class="math inline">\(A\)</span> versus <span class="math inline">\(C\)</span>,” and reports <span class="math inline">\(-d_{AC}=\eta_A-\eta_C\)</span>. By the antisymmetry law <a href="#lem-relative-effect-algebra" class="quarto-xref">Lemma&nbsp;<span>14.1</span></a>(1) the two orderings differ only by an overall sign and carry identical information; the indirect identity <span class="math inline">\(d_{AB}=d_{AC}-d_{BC}\)</span> holds verbatim in either bookkeeping, because reversing all three contrasts negates both sides. The practical rule to remember, tabulated in <a href="#sec-bucher-running" class="quarto-xref"><span>Section 14.2</span></a>: with an <em>unfavorable</em> outcome, a <strong>positive</strong> <span class="math inline">\(d_{ab}\)</span> means the second-slot treatment has the higher (worse) odds. We keep the <a href="../../notation.html">Notation</a> order and let the reader translate by the reversal law where a “<span class="math inline">\(A\)</span> versus <span class="math inline">\(C\)</span>” phrasing is more natural. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>The additivity law <a href="#eq-bucher-additivity" class="quarto-xref">Equation&nbsp;<span>14.3</span></a> is a tautology when all three contrasts live in <em>one</em> population, where the <span class="math inline">\(\eta\)</span>’s are three fixed numbers. The trials, however, live in three different populations <span class="math inline">\(\mathcal P_{AB}\)</span>, <span class="math inline">\(\mathcal P_{AC}\)</span>, <span class="math inline">\(\mathcal P_{BC}\)</span>, each with its own <span class="math inline">\(\eta\)</span>’s. To carry <a href="#eq-bucher-additivity" class="quarto-xref">Equation&nbsp;<span>14.3</span></a> across populations we need exactly the assumption that the relevant contrasts do not depend on which population we evaluate them in.</p>
+</section>
+<section id="sec-bucher-transitivity" class="level2" data-number="14.5">
+<h2 data-number="14.5" class="anchored" data-anchor-id="sec-bucher-transitivity"><span class="header-section-number">14.5</span> Constancy of relative effects and transitivity</h2>
+<p>Before the formal definitions, the assumption in plain terms, because it is the most important idea in the chapter. The two trials were run in different populations. Anchoring (Section <a href="#sec-bucher-cancellation" class="quarto-xref"><span>Section 14.9</span></a>) will handle any difference in <em>baseline risk</em> for free. What it cannot handle is a difference in the <em>size of a treatment effect</em> between the populations. A covariate that changes the size of a treatment effect is an <strong>effect modifier</strong> (<a href="../part2/11-effect-modification-collapsibility.html#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a>); a covariate that shifts outcomes but leaves treatment effects unchanged is a <strong>prognostic variable</strong> (<a href="../part2/11-effect-modification-collapsibility.html#def-prognostic-variable" class="quarto-xref">Definition&nbsp;<span>11.5</span></a>). Transitivity is the assumption that the trial populations are alike in their effect modifiers, and it allows them to differ freely in everything else.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Question about the trial populations</th>
+<th>Answer under transitivity</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>What <strong>must</strong> be similar?</td>
+<td>The distribution of any <em>effect modifier</em> of the relevant relative effects, that is, any covariate that changes the size of a treatment effect.</td>
+</tr>
+<tr class="even">
+<td>What is <strong>allowed</strong> to differ?</td>
+<td>Baseline risk and purely <em>prognostic</em> factors, which shift outcomes but not treatment effects; the anchor cancels these (<a href="#prp-baseline-cancellation" class="quarto-xref">Proposition&nbsp;<span>14.4</span></a>).</td>
+</tr>
+<tr class="odd">
+<td>What <strong>cannot</strong> be repaired by more data?</td>
+<td>Bias from an imbalance in effect modifiers. It is a bias, not a variance, so a larger trial does not shrink it.</td>
+</tr>
+</tbody>
+</table>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>A clinical instance, before the algebra.</strong> Return to the two statin trials. Suppose age modifies the effect of statin <span class="math inline">\(B\)</span> versus placebo <span class="math inline">\(C\)</span>: the reduction in cardiovascular events is larger in older patients. If the <span class="math inline">\(BC\)</span> trial enrolled a substantially younger population than the one in which we want to report <span class="math inline">\(A\)</span> versus <span class="math inline">\(B\)</span>, then <span class="math inline">\(\hat d_{BC}\)</span> estimates <span class="math inline">\(B\)</span>’s effect in a <em>younger</em> population, and subtracting it from <span class="math inline">\(\hat d_{AC}\)</span> silently mixes two different populations; transitivity fails. If instead age only <em>predicts</em> cardiovascular risk but does <em>not</em> change the size of the statin effect, then age is a prognostic variable, not an effect modifier: it shifts a study’s baseline but not its treatment effect, and anchoring absorbs the difference at no cost. Transitivity is thus a statement about effect modifiers, not about baseline comparability. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div id="def-constancy-relative-effects" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 14.2 (Constancy of relative effects)</strong></span> Let a network of studies be given, study <span class="math inline">\(j\)</span> having population <span class="math inline">\(\mathcal P_j\)</span> with covariate density <span class="math inline">\(f_j\)</span>. The marginal relative effect of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span> in <span class="math inline">\(\mathcal P_j\)</span> on the scale <span class="math inline">\(g\)</span> is, as in <a href="#eq-bucher-reldef" class="quarto-xref">Equation&nbsp;<span>14.2</span></a>, <span class="math display">\[
+d_{ab(\mathcal P_j)}=g\!\left(\int \mu_b(x)\,f_j(x)\,dx\right)-g\!\left(\int \mu_a(x)\,f_j(x)\,dx\right).
+\]</span> The <strong>constancy of relative effects</strong> assumption asserts that this quantity does not depend on the population: for every ordered pair of treatments <span class="math inline">\((a,b)\)</span> and all studies <span class="math inline">\(j,j'\)</span>, <span id="eq-bucher-constancy"><span class="math display">\[
+d_{ab(\mathcal P_j)} \;=\; d_{ab(\mathcal P_{j'})} \;=:\; d_{ab}.
+\tag{14.4}\]</span></span> The common value <span class="math inline">\(d_{ab}\)</span> is then a population-free <strong>network contrast</strong>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Reader translation.</strong> Constancy says every relative effect in the network is a single number that does not care which study you look at, so “the effect of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span>” is well defined without naming a population. It is the general network assumption. Transitivity, defined next, is its restriction to the one triangle <span class="math inline">\(\{A,B,C\}\)</span> we need for a single Bucher comparison: constancy for the whole network, transitivity for the triangle. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>Constancy <a href="#eq-bucher-constancy" class="quarto-xref">Equation&nbsp;<span>14.4</span></a> is a property of every pair of treatments across every study. For a single indirect comparison we need only its restriction to the triangle <span class="math inline">\(\{A,B,C\}\)</span> and the three populations in play. That restriction is the transitivity assumption.</p>
+<div id="def-transitivity" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 14.3 (Transitivity (for the anchored triangle))</strong></span> Let <span class="math inline">\(A\)</span>, <span class="math inline">\(B\)</span>, <span class="math inline">\(C\)</span> be three treatments studied in populations <span class="math inline">\(\mathcal P_{AB}\)</span>, <span class="math inline">\(\mathcal P_{AC}\)</span>, <span class="math inline">\(\mathcal P_{BC}\)</span> (the population of a hypothetical direct <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> trial, and the populations of the available <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> and <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> trials). The <strong>transitivity</strong> assumption asserts that each of the three relative effects takes the same value in every one of the three populations: <span id="eq-bucher-transitivity"><span class="math display">\[
+d_{AB(\mathcal P_{AB})}=d_{AB(\mathcal P_{AC})}=d_{AB(\mathcal P_{BC})}=:d_{AB},
+\tag{14.5}\]</span></span> and likewise <span class="math inline">\(d_{AC(\mathcal P_{AB})}=d_{AC(\mathcal P_{AC})}=d_{AC(\mathcal P_{BC})}=:d_{AC}\)</span> and <span class="math inline">\(d_{BC(\mathcal P_{AB})}=d_{BC(\mathcal P_{AC})}=d_{BC(\mathcal P_{BC})}=:d_{BC}\)</span>. Equivalently, transitivity is the restriction of constancy <a href="#eq-bucher-constancy" class="quarto-xref">Equation&nbsp;<span>14.4</span></a> to the treatment triangle <span class="math inline">\(\{A,B,C\}\)</span>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+<p>[machine-checked: <code>theories/Bucher.v</code>, <code>Definition transitivity</code>]</p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Reader translation.</strong> Transitivity says: the number you would call “the effect of <span class="math inline">\(B\)</span> versus <span class="math inline">\(C\)</span>” is the <em>same</em> number whether you measure it in the <span class="math inline">\(A\)</span>-vs-<span class="math inline">\(C\)</span> trial’s population, the <span class="math inline">\(B\)</span>-vs-<span class="math inline">\(C\)</span> trial’s population, or the target population where you actually want the answer, and likewise for the other two contrasts. It does <em>not</em> require the populations to be alike in every way; it requires them to be alike in the ingredients that change treatment effects, the effect modifiers. It is the population-level cousin of “no unmeasured confounding”: ignorability (<a href="../part2/09-potential-outcomes.html#def-ignorability" class="quarto-xref">Definition&nbsp;<span>9.7</span></a>) lets one study impersonate a randomized experiment, and transitivity lets three studies impersonate one connected experiment run in a single population. In practice a reviewer checks it not from the data but from the trial reports, by asking whether the trials enrolled comparable patients with respect to known effect modifiers of the outcome; it is a judgment about clinical similarity, informed by subject-matter knowledge, that the data alone cannot confirm. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>The next proposition makes the bridge precise: under transitivity the additivity law <a href="#eq-bucher-additivity" class="quarto-xref">Equation&nbsp;<span>14.3</span></a>, a tautology inside one population, becomes a genuine relation among the three well-defined network contrasts.</p>
+<div id="prp-transitivity-consistency" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 14.2 (Transitivity yields the population consistency equation)</strong></span> Under transitivity (<a href="#def-transitivity" class="quarto-xref">Definition&nbsp;<span>14.3</span></a>), the network contrasts satisfy the <strong>consistency equation</strong> <span id="eq-bucher-consistency"><span class="math display">\[
+d_{AB} \;=\; d_{AC}-d_{BC}.
+\tag{14.6}\]</span></span> Conversely, if the relative effects in each population obey the within-population additivity law <a href="#eq-bucher-additivity" class="quarto-xref">Equation&nbsp;<span>14.3</span></a> and the consistency equation <a href="#eq-bucher-consistency" class="quarto-xref">Equation&nbsp;<span>14.6</span></a> holds for the common values, then the three contrasts are mutually consistent in the sense required by <a href="#def-transitivity" class="quarto-xref">Definition&nbsp;<span>14.3</span></a>.</p>
+<p>[machine-checked: <code>theories/Bucher.v</code>, <code>Lemma transitivity_subtract</code>, <code>Lemma subtract_transitivity</code>]</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>By <a href="#def-transitivity" class="quarto-xref">Definition&nbsp;<span>14.3</span></a> the three symbols <span class="math inline">\(d_{AB},d_{AC},d_{BC}\)</span> are well defined, each being the common value of a relative effect across the three populations. Evaluate the within-population additivity law <a href="#lem-relative-effect-algebra" class="quarto-xref">Lemma&nbsp;<span>14.1</span></a>(2) in, say, the population <span class="math inline">\(\mathcal P_{AC}\)</span>: <span class="math display">\[
+d_{AB(\mathcal P_{AC})}=d_{AC(\mathcal P_{AC})}-d_{BC(\mathcal P_{AC})}.
+\]</span> Transitivity replaces each population-specific effect on the right and the left by its common value, <span class="math inline">\(d_{AB(\mathcal P_{AC})}=d_{AB}\)</span>, <span class="math inline">\(d_{AC(\mathcal P_{AC})}=d_{AC}\)</span>, <span class="math inline">\(d_{BC(\mathcal P_{AC})}=d_{BC}\)</span>, giving <span class="math inline">\(d_{AB}=d_{AC}-d_{BC}\)</span>, which is <a href="#eq-bucher-consistency" class="quarto-xref">Equation&nbsp;<span>14.6</span></a>. The same conclusion follows from evaluating the additivity law in any of the three populations, since transitivity forces them to agree.</p>
+<p>For the converse, suppose each population obeys <a href="#eq-bucher-additivity" class="quarto-xref">Equation&nbsp;<span>14.3</span></a> and the common values obey <a href="#eq-bucher-consistency" class="quarto-xref">Equation&nbsp;<span>14.6</span></a>. Then in any population <span class="math inline">\(\mathcal P_j\)</span> the additivity law reads <span class="math inline">\(d_{AB(\mathcal P_j)}=d_{AC(\mathcal P_j)}-d_{BC(\mathcal P_j)}\)</span>; if two of the three contrasts are constant across populations the third is forced to equal <span class="math inline">\(d_{AC}-d_{BC}=d_{AB}\)</span>, the common value, in every population, which is <a href="#def-transitivity" class="quarto-xref">Definition&nbsp;<span>14.3</span></a>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Reading the two directions.</strong> The forward direction is the one an analyst uses; the table records both.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Direction</th>
+<th>Assume</th>
+<th>Conclude</th>
+<th>Who uses it</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Forward</td>
+<td>transitivity (<a href="#def-transitivity" class="quarto-xref">Definition&nbsp;<span>14.3</span></a>)</td>
+<td>consistency equation <a href="#eq-bucher-consistency" class="quarto-xref">Equation&nbsp;<span>14.6</span></a></td>
+<td><a href="#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a>, the whole method</td>
+</tr>
+<tr class="even">
+<td>Converse</td>
+<td>within-population additivity plus consistency of the common values</td>
+<td>transitivity</td>
+<td>bookkeeping only</td>
+</tr>
+</tbody>
+</table>
+<p>The converse is a consistency check, not something a data analyst invokes: it says the three contrasts cannot be <em>defined</em> inconsistently. “If two of the three are constant across populations, the third is forced” because inside each population the three already satisfy <span class="math inline">\(d_{AB}=d_{AC}-d_{BC}\)</span> by pure algebra (<a href="#lem-relative-effect-algebra" class="quarto-xref">Lemma&nbsp;<span>14.1</span></a>), so fixing any two of them across populations pins the third by subtraction. Which two does not matter; the algebra is symmetric. A first-time reader can take the forward direction and move on. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span>The Coq development encodes transitivity in the equivalent additive form <span class="math inline">\(d_{AC}=d_{AB}+d_{BC}\)</span> (<code>Definition transitivity</code>) and proves the two implications <span class="math inline">\(d_{AC}=d_{AB}+d_{BC}\Rightarrow d_{AB}=d_{AC}-d_{BC}\)</span> (<code>Lemma transitivity_subtract</code>) and its converse (<code>Lemma subtract_transitivity</code>); these are precisely the two directions of <a href="#prp-transitivity-consistency" class="quarto-xref">Proposition&nbsp;<span>14.2</span></a>, stripped to their field algebra. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-bucher-anchored" class="level2" data-number="14.6">
+<h2 data-number="14.6" class="anchored" data-anchor-id="sec-bucher-anchored"><span class="header-section-number">14.6</span> The anchored indirect comparison</h2>
+<p>We can now name the estimator and the contrasting naive alternative it improves upon.</p>
+<div id="def-anchored-comparison" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 14.4 (Anchored indirect comparison)</strong></span> Suppose study <span class="math inline">\(AC\)</span> provides an estimator <span class="math inline">\(\hat d_{AC}\)</span> of the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> network contrast and study <span class="math inline">\(BC\)</span> provides an estimator <span class="math inline">\(\hat d_{BC}\)</span> of the <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> network contrast, the two studies sharing the common comparator <span class="math inline">\(C\)</span>. The <strong>anchored indirect comparison</strong> of <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span>, or <strong>Bucher estimator</strong>, is <span id="eq-bucher-estimator"><span class="math display">\[
+\hat d_{AB}^{\,\mathrm{Bucher}} \;:=\; \hat d_{AC}-\hat d_{BC}.
+\tag{14.7}\]</span></span> The comparison is called <em>anchored</em> because the within-study contrasts to the shared comparator <span class="math inline">\(C\)</span> (the anchor) are differenced, rather than the bare arm-level outcomes. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Reader translation and orientation.</strong> The estimator subtracts the two “versus <span class="math inline">\(C\)</span>” log-effects. In the chapter’s orientation the result estimates <span class="math inline">\(d_{AB}=\eta_B-\eta_A\)</span>, so a <strong>positive</strong> Bucher estimate means <span class="math inline">\(B\)</span> has the higher (with an unfavorable outcome, worse) odds, hence <span class="math inline">\(A\)</span> is the better treatment. In the running example <span class="math inline">\(\hat d_{AB}^{\,\mathrm{Bucher}}=\log 2-\log 1.5=\log\tfrac43&gt;0\)</span>: <span class="math inline">\(B\)</span> carries slightly higher event odds than <span class="math inline">\(A\)</span>. Always restate the direction when reporting: “<span class="math inline">\(B\)</span> versus <span class="math inline">\(A\)</span>, higher is worse.” <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>We also name the <em>wrong</em> thing to do, because seeing why it is wrong is the fastest route to seeing why anchoring works. The following naive comparison is a foil: it is what you get if you ignore the common comparator and simply compare the two active arms across studies. It is used in practice only as a last resort, for disconnected networks (Chapter 26); here it is the cautionary contrast that makes the value of the anchor visible.</p>
+<div id="def-unanchored-comparison" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 14.5 (Unanchored (naive single-arm) comparison)</strong></span> With the same two studies, the <strong>unanchored comparison</strong> discards the comparator arms and contrasts the two <em>active</em> arms directly across studies: <span id="eq-bucher-naive"><span class="math display">\[
+\hat d_{AB}^{\,\mathrm{naive}} \;:=\; \hat\eta_{A(\mathcal P_{AC})}-\hat\eta_{B(\mathcal P_{BC})},
+\tag{14.8}\]</span></span> where <span class="math inline">\(\hat\eta_{A(\mathcal P_{AC})}\)</span> is the estimated link-scale outcome of arm <span class="math inline">\(A\)</span> in study <span class="math inline">\(AC\)</span>, and <span class="math inline">\(\hat\eta_{B(\mathcal P_{BC})}\)</span> that of arm <span class="math inline">\(B\)</span> in study <span class="math inline">\(BC\)</span>. This comparison ignores the anchor <span class="math inline">\(C\)</span> entirely. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Reader translation.</strong> The unanchored estimator throws away the placebo arms and directly compares the new statin’s event rate in one trial to the established statin’s event rate in the other. That is exactly what you would do if you had two single-arm studies with no common comparator. The comparison looks tempting because it seems to use the arms you care about, but it silently assumes the two trials had the same baseline risk, which they almost never do; <a href="#prp-unanchored-bias" class="quarto-xref">Proposition&nbsp;<span>14.5</span></a> makes the error precise and <a href="#exm-anchored-vs-unanchored" class="quarto-xref">Example&nbsp;<span>14.1</span></a> shows it as a number. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>Section <a href="#sec-bucher-cancellation" class="quarto-xref"><span>Section 14.9</span></a> shows that the unanchored comparison carries a bias equal to the difference of the two study baselines, a bias that the anchored comparison removes by construction. The distinction between anchored and unanchored comparison organizes the whole of population-adjusted indirect comparison: anchored methods (Chapters 17 to 20) repair residual bias in <a href="#eq-bucher-estimator" class="quarto-xref">Equation&nbsp;<span>14.7</span></a>, while unanchored methods (Chapter 26) confront the baseline bias of <a href="#eq-bucher-naive" class="quarto-xref">Equation&nbsp;<span>14.8</span></a> head on.</p>
+</section>
+<section id="sec-bucher-unbiased" class="level2" data-number="14.7">
+<h2 data-number="14.7" class="anchored" data-anchor-id="sec-bucher-unbiased"><span class="header-section-number">14.7</span> Bucher’s theorem: unbiasedness</h2>
+<p>The next two results look almost the same, and it helps to say up front how they differ. First we prove the <em>deterministic</em> identity: if the trials reported the true contrasts <em>with no sampling error at all</em>, the subtraction lands exactly on the target (<a href="#prp-bucher-identity" class="quarto-xref">Proposition&nbsp;<span>14.3</span></a>). Then we reintroduce sampling error and show that the subtraction is still right <em>on average</em> (<a href="#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a>). The first is arithmetic; the second is arithmetic plus one line of expectation.</p>
+<div id="prp-bucher-identity" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 14.3 (Bucher’s identity (exact estimates))</strong></span> If <span class="math inline">\(\hat d_{AC}=d_{AC}\)</span> and <span class="math inline">\(\hat d_{BC}=d_{BC}\)</span> hold exactly and transitivity (<a href="#def-transitivity" class="quarto-xref">Definition&nbsp;<span>14.3</span></a>) holds, then <span class="math inline">\(\hat d_{AB}^{\,\mathrm{Bucher}}=d_{AB}\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Substitute the exact values into the estimator <a href="#eq-bucher-estimator" class="quarto-xref">Equation&nbsp;<span>14.7</span></a> and apply the consistency equation <a href="#eq-bucher-consistency" class="quarto-xref">Equation&nbsp;<span>14.6</span></a> of <a href="#prp-transitivity-consistency" class="quarto-xref">Proposition&nbsp;<span>14.2</span></a>: <span class="math display">\[
+\hat d_{AB}^{\,\mathrm{Bucher}}=\hat d_{AC}-\hat d_{BC}=d_{AC}-d_{BC}=d_{AB}. \qquad\square
+\]</span></p>
+</div>
+<p>[machine-checked: <code>theories/Bucher.v</code>, <code>Theorem bucher_identity</code>]</p>
+<p>The stochastic version replaces exact equality by unbiasedness and the substitution by linearity of expectation. This is the theorem of <span class="citation" data-cites="bucher1997">Bucher et al. (<a href="../../references.html#ref-bucher1997" role="doc-biblioref">1997</a>)</span>.</p>
+<div id="thm-bucher-unbiased" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 14.1 (Bucher’s theorem (unbiasedness))</strong></span> Suppose two studies provide estimators of pairwise relative effects of the form <span class="math display">\[
+\hat d_{AC}=d_{AC(\mathcal P_{AC})}+\varepsilon_{AC},\qquad
+\hat d_{BC}=d_{BC(\mathcal P_{BC})}+\varepsilon_{BC},
+\]</span> with mean-zero errors <span class="math inline">\(\mathbb E[\varepsilon_{AC}]=\mathbb E[\varepsilon_{BC}]=0\)</span>, so that <span class="math inline">\(\hat d_{AC}\)</span> and <span class="math inline">\(\hat d_{BC}\)</span> are unbiased for the relative effects in their own trial populations (<a href="#prp-trial-unbiased" class="quarto-xref">Proposition&nbsp;<span>14.1</span></a>). Assume transitivity (<a href="#def-transitivity" class="quarto-xref">Definition&nbsp;<span>14.3</span></a>). Then the Bucher estimator <a href="#eq-bucher-estimator" class="quarto-xref">Equation&nbsp;<span>14.7</span></a> is unbiased for the network contrast <span class="math inline">\(d_{AB}\)</span>: <span class="math display">\[
+\mathbb E\!\left[\hat d_{AB}^{\,\mathrm{Bucher}}\right]=d_{AB}.
+\]</span></p>
+</div>
+<p>[machine-checked: <code>theories/Bucher.v</code>, <code>Theorem bucher_unbiased</code>]</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Why this matters.</strong> This is the license for the whole method: <em>provided transitivity holds</em>, the one-line subtraction <span class="math inline">\(\hat d_{AC}-\hat d_{BC}\)</span> targets the right quantity, so an indirect estimate is a legitimate answer to the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> question. The theorem localizes all the risk in a single assumption, which the remainder of the chapter, and much of the book, learns to inspect. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Linearity of expectation applied to <a href="#eq-bucher-estimator" class="quarto-xref">Equation&nbsp;<span>14.7</span></a> gives <span class="math display">\[
+\mathbb E\!\left[\hat d_{AB}^{\,\mathrm{Bucher}}\right]
+=\mathbb E[\hat d_{AC}]-\mathbb E[\hat d_{BC}].
+\]</span> By the unbiasedness hypothesis the two expectations equal the trial-population relative effects, <span class="math display">\[
+\mathbb E[\hat d_{AC}]=d_{AC(\mathcal P_{AC})},\qquad
+\mathbb E[\hat d_{BC}]=d_{BC(\mathcal P_{BC})}.
+\]</span> Transitivity (<a href="#def-transitivity" class="quarto-xref">Definition&nbsp;<span>14.3</span></a>) identifies each trial-population effect with the corresponding network contrast, <span class="math inline">\(d_{AC(\mathcal P_{AC})}=d_{AC}\)</span> and <span class="math inline">\(d_{BC(\mathcal P_{BC})}=d_{BC}\)</span>, so <span class="math display">\[
+\mathbb E\!\left[\hat d_{AB}^{\,\mathrm{Bucher}}\right]=d_{AC}-d_{BC}.
+\]</span> Finally the consistency equation <a href="#eq-bucher-consistency" class="quarto-xref">Equation&nbsp;<span>14.6</span></a>, which <a href="#prp-transitivity-consistency" class="quarto-xref">Proposition&nbsp;<span>14.2</span></a> derives from transitivity, gives <span class="math inline">\(d_{AC}-d_{BC}=d_{AB}\)</span>. Chaining the three displays yields <span class="math inline">\(\mathbb E[\hat d_{AB}^{\,\mathrm{Bucher}}]=d_{AB}\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Where each hypothesis is spent.</strong> The proof uses each assumption exactly once and at a distinct step. Unbiasedness of the trial estimators converts expectations into trial-population effects; this is a property of randomization within each trial and uses no cross-trial information. Transitivity converts trial-population effects into network contrasts; this is the only cross-population assumption and is the one that can fail. The consistency equation converts the difference of network contrasts into the target; this is pure algebra (<a href="#lem-relative-effect-algebra" class="quarto-xref">Lemma&nbsp;<span>14.1</span></a>) and never fails. The theorem is therefore as strong as its weakest hypothesis, and the weakest is invariably transitivity. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>The estimator is trivial; the assumption is not.</strong> Equation <a href="#eq-bucher-estimator" class="quarto-xref">Equation&nbsp;<span>14.7</span></a> is one subtraction, and one might wonder why it warrants a theorem. The answer is that the subtraction is licensed only on the consistency-constrained set where <a href="#eq-bucher-consistency" class="quarto-xref">Equation&nbsp;<span>14.6</span></a> holds, and membership in that set is the substantive scientific claim. Every population-adjusted method in Parts IV and V is, in the end, a device for making <a href="#eq-bucher-consistency" class="quarto-xref">Equation&nbsp;<span>14.6</span></a> hold after a correction, or for quantifying the error when it does not. The simplicity of Bucher’s formula is exactly why the assumption that underwrites it must be stated with care. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-bucher-variance" class="level2" data-number="14.8">
+<h2 data-number="14.8" class="anchored" data-anchor-id="sec-bucher-variance"><span class="header-section-number">14.8</span> The Bucher variance</h2>
+<p>We already know from <a href="#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a> that the indirect estimate is centered correctly. The question now is how <em>precise</em> it is, and the headline is simple: an indirect estimate is built from two uncertain inputs, so its uncertainty is larger than either. The estimator <a href="#eq-bucher-estimator" class="quarto-xref">Equation&nbsp;<span>14.7</span></a> is a linear combination of two trial summaries, so its variance is a two-line consequence of the bilinearity of covariance. We first record the general identity, valid whether or not the trials are independent, because the general form is what later chapters need when a multi-arm trial makes the two contrasts dependent.</p>
+<div id="lem-var-difference" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 14.2 (Variance of a difference)</strong></span> For any two square-integrable random variables <span class="math inline">\(U,V\)</span> (that is, random variables with finite variance), <span id="eq-bucher-varidentity"><span class="math display">\[
+\mathrm{Var}(U-V)=\mathrm{Var}(U)+\mathrm{Var}(V)-2\,\mathrm{Cov}(U,V).
+\tag{14.9}\]</span></span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Write <span class="math inline">\(\mathrm{Var}(U-V)=\mathbb E\big[(U-V-\mathbb E[U-V])^2\big]\)</span> and put <span class="math inline">\(\tilde U=U-\mathbb E[U]\)</span>, <span class="math inline">\(\tilde V=V-\mathbb E[V]\)</span>, so <span class="math inline">\(U-V-\mathbb E[U-V]=\tilde U-\tilde V\)</span>. Expanding the square and using linearity of expectation, <span class="math display">\[
+\mathbb E\big[(\tilde U-\tilde V)^2\big]
+=\mathbb E[\tilde U^2]-2\,\mathbb E[\tilde U\tilde V]+\mathbb E[\tilde V^2]
+=\mathrm{Var}(U)-2\,\mathrm{Cov}(U,V)+\mathrm{Var}(V),
+\]</span> which is <a href="#eq-bucher-varidentity" class="quarto-xref">Equation&nbsp;<span>14.9</span></a>. The covariance is a symmetric bilinear form on centered variables, the same form whose positive semidefiniteness is recorded in <a href="../part1/04-probability.html#thm-cov-psd" class="quarto-xref">Theorem&nbsp;<span>4.9</span></a>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div id="thm-bucher-variance" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 14.2 (The Bucher variance)</strong></span> Let <span class="math inline">\(\hat d_{AC}\)</span> and <span class="math inline">\(\hat d_{BC}\)</span> have variances <span class="math inline">\(v_{AC}=\mathrm{Var}(\hat d_{AC})\)</span> and <span class="math inline">\(v_{BC}=\mathrm{Var}(\hat d_{BC})\)</span>. If the two estimators are uncorrelated, <span class="math inline">\(\mathrm{Cov}(\hat d_{AC},\hat d_{BC})=0\)</span> (as holds when they come from disjoint sets of trials), then the Bucher estimator <a href="#eq-bucher-estimator" class="quarto-xref">Equation&nbsp;<span>14.7</span></a> has variance <span id="eq-bucher-varsum"><span class="math display">\[
+\mathrm{Var}\!\left(\hat d_{AB}^{\,\mathrm{Bucher}}\right)=v_{AC}+v_{BC}.
+\tag{14.10}\]</span></span> In general, without the independence assumption, <span class="math inline">\(\mathrm{Var}(\hat d_{AB}^{\,\mathrm{Bucher}})=v_{AC}+v_{BC}-2\,\mathrm{Cov}(\hat d_{AC},\hat d_{BC})\)</span>.</p>
+</div>
+<p>[machine-checked: <code>theories/Bucher.v</code>, <code>Theorem bucher_variance</code>]</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Why this matters, and a picture.</strong> Indirect evidence is real evidence, but it is more expensive: its uncertainty is the <em>sum</em> of the two direct uncertainties. Independent uncertainties add in quadrature, exactly as independent errors combine by the Pythagorean rule, so the indirect standard error is the hypotenuse <span class="math inline">\(\sqrt{\mathrm{SE}_{AC}^2+\mathrm{SE}_{BC}^2}\)</span> of the two direct standard errors. A practical consequence, made concrete in <a href="#sec-bucher-example" class="quarto-xref"><span>Section 14.11</span></a>: an indirect comparison anchored on a <em>tiny</em> <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> trial can be uninformative even when both direct trials are individually significant, because the small trial’s large variance is added in. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Apply <a href="#lem-var-difference" class="quarto-xref">Lemma&nbsp;<span>14.2</span></a> with <span class="math inline">\(U=\hat d_{AC}\)</span> and <span class="math inline">\(V=\hat d_{BC}\)</span>: <span class="math display">\[
+\mathrm{Var}\!\left(\hat d_{AB}^{\,\mathrm{Bucher}}\right)
+=v_{AC}+v_{BC}-2\,\mathrm{Cov}(\hat d_{AC},\hat d_{BC}),
+\]</span> which is the general formula. Under the independence hypothesis the covariance term is zero, leaving <span class="math inline">\(v_{AC}+v_{BC}\)</span>, equation <a href="#eq-bucher-varsum" class="quarto-xref">Equation&nbsp;<span>14.10</span></a>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>The independence hypothesis holds in the canonical Bucher setting, where the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> evidence and the <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> evidence come from separate trials. It fails when a single multi-arm trial contributes to both contrasts through a shared comparator arm: then the shared arm’s sampling error enters both <span class="math inline">\(\hat d_{AC}\)</span> and <span class="math inline">\(\hat d_{BC}\)</span> with the same sign, inducing a positive covariance. Intuitively, the shared comparator’s error is <em>partly subtracted away</em> rather than counted twice, so a positive covariance <em>reduces</em> the Bucher variance below the sum <a href="#eq-bucher-varsum" class="quarto-xref">Equation&nbsp;<span>14.10</span></a>. The standard homoskedastic random-effects model (a model in which every contrast is given the same variance) makes that correlation exactly one half; the intuition is that two contrasts sharing one of their two arms overlap in half of their sampling error, and we compute it exactly in <a href="15-network-meta-analysis.html#thm-re-nma-correlation" class="quarto-xref">Theorem&nbsp;<span>15.4</span></a>. Because the covariance is positive, treating correlated contrasts as independent overstates the variance, which is conservative for this comparison.</p>
+<div id="cor-bucher-efficiency" class="theorem corollary">
+<p><span class="theorem-title"><strong>Corollary 14.1 (The price of indirectness)</strong></span> Under the independence hypothesis of <a href="#thm-bucher-variance" class="quarto-xref">Theorem&nbsp;<span>14.2</span></a>, the standard error of the Bucher estimate strictly exceeds the standard error of either direct contrast it is built from: <span class="math display">\[
+\mathrm{SE}\!\left(\hat d_{AB}^{\,\mathrm{Bucher}}\right)=\sqrt{v_{AC}+v_{BC}}
+\;&gt;\;\max\!\left(\sqrt{v_{AC}},\,\sqrt{v_{BC}}\right),
+\]</span> whenever both <span class="math inline">\(v_{AC}&gt;0\)</span> and <span class="math inline">\(v_{BC}&gt;0\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Since <span class="math inline">\(v_{AC},v_{BC}&gt;0\)</span>, we have <span class="math inline">\(v_{AC}+v_{BC}&gt;v_{AC}\)</span> and <span class="math inline">\(v_{AC}+v_{BC}&gt;v_{BC}\)</span>; taking square roots, which is monotone on the nonnegative reals, gives <span class="math inline">\(\sqrt{v_{AC}+v_{BC}}&gt;\sqrt{v_{AC}}\)</span> and <span class="math inline">\(&gt;\sqrt{v_{BC}}\)</span>, hence the inequality with the maximum. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>The corollary quantifies a fact of evidence synthesis: an indirect comparison is less precise than either of the direct comparisons it rests on, because it accumulates the uncertainty of both. Indirect evidence is genuine evidence, but it is statistically more expensive than a head-to-head trial of the same size. This is one half of the case for direct trials; the other half, that indirect evidence can be <em>biased</em> when transitivity fails, is the subject of <a href="#sec-bucher-failure" class="quarto-xref"><span>Section 14.12</span></a>.</p>
+</section>
+<section id="sec-bucher-cancellation" class="level2" data-number="14.9">
+<h2 data-number="14.9" class="anchored" data-anchor-id="sec-bucher-cancellation"><span class="header-section-number">14.9</span> The common comparator cancels baseline differences</h2>
+<p>We now make precise the sense in which the anchor <span class="math inline">\(C\)</span> protects the comparison. Decompose each arm’s link-scale position into a study-specific baseline and a treatment-specific effect. Under transitivity the treatment effects are population-free; the baselines are not, and they are exactly what the anchoring removes.</p>
+<div id="def-additive-arm-decomposition" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 14.6 (The additive arm decomposition)</strong></span> Write the marginal link-scale position of arm <span class="math inline">\(k\)</span> in study <span class="math inline">\(j\)</span> as <span id="eq-bucher-decomp"><span class="math display">\[
+\eta_{k(\mathcal P_j)} \;=\; \mu_j+\alpha_k,
+\tag{14.11}\]</span></span> where <span class="math inline">\(\mu_j\)</span> is a study-specific <strong>baseline</strong> and <span class="math inline">\(\alpha_k\)</span> is a treatment-specific <strong>shift</strong> shared across studies, with the reference treatment normalized to <span class="math inline">\(\alpha_{\mathrm{ref}}=0\)</span>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Reader translation, with a picture.</strong> The decomposition splits each arm’s position into “where the study starts” plus “how far the treatment moves it.” Concretely, normalizing the comparator as reference, <span class="math inline">\(\alpha_C=0\)</span>, so <span class="math inline">\(\mu_j=\eta_{C(\mathcal P_j)}\)</span> is literally the placebo arm’s link-scale outcome in study <span class="math inline">\(j\)</span>:</p>
+<pre><code>   position eta_k(P_j)  =  mu_j (study baseline)  +  alpha_k (treatment shift)
+
+   study AC:   arm C:  mu_AC + 0            study BC:   arm C:  mu_BC + 0
+               arm A:  mu_AC + alpha_A                  arm B:  mu_BC + alpha_B
+
+   mu_AC, mu_BC differ across studies      (different baseline risk)
+   alpha_A, alpha_B, alpha_C are SHARED     (constancy of relative effects)</code></pre>
+<p>Read <span class="math inline">\(\mu_j\)</span> as “how risky study <span class="math inline">\(j\)</span>’s population is under the reference treatment,” its baseline log-odds of the event; read <span class="math inline">\(\alpha_k\)</span> as “how much treatment <span class="math inline">\(k\)</span> moves that risk on the link scale,” the same move in every study. This <span class="math inline">\(\mu_j\)</span> is exactly the study-<span class="math inline">\(j\)</span> baseline (intercept) of <a href="../../notation.html">Notation</a>; the reuse of the symbol is deliberate, not a clash. Because both trials share <span class="math inline">\(C\)</span>, the two baselines <span class="math inline">\(\mu_{AC}\)</span> and <span class="math inline">\(\mu_{BC}\)</span> are the <em>same kind of quantity</em>, the placebo log-odds, measured in two different populations, and they will differ. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>The decomposition encodes constancy.</strong> The decomposition <a href="#eq-bucher-decomp" class="quarto-xref">Equation&nbsp;<span>14.11</span></a> is precisely the fixed-effect network model in the reference-treatment parameterization (<a href="15-network-meta-analysis.html#def-reference-treatment-param" class="quarto-xref">Definition&nbsp;<span>15.3</span></a>). The same <span class="math inline">\(\alpha_k\)</span> appears in every study, so the contrast <span class="math inline">\(\alpha_k-\alpha_{k'}\)</span> is the population-free network effect <span class="math inline">\(d_{k'k}\)</span>: under <a href="#eq-bucher-decomp" class="quarto-xref">Equation&nbsp;<span>14.11</span></a>, <span class="math inline">\(d_{ab(\mathcal P_j)}=\eta_{b(\mathcal P_j)}-\eta_{a(\mathcal P_j)}=\alpha_b-\alpha_a\)</span>, free of <span class="math inline">\(\mu_j\)</span>. This is the model form of transitivity, and it is the bridge to the network meta-analysis of Chapter 15, where the same <span class="math inline">\(\mu_j\)</span>-plus-<span class="math inline">\(\alpha_k\)</span> structure is fitted to a whole network at once. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div id="prp-baseline-cancellation" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 14.4 (Anchoring removes both the baselines and the comparator)</strong></span> Assume the additive decomposition <a href="#eq-bucher-decomp" class="quarto-xref">Equation&nbsp;<span>14.11</span></a> with a common comparator <span class="math inline">\(C\)</span> present in both studies. Then the Bucher estimand is free of the study baselines <span class="math inline">\(\mu_{AC},\mu_{BC}\)</span> and of the comparator effect <span class="math inline">\(\alpha_C\)</span>: <span class="math display">\[
+d_{AC(\mathcal P_{AC})}-d_{BC(\mathcal P_{BC})}=(\alpha_C-\alpha_A)-(\alpha_C-\alpha_B)=\alpha_B-\alpha_A=d_{AB}.
+\]</span> Each direct contrast already cancels its own study baseline, and the difference of contrasts then cancels the shared comparator effect <span class="math inline">\(\alpha_C\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>In study <span class="math inline">\(AC\)</span> the two arms have positions <span class="math inline">\(\eta_{A(\mathcal P_{AC})}=\mu_{AC}+\alpha_A\)</span> and <span class="math inline">\(\eta_{C(\mathcal P_{AC})}=\mu_{AC}+\alpha_C\)</span> by <a href="#eq-bucher-decomp" class="quarto-xref">Equation&nbsp;<span>14.11</span></a>. Their contrast is <span class="math display">\[
+d_{AC(\mathcal P_{AC})}=\eta_{C(\mathcal P_{AC})}-\eta_{A(\mathcal P_{AC})}=(\mu_{AC}+\alpha_C)-(\mu_{AC}+\alpha_A)=\alpha_C-\alpha_A,
+\]</span> the baseline <span class="math inline">\(\mu_{AC}\)</span> cancelling because it is common to both arms of the same study. This is the within-study cancellation effected by randomization. Identically, study <span class="math inline">\(BC\)</span> gives <span class="math inline">\(d_{BC(\mathcal P_{BC})}=\alpha_C-\alpha_B\)</span>. Subtracting, <span class="math display">\[
+d_{AC(\mathcal P_{AC})}-d_{BC(\mathcal P_{BC})}=(\alpha_C-\alpha_A)-(\alpha_C-\alpha_B)=\alpha_B-\alpha_A,
+\]</span> the comparator effect <span class="math inline">\(\alpha_C\)</span> cancelling because it is common to both contrasts. The result <span class="math inline">\(\alpha_B-\alpha_A\)</span> equals <span class="math inline">\(d_{AB}\)</span> by <a href="#eq-bucher-decomp" class="quarto-xref">Equation&nbsp;<span>14.11</span></a>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Why this matters.</strong> This is the precise sense in which the anchor earns its keep. Differencing <em>within</em> each trial before differencing <em>across</em> trials deletes the study baselines <span class="math inline">\(\mu_j\)</span> in two stages, so the anchored comparison is immune to the baseline-risk differences that sink the naive comparison. It does not, however, protect against differences in the <em>treatment shifts</em> <span class="math inline">\(\alpha_k\)</span> across populations; that is the province of transitivity, and its failure is <a href="#sec-bucher-failure" class="quarto-xref"><span>Section 14.12</span></a>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>The contrast with the unanchored comparison is now sharp. The naive estimator <a href="#eq-bucher-naive" class="quarto-xref">Equation&nbsp;<span>14.8</span></a> forgoes the within-study cancellation and inherits the difference of baselines as outright bias.</p>
+<div id="prp-unanchored-bias" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 14.5 (The unanchored comparison is biased by the baseline difference)</strong></span> Under the additive decomposition <a href="#eq-bucher-decomp" class="quarto-xref">Equation&nbsp;<span>14.11</span></a>, the unanchored estimand <a href="#eq-bucher-naive" class="quarto-xref">Equation&nbsp;<span>14.8</span></a> is <span class="math display">\[
+\eta_{A(\mathcal P_{AC})}-\eta_{B(\mathcal P_{BC})}=(\mu_{AC}-\mu_{BC})+(\alpha_A-\alpha_B)=(\mu_{AC}-\mu_{BC})-d_{AB},
+\]</span> so, taking <span class="math inline">\(\hat d_{AB}^{\,\mathrm{naive}}\)</span> as an estimate of <span class="math inline">\(-d_{AB}\)</span> (the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> contrast in the reversed orientation), its bias is the difference of study baselines: <span id="eq-bucher-unanchored"><span class="math display">\[
+\text{bias}\;=\;\mu_{AC}-\mu_{BC}.
+\tag{14.12}\]</span></span> The bias vanishes only in the special case <span class="math inline">\(\mu_{AC}=\mu_{BC}\)</span>, that is, only when the two studies happen to share the same baseline link-scale outcome.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>By <a href="#eq-bucher-decomp" class="quarto-xref">Equation&nbsp;<span>14.11</span></a>, <span class="math inline">\(\eta_{A(\mathcal P_{AC})}=\mu_{AC}+\alpha_A\)</span> and <span class="math inline">\(\eta_{B(\mathcal P_{BC})}=\mu_{BC}+\alpha_B\)</span>. Subtracting, <span class="math display">\[
+\eta_{A(\mathcal P_{AC})}-\eta_{B(\mathcal P_{BC})}=(\mu_{AC}-\mu_{BC})+(\alpha_A-\alpha_B).
+\]</span> By <a href="#eq-bucher-decomp" class="quarto-xref">Equation&nbsp;<span>14.11</span></a> again, <span class="math inline">\(\alpha_A-\alpha_B=-(\alpha_B-\alpha_A)=-d_{AB}\)</span>. Hence the estimand equals <span class="math inline">\((\mu_{AC}-\mu_{BC})-d_{AB}\)</span>, an estimate of <span class="math inline">\(-d_{AB}\)</span> offset by <span class="math inline">\(\mu_{AC}-\mu_{BC}\)</span>, which is the claimed bias. It is zero precisely when <span class="math inline">\(\mu_{AC}=\mu_{BC}\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div id="exm-anchored-vs-unanchored" class="theorem example">
+<p><span class="theorem-title"><strong>Example 14.1 (Anchored versus unanchored, on the same data)</strong></span> Use the two trials of the running example (computed in full in <a href="#sec-bucher-example" class="quarto-xref"><span>Section 14.11</span></a>). The placebo (arm <span class="math inline">\(C\)</span>) log-odds were <span class="math inline">\(\hat\eta_C^{(AC)}=\log 0.5=-0.693\)</span> in trial <span class="math inline">\(AC\)</span> and <span class="math inline">\(\hat\eta_C^{(BC)}=\log 0.375=-0.981\)</span> in trial <span class="math inline">\(BC\)</span>; normalizing <span class="math inline">\(\alpha_C=0\)</span> makes these the two baselines, <span class="math display">\[
+\mu_{AC}=-0.693,\qquad \mu_{BC}=-0.981,\qquad \mu_{AC}-\mu_{BC}=0.288.
+\]</span> The two statin arms happened to have <em>identical</em> event rates, <span class="math inline">\(\hat\eta_A=\hat\eta_B=\log 0.25=-1.386\)</span>, so the two analyses disagree sharply:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Quantity</th>
+<th>Anchored (Bucher)</th>
+<th>Unanchored (naive)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>what is contrasted</td>
+<td>within-study contrasts <span class="math inline">\(\hat d_{AC},\hat d_{BC}\)</span></td>
+<td>active arms <span class="math inline">\(\hat\eta_A,\hat\eta_B\)</span> across studies</td>
+</tr>
+<tr class="even">
+<td>uses the placebo arms?</td>
+<td>yes, as the anchor</td>
+<td>no, they are discarded</td>
+</tr>
+<tr class="odd">
+<td>estimate on the log scale</td>
+<td><span class="math inline">\(\hat d_{AB}=0.288\)</span></td>
+<td><span class="math inline">\(\hat\eta_A-\hat\eta_B=0\)</span></td>
+</tr>
+<tr class="even">
+<td>target it estimates</td>
+<td><span class="math inline">\(d_{AB}\)</span></td>
+<td><span class="math inline">\(-d_{AB}\)</span></td>
+</tr>
+<tr class="odd">
+<td>odds ratio reported</td>
+<td><span class="math inline">\(e^{0.288}=\tfrac43=1.33\)</span></td>
+<td><span class="math inline">\(e^{0}=1.00\)</span></td>
+</tr>
+<tr class="even">
+<td>bias</td>
+<td>none (under transitivity)</td>
+<td><span class="math inline">\(\mu_{AC}-\mu_{BC}=0.288\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>The naive comparison concludes the two statins are identical (<span class="math inline">\(\mathrm{OR}=1\)</span>), because their event rates look the same. But they are <em>not</em> comparable: statin <span class="math inline">\(B\)</span> was tested against a placebo population with a lower event rate (<span class="math inline">\(27\%\)</span> versus <span class="math inline">\(33\%\)</span>), so <span class="math inline">\(B\)</span> merely had an easier comparator. The anchored comparison corrects for this and finds <span class="math inline">\(B\)</span> carries <span class="math inline">\(\tfrac43\)</span> the event odds of <span class="math inline">\(A\)</span>. The entire discrepancy, <span class="math inline">\(0.288\)</span>, is precisely the gap between the two placebo baselines, exactly as <a href="#eq-bucher-unanchored" class="quarto-xref">Equation&nbsp;<span>14.12</span></a> predicts. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Why anchoring matters.</strong> The baseline <span class="math inline">\(\mu_j\)</span> absorbs everything about study <span class="math inline">\(j\)</span>’s population that shifts the absolute outcome level: disease severity, follow-up duration, the prevalence of prognostic variables (<a href="../part2/11-effect-modification-collapsibility.html#def-prognostic-variable" class="quarto-xref">Definition&nbsp;<span>11.5</span></a>). Two trials of different drugs are run in different places at different times and essentially never share a baseline, so <span class="math inline">\(\mu_{AC}-\mu_{BC}\)</span> is essentially never zero, and the unanchored estimator <a href="#eq-bucher-naive" class="quarto-xref">Equation&nbsp;<span>14.8</span></a> is essentially always biased, as <a href="#exm-anchored-vs-unanchored" class="quarto-xref">Example&nbsp;<span>14.1</span></a> just showed. The anchored estimator <a href="#eq-bucher-estimator" class="quarto-xref">Equation&nbsp;<span>14.7</span></a> removes this bias for free, by differencing within each study before differencing across studies. This is the whole reason anchored indirect comparison is the default and unanchored comparison a last resort reserved for disconnected networks (Chapter 26), where it must be propped up by strong additional assumptions to control <a href="#eq-bucher-unanchored" class="quarto-xref">Equation&nbsp;<span>14.12</span></a>. Crucially, anchoring does <em>not</em> protect against differences in the <em>treatment effects</em> <span class="math inline">\(\alpha_k\)</span> across populations; that is the province of transitivity, and its failure is <a href="#sec-bucher-failure" class="quarto-xref"><span>Section 14.12</span></a>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-bucher-logodds" class="level2" data-number="14.10">
+<h2 data-number="14.10" class="anchored" data-anchor-id="sec-bucher-logodds"><span class="header-section-number">14.10</span> The variance of an empirical log-odds</h2>
+<p>To turn the worked example into honest numbers we need the standard error of a single trial’s log odds-ratio. It follows from the delta method (<a href="../part1/05-inference.html#thm-delta-method" class="quarto-xref">Theorem&nbsp;<span>5.3</span></a>), and it is the standard error every applied Bucher computation uses.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>You may skip the proof on a first reading.</strong> The only thing the worked example needs from this section is the boxed formula <a href="#eq-bucher-logoddsvar" class="quarto-xref">Equation&nbsp;<span>14.13</span></a>: the estimated variance of a log odds-ratio is the sum of the reciprocals of the four cell counts of its two-by-two table. A reader in a hurry can take this on faith and go straight to <a href="#sec-bucher-example" class="quarto-xref"><span>Section 14.11</span></a>; the delta-method derivation below merely justifies it, repeating the machinery of Chapter 5 (<a href="../part1/05-inference.html#thm-delta-method" class="quarto-xref">Theorem&nbsp;<span>5.3</span></a>). <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div id="prp-logodds-variance" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 14.6 (Large-sample variance of an empirical log-odds and log odds-ratio)</strong></span> Let an arm enroll <span class="math inline">\(n\)</span> patients of whom <span class="math inline">\(r\)</span> experience the event, with <span class="math inline">\(r\sim\mathrm{Bin}(n,p)\)</span> and <span class="math inline">\(0&lt;p&lt;1\)</span>. Let <span class="math inline">\(\hat p=r/n\)</span> and let the empirical log-odds be <span class="math inline">\(\hat\eta=\operatorname{logit}(\hat p)=\log\frac{\hat p}{1-\hat p}\)</span>. Then, to first order, <span id="eq-bucher-logoddsvar"><span class="math display">\[
+\mathrm{Var}(\hat\eta)\approx\frac{1}{np(1-p)},\qquad
+\widehat{\mathrm{Var}}(\hat\eta)=\frac{1}{r}+\frac{1}{n-r}.
+\tag{14.13}\]</span></span> Consequently the empirical log odds-ratio contrasting two independent arms, with event counts <span class="math inline">\(r_1,r_2\)</span> out of <span class="math inline">\(n_1,n_2\)</span>, has estimated variance <span class="math inline">\(\big(\tfrac1{r_1}+\tfrac1{n_1-r_1}\big)+\big(\tfrac1{r_2}+\tfrac1{n_2-r_2}\big)\)</span>, the sum of the inverse cell counts of the underlying two-by-two table.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>The logit <span class="math inline">\(g(p)=\log p-\log(1-p)\)</span> has derivative <span class="math inline">\(g'(p)=\frac1p+\frac1{1-p}=\frac{1}{p(1-p)}\)</span>. Since <span class="math inline">\(\hat p\)</span> is the mean of <span class="math inline">\(n\)</span> independent Bernoulli<span class="math inline">\((p)\)</span> variables, <span class="math inline">\(\mathbb E[\hat p]=p\)</span> and <span class="math inline">\(\mathrm{Var}(\hat p)=p(1-p)/n\)</span>, and by the central limit theorem <span class="math inline">\(\sqrt n(\hat p-p)\xrightarrow{d}\mathcal N(0,p(1-p))\)</span>. The delta method (<a href="../part1/05-inference.html#thm-delta-method" class="quarto-xref">Theorem&nbsp;<span>5.3</span></a>) applied to <span class="math inline">\(g\)</span> gives <span class="math display">\[
+\sqrt n\big(g(\hat p)-g(p)\big)\xrightarrow{d}\mathcal N\!\big(0,\,[g'(p)]^2\,p(1-p)\big),
+\qquad [g'(p)]^2\,p(1-p)=\frac{p(1-p)}{p^2(1-p)^2}=\frac{1}{p(1-p)},
+\]</span> so <span class="math inline">\(\mathrm{Var}(\hat\eta)\approx\frac{1}{np(1-p)}\)</span>. Substituting the plug-in estimate <span class="math inline">\(\hat p=r/n\)</span>, <span class="math display">\[
+\widehat{\mathrm{Var}}(\hat\eta)=\frac{1}{n\hat p(1-\hat p)}=\frac{1}{n\cdot\frac{r}{n}\cdot\frac{n-r}{n}}
+=\frac{n}{r(n-r)}=\frac{(n-r)+r}{r(n-r)}=\frac1r+\frac1{n-r},
+\]</span> which is <a href="#eq-bucher-logoddsvar" class="quarto-xref">Equation&nbsp;<span>14.13</span></a>. The two arms are independent, so by <a href="#lem-var-difference" class="quarto-xref">Lemma&nbsp;<span>14.2</span></a> (with zero covariance) the variance of their difference of log-odds is the sum of the two arm variances; collecting the four reciprocals gives the stated table formula. The normal approximation underlying a Wald interval is justified by the asymptotic normality of the maximum likelihood estimator (<a href="../part1/05-inference.html#thm-mle-asymptotic-normality" class="quarto-xref">Theorem&nbsp;<span>5.6</span></a>), of which <span class="math inline">\(\hat\eta\)</span> is an instance. <span class="math inline">\(\square\)</span></p>
+</div>
+</section>
+<section id="sec-bucher-example" class="level2" data-number="14.11">
+<h2 data-number="14.11" class="anchored" data-anchor-id="sec-bucher-example"><span class="header-section-number">14.11</span> A worked Bucher comparison on the log odds-ratio scale</h2>
+<p>We carry a complete example from raw counts to a confidence interval, so that every number can be checked by hand. The event is an unfavorable outcome (a cardiovascular event); larger log-odds means worse.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Recipe: Bucher from published trials.</strong> Most of the time you will not have raw counts but a reported estimate and interval. The five-step recipe is then:</p>
+<ol type="1">
+<li><strong>Recover each standard error</strong> from a reported <span class="math inline">\(95\%\)</span> interval on the log scale: <span class="math inline">\(\mathrm{SE}=(\text{upper}-\text{lower})/(2\times 1.96)\)</span>, both endpoints on the log scale.</li>
+<li><strong>Line up the orientation</strong>: express both direct effects as “versus the common comparator <span class="math inline">\(C\)</span>” on the same log scale (log OR, log RR, or log HR), so that <span class="math inline">\(\hat d_{AC}\)</span> and <span class="math inline">\(\hat d_{BC}\)</span> mean <span class="math inline">\(\eta_C-\eta_A\)</span> and <span class="math inline">\(\eta_C-\eta_B\)</span>.</li>
+<li><strong>Subtract</strong>: <span class="math inline">\(\hat d_{AB}=\hat d_{AC}-\hat d_{BC}\)</span>.</li>
+<li><strong>Add variances</strong> (if the trials are independent): <span class="math inline">\(\mathrm{SE}(\hat d_{AB})=\sqrt{\mathrm{SE}_{AC}^2+\mathrm{SE}_{BC}^2}\)</span>.</li>
+<li><strong>Interval, then back-transform</strong>: form a Wald interval on the log scale, then exponentiate the estimate and both interval endpoints to report a ratio.</li>
+</ol>
+<p>The example below runs this recipe starting one step earlier, from the raw tables. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div id="exm-bucher-logor" class="theorem example">
+<p><span class="theorem-title"><strong>Example 14.2 (Indirect comparison of <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span> through a common comparator <span class="math inline">\(C\)</span>)</strong></span> <strong>Orientation check.</strong> We report on the chapter’s <span class="math inline">\(d_{ab}=\eta_b-\eta_a\)</span> scale. The event is unfavorable, so a <em>positive</em> contrast flags <em>higher, worse</em> odds. We expect both statins to beat placebo, so we expect <span class="math inline">\(\hat d_{AC}=\eta_C-\eta_A&gt;0\)</span> and <span class="math inline">\(\hat d_{BC}=\eta_C-\eta_B&gt;0\)</span> (placebo worse than each statin), and the target is <span class="math inline">\(d_{AB}=\eta_B-\eta_A\)</span>, “<span class="math inline">\(B\)</span> versus <span class="math inline">\(A\)</span>, higher is worse.”</p>
+<p>Two randomized trials report the following two-by-two tables.</p>
+<p>Study <span class="math inline">\(AC\)</span> (treatment <span class="math inline">\(A\)</span> versus comparator <span class="math inline">\(C\)</span>):</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Arm</th>
+<th>Events <span class="math inline">\(r\)</span></th>
+<th>Non-events <span class="math inline">\(n-r\)</span></th>
+<th>Total <span class="math inline">\(n\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(A\)</span></td>
+<td><span class="math inline">\(30\)</span></td>
+<td><span class="math inline">\(120\)</span></td>
+<td><span class="math inline">\(150\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(C\)</span></td>
+<td><span class="math inline">\(50\)</span></td>
+<td><span class="math inline">\(100\)</span></td>
+<td><span class="math inline">\(150\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>Study <span class="math inline">\(BC\)</span> (treatment <span class="math inline">\(B\)</span> versus comparator <span class="math inline">\(C\)</span>):</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Arm</th>
+<th>Events <span class="math inline">\(r\)</span></th>
+<th>Non-events <span class="math inline">\(n-r\)</span></th>
+<th>Total <span class="math inline">\(n\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(B\)</span></td>
+<td><span class="math inline">\(40\)</span></td>
+<td><span class="math inline">\(160\)</span></td>
+<td><span class="math inline">\(200\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(C\)</span></td>
+<td><span class="math inline">\(60\)</span></td>
+<td><span class="math inline">\(160\)</span></td>
+<td><span class="math inline">\(220\)</span></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 1: arm log-odds.</strong> With <span class="math inline">\(\hat\eta=\log\frac{r}{n-r}\)</span>, <span class="math display">\[
+\hat\eta_A=\log\tfrac{30}{120}=\log 0.25=-1.38629,\qquad
+\hat\eta_C^{(AC)}=\log\tfrac{50}{100}=\log 0.5=-0.69315,
+\]</span> <span class="math display">\[
+\hat\eta_B=\log\tfrac{40}{160}=\log 0.25=-1.38629,\qquad
+\hat\eta_C^{(BC)}=\log\tfrac{60}{160}=\log 0.375=-0.98083.
+\]</span></p>
+<p><strong>Step 2: direct contrasts.</strong> Using the <a href="../../notation.html">Notation</a> order <span class="math inline">\(d_{kC}=\eta_C-\eta_k\)</span>, <span class="math display">\[
+\hat d_{AC}=\hat\eta_C^{(AC)}-\hat\eta_A=-0.69315-(-1.38629)=0.69315=\log 2,
+\]</span> <span class="math display">\[
+\hat d_{BC}=\hat\eta_C^{(BC)}-\hat\eta_B=-0.98083-(-1.38629)=0.40546=\log 1.5.
+\]</span> Both are positive, as the orientation check anticipated. On the odds-ratio scale the comparator <span class="math inline">\(C\)</span> has twice the event odds of <span class="math inline">\(A\)</span> and one and a half times the event odds of <span class="math inline">\(B\)</span>; equivalently <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span> are both protective relative to <span class="math inline">\(C\)</span>, with <span class="math inline">\(A\)</span> the more so.</p>
+<p><strong>Step 3: direct variances</strong> by <a href="#prp-logodds-variance" class="quarto-xref">Proposition&nbsp;<span>14.6</span></a>, summing inverse cell counts, <span class="math display">\[
+\widehat{\mathrm{Var}}(\hat d_{AC})=\tfrac1{30}+\tfrac1{120}+\tfrac1{50}+\tfrac1{100}=0.071667,\qquad
+\mathrm{SE}=0.26771,
+\]</span> <span class="math display">\[
+\widehat{\mathrm{Var}}(\hat d_{BC})=\tfrac1{40}+\tfrac1{160}+\tfrac1{60}+\tfrac1{160}=0.054167,\qquad
+\mathrm{SE}=0.23274.
+\]</span></p>
+<p><strong>Step 4: the Bucher estimate.</strong> By <a href="#eq-bucher-estimator" class="quarto-xref">Equation&nbsp;<span>14.7</span></a> and <a href="#eq-bucher-varsum" class="quarto-xref">Equation&nbsp;<span>14.10</span></a>, <span class="math display">\[
+\hat d_{AB}^{\,\mathrm{Bucher}}=\hat d_{AC}-\hat d_{BC}=0.69315-0.40546=0.28768=\log\tfrac43,
+\]</span> <span class="math display">\[
+\widehat{\mathrm{Var}}\!\left(\hat d_{AB}^{\,\mathrm{Bucher}}\right)=0.071667+0.054167=0.125833,\qquad
+\mathrm{SE}=0.35473.
+\]</span></p>
+<p><strong>Step 5: interval and back-transformation.</strong> A <span class="math inline">\(95\%\)</span> Wald interval on the log scale is <span class="math inline">\(0.28768\pm 1.95996\times 0.35473=0.28768\pm 0.69526=(-0.40758,\,0.98293)\)</span>. Exponentiating, the indirect odds ratio of the event comparing <span class="math inline">\(B\)</span> to <span class="math inline">\(A\)</span> is <span class="math display">\[
+\widehat{\mathrm{OR}}_{AB}=e^{0.28768}=1.3333=\tfrac43,\qquad
+95\%\ \mathrm{CI}=(e^{-0.40758},\,e^{0.98293})=(0.665,\,2.672).
+\]</span> <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Final interpretation, in both orientations.</strong> On this chapter’s <span class="math inline">\(d_{AB}=\eta_B-\eta_A\)</span> scale, the event odds for statin <span class="math inline">\(B\)</span> are estimated as <span class="math inline">\(1.33\)</span> times those for statin <span class="math inline">\(A\)</span>; equivalently, the event odds for <span class="math inline">\(A\)</span> are <span class="math inline">\(1/1.33=0.75\)</span> times those for <span class="math inline">\(B\)</span>. Either way, the point estimate favors <span class="math inline">\(A\)</span> as the better statin. But the <span class="math inline">\(95\%\)</span> interval for the odds ratio, <span class="math inline">\((0.67,\,2.67)\)</span>, comfortably includes <span class="math inline">\(1\)</span>, so on this evidence the difference is not statistically distinguishable from no difference. And the estimate is trustworthy <em>only under transitivity</em>: it assumes the two trials’ populations shared the distribution of any covariate that modifies the statin effect on the log odds-ratio scale. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>Three further features of the example repay attention.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Ratios divide; logs subtract.</strong> The indirect odds ratio <span class="math inline">\(\tfrac43\)</span> is exactly the ratio of the two reported odds ratios, <span class="math inline">\(2/1.5=\tfrac43\)</span>, which is the multiplicative face of the additive identity <span class="math inline">\(\log\tfrac43=\log 2-\log 1.5\)</span>. Had we (wrongly) subtracted the odds ratios, <span class="math inline">\(2-1.5=0.5\)</span>, we would have produced a number with no meaning. The additive scale of <a href="#lem-relative-effect-algebra" class="quarto-xref">Lemma&nbsp;<span>14.1</span></a> is not optional bookkeeping; it is where the cancellation lives. The same arithmetic works verbatim on any additive scale: if a rheumatoid-arthritis network instead reported <span class="math inline">\(\hat d_{AC}=-0.40\)</span> and <span class="math inline">\(\hat d_{BC}=-0.15\)</span> as log <em>hazard</em> ratios of disease progression, then <span class="math inline">\(\hat d_{AB}=-0.40-(-0.15)=-0.25\)</span>, a hazard ratio <span class="math inline">\(e^{-0.25}=0.78\)</span>; only the name of the scale changed. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>The price of indirectness, concretely.</strong> The Bucher standard error <span class="math inline">\(0.355\)</span> exceeds both direct standard errors <span class="math inline">\(0.268\)</span> and <span class="math inline">\(0.233\)</span>, as <a href="#cor-bucher-efficiency" class="quarto-xref">Corollary&nbsp;<span>14.1</span></a> guarantees. The effect on inference is stark. The direct <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> contrast is significant (<span class="math inline">\(z=0.69315/0.26771=2.59\)</span>), the direct <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> contrast borderline (<span class="math inline">\(z=0.40546/0.23274=1.74\)</span>), yet the indirect <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> contrast is firmly inconclusive (<span class="math inline">\(z=0.28768/0.35473=0.81\)</span>, two-sided <span class="math inline">\(p\approx 0.42\)</span>), its <span class="math inline">\(95\%\)</span> interval for the odds ratio running from <span class="math inline">\(0.67\)</span> to <span class="math inline">\(2.67\)</span> and comfortably including <span class="math inline">\(1\)</span>. Two informative direct comparisons can combine into an uninformative indirect one. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>What the number means, and what it assumes.</strong> The estimate <span class="math inline">\(\widehat{\mathrm{OR}}_{AB}=\tfrac43\)</span> is unbiased for the true <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> odds ratio <em>only under transitivity</em>: the populations of the two trials must share the distribution of any covariate that modifies the treatment effect on the log odds-ratio scale. If, for instance, study <span class="math inline">\(BC\)</span> enrolled younger patients and age modifies the effect of <span class="math inline">\(B\)</span>, then <span class="math inline">\(\hat d_{BC}\)</span> estimates the effect in a younger population than the one in which <span class="math inline">\(\hat d_{AC}\)</span> estimates the effect of <span class="math inline">\(A\)</span>, and the subtraction mixes populations. No amount of data fixes this; it is a bias, not a variance, and it is invisible in the standard error <span class="math inline">\(0.355\)</span>. Diagnosing and repairing it is the subject of node-splitting (<a href="15-network-meta-analysis.html#def-node-splitting" class="quarto-xref">Definition&nbsp;<span>15.4</span></a>), a diagnostic that splits a comparison into its direct and indirect parts and checks whether they agree, and of population adjustment (Parts IV and V). <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-bucher-failure" class="level2" data-number="14.12">
+<h2 data-number="14.12" class="anchored" data-anchor-id="sec-bucher-failure"><span class="header-section-number">14.12</span> When transitivity fails</h2>
+<p>Bucher’s theorem is exact under its hypotheses, so every difficulty with indirect comparison is a difficulty with a hypothesis. The variance hypothesis (independence) is mild and is relaxed by an honest covariance term, <a href="#thm-bucher-variance" class="quarto-xref">Theorem&nbsp;<span>14.2</span></a>. The unbiasedness hypothesis (randomization) holds by design in the trials that anchored comparisons are built from. The hypothesis that bears the weight is transitivity, and it fails for a definite mechanism: an <strong>effect modifier</strong> (<a href="../part2/11-effect-modification-collapsibility.html#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a>) whose distribution differs between the trial populations.</p>
+<p>To see the mechanism, suppose a binary covariate <span class="math inline">\(Z\)</span> modifies the <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> effect, so that the conditional contrast <span class="math inline">\(d_{BC}(z)\)</span> takes one value at <span class="math inline">\(z=0\)</span> and another at <span class="math inline">\(z=1\)</span>. The marginal effect <a href="#eq-bucher-reldef" class="quarto-xref">Equation&nbsp;<span>14.2</span></a> is then a weighted average of <span class="math inline">\(d_{BC}(0)\)</span> and <span class="math inline">\(d_{BC}(1)\)</span> with weights given by the prevalence of <span class="math inline">\(Z\)</span> in the population. If study <span class="math inline">\(BC\)</span> has a different prevalence of <span class="math inline">\(Z\)</span> than the population in which we wish to report <span class="math inline">\(A\)</span> versus <span class="math inline">\(B\)</span>, the marginal <span class="math inline">\(d_{BC(\mathcal P_{BC})}\)</span> differs from <span class="math inline">\(d_{BC(\mathcal P_{AB})}\)</span>, transitivity <a href="#eq-bucher-transitivity" class="quarto-xref">Equation&nbsp;<span>14.5</span></a> is violated, the consistency equation <a href="#eq-bucher-consistency" class="quarto-xref">Equation&nbsp;<span>14.6</span></a> no longer holds, and the Bucher estimator <a href="#eq-bucher-estimator" class="quarto-xref">Equation&nbsp;<span>14.7</span></a> is biased by exactly the discrepancy <span class="math inline">\(d_{BC(\mathcal P_{BC})}-d_{BC(\mathcal P_{AB})}\)</span>.</p>
+<div id="exm-transitivity-failure" class="theorem example">
+<p><span class="theorem-title"><strong>Example 14.3 (A transitivity failure as a specific number)</strong></span> Let <span class="math inline">\(Z\)</span> be presence of diabetes, an effect modifier of the statin-<span class="math inline">\(B\)</span> effect. On the log odds-ratio scale, the conditional <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> contrast is <span class="math inline">\(d_{BC}(Z=0)=0.4\)</span> in non-diabetics and <span class="math inline">\(d_{BC}(Z=1)=1.0\)</span> in diabetics (statin <span class="math inline">\(B\)</span> is more protective in diabetics). Diabetes is more common in the <span class="math inline">\(BC\)</span> trial than in the target population where we want the answer:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th><span class="math inline">\(Z\)</span> (diabetes)</th>
+<th>conditional <span class="math inline">\(d_{BC}(Z)\)</span></th>
+<th>prevalence in <span class="math inline">\(BC\)</span> trial</th>
+<th>prevalence in target <span class="math inline">\(\mathcal P_{AB}\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(Z=0\)</span></td>
+<td><span class="math inline">\(0.4\)</span></td>
+<td><span class="math inline">\(0.4\)</span></td>
+<td><span class="math inline">\(0.8\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(Z=1\)</span></td>
+<td><span class="math inline">\(1.0\)</span></td>
+<td><span class="math inline">\(0.6\)</span></td>
+<td><span class="math inline">\(0.2\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>The marginal <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> effects are the prevalence-weighted averages <span class="math display">\[
+\begin{aligned}
+d_{BC(\mathcal P_{BC})} &amp;= 0.4\times 0.4 + 1.0\times 0.6 = 0.76,\\
+d_{BC(\mathcal P_{AB})} &amp;= 0.4\times 0.8 + 1.0\times 0.2 = 0.52.
+\end{aligned}
+\]</span> Suppose the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> effect is unaffected by <span class="math inline">\(Z\)</span> and equals <span class="math inline">\(d_{AC}=0.6\)</span> in every population. The <em>true</em> target contrast is <span class="math inline">\(d_{AB}=d_{AC}-d_{BC(\mathcal P_{AB})}=0.6-0.52=0.08\)</span>. The Bucher estimand, however, subtracts the <span class="math inline">\(BC\)</span> trial’s own marginal effect, <span class="math inline">\(d_{AC}-d_{BC(\mathcal P_{BC})}=0.6-0.76=-0.16\)</span>. The bias is <span class="math display">\[
+-0.16-0.08=-0.24=-\big(d_{BC(\mathcal P_{BC})}-d_{BC(\mathcal P_{AB})}\big),
+\]</span> a log-odds-ratio error of <span class="math inline">\(-0.24\)</span>, a multiplicative error of <span class="math inline">\(e^{-0.24}\approx 0.79\)</span> in the odds ratio, about <span class="math inline">\(21\%\)</span>. It does not shrink as the trials grow: it is a bias, not a variance, and it is invisible in any standard error. This is the mechanism the rest of the book is built to detect and repair. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>Chapter 16 makes this calculation general and names the resulting failure (<a href="16-limits-of-nma.html#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a>), and shows how it compounds with the non-collapsibility of the odds ratio and with <strong>ecological bias</strong> (<a href="16-limits-of-nma.html#def-ecological-bias" class="quarto-xref">Definition&nbsp;<span>16.2</span></a>), the bias that arises when a relationship estimated at the trial-average level does not hold at the individual level. The point to carry forward is structural: prognostic variables that are not effect modifiers do <em>not</em> break transitivity, because they shift the baselines <span class="math inline">\(\mu_j\)</span>, which <a href="#prp-baseline-cancellation" class="quarto-xref">Proposition&nbsp;<span>14.4</span></a> already cancels; only effect modifiers, which alter the <span class="math inline">\(\alpha_k\)</span> across populations, can break it.</p>
+<p>When both direct and indirect evidence exist for the same contrast, the consistency equation becomes testable by comparing them: this is <strong>node-splitting</strong> (<a href="15-network-meta-analysis.html#def-node-splitting" class="quarto-xref">Definition&nbsp;<span>15.4</span></a>, <a href="15-network-meta-analysis.html#thm-consistency-closure" class="quarto-xref">Theorem&nbsp;<span>15.1</span></a>), the diagnostic developed in Chapter 15 that splits a comparison into its direct and indirect parts and checks whether they agree. A significant discrepancy is the empirical signature of a transitivity failure and the trigger for the population-adjustment methods that occupy the remainder of the book.</p>
+<p>Transitivity is also the assumption that connects this chapter to the transportability framework of Chapter 12. Transportability asks when a relative effect measured in one population may be carried to another; transitivity is exactly the special case, direct transportability (<a href="../part2/12-transportability.html#def-transportability" class="quarto-xref">Definition&nbsp;<span>12.3</span></a>, <a href="../part2/12-transportability.html#thm-direct-transportability" class="quarto-xref">Theorem&nbsp;<span>12.1</span></a>), in which the relative effect is assumed to transport <em>unchanged</em> from each trial population to the target. In the language of <a href="#exm-transitivity-failure" class="quarto-xref">Example&nbsp;<span>14.3</span></a>, transportability would have us reweight the conditional contrasts <span class="math inline">\(d_{BC}(z)\)</span> to the target prevalence of <span class="math inline">\(Z\)</span> before subtracting; the population-adjustment methods of Parts IV and V are precisely the machinery that performs that reweighting when it is needed. Transitivity is the assumption that it is <em>not</em> needed, and the bridge to Chapter 12 is the tool for the cases where it is.</p>
+</section>
+<section id="sec-bucher-notes" class="level2" data-number="14.13">
+<h2 data-number="14.13" class="anchored" data-anchor-id="sec-bucher-notes"><span class="header-section-number">14.13</span> Notes and references</h2>
+<p>The anchored indirect comparison and the estimator <a href="#eq-bucher-estimator" class="quarto-xref">Equation&nbsp;<span>14.7</span></a> are due to <span class="citation" data-cites="bucher1997">Bucher et al. (<a href="../../references.html#ref-bucher1997" role="doc-biblioref">1997</a>)</span>, who introduced the difference of log relative effects and its variance <a href="#eq-bucher-varsum" class="quarto-xref">Equation&nbsp;<span>14.10</span></a> as the basis for indirect comparison in meta-analysis of randomized trials. The framing in terms of constancy of relative effects and transitivity, and the embedding of the estimator in the network model with the reference-treatment decomposition <a href="#eq-bucher-decomp" class="quarto-xref">Equation&nbsp;<span>14.11</span></a>, follows <span class="citation" data-cites="dias2018nma">Dias et al. (<a href="../../references.html#ref-dias2018nma" role="doc-biblioref">2018</a>)</span> and the thesis of <span class="citation" data-cites="phillippo2019thesis">Phillippo (<a href="../../references.html#ref-phillippo2019thesis" role="doc-biblioref">2019</a>)</span> (Eq. 1.2 for constancy, Eq. 1.3 for the indirect estimator). The two-layer cancellation argument of <a href="#sec-bucher-cancellation" class="quarto-xref"><span>Section 14.9</span></a>, separating the within-study cancellation of baselines from the across-study cancellation of the comparator, is the algebraic core of why anchored comparisons are preferred to unanchored ones; the bias formula <a href="#eq-bucher-unanchored" class="quarto-xref">Equation&nbsp;<span>14.12</span></a> for the naive comparison is the quantity that unanchored population adjustment (Chapter 26) must control. The delta-method variance of the empirical log-odds (<a href="#prp-logodds-variance" class="quarto-xref">Proposition&nbsp;<span>14.6</span></a>) is classical; the sum-of-inverse-cell-counts form is the standard error reported by every two-by-two table routine.</p>
+<p>This chapter corresponds to results D.1 (transitivity), D.2 (Bucher’s theorem), D.3 (the Bucher variance), and D.4 (constancy of relative effects) of the proof catalogue in <code>proofs/D_network_meta_analysis.md</code>. The network-level material that builds on Bucher’s identity, namely the parameterizations (<a href="15-network-meta-analysis.html#def-baseline-shift-param" class="quarto-xref">Definition&nbsp;<span>15.2</span></a>, <a href="15-network-meta-analysis.html#def-reference-treatment-param" class="quarto-xref">Definition&nbsp;<span>15.3</span></a>), identifiability via the graph incidence rank (<a href="15-network-meta-analysis.html#thm-fe-nma-identifiability" class="quarto-xref">Theorem&nbsp;<span>15.3</span></a>), the random-effects contrast correlation (<a href="15-network-meta-analysis.html#thm-re-nma-correlation" class="quarto-xref">Theorem&nbsp;<span>15.4</span></a>), the consistency closure and node-splitting (<a href="15-network-meta-analysis.html#thm-consistency-closure" class="quarto-xref">Theorem&nbsp;<span>15.1</span></a>, <a href="15-network-meta-analysis.html#def-node-splitting" class="quarto-xref">Definition&nbsp;<span>15.4</span></a>), and goodness-of-fit (<a href="15-network-meta-analysis.html#def-residual-deviance" class="quarto-xref">Definition&nbsp;<span>15.5</span></a>, <a href="15-network-meta-analysis.html#def-dic" class="quarto-xref">Definition&nbsp;<span>15.6</span></a>), is developed in Chapter 15; the breakdown of transitivity under effect modification (<a href="16-limits-of-nma.html#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a>, <a href="16-limits-of-nma.html#def-ecological-bias" class="quarto-xref">Definition&nbsp;<span>16.2</span></a>) is developed in Chapter 16. When the two direct contrasts are themselves pooled over several trials, the pooling is the pairwise meta-analysis of Chapter 13 (<a href="13-pairwise-meta-analysis.html#thm-fixed-effect-blue" class="quarto-xref">Theorem&nbsp;<span>13.1</span></a> for the fixed-effect inverse-variance estimate, <a href="13-pairwise-meta-analysis.html#thm-dersimonian-laird" class="quarto-xref">Theorem&nbsp;<span>13.3</span></a> for the random-effects estimate), and Bucher’s identity operates on the pooled summaries. The connection to transportability (<a href="../part2/12-transportability.html#def-transportability" class="quarto-xref">Definition&nbsp;<span>12.3</span></a>, <a href="../part2/12-transportability.html#thm-direct-transportability" class="quarto-xref">Theorem&nbsp;<span>12.1</span></a>) is developed in Chapter 12.</p>
+<p>Three results of this chapter have machine-checked counterparts in the companion Coq development, in <code>theories/Bucher.v</code>. The exact identity <a href="#prp-bucher-identity" class="quarto-xref">Proposition&nbsp;<span>14.3</span></a> is <code>Theorem bucher_identity</code>; the unbiasedness theorem <a href="#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a> is <code>Theorem bucher_unbiased</code>; the variance theorem <a href="#thm-bucher-variance" class="quarto-xref">Theorem&nbsp;<span>14.2</span></a> is <code>Theorem bucher_variance</code>. The transitivity definition <a href="#def-transitivity" class="quarto-xref">Definition&nbsp;<span>14.3</span></a> and the equivalence <a href="#prp-transitivity-consistency" class="quarto-xref">Proposition&nbsp;<span>14.2</span></a> are formalized as <code>Definition transitivity</code> together with <code>Lemma transitivity_subtract</code> and <code>Lemma subtract_transitivity</code>. The Coq development treats expectation, variance, and covariance as abstract operators satisfying linearity and the difference identity <a href="#eq-bucher-varidentity" class="quarto-xref">Equation&nbsp;<span>14.9</span></a>, exactly the structure used in the proofs above, so that the formalization captures the algebraic content of Bucher’s theorem while leaving the measure-theoretic construction of those operators to the caller.</p>
+</section>
+<section id="sec-bucher-exercises" class="level2" data-number="14.14">
+<h2 data-number="14.14" class="anchored" data-anchor-id="sec-bucher-exercises"><span class="header-section-number">14.14</span> Exercises</h2>
+<p>The exercises progress from warm-up to challenge, and are tagged by kind. An exercise marked <span class="math inline">\(\star\)</span> has a full worked solution in Appendix F. The first two are gentle checks of orientation and interpretation; the later ones build toward the network theory of Chapters 15 and 16.</p>
+<div id="exr-bucher-warmup" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 14.1</strong></span> <strong>Warm-up. Identify, orient, compute.</strong> A health technology assessment has two independent trials against a common comparator <span class="math inline">\(C\)</span> (placebo). Trial <span class="math inline">\(AC\)</span> reports the effect of a new drug on the log odds-ratio scale as <span class="math inline">\(\hat d_{AC}=\eta_C-\eta_A=0.50\)</span> with <span class="math inline">\(\mathrm{SE}=0.20\)</span>; trial <span class="math inline">\(BC\)</span> reports <span class="math inline">\(\hat d_{BC}=\eta_C-\eta_B=0.30\)</span> with <span class="math inline">\(\mathrm{SE}=0.15\)</span>. The outcome is unfavorable, so higher odds is worse. (a) Name the common comparator and the target contrast. (b) State whether a positive <span class="math inline">\(\hat d_{AC}\)</span> means the new drug <span class="math inline">\(A\)</span> is better or worse than <span class="math inline">\(C\)</span>, and why. (c) Compute the Bucher estimate <span class="math inline">\(\hat d_{AB}\)</span> and its standard error. (d) Back-transform to an odds ratio for <span class="math inline">\(B\)</span> versus <span class="math inline">\(A\)</span> and say, in one sentence, which drug the point estimate favors. (e) State the transitivity assumption you relied on, in one plain sentence.</p>
+</div>
+<div id="exr-bucher-interpret" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 14.2</strong></span> <strong>Interpretation. What breaks it, and what does not.</strong> In the setting of <a href="#exr-bucher-warmup" class="quarto-xref">Exercise&nbsp;<span>14.1</span></a>, suppose you learn that trial <span class="math inline">\(BC\)</span> enrolled much older patients than trial <span class="math inline">\(AC\)</span>. (a) If age strongly modifies the effect of drug <span class="math inline">\(B\)</span>, is the age difference a threat to the Bucher comparison, and which assumption does it threaten? (b) Would enrolling more patients in each trial remove the threat? Explain in one sentence why or why not. (c) Now suppose instead that age predicts the outcome but does <em>not</em> change the size of any treatment effect. Explain why the anchored comparison is then unharmed, naming the result (<a href="#prp-baseline-cancellation" class="quarto-xref">Proposition&nbsp;<span>14.4</span></a>) that does the work.</p>
+</div>
+<div id="exr-bucher-recompute" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 14.3</strong></span> <strong>Computation. A Bucher computation from summaries.</strong> Two trials report log hazard ratios on the proportional-hazards scale: <span class="math inline">\(\hat d_{AC}=-0.51\)</span> with <span class="math inline">\(\mathrm{SE}=0.18\)</span>, and <span class="math inline">\(\hat d_{BC}=-0.22\)</span> with <span class="math inline">\(\mathrm{SE}=0.13\)</span>, the contrasts being independent. Compute the indirect log hazard ratio of <span class="math inline">\(A\)</span> versus <span class="math inline">\(B\)</span>, its standard error, a <span class="math inline">\(95\%\)</span> confidence interval, and the back-transformed hazard ratio with interval. State the transitivity assumption you are relying on in words.</p>
+</div>
+<div id="exr-bucher-tables" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 14.4</strong></span> <strong>Computation. From raw tables.</strong> Repeat the worked example <a href="#exm-bucher-logor" class="quarto-xref">Example&nbsp;<span>14.2</span></a> with the tables: study <span class="math inline">\(AC\)</span> has <span class="math inline">\(A:24/120\)</span> and <span class="math inline">\(C:48/160\)</span>; study <span class="math inline">\(BC\)</span> has <span class="math inline">\(B:20/100\)</span> and <span class="math inline">\(C:30/150\)</span>. Report the two direct log odds-ratios with standard errors, the Bucher estimate with standard error, and the indirect odds ratio with <span class="math inline">\(95\%\)</span> interval. Verify that the indirect odds ratio equals the ratio of the two direct odds ratios.</p>
+</div>
+<div id="exr-bucher-scales" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 14.5</strong></span> <strong>Proof. Additivity holds on the right scales.</strong> Prove that the antisymmetry and additivity laws <a href="#lem-relative-effect-algebra" class="quarto-xref">Lemma&nbsp;<span>14.1</span></a> hold for the log risk-ratio contrast <span class="math inline">\(d_{ab}=\log\bar\mu_b-\log\bar\mu_a\)</span> and for the mean-difference contrast <span class="math inline">\(d_{ab}=\bar\mu_b-\bar\mu_a\)</span>, and show by a numerical counterexample that they fail for the risk-ratio contrast taken on the ratio scale itself, <span class="math inline">\(\bar\mu_b/\bar\mu_a\)</span> (that is, that <span class="math inline">\(\bar\mu_C/\bar\mu_A\ne(\bar\mu_C/\bar\mu_B)\cdot\text{(something additive)}\)</span> unless one first takes logarithms). Conclude that Bucher’s subtraction is a statement about the link scale.</p>
+</div>
+<div id="exr-bucher-unanchored" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 14.6</strong></span> <strong>Computation. The cost of dropping the anchor.</strong> Using the additive decomposition <a href="#eq-bucher-decomp" class="quarto-xref">Equation&nbsp;<span>14.11</span></a>, suppose <span class="math inline">\(\mu_{AC}=-1.2\)</span>, <span class="math inline">\(\mu_{BC}=-1.8\)</span>, <span class="math inline">\(\alpha_A=-0.7\)</span>, <span class="math inline">\(\alpha_B=-0.4\)</span>, <span class="math inline">\(\alpha_C=0\)</span> on the logit scale. Compute the true network contrast <span class="math inline">\(d_{AB}\)</span>, the anchored estimand <span class="math inline">\(d_{AC}-d_{BC}\)</span>, and the unanchored estimand <a href="#eq-bucher-naive" class="quarto-xref">Equation&nbsp;<span>14.8</span></a>, and verify that the unanchored estimand is off by exactly <span class="math inline">\(\mu_{AC}-\mu_{BC}\)</span> as <a href="#prp-unanchored-bias" class="quarto-xref">Proposition&nbsp;<span>14.5</span></a> predicts. Comment on which of the five parameters an anchored comparison is immune to.</p>
+</div>
+<div id="exr-bucher-chain" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 14.7</strong></span> <strong>Proof. A longer chain.</strong> Generalize Bucher’s identity to a path of comparators <span class="math inline">\(A\to C\to D\to B\)</span>, in which trial <span class="math inline">\(AC\)</span> estimates <span class="math inline">\(d_{AC}\)</span>, trial <span class="math inline">\(CD\)</span> estimates <span class="math inline">\(d_{CD}\)</span>, and trial <span class="math inline">\(DB\)</span> estimates <span class="math inline">\(d_{DB}\)</span>, all independent. Using <a href="#lem-relative-effect-algebra" class="quarto-xref">Lemma&nbsp;<span>14.1</span></a>, derive the chained indirect estimator of <span class="math inline">\(d_{AB}\)</span> as a signed sum of the three direct contrasts, prove it unbiased under transitivity along the path, and show its variance is the sum of the three direct variances. Explain why each additional link strictly inflates the variance.</p>
+</div>
+<div id="exr-bucher-correlated" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 14.8</strong></span> <strong>(<span class="math inline">\(\star\)</span>, challenge) Correlated contrasts from a three-arm trial.</strong> Suppose a single three-arm trial reports both <span class="math inline">\(\hat d_{AC}\)</span> and <span class="math inline">\(\hat d_{BC}\)</span> (arms <span class="math inline">\(A\)</span>, <span class="math inline">\(B\)</span>, <span class="math inline">\(C\)</span> in one study), so the shared comparator arm makes the two contrasts correlated with <span class="math inline">\(\mathrm{Cov}(\hat d_{AC},\hat d_{BC})=\rho\sqrt{v_{AC}v_{BC}}\)</span> for some <span class="math inline">\(\rho&gt;0\)</span>. Using the general formula in <a href="#thm-bucher-variance" class="quarto-xref">Theorem&nbsp;<span>14.2</span></a>, write the variance of the Bucher estimate of <span class="math inline">\(d_{AB}\)</span> and show it is strictly smaller than <span class="math inline">\(v_{AC}+v_{BC}\)</span>. For the homoskedastic structure in which both contrasts share a comparator arm of variance <span class="math inline">\(\sigma^2\)</span> and have arm-level variance <span class="math inline">\(\sigma^2\)</span> in each non-comparator arm, show <span class="math inline">\(\rho=\tfrac12\)</span> and recover the variance of the within-study <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> contrast directly; reconcile your answer with <a href="15-network-meta-analysis.html#thm-re-nma-correlation" class="quarto-xref">Theorem&nbsp;<span>15.4</span></a>.</p>
+</div>
+<div id="exr-bucher-transitivity-bias" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 14.9</strong></span> <strong>(<span class="math inline">\(\star\)</span>, interpretation) Quantifying a transitivity failure.</strong> A binary effect modifier <span class="math inline">\(Z\)</span> acts on the <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> contrast so that the conditional log odds-ratios are <span class="math inline">\(d_{BC}(Z=0)=0.2\)</span> and <span class="math inline">\(d_{BC}(Z=1)=0.8\)</span> (on the link scale, treating these conditional contrasts as collapsible for simplicity). Study <span class="math inline">\(BC\)</span> has <span class="math inline">\(\Pr(Z=1)=0.7\)</span>, while the target population <span class="math inline">\(\mathcal P_{AB}\)</span> in which we wish to report <span class="math inline">\(A\)</span> versus <span class="math inline">\(B\)</span> has <span class="math inline">\(\Pr(Z=1)=0.3\)</span>. The <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> contrast is unaffected by <span class="math inline">\(Z\)</span> and equals <span class="math inline">\(d_{AC}=0.6\)</span> in every population. Compute the marginal <span class="math inline">\(d_{BC(\mathcal P_{BC})}\)</span> and <span class="math inline">\(d_{BC(\mathcal P_{AB})}\)</span>, the true target contrast <span class="math inline">\(d_{AB}\)</span>, the Bucher estimand <span class="math inline">\(d_{AC}-d_{BC(\mathcal P_{BC})}\)</span>, and hence the bias of the unadjusted indirect comparison. Identify which quantity an effect-modifier adjustment (Chapter 17 onward) must reweight to remove the bias, and explain why a prognostic variable that shifted only the baseline would have created no bias at all.</p>
+</div>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-bucher1997" class="csl-entry" role="listitem">
+Bucher, Heiner C., Gordon H. Guyatt, Lauren E. Griffith, and Stephen D. Walter. 1997. <span>“The Results of Direct and Indirect Treatment Comparisons in Meta-Analysis of Randomized Controlled Trials.”</span> <em>Journal of Clinical Epidemiology</em> 50 (6): 683–91.
+</div>
+<div id="ref-dias2018nma" class="csl-entry" role="listitem">
+Dias, Sofia, A. E. Ades, Nicky J. Welton, Jeroen P. Jansen, and Alexander J. Sutton. 2018. <em>Network Meta-Analysis for Decision-Making</em>. Statistics in Practice. Wiley.
+</div>
+<div id="ref-phillippo2019thesis" class="csl-entry" role="listitem">
+Phillippo, David Mark. 2019. <span>“Calibration of Treatment Effects in Network Meta-Analysis Using Individual Patient Data.”</span> PhD thesis, University of Bristol.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/choxos\.github\.io\/Mathematics-of-ITC\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../chapters/part3/13-pairwise-meta-analysis.html" class="pagination-link" aria-label="Pairwise Meta-Analysis">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Pairwise Meta-Analysis</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../chapters/part3/15-network-meta-analysis.html" class="pagination-link" aria-label="Network Meta-Analysis: Models and Identifiability">
+        <span class="nav-page-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Network Meta-Analysis: Models and Identifiability</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

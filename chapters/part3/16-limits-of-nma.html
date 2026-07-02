@@ -1,0 +1,1676 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>16&nbsp; The Limits of Standard Network Meta-Analysis – The Mathematics of Indirect Treatment Comparisons</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../chapters/part4/17-population-adjustment-theory.html" rel="next">
+<link href="../../chapters/part3/15-network-meta-analysis.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-aafe154f14b83768199b70e6209de778.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/part3/13-pairwise-meta-analysis.html">Part III: Meta-Analysis and Network Meta-Analysis</a></li><li class="breadcrumb-item"><a href="../../chapters/part3/16-limits-of-nma.html"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">The Limits of Standard Network Meta-Analysis</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">The Mathematics of Indirect Treatment Comparisons</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/choxos/Mathematics-of-ITC" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../notation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Notation and Conventions</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part I: Mathematical Foundations</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/01-linear-algebra-i.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Linear Algebra I: Vector Spaces, Linear Maps, and Rank</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/02-linear-algebra-ii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Linear Algebra II: Orthogonality and the Projection Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/03-linear-algebra-iii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Linear Algebra III: Spectral Theory and Quadratic Forms</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/04-probability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Probability and Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/05-inference.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Statistical Inference</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/06-linear-regression.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Linear Regression from First Principles</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/07-glm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Generalized Linear Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/08-hierarchical-bayes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Hierarchical Models, Shrinkage, and Bayesian Inference</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Causal Inference and Estimands</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/09-potential-outcomes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Potential Outcomes and Identification</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/10-adjustment-methods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Adjustment Methods</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/11-effect-modification-collapsibility.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Effect Modification, Interaction, and Collapsibility</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/12-transportability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Transportability: The Estimand-Based Theory</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Meta-Analysis and Network Meta-Analysis</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/13-pairwise-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Pairwise Meta-Analysis</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/14-bucher.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Indirect Comparison and Bucher’s Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/15-network-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Network Meta-Analysis: Models and Identifiability</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/16-limits-of-nma.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">The Limits of Standard Network Meta-Analysis</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Population Adjustment: MAIC and STC</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/17-population-adjustment-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Population Adjustment Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/18-maic.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">Matching-Adjusted Indirect Comparison</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/19-stc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Simulated Treatment Comparison</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part V: Multilevel Network Meta-Regression</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/20-mlnmr-aggregation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression I: The Aggregation Principle</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/21-mlnmr-discrete.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression II: Discrete Outcomes and Approximation Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/22-mlnmr-integration.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression III: Numerical Integration Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/23-mlnmr-estimands.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression IV: Estimands, Identifiability, and Generality</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/24-computation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Bayesian Computation and Diagnostics</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/25-general-likelihoods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">General Likelihoods: Survival and Ordered Categorical Outcomes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/26-ml-umr.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Multilevel Unanchored Meta-Regression</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part VI: Bias, Comparator Selection, and Rigor</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/27-distance-matching.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Aggregate-Level Covariate-Distance Matching</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/28-qba.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Quantitative Bias Analysis for Indirect Comparisons</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/29-simulation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Simulation Study Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/30-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Machine-Checked Foundations: The Coq Formalization</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/A-notation-glossary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Notation Glossary</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/B-matrix-calculus.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Matrix Calculus</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/C-distributions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">Probability Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/D-special-functions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">D</span>&nbsp; <span class="chapter-title">Special Functions for Numerical Integration</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/E-reference-implementations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">E</span>&nbsp; <span class="chapter-title">Reference Implementations: multinma, mlumr, and uitc</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/F-solutions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">F</span>&nbsp; <span class="chapter-title">Solutions to Selected Exercises</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/G-reading-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">G</span>&nbsp; <span class="chapter-title">Reading the Coq Proofs</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#sec-limits-intro" id="toc-sec-limits-intro" class="nav-link active" data-scroll-target="#sec-limits-intro"><span class="header-section-number">16.1</span> Introduction</a>
+  <ul class="collapse">
+  <li><a href="#sec-limits-running" id="toc-sec-limits-running" class="nav-link" data-scroll-target="#sec-limits-running"><span class="header-section-number">16.1.1</span> A running clinical example</a></li>
+  </ul></li>
+  <li><a href="#sec-limits-setup" id="toc-sec-limits-setup" class="nav-link" data-scroll-target="#sec-limits-setup"><span class="header-section-number">16.2</span> Conditional and marginal relative effects</a>
+  <ul class="collapse">
+  <li><a href="#sec-limits-two-constancies" id="toc-sec-limits-two-constancies" class="nav-link" data-scroll-target="#sec-limits-two-constancies"><span class="header-section-number">16.2.1</span> The two faces of constancy</a></li>
+  </ul></li>
+  <li><a href="#sec-limits-failure-bucher" id="toc-sec-limits-failure-bucher" class="nav-link" data-scroll-target="#sec-limits-failure-bucher"><span class="header-section-number">16.3</span> The failure-of-Bucher theorem</a>
+  <ul class="collapse">
+  <li><a href="#sec-limits-surcharge" id="toc-sec-limits-surcharge" class="nav-link" data-scroll-target="#sec-limits-surcharge"><span class="header-section-number">16.3.1</span> The non-collapsibility surcharge</a></li>
+  </ul></li>
+  <li><a href="#sec-limits-ecological" id="toc-sec-limits-ecological" class="nav-link" data-scroll-target="#sec-limits-ecological"><span class="header-section-number">16.4</span> Aggregate meta-regression and ecological bias</a></li>
+  <li><a href="#sec-limits-example" id="toc-sec-limits-example" class="nav-link" data-scroll-target="#sec-limits-example"><span class="header-section-number">16.5</span> Reading the two failures side by side</a></li>
+  <li><a href="#sec-limits-gap" id="toc-sec-limits-gap" class="nav-link" data-scroll-target="#sec-limits-gap"><span class="header-section-number">16.6</span> The gap that population adjustment fills</a></li>
+  <li><a href="#sec-limits-notes" id="toc-sec-limits-notes" class="nav-link" data-scroll-target="#sec-limits-notes"><span class="header-section-number">16.7</span> Notes and references</a></li>
+  <li><a href="#sec-limits-exercises" id="toc-sec-limits-exercises" class="nav-link" data-scroll-target="#sec-limits-exercises"><span class="header-section-number">16.8</span> Exercises</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/part3/13-pairwise-meta-analysis.html">Part III: Meta-Analysis and Network Meta-Analysis</a></li><li class="breadcrumb-item"><a href="../../chapters/part3/16-limits-of-nma.html"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">The Limits of Standard Network Meta-Analysis</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">The Limits of Standard Network Meta-Analysis</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="sec-limits-intro" class="level2" data-number="16.1">
+<h2 data-number="16.1" class="anchored" data-anchor-id="sec-limits-intro"><span class="header-section-number">16.1</span> Introduction</h2>
+<p>The previous two chapters built the standard machinery of indirect comparison. Bucher’s theorem (<a href="14-bucher.html#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a>) makes the anchored estimator <span class="math inline">\(\hat d_{AB}=\hat d_{AC}-\hat d_{BC}\)</span> unbiased for the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> network contrast, and the network meta-analysis of Chapter 15 generalizes the same subtraction to an arbitrary connected graph of treatments. Every one of those results rests on a single load-bearing hypothesis: the <strong>constancy of relative effects</strong> (<a href="14-bucher.html#def-constancy-relative-effects" class="quarto-xref">Definition&nbsp;<span>14.2</span></a>), equivalently <strong>transitivity</strong> (<a href="14-bucher.html#def-transitivity" class="quarto-xref">Definition&nbsp;<span>14.3</span></a>), the assumption that the relative effect of one treatment versus another is the same number in every study population in the network. This chapter is the study of what happens when that hypothesis is false. It is, in a precise sense, the chapter that the remainder of the book exists to answer.</p>
+<p>Two distinct failures are at work, and the chapter treats them in turn. The first is direct. We saw at the end of Chapter 14 (<a href="14-bucher.html#sec-bucher-failure" class="quarto-xref"><span>Section 14.12</span></a>) that an <strong>effect modifier</strong> (<a href="../part2/11-effect-modification-collapsibility.html#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a>) whose distribution differs across the trial populations breaks transitivity, because the marginal relative effect a trial reports is then a population-specific average of a varying conditional effect. The <strong>failure-of-Bucher theorem</strong> of this chapter (<a href="#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a>) makes that statement quantitative: it gives the exact asymptotic bias of the unadjusted indirect comparison as an explicit pair of integrals against the difference of covariate distributions. The bias is not a small-sample artifact; it does not shrink as the trials grow, it is invisible in the Bucher standard error of <a href="14-bucher.html#thm-bucher-variance" class="quarto-xref">Theorem&nbsp;<span>14.2</span></a>, and it can be large enough to reverse the sign of the estimated treatment difference.</p>
+<p>The second failure is subtler, and it concerns the natural first attempt at a cure. If the trouble is that an effect modifier is distributed differently across trials, why not regress the trial-level treatment effects on the trial-level covariate means and read off the modification? This is <strong>aggregate-level meta-regression</strong>, and the reason it cannot recover the within-patient effect-modifier coefficient is the <strong>ecological fallacy</strong>. Averaging a nonlinear inverse link over a covariate distribution is not the same as applying the inverse link to the average covariate; the gap is a Jensen gap (<a href="../part1/04-probability.html#thm-jensen" class="quarto-xref">Theorem&nbsp;<span>4.6</span></a>), the same nonlinearity that makes the odds ratio and the hazard ratio non-collapsible (<a href="../part1/07-glm.html#def-non-collapsibility" class="quarto-xref">Definition&nbsp;<span>7.7</span></a>). We define <strong>ecological bias</strong> precisely (<a href="#def-ecological-bias" class="quarto-xref">Definition&nbsp;<span>16.2</span></a>) and prove, with a closed-form probit computation, that the slope of an aggregate regression is a strictly attenuated version of the individual-level interaction coefficient (<a href="#thm-ecological-norecovery" class="quarto-xref">Theorem&nbsp;<span>16.2</span></a>). Aggregate data, in short, do not contain the information that the correction requires.</p>
+<p>The synthesis is the motivation for Part IV. Both failures point to the same two missing ingredients: the individual-level effect-modifier coefficient, which needs patient-level data from at least one trial to estimate without ecological bias; and an integration of the individual model over the <em>target</em> covariate distribution, in place of the illegitimate plug-in of a covariate mean. A method that supplies both is a <strong>population-adjusted indirect comparison</strong>. Matching-adjusted indirect comparison (Chapter 18), the simulated treatment comparison (Chapter 19), and multilevel network meta-regression (Chapter 20) are three such methods, and the precise gap this chapter exhibits is exactly what they are built to close.</p>
+<p>Throughout we keep the notation of <a href="../../notation.html">Notation</a> and Chapters 11 and 14. For a treatment <span class="math inline">\(k\)</span> and covariate value <span class="math inline">\(x\)</span>, <span class="math inline">\(\mu_k(x)=\mathbb E[Y(k)\mid X=x]\)</span> is the conditional mean potential outcome; <span class="math inline">\(g\)</span> is the link of <a href="../part1/07-glm.html#def-link-function" class="quarto-xref">Definition&nbsp;<span>7.2</span></a>; the conditional contrast of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span> on scale <span class="math inline">\(g\)</span> is <span class="math inline">\(\tau^g_{ab}(x)=g(\mu_b(x))-g(\mu_a(x))\)</span> as in <a href="../part2/11-effect-modification-collapsibility.html#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a>; and a population <span class="math inline">\(\mathcal P\)</span> has covariate density <span class="math inline">\(f_{\mathcal P}\)</span> with mean <span class="math inline">\(\bar{\mathbf x}_{\mathcal P}=\int x\,f_{\mathcal P}(x)\,dx\)</span>. This chapter owns result E.3 of the proof catalogue and introduces the ecological-bias material that prepares Part IV.</p>
+<section id="sec-limits-running" class="level3" data-number="16.1.1">
+<h3 data-number="16.1.1" class="anchored" data-anchor-id="sec-limits-running"><span class="header-section-number">16.1.1</span> A running clinical example</h3>
+<p>Before any definitions, here is a concrete scenario we will return to at every transition. Read the whole chapter with this picture in mind; the notation below is just a precise language for describing it.</p>
+<div id="exm-limits-psoriasis" class="theorem example">
+<p><span class="theorem-title"><strong>Example 16.1 (Two biologics for plaque psoriasis)</strong></span> Consider moderate-to-severe plaque psoriasis. Two biologic drugs, <span class="math inline">\(A\)</span> and <span class="math inline">\(B\)</span>, have each been compared in a randomized trial against the same standard systemic therapy <span class="math inline">\(C\)</span>, but the two drugs have never been compared head to head. We want the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> contrast, and because both trials share the comparator <span class="math inline">\(C\)</span> we can form it <em>indirectly</em> (an <strong>anchored</strong> comparison: both routes pass through the shared comparator <span class="math inline">\(C\)</span>).</p>
+<p>The outcome is an unfavorable binary event, <strong>treatment failure</strong> (failing to reach an adequate skin response by week 16); a larger risk is worse. One baseline covariate matters: prior biologic therapy, <span class="math inline">\(X=1\)</span> for biologic-experienced patients and <span class="math inline">\(X=0\)</span> for biologic-naive patients. Prior therapy makes the disease harder to control, so it raises the failure risk under the comparator <span class="math inline">\(C\)</span> and under biologic <span class="math inline">\(B\)</span> by the same amount, leaving the <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> benefit unchanged; but biologic <span class="math inline">\(A\)</span> acts through a pathway unaffected by prior exposure, so its failure risk stays flat and its advantage over <span class="math inline">\(C\)</span> is <em>larger</em> in experienced patients. Prior exposure is therefore an <strong>effect modifier</strong> of <span class="math inline">\(A\)</span> versus <span class="math inline">\(C\)</span> but not of <span class="math inline">\(B\)</span> versus <span class="math inline">\(C\)</span>. The stratum-specific failure risks are</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>stratum <span class="math inline">\(x\)</span></th>
+<th><span class="math inline">\(\mu_A(x)\)</span></th>
+<th><span class="math inline">\(\mu_B(x)\)</span></th>
+<th><span class="math inline">\(\mu_C(x)\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(x=0\)</span> (naive)</td>
+<td><span class="math inline">\(0.30\)</span></td>
+<td><span class="math inline">\(0.25\)</span></td>
+<td><span class="math inline">\(0.40\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(x=1\)</span> (experienced)</td>
+<td><span class="math inline">\(0.30\)</span></td>
+<td><span class="math inline">\(0.45\)</span></td>
+<td><span class="math inline">\(0.60\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>The two trials enrolled different case mixes. The <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> trial recruited mostly biologic-naive patients (prevalence of prior exposure <span class="math inline">\(p_{AC}=0.2\)</span>); the <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> trial recruited mostly experienced patients (<span class="math inline">\(p_{BC}=0.8\)</span>). The decision (target) population for the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> recommendation is evenly mixed, <span class="math inline">\(p_{*}=0.5\)</span>.</p>
+<p><strong>Why the shared comparator does not rescue us.</strong> Sharing <span class="math inline">\(C\)</span> is what makes an indirect comparison <em>possible</em>; it does not make the two trials exchangeable. The <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> trial measured <span class="math inline">\(A\)</span>’s benefit almost entirely in easy-to-treat patients, where that benefit is small, while the <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> trial measured <span class="math inline">\(B\)</span>’s benefit almost entirely in hard-to-treat patients. Subtracting the two trial-level effects silently pits <span class="math inline">\(A\)</span>’s benefit at one case mix against <span class="math inline">\(B\)</span>’s benefit at another. That mismatch is exactly the bias this chapter quantifies; <a href="#exm-limits-bucher-rd" class="quarto-xref">Example&nbsp;<span>16.2</span></a> computes it and finds it large enough to reverse the sign of the answer.</p>
+<p><strong>Why it matters for a decision.</strong> If the indirect estimate has the wrong sign, a health technology assessment (for example a NICE appraisal, <span class="citation" data-cites="phillippo2016tsd18">Phillippo et al. (<a href="../../references.html#ref-phillippo2016tsd18" role="doc-biblioref">2016</a>)</span>) can recommend the inferior drug: patients may be denied the better biologic, or a payer may fund one that is in truth no better. The bias below is not academic; it can flip a reimbursement decision. This is why NICE Technical Support Document 18 (<span class="citation" data-cites="phillippo2016tsd18">Phillippo et al. (<a href="../../references.html#ref-phillippo2016tsd18" role="doc-biblioref">2016</a>)</span>) requires an indirect comparison to justify its constancy assumption before the estimate is trusted. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Terms carried from earlier chapters.</strong> A novice can treat the following as a glossary and refer back as needed.</p>
+<ul>
+<li><strong>Contrast</strong>: a difference of two treatments on a chosen scale, for example a risk difference or a log odds ratio. Throughout, “<span class="math inline">\(a\)</span> versus <span class="math inline">\(b\)</span>”, and the symbols <span class="math inline">\(d_{ab}\)</span> and <span class="math inline">\(\tau_{ab}\)</span>, mean <span class="math inline">\(b\)</span> <em>relative to</em> <span class="math inline">\(a\)</span>: <span class="math inline">\(\tau^g_{ab}(x)=g(\mu_b(x))-g(\mu_a(x))\)</span>.</li>
+<li><strong>Anchored comparison</strong>: an indirect <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> comparison in which both drugs are joined through a shared comparator <span class="math inline">\(C\)</span> (Chapter 14). The alternative, an <strong>unanchored</strong> comparison of absolute arm outcomes, is Chapter 26.</li>
+<li><strong>Effect modifier versus prognostic variable</strong>: an effect modifier changes the <em>size of a contrast</em> across its levels; a purely prognostic variable shifts <em>both arms equally</em> and leaves the contrast unchanged (Chapter 11). This distinction is the most reused idea in the chapter.</li>
+<li><strong>Transitivity and consistency</strong>: transitivity is the assumption that relative effects are comparable across trials so indirect and direct evidence agree; <strong>consistency</strong> is the same idea checked inside a network (Chapter 15). <strong>Node-splitting</strong> is the diagnostic that compares direct and indirect evidence at one contrast. <strong>Heterogeneity</strong> is unexplained trial-to-trial variation beyond sampling error (Chapter 13); it is a variance phenomenon, distinct from the systematic bias studied here.</li>
+<li><strong>Link and inverse link <span class="math inline">\(g,g^{-1}\)</span></strong>: <span class="math inline">\(g\)</span> maps a probability or mean to the linear-predictor scale; <span class="math inline">\(g^{-1}\)</span> maps back. For the logit link <span class="math inline">\(g^{-1}\)</span> is the logistic function <span class="math inline">\(e^{\eta}/(1+e^{\eta})\)</span>; for the probit link <span class="math inline">\(g^{-1}\)</span> is the standard normal distribution function <span class="math inline">\(\Phi\)</span> (Chapter 7).</li>
+<li><strong>Directly collapsible scale</strong>: a scale on which the population-level (marginal) effect equals the covariate-average of the per-stratum (conditional) effects. The risk difference is directly collapsible; the odds ratio is not (Chapter 11). We keep the qualifier “directly” to match Chapter 11; for this chapter you may read it as “collapsible.”</li>
+<li><strong>Affine in <span class="math inline">\(x\)</span></strong>: “linear plus a constant,” a function of the form <span class="math inline">\(a+b^{\top}x\)</span>. <span class="math inline">\(\blacktriangleleft\)</span></li>
+</ul>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Sign convention.</strong> A positive <span class="math inline">\(\tau^g_{ab}(x)\)</span> means <span class="math inline">\(b\)</span> scores higher than <span class="math inline">\(a\)</span> on scale <span class="math inline">\(g\)</span> at covariate value <span class="math inline">\(x\)</span>. On the risk-difference scale a positive <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> contrast means <span class="math inline">\(B\)</span> carries the higher event risk; since the event is unfavorable, positive means <span class="math inline">\(B\)</span> is <em>worse</em> than <span class="math inline">\(A\)</span>. The bias terms <span class="math inline">\(b_{AC},b_{BC}\)</span> that appear in <a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a> are <em>bias contributions</em>, not treatment contrasts: the lowercase <span class="math inline">\(b\)</span> is a bias, never “treatment <span class="math inline">\(B\)</span>.” <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+</section>
+<section id="sec-limits-setup" class="level2" data-number="16.2">
+<h2 data-number="16.2" class="anchored" data-anchor-id="sec-limits-setup"><span class="header-section-number">16.2</span> Conditional and marginal relative effects</h2>
+<p>Two relative effects can be attached to a population, and the distinction between them is the hinge of the whole chapter. The first is the one a trial reports from its arm summaries; the second is the one a patient-level regression estimates. They agree on a collapsible scale and diverge on a non-collapsible one, and even when they agree they respond differently to a change of covariate distribution.</p>
+<div id="def-conditional-marginal-contrast" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 16.1 (Marginal and average-conditional relative effects)</strong></span> Let <span class="math inline">\(\mathcal P\)</span> be a population with covariate density <span class="math inline">\(f_{\mathcal P}\)</span>, let <span class="math inline">\(g\)</span> be a strictly increasing link, and let <span class="math inline">\(a,b\)</span> be two treatments with conditional means <span class="math inline">\(\mu_a(\cdot),\mu_b(\cdot)\)</span>. The <strong>marginal relative effect</strong> of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span> in <span class="math inline">\(\mathcal P\)</span> on scale <span class="math inline">\(g\)</span> is the contrast of marginalized arm means, <span id="eq-limits-marg"><span class="math display">\[
+d_{ab(\mathcal P)} \;=\; g\!\left(\int \mu_b(x)\,f_{\mathcal P}(x)\,dx\right)-g\!\left(\int \mu_a(x)\,f_{\mathcal P}(x)\,dx\right),
+\tag{16.1}\]</span></span> exactly the quantity of <a href="14-bucher.html#eq-bucher-reldef" class="quarto-xref">Equation&nbsp;<span>14.2</span></a>. The <strong>average-conditional relative effect</strong> of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span> in <span class="math inline">\(\mathcal P\)</span> on scale <span class="math inline">\(g\)</span> is the covariate average of the conditional contrast, <span id="eq-limits-avgcond"><span class="math display">\[
+\tilde d_{ab(\mathcal P)} \;=\; \int \tau^g_{ab}(x)\,f_{\mathcal P}(x)\,dx
+\;=\; \int \bigl[g(\mu_b(x))-g(\mu_a(x))\bigr]\,f_{\mathcal P}(x)\,dx .
+\tag{16.2}\]</span></span> The first marginalizes inside the link, the second outside. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p><em>Reader translation.</em> The single distinguishing mark is the tilde, so fix the mnemonic: <strong>no tilde is marginal</strong>, the number a trial reports; <strong>the tilde is average-conditional</strong>, the number a patient-level regression gives. The difference is <em>where the averaging sits relative to <span class="math inline">\(g\)</span></em>.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Quantity</th>
+<th>Recipe</th>
+<th>Where the averaging happens</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Marginal <span class="math inline">\(d_{ab(\mathcal P)}\)</span> (<a href="#eq-limits-marg" class="quarto-xref">Equation&nbsp;<span>16.1</span></a>)</td>
+<td>average each arm’s outcome over patients, then apply <span class="math inline">\(g\)</span> and subtract</td>
+<td>inside the link: the average is inside the argument of <span class="math inline">\(g\)</span></td>
+</tr>
+<tr class="even">
+<td>Average-conditional <span class="math inline">\(\tilde d_{ab(\mathcal P)}\)</span> (<a href="#eq-limits-avgcond" class="quarto-xref">Equation&nbsp;<span>16.2</span></a>)</td>
+<td>apply <span class="math inline">\(g\)</span> within each stratum and subtract, then average the per-stratum contrasts</td>
+<td>outside the link: the average is applied after <span class="math inline">\(g\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>In a two-arm trial you observe only arm totals, so you can form the marginal effect <span class="math inline">\(d\)</span> directly. With individual patient data you can estimate the per-patient contrast <span class="math inline">\(\tau^g_{ab}(\cdot)\)</span> and then average it, giving <span class="math inline">\(\tilde d\)</span>. On a directly collapsible scale (for example the risk difference) the two recipes give the same number; on the odds-ratio scale they do not, and the difference is the non-collapsibility gap we revisit in <a href="#sec-limits-surcharge" class="quarto-xref"><span>Section 16.3.1</span></a>.</p>
+<p>The marginal effect <a href="#eq-limits-marg" class="quarto-xref">Equation&nbsp;<span>16.1</span></a> is what a two-arm trial estimates from its observed arm means, since a randomized trial identifies <span class="math inline">\(\int\mu_a f\)</span> and <span class="math inline">\(\int\mu_b f\)</span> and then applies <span class="math inline">\(g\)</span> to each (<a href="14-bucher.html#prp-trial-unbiased" class="quarto-xref">Proposition&nbsp;<span>14.1</span></a>). The average-conditional effect <a href="#eq-limits-avgcond" class="quarto-xref">Equation&nbsp;<span>16.2</span></a> is what an individual patient data regression estimates, since such a regression identifies the conditional contrast <span class="math inline">\(\tau^g_{ab}(\cdot)\)</span> as a function of <span class="math inline">\(x\)</span> and then averages it. The relationship between the two is exactly the collapsibility theory of Chapters 7 and 11.</p>
+<div id="prp-limits-collapse-link" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 16.1 (When the two relative effects coincide)</strong></span> With the notation of <a href="#def-conditional-marginal-contrast" class="quarto-xref">Definition&nbsp;<span>16.1</span></a>:</p>
+<ol type="1">
+<li>If the scale <span class="math inline">\(g\)</span> is the identity (the risk-difference or mean-difference scale), then <span class="math inline">\(d_{ab(\mathcal P)}=\tilde d_{ab(\mathcal P)}\)</span> for every population <span class="math inline">\(\mathcal P\)</span> and every pair of conditional means.</li>
+<li>More generally, if the effect measure based on <span class="math inline">\(g\)</span> is <strong>directly collapsible</strong> over <span class="math inline">\(X\)</span> in the sense of <a href="../part2/11-effect-modification-collapsibility.html#def-collapsibility" class="quarto-xref">Definition&nbsp;<span>11.6</span></a>, then <span class="math inline">\(d_{ab(\mathcal P)}=\tilde d_{ab(\mathcal P)}\)</span> for every <span class="math inline">\(\mathcal P\)</span>.</li>
+<li>If <span class="math inline">\(g\)</span> is non-collapsible (the logit or log-hazard scale, <a href="../part1/07-glm.html#def-non-collapsibility" class="quarto-xref">Definition&nbsp;<span>7.7</span></a>, <a href="../part2/11-effect-modification-collapsibility.html#thm-noncollapsibility-or-hr" class="quarto-xref">Theorem&nbsp;<span>11.2</span></a>), the two differ in general; their difference is the non-collapsibility gap, a Jensen gap (<a href="../part1/04-probability.html#thm-jensen" class="quarto-xref">Theorem&nbsp;<span>4.6</span></a>) for the nonlinear link.</li>
+</ol>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>For (1), with <span class="math inline">\(g\)</span> the identity, linearity of the integral gives <span class="math display">\[
+d_{ab(\mathcal P)}=\int\mu_b f-\int\mu_a f=\int(\mu_b-\mu_a)f=\int\tau^{\mathrm{id}}_{ab}(x)f(x)\,dx=\tilde d_{ab(\mathcal P)} .
+\]</span> Statement (2) unpacks the definition of direct collapsibility. Direct collapsibility on scale <span class="math inline">\(g\)</span> means precisely that the population marginal effect equals the covariate-weighted average of the conditional effects, for <em>every</em> distribution of <span class="math inline">\(X\)</span>; <a href="../part2/11-effect-modification-collapsibility.html#eq-emcoll-direct" class="quarto-xref">Equation&nbsp;<span>11.9</span></a> is that statement. Applied to the contrast of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span> it reads <span class="math inline">\(d_{ab(\mathcal P)}=\tilde d_{ab(\mathcal P)}\)</span>, which is what we want. The identity scale is the canonical directly collapsible case, <a href="../part2/11-effect-modification-collapsibility.html#prp-emcoll-rd-direct" class="quarto-xref">Proposition&nbsp;<span>11.3</span></a>. For (3), take <span class="math inline">\(g=\operatorname{logit}\)</span> and a non-degenerate baseline; <a href="../part2/11-effect-modification-collapsibility.html#thm-noncollapsibility-or-hr" class="quarto-xref">Theorem&nbsp;<span>11.2</span></a> exhibits stratum means with constant conditional effect for which the marginal effect strictly differs, so <span class="math inline">\(d_{ab(\mathcal P)}\neq\tilde d_{ab(\mathcal P)}\)</span>. The discrepancy is the difference between <span class="math inline">\(g\)</span> applied to an average and the average of <span class="math inline">\(g\)</span> applied pointwise, which is the Jensen gap of <a href="../part1/04-probability.html#thm-jensen" class="quarto-xref">Theorem&nbsp;<span>4.6</span></a> for the convex or concave pieces of <span class="math inline">\(g\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Reader translation.</em> On the risk-difference scale (and any directly collapsible scale) you may treat “what the trial reports” and “the average of per-patient contrasts” as the <em>same number</em>. On the odds-ratio or hazard-ratio scale you may not, and pretending otherwise is a second, independent source of error that we isolate in <a href="#sec-limits-surcharge" class="quarto-xref"><span>Section 16.3.1</span></a>. For the first half of the chapter we work on a directly collapsible scale, where <a href="#prp-limits-collapse-link" class="quarto-xref">Proposition&nbsp;<span>16.1</span></a> lets us use <span class="math inline">\(d_{ab(\mathcal P)}\)</span> and <span class="math inline">\(\tilde d_{ab(\mathcal P)}\)</span> interchangeably and the algebra is exact; the identity scale is the running example. The non-collapsible case, where the two relative effects come apart, returns in <a href="#sec-limits-ecological" class="quarto-xref"><span>Section 16.4</span></a> as a second and independent source of bias. The pointwise additivity (sometimes called conditional additivity) that powers Bucher’s subtraction holds for the conditional contrasts pointwise.</p>
+<div id="lem-limits-conditional-additivity" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 16.1 (Pointwise additivity of conditional contrasts)</strong></span> For treatments <span class="math inline">\(A,B,C\)</span> and every covariate value <span class="math inline">\(x\)</span>, <span id="eq-limits-cond-additivity"><span class="math display">\[
+\tau^g_{AB}(x) \;=\; \tau^g_{AC}(x)-\tau^g_{BC}(x).
+\tag{16.3}\]</span></span> Consequently, on a directly collapsible scale, <span class="math inline">\(\tilde d_{AB(\mathcal P)}=\tilde d_{AC(\mathcal P)}-\tilde d_{BC(\mathcal P)}\)</span> in every population <span class="math inline">\(\mathcal P\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>By definition <span class="math inline">\(\tau^g_{ab}(x)=g(\mu_b(x))-g(\mu_a(x))\)</span>, so at fixed <span class="math inline">\(x\)</span> the three contrasts are differences of the three numbers <span class="math inline">\(g(\mu_A(x)),g(\mu_B(x)),g(\mu_C(x))\)</span>, and <span class="math display">\[
+\tau^g_{AC}(x)-\tau^g_{BC}(x)=\bigl[g(\mu_C(x))-g(\mu_A(x))\bigr]-\bigl[g(\mu_C(x))-g(\mu_B(x))\bigr]=g(\mu_B(x))-g(\mu_A(x))=\tau^g_{AB}(x),
+\]</span> which is <a href="#eq-limits-cond-additivity" class="quarto-xref">Equation&nbsp;<span>16.3</span></a>; this is <a href="14-bucher.html#lem-relative-effect-algebra" class="quarto-xref">Lemma&nbsp;<span>14.1</span></a> applied at the value <span class="math inline">\(x\)</span> rather than to the marginal positions. Integrating both sides against <span class="math inline">\(f_{\mathcal P}\)</span> and using linearity gives <span class="math inline">\(\tilde d_{AB(\mathcal P)}=\tilde d_{AC(\mathcal P)}-\tilde d_{BC(\mathcal P)}\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Why this matters.</em> This pointwise identity is the <em>entire license</em> for Bucher’s subtraction: at each covariate value the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> contrast is exactly the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> contrast minus the <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> contrast. Bucher subtracts the two trials’ effects in the hope that this identity survives averaging. The failure theorem below is precisely the statement that it need not survive, because the three populations average the same conditional contrasts over <em>different</em> covariate distributions.</p>
+<section id="sec-limits-two-constancies" class="level3" data-number="16.2.1">
+<h3 data-number="16.2.1" class="anchored" data-anchor-id="sec-limits-two-constancies"><span class="header-section-number">16.2.1</span> The two faces of constancy</h3>
+<p>The constancy hypothesis of Bucher’s theorem can now be split into its two natural strengths. Both will appear in the failure analysis, and keeping them apart is what lets the theorem isolate the role of the covariate distribution.</p>
+<p>The first is <strong>constancy of marginal relative effects</strong>, the original transitivity of <a href="14-bucher.html#def-transitivity" class="quarto-xref">Definition&nbsp;<span>14.3</span></a>: the marginal effect <span class="math inline">\(d_{ab(\mathcal P_j)}\)</span> is the same in every population. This is what Bucher’s theorem requires, and it is what we will show fails. The second is <strong>conditional constancy of relative effects on scale <span class="math inline">\(g\)</span></strong>: there is a single function <span class="math inline">\(\tau^g_{ab}(\cdot)\)</span> such that, in every population in play, the conditional contrast at covariate value <span class="math inline">\(x\)</span> equals <span class="math inline">\(\tau^g_{ab}(x)\)</span>. Conditional constancy says the per-stratum effect transports; it is the assumption that an individual-level effect estimated in one trial is the same biological quantity in another population with the same within-stratum structure. In the trial-methodology literature this is the <strong>shared effect modifier assumption (SEMA)</strong> of <span class="citation" data-cites="phillippo2016tsd18">Phillippo et al. (<a href="../../references.html#ref-phillippo2016tsd18" role="doc-biblioref">2016</a>)</span>; “conditional constancy” is its estimand-level statement, and the two say the same thing. It is developed in full as the anchored-adjustment assumption in Chapter 17. The point of the failure analysis is that conditional constancy can hold while marginal constancy fails, and the gap between them is governed entirely by the covariate distributions.</p>
+<p>The distinction is easiest to hold onto as a table.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Assumption</th>
+<th>What it says</th>
+<th>Needed by Bucher?</th>
+<th>Can fail while the other holds?</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Marginal constancy (transitivity, <a href="14-bucher.html#def-transitivity" class="quarto-xref">Definition&nbsp;<span>14.3</span></a>)</td>
+<td>the <em>trial-reported</em> effect <span class="math inline">\(d_{ab(\mathcal P_j)}\)</span> is one number across populations</td>
+<td>yes: this is the hypothesis of <a href="14-bucher.html#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a></td>
+<td>yes: it fails whenever an effect modifier is imbalanced</td>
+</tr>
+<tr class="even">
+<td>Conditional constancy (SEMA, <span class="citation" data-cites="phillippo2016tsd18">Phillippo et al. (<a href="../../references.html#ref-phillippo2016tsd18" role="doc-biblioref">2016</a>)</span>)</td>
+<td>the <em>per-stratum</em> contrast <span class="math inline">\(\tau^g_{ab}(x)\)</span> is one function across populations</td>
+<td>no</td>
+<td>yes: it can hold even when marginal constancy fails</td>
+</tr>
+</tbody>
+</table>
+<p>Clinically: the biology of a treatment effect within, say, each prior-exposure stratum may transport perfectly (conditional constancy), yet the trial-level average still changes if one trial enrolled mostly experienced patients and the other mostly naive ones (marginal constancy fails). The whole chapter lives in that gap.</p>
+<div id="lem-limits-em-breaks-transitivity" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 16.2 (An imbalanced effect modifier breaks marginal constancy)</strong></span> Assume conditional constancy of relative effects on scale <span class="math inline">\(g\)</span>, so the conditional contrast <span class="math inline">\(\tau^g_{ab}(\cdot)\)</span> is the same function in two populations <span class="math inline">\(\mathcal P_1,\mathcal P_2\)</span>. On a directly collapsible scale the marginal relative effects are then <span class="math inline">\(d_{ab(\mathcal P_i)}=\int\tau^g_{ab}(x)\,f_i(x)\,dx\)</span>, and</p>
+<ol type="1">
+<li>if <span class="math inline">\(X\)</span> is <strong>not</strong> an effect modifier of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span> on scale <span class="math inline">\(g\)</span>, that is <span class="math inline">\(\tau^g_{ab}(\cdot)\equiv c\)</span> is constant, then <span class="math inline">\(d_{ab(\mathcal P_1)}=d_{ab(\mathcal P_2)}=c\)</span> regardless of the covariate distributions; marginal constancy holds automatically;</li>
+<li>if <span class="math inline">\(X\)</span> is an effect modifier on scale <span class="math inline">\(g\)</span>, then there exist covariate distributions <span class="math inline">\(f_1\neq f_2\)</span> with <span class="math inline">\(d_{ab(\mathcal P_1)}\neq d_{ab(\mathcal P_2)}\)</span>; marginal constancy fails.</li>
+</ol>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Under conditional constancy and direct collapsibility, <a href="#prp-limits-collapse-link" class="quarto-xref">Proposition&nbsp;<span>16.1</span></a>(2) gives <span class="math inline">\(d_{ab(\mathcal P_i)}=\tilde d_{ab(\mathcal P_i)}=\int\tau^g_{ab}(x)f_i(x)\,dx\)</span>. For (1), if <span class="math inline">\(\tau^g_{ab}\equiv c\)</span> then <span class="math inline">\(\int c\,f_i(x)\,dx=c\int f_i=c\)</span> for either density, since a density integrates to one; the two marginal effects equal the common value <span class="math inline">\(c\)</span>. For (2), effect modification means (<a href="../part2/11-effect-modification-collapsibility.html#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a>) there are points <span class="math inline">\(x_1,x_2\)</span> in the support with <span class="math inline">\(\tau^g_{ab}(x_1)\neq\tau^g_{ab}(x_2)\)</span>. If the support is discrete, take the two-point masses <span class="math inline">\(f_1=\delta_{x_1}\)</span> and <span class="math inline">\(f_2=\delta_{x_2}\)</span> directly; then <span class="math inline">\(d_{ab(\mathcal P_1)}=\tau^g_{ab}(x_1)\neq\tau^g_{ab}(x_2)=d_{ab(\mathcal P_2)}\)</span> exactly, with no limit needed. If the covariate is continuous, take a sequence of admissible densities <span class="math inline">\(f_1^{(n)}\)</span> concentrating on shrinking neighborhoods of <span class="math inline">\(x_1\)</span>; since <span class="math inline">\(\tau^g_{ab}\)</span> is bounded on the common support and continuous at <span class="math inline">\(x_1\)</span>, dominated convergence gives <span class="math inline">\(\int\tau^g_{ab}\,f_1^{(n)}\to\tau^g_{ab}(x_1)\)</span>, and likewise <span class="math inline">\(\int\tau^g_{ab}\,f_2^{(n)}\to\tau^g_{ab}(x_2)\)</span>. For <span class="math inline">\(n\)</span> large enough the two marginal effects lie within any prescribed tolerance of the unequal numbers <span class="math inline">\(\tau^g_{ab}(x_1)\)</span> and <span class="math inline">\(\tau^g_{ab}(x_2)\)</span>, hence are themselves unequal, so the two marginal effects differ. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Reader translation.</em> Part (1) is the formal statement that purely prognostic covariates do not threaten an anchored comparison: a covariate that fails to modify the contrast leaves the marginal effect unchanged however its distribution shifts, because its effect on the two arms cancels inside <span class="math inline">\(\tau^g_{ab}\)</span>. This is the machine-checked cancellation of <a href="../part2/11-effect-modification-collapsibility.html#thm-emcoll-em-pv-distinct" class="quarto-xref">Theorem&nbsp;<span>11.1</span></a>. Part (2) is the mechanism of failure: only effect modifiers, and only when their distribution differs across populations, can move the marginal effect and so break the transitivity that Bucher’s theorem assumes. In the running example (<a href="#exm-limits-psoriasis" class="quarto-xref">Example&nbsp;<span>16.1</span></a>), prior exposure modifies <span class="math inline">\(A\)</span> versus <span class="math inline">\(C\)</span>, so the differing case mixes of the two trials will move that trial’s reported effect; it does not modify <span class="math inline">\(B\)</span> versus <span class="math inline">\(C\)</span>, so the <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> trial’s imbalance turns out to be harmless.</p>
+</section>
+</section>
+<section id="sec-limits-failure-bucher" class="level2" data-number="16.3">
+<h2 data-number="16.3" class="anchored" data-anchor-id="sec-limits-failure-bucher"><span class="header-section-number">16.3</span> The failure-of-Bucher theorem</h2>
+<p>We now compute the bias exactly. The setup is the anchored triangle of Chapter 14 (three treatments joined through the shared comparator <span class="math inline">\(C\)</span>): an <span class="math inline">\(AC\)</span> trial in population <span class="math inline">\(\mathcal P_{AC}\)</span>, a <span class="math inline">\(BC\)</span> trial in population <span class="math inline">\(\mathcal P_{BC}\)</span>, and a target population <span class="math inline">\(\mathcal P^{*}\)</span> in which we wish to report the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> contrast. Conditional constancy holds, so the conditional contrasts <span class="math inline">\(\tau^g_{AC}(\cdot)\)</span> and <span class="math inline">\(\tau^g_{BC}(\cdot)\)</span> are common to all three populations; the covariate distributions <span class="math inline">\(f_{AC},f_{BC},f_{*}\)</span> may all differ. The target estimand is the average-conditional contrast in <span class="math inline">\(\mathcal P^{*}\)</span>, <span id="eq-limits-target"><span class="math display">\[
+\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*}) \;=\; \int \tau^g_{AB}(x)\,f_{*}(x)\,dx
+\;=\; \int\bigl[\tau^g_{AC}(x)-\tau^g_{BC}(x)\bigr]f_{*}(x)\,dx ,
+\tag{16.4}\]</span></span> the second equality by <a href="#lem-limits-conditional-additivity" class="quarto-xref">Lemma&nbsp;<span>16.1</span></a>. Each trial reports its own average-conditional contrast, <span class="math inline">\(\tilde d_{AC(\mathcal P_{AC})}=\int\tau^g_{AC}f_{AC}\)</span> and <span class="math inline">\(\tilde d_{BC(\mathcal P_{BC})}=\int\tau^g_{BC}f_{BC}\)</span>, and the Bucher procedure subtracts them.</p>
+<p>Four quantities are now in play, and it is worth pinning down which is which before the theorem. This is the estimand roadmap for the rest of the chapter.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Plain meaning</th>
+<th>Estimated from</th>
+<th>Why it matters</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(d_{ab(\mathcal P)}\)</span> (<a href="#eq-limits-marg" class="quarto-xref">Equation&nbsp;<span>16.1</span></a>)</td>
+<td>marginal effect: apply <span class="math inline">\(g\)</span> to each arm’s average outcome, then subtract</td>
+<td>a two-arm trial’s arm summaries</td>
+<td>this is the number that shifts when an effect modifier is imbalanced</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\tilde d_{ab(\mathcal P)}\)</span> (<a href="#eq-limits-avgcond" class="quarto-xref">Equation&nbsp;<span>16.2</span></a>)</td>
+<td>average-conditional effect: per-stratum contrast, averaged over the population</td>
+<td>an individual-patient-data regression</td>
+<td>on a collapsible scale it equals <span class="math inline">\(d_{ab(\mathcal P)}\)</span>; it is what Bucher implicitly subtracts</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*})\)</span> (<a href="#eq-limits-target" class="quarto-xref">Equation&nbsp;<span>16.4</span></a>)</td>
+<td>the target <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> contrast in the decision population</td>
+<td>the estimand we <em>want</em></td>
+<td>this is what a valid indirect comparison must deliver</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(d_{AB}^{\mathrm{Bucher}}\)</span></td>
+<td>the Bucher estimand <span class="math inline">\(\tilde d_{AC(\mathcal P_{AC})}-\tilde d_{BC(\mathcal P_{BC})}\)</span></td>
+<td>subtracting the two trials’ contrasts</td>
+<td>what standard NMA delivers; differs from the target by <a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a></td>
+</tr>
+</tbody>
+</table>
+<p>Before the general integral statement, here is the binary-covariate special case. It contains the whole idea in one line of arithmetic, and the general theorem is its integral generalization.</p>
+<div id="prp-limits-binary-bias" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 16.2 (The binary-covariate bias)</strong></span> In the anchored triangle above, suppose <span class="math inline">\(X\in\{0,1\}\)</span> is binary with <span class="math inline">\(\Pr(X=1)\)</span> equal to <span class="math inline">\(p_{AC},p_{BC},p_{*}\)</span> in the three populations, and conditional constancy holds. Write the <strong>effect-modification jump</strong> of the <span class="math inline">\(t\)</span>-versus-<span class="math inline">\(C\)</span> contrast as <span class="math inline">\(s_{tC}=\tau^g_{tC}(1)-\tau^g_{tC}(0)\)</span>, for <span class="math inline">\(t\in\{A,B\}\)</span>. Then the asymptotic bias of the unadjusted indirect comparison <span class="math inline">\(d_{AB}^{\mathrm{Bucher}}=\tilde d_{AC(\mathcal P_{AC})}-\tilde d_{BC(\mathcal P_{BC})}\)</span> relative to the target <a href="#eq-limits-target" class="quarto-xref">Equation&nbsp;<span>16.4</span></a> is <span id="eq-limits-binary-bias"><span class="math display">\[
+d_{AB}^{\mathrm{Bucher}}-\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*})
+\;=\; s_{AC}\,(p_{AC}-p_{*}) \;-\; s_{BC}\,(p_{BC}-p_{*}) .
+\tag{16.5}\]</span></span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>For a binary covariate, <span class="math inline">\(\tilde d_{tC(\mathcal P_j)}=(1-p_j)\tau^g_{tC}(0)+p_j\tau^g_{tC}(1)\)</span> in any population with prevalence <span class="math inline">\(p_j\)</span>. Applying this to the trial population <span class="math inline">\(p_{tC}\)</span> and to the target <span class="math inline">\(p_{*}\)</span> and differencing, <span class="math display">\[
+\begin{aligned}
+\tilde d_{tC(\mathcal P_{tC})}-\int\tau^g_{tC}f_{*}
+&amp;=\bigl[(1-p_{tC})\tau^g_{tC}(0)+p_{tC}\tau^g_{tC}(1)\bigr]-\bigl[(1-p_{*})\tau^g_{tC}(0)+p_{*}\tau^g_{tC}(1)\bigr]\\
+&amp;=\tau^g_{tC}(0)\,(p_{*}-p_{tC})+\tau^g_{tC}(1)\,(p_{tC}-p_{*})\\
+&amp;=\bigl[\tau^g_{tC}(1)-\tau^g_{tC}(0)\bigr](p_{tC}-p_{*})=s_{tC}\,(p_{tC}-p_{*}).
+\end{aligned}
+\]</span> Call this <span class="math inline">\(b_{tC}\)</span>. Subtracting the <span class="math inline">\(BC\)</span> term from the <span class="math inline">\(AC\)</span> term and using additivity <a href="#eq-limits-cond-additivity" class="quarto-xref">Equation&nbsp;<span>16.3</span></a> inside the target gives <span class="math inline">\(d_{AB}^{\mathrm{Bucher}}-\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*})=b_{AC}-b_{BC}
+=s_{AC}(p_{AC}-p_{*})-s_{BC}(p_{BC}-p_{*})\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Reader translation.</em> On a binary effect modifier, each contrast’s bias is its <strong>effect-modification jump times how much the trial over- or under-represents the high-risk stratum relative to the target</strong>. No modification (<span class="math inline">\(s_{tC}=0\)</span>) or no imbalance (<span class="math inline">\(p_{tC}=p_{*}\)</span>) kills that term. For the psoriasis network of <a href="#exm-limits-psoriasis" class="quarto-xref">Example&nbsp;<span>16.1</span></a> on the risk-difference scale, <span class="math inline">\(s_{AC}=\tau_{AC}(1)-\tau_{AC}(0)=0.30-0.10=0.20\)</span> and <span class="math inline">\(s_{BC}=0.15-0.15=0\)</span>, while <span class="math inline">\(p_{AC}-p_{*}=0.2-0.5=-0.3\)</span>; the bias is <span class="math inline">\(0.20\cdot(-0.3)-0=-0.06\)</span>. The <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> trial under-represents the hard-to-treat stratum, and <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> is the <em>modified</em> contrast, so the indirect comparison inherits a <span class="math inline">\(-0.06\)</span> bias. <a href="#exm-limits-bucher-rd" class="quarto-xref">Example&nbsp;<span>16.2</span></a> shows this is enough to flip the sign of the answer.</p>
+<div id="thm-failure-of-bucher" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 16.1 (Failure of Bucher under differential effect modification)</strong></span> Fix a treatment triple <span class="math inline">\(\{A,B,C\}\)</span> and a scale <span class="math inline">\(g\)</span>, and assume conditional constancy of relative effects on scale <span class="math inline">\(g\)</span>, with common conditional contrasts <span class="math inline">\(\tau^g_{AC}(\cdot),\tau^g_{BC}(\cdot)\)</span>. Let the Bucher estimand built from the two trials’ average-conditional contrasts be <span class="math display">\[
+d_{AB}^{\mathrm{Bucher}} \;=\; \tilde d_{AC(\mathcal P_{AC})}-\tilde d_{BC(\mathcal P_{BC})}
+\;=\; \int\tau^g_{AC}(x)\,f_{AC}(x)\,dx-\int\tau^g_{BC}(x)\,f_{BC}(x)\,dx ,
+\]</span> and let the target be <span class="math inline">\(\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*})\)</span> of <a href="#eq-limits-target" class="quarto-xref">Equation&nbsp;<span>16.4</span></a>. Then the asymptotic bias of the unadjusted indirect comparison is <span id="eq-limits-bias"><span class="math display">\[
+d_{AB}^{\mathrm{Bucher}}-\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*})
+\;=\; \underbrace{\int\tau^g_{AC}(x)\,[f_{AC}(x)-f_{*}(x)]\,dx}_{\textstyle b_{AC}}
+\;-\; \underbrace{\int\tau^g_{BC}(x)\,[f_{BC}(x)-f_{*}(x)]\,dx}_{\textstyle b_{BC}} .
+\tag{16.6}\]</span></span> Moreover:</p>
+<ol type="1">
+<li><p>(Vanishing under no modification.) For each contrast <span class="math inline">\(t\in\{A,B\}\)</span>, the term <span class="math inline">\(b_{tC}\)</span> vanishes for <strong>every</strong> pair of covariate distributions <span class="math inline">\((f_{tC},f_{*})\)</span> if and only if <span class="math inline">\(\tau^g_{tC}\)</span> is constant on the common support, that is, if and only if <span class="math inline">\(X\)</span> is not an effect modifier of <span class="math inline">\(t\)</span> versus <span class="math inline">\(C\)</span> on scale <span class="math inline">\(g\)</span>. In particular, if neither contrast is modified, the bias is zero for all covariate distributions.</p></li>
+<li><p>(Genuineness of the bias.) If <span class="math inline">\(X\)</span> is an effect modifier of at least one of <span class="math inline">\(A\)</span> versus <span class="math inline">\(C\)</span> or <span class="math inline">\(B\)</span> versus <span class="math inline">\(C\)</span> on scale <span class="math inline">\(g\)</span>, then there exist covariate distributions making the bias <a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a> nonzero.</p></li>
+</ol>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>By <a href="14-bucher.html#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a>, the Bucher subtraction would equal the target contrast if each trial reported the population-free network effect, that is if marginal constancy held; the present hypotheses grant only conditional constancy, and we compute the residual directly. Linearity of the integral gives, for the <span class="math inline">\(AC\)</span> contrast, <span class="math display">\[
+\tilde d_{AC(\mathcal P_{AC})}-\int\tau^g_{AC}(x)f_{*}(x)\,dx
+=\int\tau^g_{AC}(x)f_{AC}(x)\,dx-\int\tau^g_{AC}(x)f_{*}(x)\,dx
+=\int\tau^g_{AC}(x)\,[f_{AC}(x)-f_{*}(x)]\,dx=b_{AC},
+\]</span> and identically <span class="math inline">\(\tilde d_{BC(\mathcal P_{BC})}-\int\tau^g_{BC}f_{*}=b_{BC}\)</span>. Subtracting the second display from the first and using the additivity <a href="#eq-limits-cond-additivity" class="quarto-xref">Equation&nbsp;<span>16.3</span></a> inside the target, <span class="math display">\[
+d_{AB}^{\mathrm{Bucher}}-\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*})
+=\Bigl(\tilde d_{AC(\mathcal P_{AC})}-\textstyle\int\tau^g_{AC}f_{*}\Bigr)-\Bigl(\tilde d_{BC(\mathcal P_{BC})}-\int\tau^g_{BC}f_{*}\Bigr)=b_{AC}-b_{BC},
+\]</span> which is <a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a>.</p>
+<p>For (1), suppose first that <span class="math inline">\(\tau^g_{tC}\equiv c\)</span> is constant. Then <span class="math inline">\(b_{tC}=c\int[f_{tC}(x)-f_{*}(x)]\,dx=c\,(1-1)=0\)</span>, since each density integrates to one; this holds for any pair of distributions. Conversely suppose <span class="math inline">\(\tau^g_{tC}\)</span> is not constant, so there are support points <span class="math inline">\(x_1,x_2\)</span> with <span class="math inline">\(\tau^g_{tC}(x_1)\neq\tau^g_{tC}(x_2)\)</span>. Choosing <span class="math inline">\(f_{tC}\)</span> concentrated near <span class="math inline">\(x_2\)</span> and <span class="math inline">\(f_{*}\)</span> near <span class="math inline">\(x_1\)</span> (point masses if the support is discrete) gives <span class="math inline">\(b_{tC}\to\tau^g_{tC}(x_2)-\tau^g_{tC}(x_1)\neq 0\)</span>, so the term does not vanish for all pairs. Hence <span class="math inline">\(b_{tC}\equiv 0\)</span> over all distribution pairs if and only if <span class="math inline">\(\tau^g_{tC}\)</span> is constant, i.e.&nbsp;<span class="math inline">\(X\)</span> is not an effect modifier for <span class="math inline">\(t\)</span> versus <span class="math inline">\(C\)</span>. The final clause of (1) is the case where both contrasts are constant, so <span class="math inline">\(b_{AC}=b_{BC}=0\)</span> identically.</p>
+<p>For (2), if (say) <span class="math inline">\(X\)</span> modifies the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> contrast, the converse direction of (1) furnishes a pair <span class="math inline">\((f_{AC},f_{*})\)</span> with <span class="math inline">\(b_{AC}\neq0\)</span>; choosing <span class="math inline">\(f_{BC}=f_{*}\)</span> makes <span class="math inline">\(b_{BC}=0\)</span>, so the total bias is <span class="math inline">\(b_{AC}\neq0\)</span>. The same construction works if <span class="math inline">\(X\)</span> modifies the <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> contrast. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>This is result E.3 of the proof catalogue, and <a href="#prp-limits-binary-bias" class="quarto-xref">Proposition&nbsp;<span>16.2</span></a> is its two-point special case (<span class="math inline">\(b_{tC}=s_{tC}(p_{tC}-p_{*})\)</span> when <span class="math inline">\(X\)</span> is binary). The bias decomposition <a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a> has a transparent reading. Each term <span class="math inline">\(b_{tC}\)</span> is the difference between the trial-population mean of the conditional contrast and its target-population mean; it is a covariance-like quantity, the inner product of the effect-modification function <span class="math inline">\(\tau^g_{tC}\)</span> with the signed measure <span class="math inline">\(f_{tC}-f_{*}\)</span>. Physically, a positive <span class="math inline">\(b_{AC}\)</span> says trial <span class="math inline">\(AC\)</span> <em>over-represents the strata where <span class="math inline">\(A\)</span>’s advantage is large</em> relative to the target: it sampled too many high-contrast patients, so its reported <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> effect overshoots the target average. The bias is large when the contrast varies steeply over <span class="math inline">\(x\)</span> (strong effect modification) and when the trial and target distributions are far apart (strong imbalance), and it is exactly zero when either factor is absent. The cure is now legible in the formula: replace <span class="math inline">\(f_{tC}\)</span> by <span class="math inline">\(f_{*}\)</span>, that is, reweight or re-regress each trial’s conditional contrast to the target covariate distribution, and each <span class="math inline">\(b_{tC}\)</span> collapses to zero. That operation is population adjustment.</p>
+<p><em>Why this matters.</em> Standard NMA computes <span class="math inline">\(d_{AB}^{\mathrm{Bucher}}\)</span>; the estimand a decision needs is <span class="math inline">\(\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*})\)</span>. The theorem says these differ by a term that a health researcher can neither see in the standard error nor remove without extra data, which is the entire reason population-adjusted methods exist.</p>
+<p>We put numbers on the theorem immediately, in the running example.</p>
+<div id="exm-limits-bucher-rd" class="theorem example">
+<p><span class="theorem-title"><strong>Example 16.2 (A sign-reversing Bucher bias on the risk-difference scale)</strong></span> This is the psoriasis network of <a href="#exm-limits-psoriasis" class="quarto-xref">Example&nbsp;<span>16.1</span></a> with the arithmetic filled in. The outcome is a binary event (treatment failure, an unfavorable outcome, so larger risk is worse), <span class="math inline">\(X\in\{0,1\}\)</span> is prior biologic exposure, and we work on the identity (risk-difference) scale, <span class="math inline">\(g=\mathrm{id}\)</span>, which is directly collapsible (<a href="../part2/11-effect-modification-collapsibility.html#prp-emcoll-rd-direct" class="quarto-xref">Proposition&nbsp;<span>11.3</span></a>). Conditional constancy holds, so the stratum risks below are common to all three populations:</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>stratum <span class="math inline">\(x\)</span></th>
+<th><span class="math inline">\(\mu_A(x)\)</span></th>
+<th><span class="math inline">\(\mu_B(x)\)</span></th>
+<th><span class="math inline">\(\mu_C(x)\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(x=0\)</span></td>
+<td><span class="math inline">\(0.30\)</span></td>
+<td><span class="math inline">\(0.25\)</span></td>
+<td><span class="math inline">\(0.40\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(x=1\)</span></td>
+<td><span class="math inline">\(0.30\)</span></td>
+<td><span class="math inline">\(0.45\)</span></td>
+<td><span class="math inline">\(0.60\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>so treatment <span class="math inline">\(A\)</span> has constant risk <span class="math inline">\(0.30\)</span> while <span class="math inline">\(B\)</span> and <span class="math inline">\(C\)</span> have stratum-dependent risk. The conditional contrasts on the risk-difference scale, <span class="math inline">\(\tau_{tC}(x)=\mu_C(x)-\mu_t(x)\)</span>, are <span class="math display">\[
+\tau_{AC}(0)=0.40-0.30=0.10,\quad \tau_{AC}(1)=0.60-0.30=0.30,
+\]</span> <span class="math display">\[
+\tau_{BC}(0)=0.40-0.25=0.15,\quad \tau_{BC}(1)=0.60-0.45=0.15 .
+\]</span> Thus <span class="math inline">\(X\)</span> <strong>is</strong> an effect modifier of <span class="math inline">\(A\)</span> versus <span class="math inline">\(C\)</span> (the contrast moves from <span class="math inline">\(0.10\)</span> to <span class="math inline">\(0.30\)</span>) and is <strong>not</strong> an effect modifier of <span class="math inline">\(B\)</span> versus <span class="math inline">\(C\)</span> (the contrast is <span class="math inline">\(0.15\)</span> in both strata). The target contrast <span class="math inline">\(\tau_{AB}(x)=\mu_B(x)-\mu_A(x)\)</span> is <span class="math inline">\(\tau_{AB}(0)=0.25-0.30=-0.05\)</span> and <span class="math inline">\(\tau_{AB}(1)=0.45-0.30=0.15\)</span>, which matches <span class="math inline">\(\tau_{AC}-\tau_{BC}\)</span> stratum by stratum as <a href="#lem-limits-conditional-additivity" class="quarto-xref">Lemma&nbsp;<span>16.1</span></a> requires.</p>
+<p>The three populations differ only in the prevalence <span class="math inline">\(p=\Pr(X=1)\)</span> of the effect modifier: <span class="math display">\[
+p_{AC}=0.2,\qquad p_{BC}=0.8,\qquad p_{*}=0.5 .
+\]</span></p>
+<p><strong>Trial reports.</strong> Each trial reports its average-conditional contrast, which on this scale equals what its arm means give: <span class="math display">\[
+\tilde d_{AC(\mathcal P_{AC})}=(1-p_{AC})\,\tau_{AC}(0)+p_{AC}\,\tau_{AC}(1)=0.8(0.10)+0.2(0.30)=0.14,
+\]</span> <span class="math display">\[
+\tilde d_{BC(\mathcal P_{BC})}=(1-p_{BC})\,\tau_{BC}(0)+p_{BC}\,\tau_{BC}(1)=0.15 .
+\]</span></p>
+<p><strong>Bucher estimand.</strong> <span class="math display">\[
+d_{AB}^{\mathrm{Bucher}}=\tilde d_{AC(\mathcal P_{AC})}-\tilde d_{BC(\mathcal P_{BC})}=0.14-0.15=-0.01 .
+\]</span></p>
+<p><strong>Target.</strong> <span class="math display">\[
+\Delta^{\mathrm{Cond},\mathrm{id}}_{AB}(\mathcal P^{*})=(1-p_{*})\,\tau_{AB}(0)+p_{*}\,\tau_{AB}(1)=0.5(-0.05)+0.5(0.15)=0.05 .
+\]</span></p>
+<p><strong>Bias.</strong> The unadjusted indirect comparison reports <span class="math inline">\(-0.01\)</span> when the true target risk difference is <span class="math inline">\(+0.05\)</span>: it is biased by <span class="math inline">\(-0.06\)</span>, and it has the <strong>wrong sign</strong>. On the unadjusted estimate <span class="math inline">\(B\)</span> looks marginally protective relative to <span class="math inline">\(A\)</span>; in truth <span class="math inline">\(B\)</span> raises the event risk by five percentage points in the target population. In clinical terms, the indirect comparison would recommend <span class="math inline">\(B\)</span> when <span class="math inline">\(A\)</span> is in fact the better drug.</p>
+<p><strong>Verification through <a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a>.</strong> The bias decomposition gives <span class="math display">\[
+b_{AC}=\tau_{AC}(0)\,[(1-p_{AC})-(1-p_{*})]+\tau_{AC}(1)\,[p_{AC}-p_{*}]=0.10(0.3)+0.30(-0.3)=0.03-0.09=-0.06,
+\]</span> <span class="math display">\[
+b_{BC}=0.15\cdot\bigl([(1-p_{BC})-(1-p_{*})]+[p_{BC}-p_{*}]\bigr)=0.15\cdot 0=0,
+\]</span> the second vanishing because <span class="math inline">\(\tau_{BC}\)</span> is constant, exactly <a href="#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a>(1). The total <span class="math inline">\(b_{AC}-b_{BC}=-0.06-0=-0.06\)</span> reproduces the bias, and matches the binary formula <span class="math inline">\(s_{AC}(p_{AC}-p_{*})=0.20\cdot(-0.3)\)</span> of <a href="#prp-limits-binary-bias" class="quarto-xref">Proposition&nbsp;<span>16.2</span></a>. Note that <span class="math inline">\(B\)</span> versus <span class="math inline">\(C\)</span> is the more imbalanced contrast, <span class="math inline">\(p_{BC}=0.8\)</span> against <span class="math inline">\(p_{*}=0.5\)</span>, yet it contributes nothing, because <span class="math inline">\(X\)</span> does not modify it; all the bias comes from <span class="math inline">\(A\)</span> versus <span class="math inline">\(C\)</span>, which is only modestly imbalanced but is modified.</p>
+<p><strong>The cure.</strong> Reweighting the modified contrast to the target distribution replaces <span class="math inline">\(p_{AC}\)</span> by <span class="math inline">\(p_{*}\)</span>: <span class="math inline">\(\int\tau_{AC}f_{*}=0.5(0.10)+0.5(0.30)=0.20\)</span>, and then <span class="math inline">\(0.20-0.15=0.05\)</span> recovers the target exactly. That reweighting is what a population-adjusted method performs. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>The corollary that follows is the single most useful practical fact in the chapter for an analyst: it says which covariates you actually have to worry about.</p>
+<p>Before the algebra, the plain reason. In a <em>contrast</em> on a collapsible scale, any covariate effect that enters both arms by the same amount cancels: if a covariate raises the failure risk under <span class="math inline">\(A\)</span> and under <span class="math inline">\(C\)</span> equally, it leaves <span class="math inline">\(\mu_C-\mu_A\)</span> untouched, so it cannot bias the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> contrast no matter how imbalanced it is. Only a covariate that changes the <em>difference</em> between the arms survives. That is the whole content of the corollary. The following one-line table is worth memorizing.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Covariate role</th>
+<th>Effect on the two arms</th>
+<th>Effect on the contrast <span class="math inline">\(\tau^g\)</span></th>
+<th>Anchored ITC consequence</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Purely prognostic (e.g., a severity marker that raises failure risk under both <span class="math inline">\(A\)</span> and <span class="math inline">\(C\)</span> equally)</td>
+<td>shifts both arms by the same amount</td>
+<td>unchanged: it cancels</td>
+<td>imbalance is harmless; contributes no Bucher bias</td>
+</tr>
+<tr class="even">
+<td>Effect modifier (e.g., prior biologic exposure)</td>
+<td>shifts the arms by different amounts</td>
+<td>changes with the covariate</td>
+<td>imbalance biases the indirect comparison</td>
+</tr>
+</tbody>
+</table>
+<div id="cor-limits-pv-no-bias" class="theorem corollary">
+<p><span class="theorem-title"><strong>Corollary 16.1 (Purely prognostic covariates contribute no Bucher bias)</strong></span> A covariate that is a prognostic variable (<a href="../part2/11-effect-modification-collapsibility.html#def-prognostic-variable" class="quarto-xref">Definition&nbsp;<span>11.5</span></a>) for the arms but is not an effect modifier of <span class="math inline">\(A\)</span> versus <span class="math inline">\(C\)</span> or of <span class="math inline">\(B\)</span> versus <span class="math inline">\(C\)</span> on scale <span class="math inline">\(g\)</span> contributes zero to the bias <a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a>, however imbalanced its distribution across <span class="math inline">\(\mathcal P_{AC},\mathcal P_{BC},\mathcal P^{*}\)</span>.</p>
+<p>[machine-checked: <code>theories/EffectModifiers.v</code>, <code>Theorem anchored_PV_cancellation</code>]</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Decompose the covariate vector as <span class="math inline">\(X=(X_{\mathrm{EM}},W)\)</span>, where <span class="math inline">\(W\)</span> is the purely prognostic component. By the definition of “not an effect modifier,” the conditional contrast does not depend on <span class="math inline">\(W\)</span>: <span class="math inline">\(\tau^g_{tC}(x_{\mathrm{EM}},w)=\tau^g_{tC}(x_{\mathrm{EM}})\)</span> for all <span class="math inline">\(w\)</span>, for <span class="math inline">\(t\in\{A,B\}\)</span>. This is the content of <code>anchored_PV_cancellation</code> in the Coq development: if the contrast <span class="math inline">\(\mu_t(\cdot,w)-\mu_C(\cdot,w)\)</span> on the model scale is constant in <span class="math inline">\(w\)</span>, it equals its value at any other <span class="math inline">\(w'\)</span>. Now write <span class="math inline">\(f_{tC}\)</span> and <span class="math inline">\(f_{*}\)</span> as joint densities of <span class="math inline">\((X_{\mathrm{EM}},W)\)</span>. Because <span class="math inline">\(\tau^g_{tC}\)</span> does not depend on <span class="math inline">\(w\)</span>, we may interchange the order of integration and integrate out <span class="math inline">\(W\)</span> first; this interchange is Fubini’s theorem, valid because <span class="math inline">\(\tau^g_{tC}\)</span> is bounded on the support and the densities are integrable. Integrating each density’s <span class="math inline">\(W\)</span>-slice down to its <span class="math inline">\(X_{\mathrm{EM}}\)</span>-marginal <span class="math inline">\(f^{\mathrm{EM}}(x_{\mathrm{EM}})=\int f(x_{\mathrm{EM}},w)\,dw\)</span>, <span class="math display">\[
+b_{tC}=\int\tau^g_{tC}(x_{\mathrm{EM}})\Bigl[\int\bigl(f_{tC}(x_{\mathrm{EM}},w)-f_{*}(x_{\mathrm{EM}},w)\bigr)\,dw\Bigr]dx_{\mathrm{EM}}
+=\int\tau^g_{tC}(x_{\mathrm{EM}})\,[f^{\mathrm{EM}}_{tC}(x_{\mathrm{EM}})-f^{\mathrm{EM}}_{*}(x_{\mathrm{EM}})]\,dx_{\mathrm{EM}},
+\]</span> which depends only on the marginal distribution of the effect-modifying component <span class="math inline">\(X_{\mathrm{EM}}\)</span>. Any imbalance confined to <span class="math inline">\(W\)</span> has integrated away and contributes nothing. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><a href="#cor-limits-pv-no-bias" class="quarto-xref">Corollary&nbsp;<span>16.1</span></a> is the rigorous form of the slogan that “prognostic variables cancel in anchored comparisons.” It is the precise reason an anchored adjustment need balance only the effect modifiers, a fact that Chapter 17 turns into the central anchored-consistency theorem and that makes anchored methods far less data-hungry than unanchored ones. The cancellation is purely a property of the contrast; it has no analogue when one compares absolute arm outcomes, which is why unanchored comparison (Chapter 26) must control prognostic variables too.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Warning: the standard error cannot see this bias.</strong> The bias <a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a> is a deterministic functional of the true conditional contrasts and covariate distributions. It does not depend on the trial sample sizes and does not vanish as they grow; it is a bias, not a variance. The Bucher standard error of <a href="14-bucher.html#thm-bucher-variance" class="quarto-xref">Theorem&nbsp;<span>14.2</span></a> estimates only the sampling variability of <span class="math inline">\(\hat d_{AC}\)</span> and <span class="math inline">\(\hat d_{BC}\)</span> around their own population means, so it is blind to <a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a> entirely. A confidently narrow indirect confidence interval can be centered on the wrong number. This is the formal sense in which a transitivity failure is undetectable from the precision of the estimate alone: a tight interval buys you no protection here. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Warning: in the anchored triangle this bias is untestable.</strong> When the same contrast carries both direct and indirect evidence, the two can be compared, and a discrepancy signals that some constancy assumption has failed; this is the node-splitting and consistency machinery of Chapter 15 (<a href="15-network-meta-analysis.html#def-node-splitting" class="quarto-xref">Definition&nbsp;<span>15.4</span></a>, <a href="15-network-meta-analysis.html#thm-consistency-closure" class="quarto-xref">Theorem&nbsp;<span>15.1</span></a>). But in the minimal anchored triangle there is no direct <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> evidence, nothing to compare the indirect estimate against, and <a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a> is then untestable from the trial outcomes. It can be assessed only by examining the covariate distributions <span class="math inline">\(f_{AC},f_{BC},f_{*}\)</span> and asking whether any effect modifier is imbalanced, which requires knowing which covariates modify the effect and on what scale. That is a substantive, external judgment, and the reason NICE Technical Support Document 18 (<span class="citation" data-cites="phillippo2016tsd18">Phillippo et al. (<a href="../../references.html#ref-phillippo2016tsd18" role="doc-biblioref">2016</a>)</span>) insists that an indirect comparison justify constancy before relying on it. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<section id="sec-limits-surcharge" class="level3" data-number="16.3.1">
+<h3 data-number="16.3.1" class="anchored" data-anchor-id="sec-limits-surcharge"><span class="header-section-number">16.3.1</span> The non-collapsibility surcharge</h3>
+<p>So far we worked on a directly collapsible scale, where the trial-reported marginal contrast and the average-conditional contrast are one number. On a non-collapsible scale a <em>second</em> discrepancy appears, independent of any imbalance, and it is worth isolating because health researchers meet it constantly: everyone knows odds ratios “behave strangely.”</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>The non-collapsibility surcharge.</strong> <a href="#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a> is exact for the average-conditional estimand <a href="#eq-limits-target" class="quarto-xref">Equation&nbsp;<span>16.4</span></a> on any scale, and on a directly collapsible scale (identity, log risk ratio) it is also the exact bias of the marginal contrast a trial reports, by <a href="#prp-limits-collapse-link" class="quarto-xref">Proposition&nbsp;<span>16.1</span></a>. On a non-collapsible scale, such as the log odds ratio, the trial’s reported marginal contrast <span class="math inline">\(d_{tC(\mathcal P_j)}\)</span> is not the average-conditional <span class="math inline">\(\tilde d_{tC(\mathcal P_j)}\)</span>, and a second discrepancy, the non-collapsibility gap, is added to <a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a>. That second gap is itself a Jensen gap for the nonlinear link. We illustrate it numerically just below, and the same mechanism reappears as ecological bias in <a href="#sec-limits-ecological" class="quarto-xref"><span>Section 16.4</span></a>. The two effects compound: an imbalanced effect modifier biases the indirect comparison, and a nonlinear link distorts what each trial reports in the first place. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p><strong>A numeric illustration in its purest form.</strong> Take a single trial, a treatment versus a control, and a binary covariate <span class="math inline">\(X\)</span> balanced at <span class="math inline">\(\Pr(X=1)=0.5\)</span>, so there is no imbalance at all. Let the control risks be <span class="math inline">\(\mu_0(0)=0.1\)</span> and <span class="math inline">\(\mu_0(1)=0.5\)</span>, and let the conditional odds ratio be a <em>constant</em> <span class="math inline">\(3\)</span> in both strata, so <span class="math inline">\(X\)</span> is not even an effect modifier. Solving for the treated risks gives <span class="math inline">\(\mu_1(0)=0.25\)</span> and <span class="math inline">\(\mu_1(1)=0.75\)</span>, and the conditional log odds ratio is <span class="math inline">\(\log 3=1.0986\)</span> in each stratum. The marginalized arm risks are <span class="math inline">\(\bar\mu_0=(0.1+0.5)/2=0.30\)</span> and <span class="math inline">\(\bar\mu_1=(0.25+0.75)/2=0.50\)</span>, so the marginal odds ratio is <span class="math display">\[
+\frac{0.50/0.50}{0.30/0.70}=\frac{1}{3/7}=\frac{7}{3}\approx 2.33,\qquad \log\frac{7}{3}=0.8473 .
+\]</span> Even with the conditional odds ratio identical in both strata and the covariate perfectly balanced, the marginal odds ratio is <span class="math inline">\(2.33\)</span>, not <span class="math inline">\(3\)</span>: the marginal log odds ratio <span class="math inline">\(0.847\)</span> sits <em>below</em> the conditional <span class="math inline">\(1.099\)</span>. That gap, about <span class="math inline">\(0.25\)</span>, is pure non-collapsibility; it owes nothing to imbalance and would be present in a single perfectly balanced trial.</p>
+<p>The two problems are genuinely separate, and it helps to tabulate them.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Source of discrepancy</th>
+<th>What it is</th>
+<th>When it appears</th>
+<th>Scale dependence</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Effect-modifier imbalance (Bucher bias)</td>
+<td><a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a>: trial and target case mixes differ on a modified contrast</td>
+<td>whenever an effect modifier is imbalanced across trial and target</td>
+<td>present on every scale, including collapsible ones</td>
+</tr>
+<tr class="even">
+<td>Non-collapsibility surcharge</td>
+<td>the marginal (trial-reported) contrast differs from the average-conditional contrast</td>
+<td>whenever the link is nonlinear (odds ratio, hazard ratio), even with balanced covariates</td>
+<td>only on non-collapsible scales</td>
+</tr>
+</tbody>
+</table>
+<p>In a real anchored odds-ratio comparison the two effects add: each trial’s reported marginal log odds ratio already differs from its average-conditional log odds ratio by a non-collapsibility gap (this illustration), and then the imbalance of effect modifiers biases the subtraction (<a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a>). <a href="#exr-limits-logit-compound" class="quarto-xref">Exercise&nbsp;<span>16.7</span></a> asks you to compute both for the psoriasis network of <a href="#exm-limits-bucher-rd" class="quarto-xref">Example&nbsp;<span>16.2</span></a> and confirm that the total discrepancy exceeds the <span class="math inline">\(-0.06\)</span> of the risk-difference analysis.</p>
+</section>
+</section>
+<section id="sec-limits-ecological" class="level2" data-number="16.4">
+<h2 data-number="16.4" class="anchored" data-anchor-id="sec-limits-ecological"><span class="header-section-number">16.4</span> Aggregate meta-regression and ecological bias</h2>
+<p><a href="#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a> shows that the cure is to reweight each conditional contrast to the target covariate distribution. The obstacle, in the typical health-technology-assessment setting, is that the analyst has individual patient data (IPD) for at most one trial and only <strong>aggregate data</strong> (AgD), the covariate means <span class="math inline">\(\bar{\mathbf x}_j\)</span> and arm-level outcome summaries, for the others. A natural idea is to sidestep the need for IPD by regressing trial-level treatment effects on trial-level covariate means, an <strong>aggregate-level meta-regression</strong>, and to use the fitted slope to adjust for imbalance. This section proves that the idea fails: the aggregate slope is not the individual-level effect-modifier coefficient, and the error has a definite source and sign. The phenomenon is the <strong>ecological fallacy</strong>, and the error is <strong>ecological bias</strong>.</p>
+<p><strong>The analyst’s temptation, and the two slopes it confuses.</strong> Put yourself in the analyst’s chair: “I do not have patient-level data for the other trial, but I do have its mean covariate, say mean prior-exposure prevalence or mean age. If I collect several trials, each reporting a covariate mean <span class="math inline">\(\bar x_j\)</span> and a treatment effect <span class="math inline">\(D_j\)</span>, surely the slope of <span class="math inline">\(D_j\)</span> against <span class="math inline">\(\bar x_j\)</span> tells me how the effect changes with the covariate?” Concretely, suppose three trials report</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>trial</th>
+<th>covariate mean <span class="math inline">\(\bar x_j\)</span></th>
+<th>trial contrast <span class="math inline">\(D_j\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td><span class="math inline">\(0.0\)</span></td>
+<td><span class="math inline">\(0.332\)</span></td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td><span class="math inline">\(0.5\)</span></td>
+<td><span class="math inline">\(0.427\)</span></td>
+</tr>
+<tr class="odd">
+<td>3</td>
+<td><span class="math inline">\(1.0\)</span></td>
+<td><span class="math inline">\(0.521\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>The fitted between-trial slope is <span class="math inline">\((0.521-0.332)/1.0\approx 0.19\)</span>. Call it <span class="math inline">\(b_2\)</span>. The temptation is to read <span class="math inline">\(b_2\)</span> as the effect-modification coefficient. But there are two different objects here:</p>
+<ul>
+<li><span class="math inline">\(b_2\)</span> is the <strong>between-trial slope</strong>: how a <em>trial’s</em> aggregate contrast changes as the <em>trial’s mean</em> covariate changes, read off aggregate summaries.</li>
+<li><span class="math inline">\(\beta_2\)</span> is the <strong>within-patient interaction</strong>: how <em>one patient’s</em> contrast changes as <em>that patient’s</em> own covariate changes, a coefficient in the individual-level model.</li>
+</ul>
+<p><a href="#thm-ecological-norecovery" class="quarto-xref">Theorem&nbsp;<span>16.2</span></a> proves that these are not equal; <span class="math inline">\(b_2\)</span> is a strictly <em>shrunken</em> image of <span class="math inline">\(\beta_2\)</span>. In the numbers above the true <span class="math inline">\(\beta_2\)</span> is <span class="math inline">\(0.6\)</span>, not <span class="math inline">\(0.19\)</span>. The root cause is one line of calculus: the aggregate arm mean is an average of a nonlinear inverse link over the covariate distribution, and that is not the inverse link evaluated at the average covariate.</p>
+<div id="lem-limits-aggregation-jensen" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 16.3 (The aggregation gap is a Jensen gap)</strong></span> Let the individual-level model have link <span class="math inline">\(g\)</span> and a linear predictor <span class="math inline">\(\eta_t(x)\)</span> that is affine in <span class="math inline">\(x\)</span> (that is, of the form <span class="math inline">\(a+b^{\top}x\)</span>, linear plus a constant), so the conditional mean of arm <span class="math inline">\(t\)</span> is <span class="math inline">\(\mu_t(x)=g^{-1}(\eta_t(x))\)</span>. For a population with covariate density <span class="math inline">\(f\)</span> and mean <span class="math inline">\(\bar x=\int x\,f(x)\,dx\)</span>, <span id="eq-limits-jensen-gap"><span class="math display">\[
+\int g^{-1}(\eta_t(x))\,f(x)\,dx \;\neq\; g^{-1}\!\Bigl(\int\eta_t(x)\,f(x)\,dx\Bigr)=g^{-1}(\eta_t(\bar x))
+\qquad\text{in general.}
+\tag{16.7}\]</span></span> If <span class="math inline">\(g^{-1}\)</span> is convex the left side is the larger; if <span class="math inline">\(g^{-1}\)</span> is concave the right side is the larger; if <span class="math inline">\(g^{-1}\)</span> is affine on the range of <span class="math inline">\(\eta_t\)</span>, the two are equal for every <span class="math inline">\(f\)</span>. When <span class="math inline">\(g^{-1}\)</span> is strictly convex or strictly concave on that range and <span class="math inline">\(X\)</span> is non-degenerate, the inequality is strict.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Because <span class="math inline">\(\eta_t\)</span> is affine, <span class="math inline">\(\int\eta_t(x)f(x)\,dx=\eta_t(\bar x)\)</span> exactly, which gives the displayed equality on the right. Apply Jensen’s inequality (<a href="../part1/04-probability.html#thm-jensen" class="quarto-xref">Theorem&nbsp;<span>4.6</span></a>) to the random variable <span class="math inline">\(\eta_t(X)\)</span> with the convex function <span class="math inline">\(\varphi=g^{-1}\)</span>: <span class="math inline">\(\varphi(\mathbb E[\eta_t(X)])\le\mathbb E[\varphi(\eta_t(X))]\)</span>, that is <span class="math inline">\(g^{-1}(\eta_t(\bar x))\le\int g^{-1}(\eta_t(x))f(x)\,dx\)</span>, with strict inequality when <span class="math inline">\(g^{-1}\)</span> is strictly convex and <span class="math inline">\(\eta_t(X)\)</span> is non-degenerate, the latter holding when <span class="math inline">\(X\)</span> is non-degenerate and the affine map <span class="math inline">\(\eta_t\)</span> is non-constant. The concave case is the same inequality reversed, applied to <span class="math inline">\(-g^{-1}\)</span>. If <span class="math inline">\(g^{-1}\)</span> is affine on the range of <span class="math inline">\(\eta_t\)</span> then it commutes with the expectation and the two sides agree for every <span class="math inline">\(f\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Reader translation.</em> The load-bearing move is that Jensen is applied to the random variable <span class="math inline">\(\eta_t(X)\)</span>, the <em>linear predictor</em>, not to <span class="math inline">\(X\)</span> itself; the convex function is the inverse link <span class="math inline">\(g^{-1}\)</span>. In plain words: with a curved inverse link, <strong>the average of the patients’ risks is not the risk of the average patient</strong>. Evaluating the model at the mean covariate (the “plug-in”) therefore misses the true aggregate mean whenever the link is nonlinear.</p>
+<p><strong>A one-line numeric check.</strong> Take the probit inverse link <span class="math inline">\(g^{-1}=\Phi\)</span> and <span class="math inline">\(\eta(X)=0.5+X\)</span> with <span class="math inline">\(X\sim\mathcal N(0,1)\)</span>. The true aggregate mean, using the Gaussian identity <a href="#eq-limits-probit-integral" class="quarto-xref">Equation&nbsp;<span>16.10</span></a> below, is <span class="math inline">\(\mathbb E[\Phi(0.5+X)]=\Phi(0.5/\sqrt{2})=\Phi(0.354)\approx 0.638\)</span>, whereas the plug-in value is <span class="math inline">\(\Phi(0.5)\approx 0.691\)</span>. The plug-in overstates the aggregate risk by about five percentage points; that gap is the Jensen gap, and it is exactly the quantity we now name.</p>
+<p>The only link for which <a href="#eq-limits-jensen-gap" class="quarto-xref">Equation&nbsp;<span>16.7</span></a> is an equality for all covariate distributions is the one whose inverse is affine, namely the identity link, where <span class="math inline">\(g^{-1}\)</span> is the identity map. For every nonlinear link, the logit with <span class="math inline">\(g^{-1}(\eta)=e^{\eta}/(1+e^{\eta})\)</span>, the log with <span class="math inline">\(g^{-1}(\eta)=e^{\eta}\)</span>, the probit with <span class="math inline">\(g^{-1}=\Phi\)</span>, the aggregation gap is generically nonzero. We name it.</p>
+<div id="def-ecological-bias" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 16.2 (Ecological (aggregation) bias)</strong></span> Let an individual-level outcome model have link <span class="math inline">\(g\)</span> and a linear predictor <span class="math inline">\(\eta_t(x)\)</span> affine in the covariates <span class="math inline">\(x\)</span>, so that the conditional mean of arm <span class="math inline">\(t\)</span> is <span class="math inline">\(\mu_t(x)=g^{-1}(\eta_t(x))\)</span>. For a population with covariate density <span class="math inline">\(f\)</span> and mean <span class="math inline">\(\bar x=\int x\,f(x)\,dx\)</span>, the <strong>aggregate (population-averaged) arm mean</strong> is <span class="math display">\[
+\bar\mu_t \;=\; \int g^{-1}(\eta_t(x))\,f(x)\,dx ,
+\]</span> and the <strong>plug-in arm mean</strong> is <span class="math inline">\(g^{-1}(\eta_t(\bar x))\)</span>, obtained by evaluating the individual model at the mean covariate. The <strong>ecological bias</strong> (or aggregation bias) of arm <span class="math inline">\(t\)</span> in this population is the discrepancy between them, <span id="eq-ecological-bias"><span class="math display">\[
+\mathrm{EB}_t(f) \;=\; g^{-1}(\eta_t(\bar x))-\int g^{-1}(\eta_t(x))\,f(x)\,dx \;=\; g^{-1}(\eta_t(\bar x))-\bar\mu_t .
+\tag{16.8}\]</span></span> At the level of the relative effect, suppose the individual interaction slope of the contrast <span class="math inline">\(\eta_1(x)-\eta_0(x)\)</span> in <span class="math inline">\(x\)</span> is <span class="math inline">\(\beta_2\)</span> (the effect-modification coefficient of <a href="../part2/11-effect-modification-collapsibility.html#lem-emcoll-interaction" class="quarto-xref">Lemma&nbsp;<span>11.2</span></a>), and let <span class="math inline">\(b_2\)</span> be the slope in <span class="math inline">\(\bar x\)</span> of the aggregate marginal contrast <span class="math inline">\(g(\bar\mu_1)-g(\bar\mu_0)\)</span> regarded as a function of the covariate mean across populations. The <strong>ecological bias of the effect-modification coefficient</strong> is <span id="eq-limits-coef-eb"><span class="math display">\[
+\mathrm{EB}_{\mathrm{coef}} \;=\; b_2-\beta_2 ,
+\tag{16.9}\]</span></span> the difference between the between-trial (ecological) slope <span class="math inline">\(b_2\)</span> and the within-patient interaction <span class="math inline">\(\beta_2\)</span>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>By <a href="#lem-limits-aggregation-jensen" class="quarto-xref">Lemma&nbsp;<span>16.3</span></a> the arm-level ecological bias <a href="#eq-ecological-bias" class="quarto-xref">Equation&nbsp;<span>16.8</span></a> is nonzero whenever the link is nonlinear and the covariate is non-degenerate, with sign fixed by the convexity of <span class="math inline">\(g^{-1}\)</span>. The ecological bias of the coefficient <a href="#eq-limits-coef-eb" class="quarto-xref">Equation&nbsp;<span>16.9</span></a> is the consequential one for indirect comparison, because it is the slope <span class="math inline">\(\beta_2\)</span>, the strength of effect modification, that the adjustment in <a href="#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a> needs. We now compute <span class="math inline">\(b_2\)</span> in closed form for the probit link and a normal covariate, the one case where the aggregation integral <a href="#eq-ecological-bias" class="quarto-xref">Equation&nbsp;<span>16.8</span></a> is elementary, and read off the bias exactly.</p>
+<p>First the computational tool. The next lemma is a self-contained calculation; we flag it as such and use it only inside the theorem that follows.</p>
+<div id="lem-limits-probit-integral" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 16.4 (The Gaussian probit integral)</strong></span> Let <span class="math inline">\(Z\sim\mathcal N(m,\sigma^2)\)</span> and let <span class="math inline">\(a,b\in\mathbb R\)</span>. Then <span id="eq-limits-probit-integral"><span class="math display">\[
+\mathbb E[\Phi(a+bZ)] \;=\; \Phi\!\left(\frac{a+bm}{\sqrt{1+b^2\sigma^2}}\right).
+\tag{16.10}\]</span></span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Recall the meaning of <span class="math inline">\(\Phi\)</span>: for a standard normal <span class="math inline">\(U\sim\mathcal N(0,1)\)</span>, the value <span class="math inline">\(\Phi(t)=P(U\le t)\)</span> is <em>literally</em> the probability that <span class="math inline">\(U\)</span> falls at or below <span class="math inline">\(t\)</span>. Let <span class="math inline">\(U\sim\mathcal N(0,1)\)</span> be independent of <span class="math inline">\(Z\)</span>. Then for fixed <span class="math inline">\(Z\)</span> this reading gives <span class="math inline">\(\Phi(a+bZ)=P(U\le a+bZ\mid Z)\)</span>. Taking expectations over <span class="math inline">\(Z\)</span> and using the law of total probability, <span class="math display">\[
+\mathbb E[\Phi(a+bZ)]=P(U\le a+bZ)=P(U-bZ\le a).
+\]</span> The variable <span class="math inline">\(U-bZ\)</span> is a linear combination of independent normals. Its moment generating function is, by <a href="../part1/04-probability.html#thm-mgf-sum" class="quarto-xref">Theorem&nbsp;<span>4.12</span></a> applied to <span class="math inline">\(U\)</span> and <span class="math inline">\(-bZ\)</span>, <span class="math display">\[
+M_{U-bZ}(s)=M_U(s)\,M_{-bZ}(s)=e^{\frac12 s^2}\cdot e^{-bms+\frac12 b^2\sigma^2 s^2}=\exp\!\Bigl(-bm\,s+\tfrac12(1+b^2\sigma^2)s^2\Bigr),
+\]</span> which is the moment generating function of <span class="math inline">\(\mathcal N(-bm,\,1+b^2\sigma^2)\)</span>; by uniqueness (<a href="../part1/04-probability.html#thm-mgf-uniqueness" class="quarto-xref">Theorem&nbsp;<span>4.11</span></a>) that is the law of <span class="math inline">\(U-bZ\)</span>. Standardizing, <span class="math display">\[
+P(U-bZ\le a)=\Phi\!\left(\frac{a-(-bm)}{\sqrt{1+b^2\sigma^2}}\right)=\Phi\!\left(\frac{a+bm}{\sqrt{1+b^2\sigma^2}}\right),
+\]</span> which is <a href="#eq-limits-probit-integral" class="quarto-xref">Equation&nbsp;<span>16.10</span></a>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>We can now state the attenuation theorem. Because several symbols enter at once, here is the map to keep beside the statement.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(a_0,a_1\)</span></td>
+<td>arm intercepts (control, treated) on the probit scale</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\rho_0,\rho_1\)</span></td>
+<td>arm slopes in the covariate <span class="math inline">\(x\)</span> on the probit scale</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\beta_2=\rho_1-\rho_0\)</span></td>
+<td>within-patient effect-modification coefficient (the target quantity)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(b_2\)</span></td>
+<td>between-trial (ecological) slope from aggregate meta-regression</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\sigma^2\)</span></td>
+<td>common within-trial covariate variance</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\bar x_j\)</span></td>
+<td>covariate mean of trial <span class="math inline">\(j\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\Phi,\Phi^{-1}\)</span></td>
+<td>standard normal distribution function (the probit inverse link) and its inverse</td>
+</tr>
+</tbody>
+</table>
+<div id="thm-ecological-norecovery" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 16.2 (Aggregate meta-regression does not recover the individual effect-modifier coefficient)</strong></span> Let the individual-level model be probit, <span class="math inline">\(\Phi^{-1}(\mu_t(x))=\eta_t(x)\)</span>, with arm-specific affine linear predictors <span class="math display">\[
+\eta_0(x)=a_0+\rho_0 x,\qquad \eta_1(x)=a_1+\rho_1 x ,
+\]</span> so the individual-level effect-modification coefficient is <span class="math inline">\(\beta_2=\rho_1-\rho_0\)</span>. Suppose each trial <span class="math inline">\(j\)</span> has a normal within-trial covariate distribution <span class="math inline">\(X\sim\mathcal N(\bar x_j,\sigma^2)\)</span> with a common variance <span class="math inline">\(\sigma^2\)</span>. Then the aggregate marginal contrast on the probit scale is an affine function of the covariate mean, <span id="eq-limits-shrinkage"><span class="math display">\[
+\Phi^{-1}(\bar\mu_{1j})-\Phi^{-1}(\bar\mu_{0j}) \;=\; c+b_2\,\bar x_j ,
+\tag{16.11}\]</span></span> with intercept and slope <span id="eq-limits-b2"><span class="math display">\[
+c=\frac{a_1}{\sqrt{1+\rho_1^2\sigma^2}}-\frac{a_0}{\sqrt{1+\rho_0^2\sigma^2}},
+\qquad
+b_2=\frac{\rho_1}{\sqrt{1+\rho_1^2\sigma^2}}-\frac{\rho_0}{\sqrt{1+\rho_0^2\sigma^2}} .
+\tag{16.12}\]</span></span> The ecological slope <span class="math inline">\(b_2\)</span> equals the individual coefficient <span class="math inline">\(\beta_2=\rho_1-\rho_0\)</span> if and only if <span class="math inline">\(\sigma^2=0\)</span> or <span class="math inline">\(\rho_0=\rho_1\)</span>. Whenever <span class="math inline">\(\sigma^2&gt;0\)</span> and <span class="math inline">\(\rho_0\neq\rho_1\)</span>, the ecological slope is a strict attenuation toward zero: <span class="math inline">\(0&lt;b_2&lt;\beta_2\)</span> if <span class="math inline">\(\beta_2&gt;0\)</span>, and <span class="math inline">\(\beta_2&lt;b_2&lt;0\)</span> if <span class="math inline">\(\beta_2&lt;0\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>By <a href="#lem-limits-probit-integral" class="quarto-xref">Lemma&nbsp;<span>16.4</span></a> with <span class="math inline">\(Z=X\sim\mathcal N(\bar x_j,\sigma^2)\)</span>, <span class="math inline">\(a=a_t\)</span>, <span class="math inline">\(b=\rho_t\)</span>, <span class="math display">\[
+\bar\mu_{tj}=\mathbb E[\Phi(a_t+\rho_t X)]=\Phi\!\left(\frac{a_t+\rho_t\bar x_j}{\sqrt{1+\rho_t^2\sigma^2}}\right),
+\qquad\text{so}\qquad
+\Phi^{-1}(\bar\mu_{tj})=\frac{a_t+\rho_t\bar x_j}{\sqrt{1+\rho_t^2\sigma^2}} ,
+\]</span> applying <span class="math inline">\(\Phi^{-1}\)</span> to both sides. Differencing the arms, <span class="math display">\[
+\Phi^{-1}(\bar\mu_{1j})-\Phi^{-1}(\bar\mu_{0j})
+=\frac{a_1+\rho_1\bar x_j}{\sqrt{1+\rho_1^2\sigma^2}}-\frac{a_0+\rho_0\bar x_j}{\sqrt{1+\rho_0^2\sigma^2}}
+=\underbrace{\Bigl(\tfrac{a_1}{\sqrt{1+\rho_1^2\sigma^2}}-\tfrac{a_0}{\sqrt{1+\rho_0^2\sigma^2}}\Bigr)}_{c}
++\underbrace{\Bigl(\tfrac{\rho_1}{\sqrt{1+\rho_1^2\sigma^2}}-\tfrac{\rho_0}{\sqrt{1+\rho_0^2\sigma^2}}\Bigr)}_{b_2}\bar x_j,
+\]</span> which is <a href="#eq-limits-shrinkage" class="quarto-xref">Equation&nbsp;<span>16.11</span></a> with the coefficients <a href="#eq-limits-b2" class="quarto-xref">Equation&nbsp;<span>16.12</span></a>; the relationship is affine in <span class="math inline">\(\bar x_j\)</span> because <span class="math inline">\(\sigma^2\)</span> is common across trials.</p>
+<p>Write <span class="math inline">\(h(\rho)=\rho/\sqrt{1+\rho^2\sigma^2}\)</span>, so that <span class="math inline">\(b_2=h(\rho_1)-h(\rho_0)\)</span> and <span class="math inline">\(\beta_2=\rho_1-\rho_0\)</span>. Differentiating by the quotient rule, <span class="math display">\[
+h'(\rho)=\frac{\sqrt{1+\rho^2\sigma^2}-\rho\cdot\frac{\rho\sigma^2}{\sqrt{1+\rho^2\sigma^2}}}{1+\rho^2\sigma^2} .
+\]</span> Multiplying numerator and denominator by <span class="math inline">\(\sqrt{1+\rho^2\sigma^2}\)</span> clears the inner fraction, and the numerator becomes <span class="math inline">\((1+\rho^2\sigma^2)-\rho^2\sigma^2=1\)</span>, so <span class="math display">\[
+h'(\rho)=\frac{(1+\rho^2\sigma^2)-\rho^2\sigma^2}{(1+\rho^2\sigma^2)^{3/2}}=\frac{1}{(1+\rho^2\sigma^2)^{3/2}} ,
+\]</span> whence <span class="math inline">\(0&lt;h'(\rho)\le 1\)</span> for all <span class="math inline">\(\rho\)</span>, with <span class="math inline">\(h'(\rho)=1\)</span> only at <span class="math inline">\(\rho=0\)</span> (assuming <span class="math inline">\(\sigma^2&gt;0\)</span>). By the fundamental theorem of calculus, for <span class="math inline">\(\rho_1&gt;\rho_0\)</span>, <span class="math display">\[
+b_2=h(\rho_1)-h(\rho_0)=\int_{\rho_0}^{\rho_1}h'(\rho)\,d\rho .
+\]</span> Since <span class="math inline">\(0&lt;h'(\rho)\le1\)</span> with equality only on the single point <span class="math inline">\(\rho=0\)</span>, the integrand is positive, giving <span class="math inline">\(b_2&gt;0\)</span>; and it is strictly below <span class="math inline">\(1\)</span> except at that one point. A single point has Lebesgue measure zero, so it does not affect the value of the integral, and therefore <span class="math inline">\(b_2&lt;\int_{\rho_0}^{\rho_1}1\,d\rho=\rho_1-\rho_0=\beta_2\)</span>. Hence <span class="math inline">\(0&lt;b_2&lt;\beta_2\)</span> when <span class="math inline">\(\beta_2&gt;0\)</span>; the case <span class="math inline">\(\beta_2&lt;0\)</span> is identical with the inequalities reversed. If <span class="math inline">\(\sigma^2=0\)</span> then <span class="math inline">\(h'(\rho)\equiv1\)</span> and <span class="math inline">\(b_2=\rho_1-\rho_0=\beta_2\)</span>; if <span class="math inline">\(\rho_0=\rho_1\)</span> then <span class="math inline">\(\beta_2=0\)</span> and <span class="math inline">\(b_2=h(\rho_0)-h(\rho_0)=0=\beta_2\)</span>. These are the only equality cases. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Why this matters.</em> The slope <a href="#eq-limits-b2" class="quarto-xref">Equation&nbsp;<span>16.12</span></a> is the ecological coefficient an analyst would obtain by regressing the aggregate probit contrasts on the trial covariate means, and <a href="#thm-ecological-norecovery" class="quarto-xref">Theorem&nbsp;<span>16.2</span></a> shows it is a shrunk image of the true within-patient interaction <span class="math inline">\(\beta_2\)</span>, with shrinkage controlled by the within-trial spread <span class="math inline">\(\sigma^2\)</span>. An analyst who reads the between-trial slope <span class="math inline">\(b_2\)</span> as the effect-modification coefficient underestimates the modification, and so under-corrects the Bucher bias. We put numbers on it before drawing the two general consequences.</p>
+<div id="exm-limits-probit-eco" class="theorem example">
+<p><span class="theorem-title"><strong>Example 16.3 (Ecological attenuation of an effect-modifier coefficient)</strong></span> Take the probit model of <a href="#thm-ecological-norecovery" class="quarto-xref">Theorem&nbsp;<span>16.2</span></a> with one covariate and parameters <span class="math display">\[
+\alpha=-0.5,\quad \beta_1=0.8,\quad \gamma=0.4,\quad \beta_2=0.6,
+\]</span> in the parameterization <span class="math inline">\(\Phi^{-1}(\mu_t(x))=\alpha+\beta_1 x+(\gamma+\beta_2 x)t\)</span>, so the arm linear predictors are <span class="math inline">\(\eta_0(x)=-0.5+0.8x\)</span> and <span class="math inline">\(\eta_1(x)=-0.1+1.4x\)</span>, with slopes <span class="math inline">\(\rho_0=0.8\)</span> and <span class="math inline">\(\rho_1=\beta_1+\beta_2=1.4\)</span>. The individual-level effect-modification coefficient is <span class="math inline">\(\beta_2=0.6\)</span>. Let the common within-trial covariate variance be <span class="math inline">\(\sigma^2=1\)</span>.</p>
+<p><strong>Shrinkage factors.</strong> From <a href="#eq-limits-b2" class="quarto-xref">Equation&nbsp;<span>16.12</span></a>, <span class="math display">\[
+\sqrt{1+\rho_0^2\sigma^2}=\sqrt{1.64}=1.28062,\qquad \sqrt{1+\rho_1^2\sigma^2}=\sqrt{2.96}=1.72047 ,
+\]</span> <span class="math display">\[
+h(\rho_0)=\frac{0.8}{1.28062}=0.62470,\qquad h(\rho_1)=\frac{1.4}{1.72047}=0.81373 .
+\]</span></p>
+<p><strong>Ecological coefficient.</strong> <span class="math display">\[
+b_2=h(\rho_1)-h(\rho_0)=0.81373-0.62470=0.18903 .
+\]</span> An aggregate meta-regression would estimate the effect-modification coefficient as <span class="math inline">\(0.189\)</span>, against the true individual value <span class="math inline">\(\beta_2=0.6\)</span>: an attenuation to about <span class="math inline">\(31.5\%\)</span> of its size. The ecological bias of the coefficient is <span class="math inline">\(b_2-\beta_2=0.189-0.600=-0.411\)</span>. These are the numbers that appear in the illustrative table at the start of <a href="#sec-limits-ecological" class="quarto-xref"><span>Section 16.4</span></a>.</p>
+<p><strong>Two trials, checked directly.</strong> With intercepts <span class="math inline">\(a_0=\alpha=-0.5\)</span> and <span class="math inline">\(a_1=\alpha+\gamma=-0.1\)</span>, a trial with covariate mean <span class="math inline">\(\bar x=0\)</span> has <span class="math display">\[
+\Phi^{-1}(\bar\mu_0)=\frac{-0.5}{1.28062}=-0.39044,\qquad \Phi^{-1}(\bar\mu_1)=\frac{-0.1}{1.72047}=-0.05813,
+\]</span> so its aggregate probit contrast is <span class="math inline">\(-0.05813-(-0.39044)=0.33231\)</span>. A trial with <span class="math inline">\(\bar x=1\)</span> has <span class="math display">\[
+\Phi^{-1}(\bar\mu_0)=\frac{0.3}{1.28062}=0.23426,\qquad \Phi^{-1}(\bar\mu_1)=\frac{1.3}{1.72047}=0.75560,
+\]</span> with contrast <span class="math inline">\(0.75560-0.23426=0.52134\)</span>. The slope between the two trials is <span class="math inline">\(0.52134-0.33231=0.18903=b_2\)</span>, confirming <a href="#eq-limits-shrinkage" class="quarto-xref">Equation&nbsp;<span>16.11</span></a>.</p>
+<p><strong>The Jensen gap, concretely.</strong> At <span class="math inline">\(\bar x=0\)</span> the aggregate control-arm mean is <span class="math inline">\(\bar\mu_0=\Phi(-0.39044)=0.34811\)</span>, whereas the plug-in value is <span class="math inline">\(\Phi(\eta_0(0))=\Phi(-0.5)=0.30854\)</span>. The arm-level ecological bias is <span class="math inline">\(\mathrm{EB}_0=0.30854-0.34811=-0.03957\)</span> of <a href="#eq-ecological-bias" class="quarto-xref">Equation&nbsp;<span>16.8</span></a>: evaluating the individual model at the mean covariate understates the true aggregate event probability by about four percentage points.</p>
+<p><strong>Against the average-conditional contrast.</strong> The average-conditional contrast in a trial with mean <span class="math inline">\(\bar x\)</span> is <span class="math inline">\(\gamma+\beta_2\bar x=0.4+0.6\bar x\)</span>, with slope <span class="math inline">\(0.6=\beta_2\)</span> exactly. At <span class="math inline">\(\bar x=0\)</span> it is <span class="math inline">\(0.40\)</span> versus the marginal <span class="math inline">\(0.33231\)</span>, and at <span class="math inline">\(\bar x=1\)</span> it is <span class="math inline">\(1.00\)</span> versus the marginal <span class="math inline">\(0.52134\)</span>. The gap, <span class="math inline">\(0.06769\)</span> at <span class="math inline">\(\bar x=0\)</span> growing to <span class="math inline">\(0.47866\)</span> at <span class="math inline">\(\bar x=1\)</span>, is the non-collapsibility gap, and its growth is precisely what bends the marginal slope down from <span class="math inline">\(0.60\)</span> to <span class="math inline">\(0.189\)</span>; <a href="#prp-limits-eco-noncollapse" class="quarto-xref">Proposition&nbsp;<span>16.3</span></a> below makes this identity exact. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>Two consequences deserve emphasis, and the first is important enough to state as a proposition.</p>
+<div id="prp-limits-eco-noncollapse" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 16.3 (Ecological bias and non-collapsibility are the same Jensen gap)</strong></span> In the probit model of <a href="#thm-ecological-norecovery" class="quarto-xref">Theorem&nbsp;<span>16.2</span></a>, the average-conditional contrast in trial <span class="math inline">\(j\)</span> is affine in <span class="math inline">\(\bar x_j\)</span> with slope exactly <span class="math inline">\(\beta_2\)</span>, while the marginal (aggregate) contrast <a href="#eq-limits-shrinkage" class="quarto-xref">Equation&nbsp;<span>16.11</span></a> is affine in <span class="math inline">\(\bar x_j\)</span> with the strictly smaller slope <span class="math inline">\(b_2\)</span>. The difference between the two contrasts, in each single population, is the non-collapsibility gap of <a href="../part1/07-glm.html#def-non-collapsibility" class="quarto-xref">Definition&nbsp;<span>7.7</span></a>; equivalently it is the arm-differenced Jensen gap of <a href="#lem-limits-aggregation-jensen" class="quarto-xref">Lemma&nbsp;<span>16.3</span></a>. Ecological bias of the coefficient (<a href="#eq-limits-coef-eb" class="quarto-xref">Equation&nbsp;<span>16.9</span></a>) is thus non-collapsibility applied to the <em>slope</em> of the effect-modification function.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>By linearity of the linear predictor, the average-conditional contrast is <span class="math display">\[
+\tilde d_{10(\mathcal P_j)}=\mathbb E_{f_j}[\eta_1(X)-\eta_0(X)]=(a_1-a_0)+(\rho_1-\rho_0)\bar x_j=\gamma+\beta_2\bar x_j,
+\]</span> with <span class="math inline">\(\gamma=a_1-a_0\)</span>, so its slope in <span class="math inline">\(\bar x_j\)</span> is <span class="math inline">\(\beta_2\)</span>. The marginal contrast is <span class="math inline">\(\Phi^{-1}(\bar\mu_{1j})-\Phi^{-1}(\bar\mu_{0j})=c+b_2\bar x_j\)</span> by <a href="#eq-limits-shrinkage" class="quarto-xref">Equation&nbsp;<span>16.11</span></a>, with <span class="math inline">\(b_2&lt;\beta_2\)</span> by <a href="#thm-ecological-norecovery" class="quarto-xref">Theorem&nbsp;<span>16.2</span></a>. Their difference in population <span class="math inline">\(j\)</span> is <span class="math display">\[
+\bigl[\Phi^{-1}(\bar\mu_{1j})-\Phi^{-1}(\bar\mu_{0j})\bigr]-\tilde d_{10(\mathcal P_j)}
+=\bigl[\Phi^{-1}(\bar\mu_{1j})-\mathbb E_{f_j}\eta_1\bigr]-\bigl[\Phi^{-1}(\bar\mu_{0j})-\mathbb E_{f_j}\eta_0\bigr],
+\]</span> and each bracket is, up to sign, the arm-level gap between <span class="math inline">\(g\)</span> applied to the aggregate mean and the average of <span class="math inline">\(g\)</span> applied pointwise, that is the arm-level Jensen gap of <a href="#lem-limits-aggregation-jensen" class="quarto-xref">Lemma&nbsp;<span>16.3</span></a> and the non-collapsibility gap of <a href="../part1/07-glm.html#def-non-collapsibility" class="quarto-xref">Definition&nbsp;<span>7.7</span></a> for that arm. The contrast-level gap is their difference, and since it equals <span class="math inline">\((c-\gamma)+(b_2-\beta_2)\bar x_j\)</span>, its slope in <span class="math inline">\(\bar x_j\)</span> is exactly the coefficient-level ecological bias <span class="math inline">\(b_2-\beta_2\)</span> of <a href="#eq-limits-coef-eb" class="quarto-xref">Equation&nbsp;<span>16.9</span></a>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Aggregate data do not carry the missing information.</strong> The shrinkage depends on <span class="math inline">\(\sigma^2\)</span>, the within-trial variance of the covariate. If <span class="math inline">\(\sigma^2\)</span> varied across trials, <a href="#eq-limits-shrinkage" class="quarto-xref">Equation&nbsp;<span>16.11</span></a> would not even be affine in <span class="math inline">\(\bar x_j\)</span>, and no single ecological slope would exist. The dependence on a within-trial moment that aggregate means do not report is the precise reason aggregate meta-regression cannot recover <span class="math inline">\(\beta_2\)</span>: the quantity it needs has been integrated away in forming the trial summaries. Only patient-level data, where <span class="math inline">\(\sigma^2\)</span> and the individual interaction are both visible, restore it. This is the information-theoretic core of why population adjustment requires IPD from at least one trial. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>The constant term shows the same phenomenon.</strong> <a href="#prp-limits-eco-noncollapse" class="quarto-xref">Proposition&nbsp;<span>16.3</span></a> is about the slope; the intercept tells the same story. When there is no effect modification, <span class="math inline">\(\rho_0=\rho_1=\rho\)</span> and <a href="#eq-limits-b2" class="quarto-xref">Equation&nbsp;<span>16.12</span></a> gives <span class="math inline">\(b_2=0\)</span> but <span class="math inline">\(c=(a_1-a_0)/\sqrt{1+\rho^2\sigma^2}=\gamma/\sqrt{1+\rho^2\sigma^2}&lt;\gamma\)</span>: the marginal probit effect is strictly attenuated from the conditional effect <span class="math inline">\(\gamma\)</span> even with a constant conditional contrast. That is non-collapsibility of the probit in its purest form, the intercept-level twin of the surcharge illustration in <a href="#sec-limits-surcharge" class="quarto-xref"><span>Section 16.3.1</span></a>. Both the slope shrinkage and the intercept shrinkage are instances of <a href="#lem-limits-aggregation-jensen" class="quarto-xref">Lemma&nbsp;<span>16.3</span></a> for the nonlinear inverse link. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-limits-example" class="level2" data-number="16.5">
+<h2 data-number="16.5" class="anchored" data-anchor-id="sec-limits-example"><span class="header-section-number">16.5</span> Reading the two failures side by side</h2>
+<p>The two worked examples, <a href="#exm-limits-bucher-rd" class="quarto-xref">Example&nbsp;<span>16.2</span></a> and <a href="#exm-limits-probit-eco" class="quarto-xref">Example&nbsp;<span>16.3</span></a>, are the two failures of this chapter in miniature. Placing them side by side isolates what each one teaches and shows that they are two faces of a single problem: an <em>averaging</em> done in the wrong place.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Feature</th>
+<th>Bucher failure (<a href="#exm-limits-bucher-rd" class="quarto-xref">Example&nbsp;<span>16.2</span></a>)</th>
+<th>Ecological failure (<a href="#exm-limits-probit-eco" class="quarto-xref">Example&nbsp;<span>16.3</span></a>)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Scale</td>
+<td>risk difference (directly collapsible)</td>
+<td>probit (non-collapsible)</td>
+</tr>
+<tr class="even">
+<td>What breaks</td>
+<td>an effect modifier is imbalanced across trials</td>
+<td>the aggregate slope shrinks the interaction</td>
+</tr>
+<tr class="odd">
+<td>Data assumed</td>
+<td>conditional contrasts known</td>
+<td>only trial means and trial contrasts</td>
+</tr>
+<tr class="even">
+<td>Symptom</td>
+<td>indirect estimate has the wrong sign (<span class="math inline">\(-0.01\)</span> vs <span class="math inline">\(+0.05\)</span>)</td>
+<td><span class="math inline">\(b_2=0.189\)</span> against <span class="math inline">\(\beta_2=0.60\)</span></td>
+</tr>
+<tr class="odd">
+<td>Root cause</td>
+<td>the right contrast averaged over the wrong population</td>
+<td>a nonlinear link averaged, destroying within-trial spread</td>
+</tr>
+<tr class="even">
+<td>Cure</td>
+<td>reweight the contrast to <span class="math inline">\(f_{*}\)</span></td>
+<td>model IPD and integrate (Chapter 20)</td>
+</tr>
+</tbody>
+</table>
+<p>Both are averaging failures. The first averages the <em>correct</em> conditional contrast against the <em>wrong</em> covariate distribution, so it is repaired by changing the distribution you average against (reweight to <span class="math inline">\(f_{*}\)</span>). The second destroys the conditional contrast by averaging through a nonlinear link <em>before</em> differencing, so it is repaired by keeping the individual model and integrating it honestly. Population adjustment does both at once: it estimates the conditional contrast from IPD and integrates it over the target population. That is the subject of the next section and of Part IV.</p>
+</section>
+<section id="sec-limits-gap" class="level2" data-number="16.6">
+<h2 data-number="16.6" class="anchored" data-anchor-id="sec-limits-gap"><span class="header-section-number">16.6</span> The gap that population adjustment fills</h2>
+<p>The two failures of this chapter have a common diagnosis, and it is the diagnosis that defines Part IV. Standard NMA fails because it <strong>averages the wrong conditional effects over the wrong populations</strong>: it subtracts each trial’s marginal effect, which is the trial’s own conditional contrast averaged over the trial’s own covariate distribution, and neither the contrast nor the distribution is the one the target estimand requires. Population-adjusted methods are needed because they estimate conditional effects and average them over the <em>target</em> population.</p>
+<p>The failure-of-Bucher theorem (<a href="#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a>) says that an unadjusted indirect comparison is biased by <span class="math inline">\(\int\tau^g_{AC}(f_{AC}-f_{*})-\int\tau^g_{BC}(f_{BC}-f_{*})\)</span>, and that the bias is removed by re-expressing each trial’s conditional contrast as an average against the <em>target</em> covariate distribution <span class="math inline">\(f_{*}\)</span> rather than the trial’s own. Two ingredients are needed to perform that re-expression: the conditional contrast function <span class="math inline">\(\tau^g_{tC}(\cdot)\)</span>, which is the effect-modification structure of the treatment, and the target distribution <span class="math inline">\(f_{*}\)</span>. The ecological-bias theorem (<a href="#thm-ecological-norecovery" class="quarto-xref">Theorem&nbsp;<span>16.2</span></a>) says that the first ingredient cannot be recovered from aggregate data alone, because aggregating a nonlinear link over a covariate distribution destroys exactly the within-trial information that pins down the interaction slope <span class="math inline">\(\beta_2\)</span>. The remedy must therefore (i) estimate <span class="math inline">\(\tau^g_{tC}(\cdot)\)</span>, and in particular its effect-modification slope, from individual patient data in at least one trial, and (ii) integrate the resulting individual model over the target covariate distribution, never substituting the target mean into the individual model, since by <a href="#lem-limits-aggregation-jensen" class="quarto-xref">Lemma&nbsp;<span>16.3</span></a> that substitution is itself biased.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>What a valid indirect comparison must compute.</strong> This is the checklist Part IV builds on.</p>
+<ol type="1">
+<li><strong>The conditional contrast function <span class="math inline">\(\tau^g_{tC}(\cdot)\)</span></strong> (the effect-modification structure), estimated from individual patient data in at least one trial. Aggregate data cannot recover it (<a href="#thm-ecological-norecovery" class="quarto-xref">Theorem&nbsp;<span>16.2</span></a>).</li>
+<li><strong>The target covariate distribution <span class="math inline">\(f_{*}\)</span></strong>, with the individual model integrated against it, never the target mean plugged into the model (<a href="#lem-limits-aggregation-jensen" class="quarto-xref">Lemma&nbsp;<span>16.3</span></a>).</li>
+</ol>
+<p>A method that supplies both closes the gap; a method that supplies neither is standard NMA. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>The three methods of Part IV and Part V realize the two ingredients differently; each bullet ends with the data it needs.</p>
+<ul>
+<li><strong>Matching-adjusted indirect comparison</strong> (Chapter 18) reweights the IPD trial’s individuals so that their weighted covariate moments match the aggregate trial’s, then forms the contrast on the reweighted sample. The weights perform the integration against <span class="math inline">\(f_{*}\)</span> implicitly; the effective sample size (<a href="../part1/04-probability.html#thm-cauchy-schwarz-exp" class="quarto-xref">Theorem&nbsp;<span>4.7</span></a>, the Cauchy-Schwarz bound on <span class="math inline">\((\sum w_i)^2/\sum w_i^2\)</span>) measures how much precision the reweighting costs. <em>Data needed:</em> IPD in one study and aggregate covariate moments in the target.</li>
+<li><strong>Simulated treatment comparison</strong> (Chapter 19) fits the conditional outcome model <span class="math inline">\(\mu_t(\cdot)\)</span> on the IPD trial and then evaluates it at the aggregate trial’s covariate distribution, integrating the model rather than plugging in the mean, which is the correct response to <a href="#lem-limits-aggregation-jensen" class="quarto-xref">Lemma&nbsp;<span>16.3</span></a>. <em>Data needed:</em> an IPD-fitted outcome model plus the target covariate summaries or distribution.</li>
+<li><strong>Multilevel network meta-regression</strong> (Chapter 20) writes the aggregate likelihood as the exact integral of the individual model over the within-study covariate distribution, <span class="math inline">\(\bar\mu_{tj}=\int g^{-1}(\eta_t(x))f_j(x)\,dx\)</span>, the very integral of <a href="#eq-ecological-bias" class="quarto-xref">Equation&nbsp;<span>16.8</span></a>, and estimates the shared individual-level coefficients, including <span class="math inline">\(\beta_2\)</span>, from the IPD and AgD studies jointly. It is the method that confronts the aggregation gap head on by computing it instead of ignoring it. <em>Data needed:</em> IPD and AgD modeled jointly, with the covariate distribution of every study.</li>
+</ul>
+<p>Each method, in its own idiom, supplies the conditional contrast and the target integration that <a href="#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a> and <a href="#thm-ecological-norecovery" class="quarto-xref">Theorem&nbsp;<span>16.2</span></a> prove are necessary. That is the sense in which the limits established in this chapter are not a dead end but a specification: they say exactly what a valid indirect comparison must compute, and the rest of the book is the construction and analysis of methods that compute it.</p>
+</section>
+<section id="sec-limits-notes" class="level2" data-number="16.7">
+<h2 data-number="16.7" class="anchored" data-anchor-id="sec-limits-notes"><span class="header-section-number">16.7</span> Notes and references</h2>
+<p>The failure-of-Bucher theorem and its bias decomposition <a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a> are result E.3 of the proof catalogue (<code>proofs/E_population_adjustment_theory.md</code>); the development here expands the catalogue’s one-line argument into the full statement with the vanishing and genuineness clauses, and frames it as the exact residual of <a href="14-bucher.html#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a> when marginal constancy is weakened to conditional constancy. The distinction between marginal and average-conditional relative effects, <a href="#def-conditional-marginal-contrast" class="quarto-xref">Definition&nbsp;<span>16.1</span></a>, and the role of direct collapsibility in collapsing the two, follow the estimand-based account of <span class="citation" data-cites="chandler2026transport">Chandler and Ishak (<a href="../../references.html#ref-chandler2026transport" role="doc-biblioref">2026</a>)</span> and the thesis of <span class="citation" data-cites="phillippo2019thesis">Phillippo (<a href="../../references.html#ref-phillippo2019thesis" role="doc-biblioref">2019</a>)</span>; the underlying collapsibility theory is Chapters 7 and 11 (<a href="../part1/07-glm.html#def-non-collapsibility" class="quarto-xref">Definition&nbsp;<span>7.7</span></a>, <a href="../part2/11-effect-modification-collapsibility.html#def-collapsibility" class="quarto-xref">Definition&nbsp;<span>11.6</span></a>, <a href="../part2/11-effect-modification-collapsibility.html#thm-noncollapsibility-or-hr" class="quarto-xref">Theorem&nbsp;<span>11.2</span></a>). The mechanism that only imbalanced effect modifiers, not prognostic variables, bias an anchored comparison (<a href="#cor-limits-pv-no-bias" class="quarto-xref">Corollary&nbsp;<span>16.1</span></a>) is the anchored-cancellation result whose algebraic core is machine-checked in the Coq development as <code>anchored_PV_cancellation</code> in <code>theories/EffectModifiers.v</code>; the same file’s <code>not_EM_does_not_imply_not_PV</code> underwrites the EM-versus-PV distinction of <a href="../part2/11-effect-modification-collapsibility.html#thm-emcoll-em-pv-distinct" class="quarto-xref">Theorem&nbsp;<span>11.1</span></a> used here. The identification of conditional constancy with the shared effect modifier assumption of <span class="citation" data-cites="phillippo2016tsd18">Phillippo et al. (<a href="../../references.html#ref-phillippo2016tsd18" role="doc-biblioref">2016</a>)</span> is the bridge from the book’s estimand language to the trial-methodology literature.</p>
+<p>Ecological bias is the classical ecological fallacy of <span class="citation" data-cites="phillippo2020mlnmr">Phillippo et al. (<a href="../../references.html#ref-phillippo2020mlnmr" role="doc-biblioref">2020</a>)</span> in the indirect-comparison setting; the closed-form probit shrinkage <a href="#eq-limits-b2" class="quarto-xref">Equation&nbsp;<span>16.12</span></a> is the Gaussian-integration identity that makes multilevel network meta-regression analytically tractable for the probit link, and the general statement that aggregating a nonlinear link is not the link of the aggregate is the motivation for ML-NMR’s integration step. The Gaussian probit integral <a href="#eq-limits-probit-integral" class="quarto-xref">Equation&nbsp;<span>16.10</span></a> is classical; the proof by an auxiliary independent normal is the standard device. The reduction of both ecological bias and non-collapsibility to a single Jensen gap (<a href="../part1/04-probability.html#thm-jensen" class="quarto-xref">Theorem&nbsp;<span>4.6</span></a>) for the inverse link, promoted here to <a href="#prp-limits-eco-noncollapse" class="quarto-xref">Proposition&nbsp;<span>16.3</span></a>, is the unifying observation of this chapter, and it is the reason <span class="citation" data-cites="phillippo2016tsd18">Phillippo et al. (<a href="../../references.html#ref-phillippo2016tsd18" role="doc-biblioref">2016</a>)</span> treats covariate adjustment on the correct scale as the central methodological requirement of a population-adjusted comparison. The definition of ecological bias (<a href="#def-ecological-bias" class="quarto-xref">Definition&nbsp;<span>16.2</span></a>) is given here for the book; it specializes the epidemiological notion to the affine-linear-predictor setting used throughout Parts IV and V.</p>
+<p>The chapter owns the slugs <code>thm-failure-of-bucher</code> (catalogue E.3) and <code>def-ecological-bias</code> (new). The pedagogical additions of this revision introduce the running example <a href="#exm-limits-psoriasis" class="quarto-xref">Example&nbsp;<span>16.1</span></a>, the binary-covariate special case <a href="#prp-limits-binary-bias" class="quarto-xref">Proposition&nbsp;<span>16.2</span></a> with <a href="#eq-limits-binary-bias" class="quarto-xref">Equation&nbsp;<span>16.5</span></a>, the coefficient-level ecological bias <a href="#eq-limits-coef-eb" class="quarto-xref">Equation&nbsp;<span>16.9</span></a>, and the unifying <a href="#prp-limits-eco-noncollapse" class="quarto-xref">Proposition&nbsp;<span>16.3</span></a>; none renames an existing label. The symbols <span class="math inline">\(\tilde d_{ab(\mathcal P)}\)</span> (average-conditional effect) and <span class="math inline">\(\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*})\)</span> (target average-conditional contrast) are used as in <a href="#def-conditional-marginal-contrast" class="quarto-xref">Definition&nbsp;<span>16.1</span></a> and <a href="#eq-limits-target" class="quarto-xref">Equation&nbsp;<span>16.4</span></a>; they are proposed additions to the notation chapter. The worked examples are self-contained and hand-verifiable; the probit example doubles as the simplest exact instance of the integral that Chapter 20 computes numerically in general.</p>
+</section>
+<section id="sec-limits-exercises" class="level2" data-number="16.8">
+<h2 data-number="16.8" class="anchored" data-anchor-id="sec-limits-exercises"><span class="header-section-number">16.8</span> Exercises</h2>
+<p>Exercises marked with a star (<span class="math inline">\(\star\)</span>) have complete worked solutions in Appendix F. The first two are warm-ups: do them before the computational and proof exercises that follow.</p>
+<div id="exr-limits-identify-em" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 16.1</strong></span> <strong>(Warm-up.) Spotting the effect modifier.</strong> Using the psoriasis stratum-risk table of <a href="#exm-limits-psoriasis" class="quarto-xref">Example&nbsp;<span>16.1</span></a>, (a) compute the two risk-difference contrasts <span class="math inline">\(\tau_{AC}(x)=\mu_C(x)-\mu_A(x)\)</span> and <span class="math inline">\(\tau_{BC}(x)=\mu_C(x)-\mu_B(x)\)</span> in each stratum, and confirm which of <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> and <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> is modified by prior exposure; (b) without computing the full bias, use the binary formula <a href="#eq-limits-binary-bias" class="quarto-xref">Equation&nbsp;<span>16.5</span></a> and the fact that <span class="math inline">\(p_{AC}=0.2&lt;p_{*}=0.5\)</span> to predict the <em>sign</em> of the Bucher bias; (c) say in one sentence which trial’s imbalance is harmless and why.</p>
+</div>
+<div id="exr-limits-interpret-se" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 16.2</strong></span> <strong>(Interpretation.) A narrow interval is not a safe interval.</strong> A colleague reports an indirect <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> odds ratio of <span class="math inline">\(1.08\)</span> with a <span class="math inline">\(95\%\)</span> confidence interval of <span class="math inline">\((1.02,1.14)\)</span> and concludes that <span class="math inline">\(B\)</span> is worse than <span class="math inline">\(A\)</span>. Explain, citing the mechanism of <a href="#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a> and the warning that the standard error is silent, why this narrow interval does not establish that the point estimate is unbiased. Name the one thing you would inspect to judge the risk of bias, and explain why, in the minimal anchored triangle, you cannot instead test for it from the trial outcomes.</p>
+</div>
+<div id="exr-limits-recompute-bias" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 16.3</strong></span> <strong>(Computation.) Recomputing a transitivity bias.</strong> A binary effect modifier <span class="math inline">\(X\)</span> acts on the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> contrast on the risk-difference scale with conditional contrasts <span class="math inline">\(\tau_{AC}(0)=0.05\)</span> and <span class="math inline">\(\tau_{AC}(1)=0.35\)</span>, while the <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> contrast is unmodified at <span class="math inline">\(\tau_{BC}\equiv0.10\)</span>. The prevalences are <span class="math inline">\(p_{AC}=0.3\)</span>, <span class="math inline">\(p_{BC}=0.6\)</span>, and <span class="math inline">\(p_{*}=0.5\)</span>. Compute the Bucher estimand, the target contrast <span class="math inline">\(\Delta^{\mathrm{Cond},\mathrm{id}}_{AB}(\mathcal P^{*})\)</span>, and the bias, and verify the bias through the decomposition <a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a> and again through the binary formula <a href="#eq-limits-binary-bias" class="quarto-xref">Equation&nbsp;<span>16.5</span></a>. State which contrast supplies the bias and why the imbalance in the other contrast is harmless.</p>
+</div>
+<div id="exr-limits-probit-recompute" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 16.4</strong></span> <strong>(Computation.) Probit attenuation with a smaller spread.</strong> Repeat the computation of <a href="#exm-limits-probit-eco" class="quarto-xref">Example&nbsp;<span>16.3</span></a> with within-trial variance <span class="math inline">\(\sigma^2=0.25\)</span> instead of <span class="math inline">\(\sigma^2=1\)</span>, keeping all other parameters. Compute the new ecological coefficient <span class="math inline">\(b_2\)</span> and the ecological bias <span class="math inline">\(b_2-\beta_2\)</span>, and verify that the attenuation is milder than at <span class="math inline">\(\sigma^2=1\)</span> but still present. Explain in one sentence why <span class="math inline">\(\sigma^2\to0\)</span> recovers <span class="math inline">\(\beta_2\)</span> and why that limit is unattainable in any real trial.</p>
+</div>
+<div id="exr-limits-jensen-sign" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 16.5</strong></span> <strong>(Computation.) Sign of the aggregation gap.</strong> For the log link, <span class="math inline">\(g(\mu)=\log\mu\)</span> and <span class="math inline">\(g^{-1}(\eta)=e^{\eta}\)</span>, show that the arm-level ecological bias <a href="#eq-ecological-bias" class="quarto-xref">Equation&nbsp;<span>16.8</span></a> is always negative (the plug-in arm mean understates the aggregate mean) for any non-degenerate covariate, and compute it exactly when <span class="math inline">\(\eta_t(X)\)</span> is normal with mean <span class="math inline">\(m\)</span> and variance <span class="math inline">\(v\)</span>. (Hint: <span class="math inline">\(\mathbb E[e^{\eta}]=e^{m+v/2}\)</span> by the lognormal mean; compare with <span class="math inline">\(e^{m}\)</span>.) Relate the multiplicative factor <span class="math inline">\(e^{v/2}\)</span> to the shrinkage factor of <a href="#eq-limits-b2" class="quarto-xref">Equation&nbsp;<span>16.12</span></a>.</p>
+</div>
+<div id="exr-limits-zero-bias-trap" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 16.6</strong></span> <strong>(Interpretation and proof.) A nonzero imbalance with zero bias.</strong> Construct conditional contrasts <span class="math inline">\(\tau_{AC}(\cdot)\)</span> on a binary covariate and prevalences <span class="math inline">\(p_{AC}\neq p_{*}\)</span> such that <span class="math inline">\(X\)</span> is a genuine effect modifier of <span class="math inline">\(A\)</span> versus <span class="math inline">\(C\)</span> yet the contribution <span class="math inline">\(b_{AC}\)</span> in <a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a> is exactly zero. (Hint: by <a href="#eq-limits-binary-bias" class="quarto-xref">Equation&nbsp;<span>16.5</span></a>, <span class="math inline">\(b_{AC}=s_{AC}(p_{AC}-p_{*})\)</span>; a jump <span class="math inline">\(s_{AC}\neq0\)</span> can still give <span class="math inline">\(b_{AC}=0\)</span> only if the prevalence difference vanishes, so revisit the hint: instead make the two population <em>means</em> of <span class="math inline">\(\tau_{AC}\)</span> coincide by a different route, using a covariate with more than two levels.) Explain why this does not contradict <a href="#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a>(2), and connect your example to the distinction between a class-wise and a contrast-wise necessity statement.</p>
+</div>
+<div id="exr-limits-logit-compound" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 16.7</strong></span> <strong>(Challenge.) Compounding with non-collapsibility.</strong> Reconsider <a href="#exm-limits-bucher-rd" class="quarto-xref">Example&nbsp;<span>16.2</span></a> but report the comparison on the logit (log odds-ratio) scale instead of the risk-difference scale, using the same stratum risks. Compute each trial’s <em>marginal</em> log odds-ratio <span class="math inline">\(d_{tC(\mathcal P_j)}=\operatorname{logit}(\bar\mu_t)-\operatorname{logit}(\bar\mu_C)\)</span> from the marginalized arm risks, the resulting Bucher estimand, and the target <em>average-conditional</em> log odds-ratio. Show that the total discrepancy now exceeds the <span class="math inline">\(-0.06\)</span> of the risk-difference analysis, and identify the two additive sources, the differential-effect-modification bias of <a href="#eq-limits-bias" class="quarto-xref">Equation&nbsp;<span>16.6</span></a> and the non-collapsibility gap of <a href="#prp-limits-collapse-link" class="quarto-xref">Proposition&nbsp;<span>16.1</span></a>(3). (Hint: compute the marginalized arm risks first, for example <span class="math inline">\(\bar\mu_C=(1-p)\mu_C(0)+p\,\mu_C(1)\)</span> in each trial, then take logits; the surcharge illustration of <a href="#sec-limits-surcharge" class="quarto-xref"><span>Section 16.3.1</span></a> is the same computation in miniature.)</p>
+</div>
+<div id="exr-limits-pv-cancellation" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 16.8</strong></span> <strong>(<span class="math inline">\(\star\)</span>) (Proof.) Prognostic variables cancel, effect modifiers do not.</strong> Let the covariate split as <span class="math inline">\(X=(V,W)\)</span> with <span class="math inline">\(V\)</span> an effect modifier and <span class="math inline">\(W\)</span> purely prognostic for the anchored contrast on scale <span class="math inline">\(g\)</span>, so that <span class="math inline">\(\tau^g_{tC}(v,w)=\tau^g_{tC}(v)\)</span> does not depend on <span class="math inline">\(w\)</span>. Suppose <span class="math inline">\(\mathcal P_{AC}\)</span>, <span class="math inline">\(\mathcal P_{BC}\)</span>, and <span class="math inline">\(\mathcal P^{*}\)</span> have arbitrary, mutually different joint distributions of <span class="math inline">\((V,W)\)</span>. Prove from <a href="#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a> that the Bucher bias depends only on the marginal distributions of <span class="math inline">\(V\)</span> across the three populations and is invariant to every difference in the distribution of <span class="math inline">\(W\)</span>, including differences in the dependence between <span class="math inline">\(V\)</span> and <span class="math inline">\(W\)</span>. Deduce that an anchored adjustment that balances <span class="math inline">\(V\)</span> alone is sufficient, and state precisely where the argument would break for an unanchored comparison built from absolute arm means rather than contrasts.</p>
+</div>
+<div id="exr-limits-general-attenuation" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 16.9</strong></span> <strong>(<span class="math inline">\(\star\)</span>) (Challenge.) Monotone attenuation for a general link.</strong> Let <span class="math inline">\(g^{-1}\)</span> be smooth and let each trial have <span class="math inline">\(X\sim\mathcal N(\bar x_j,\sigma^2)\)</span> with common <span class="math inline">\(\sigma^2\)</span>. Define the aggregate arm mean <span class="math inline">\(\bar\mu_t(\bar x)=\mathbb E[g^{-1}(a_t+\rho_t X)]\)</span> as a function of the trial mean <span class="math inline">\(\bar x\)</span>, and the aggregate link-scale contrast <span class="math inline">\(D(\bar x)=g(\bar\mu_1(\bar x))-g(\bar\mu_0(\bar x))\)</span>. Using a second-order Taylor expansion of <span class="math inline">\(g^{-1}\)</span> in <span class="math inline">\(\sigma^2\)</span>, show that the local ecological slope <span class="math inline">\(D'(\bar x)\)</span> equals the individual coefficient <span class="math inline">\(\beta_2=\rho_1-\rho_0\)</span> to zeroth order in <span class="math inline">\(\sigma^2\)</span> and acquires an <span class="math inline">\(O(\sigma^2)\)</span> correction governed by the curvature <span class="math inline">\((g^{-1})''\)</span> and the third derivative of <span class="math inline">\(g^{-1}\)</span>. Specialize to the probit and recover the leading-order term of <a href="#eq-limits-b2" class="quarto-xref">Equation&nbsp;<span>16.12</span></a> by expanding <span class="math inline">\(1/\sqrt{1+\rho^2\sigma^2}\)</span>. Comment on why a globally convex <span class="math inline">\(g^{-1}\)</span> does not guarantee attenuation toward zero for every parameter configuration, in contrast to the exact probit result. (Hint: start from <span class="math inline">\(\bar\mu_t(\bar x)=g^{-1}(\eta_t(\bar x))+\tfrac12(g^{-1})''(\eta_t(\bar x))\rho_t^2\sigma^2+O(\sigma^4)\)</span>, the Jensen gap of <a href="#lem-limits-aggregation-jensen" class="quarto-xref">Lemma&nbsp;<span>16.3</span></a> to second order.)</p>
+</div>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-chandler2026transport" class="csl-entry" role="listitem">
+Chandler, Conor, and K. Jack Ishak. 2026. <span>“Reframing Population-Adjusted Indirect Comparisons as a Transportability Problem: An Estimand-Based Perspective and Implications for Health Technology Assessment.”</span> <em>arXiv Preprint arXiv:2602.17041</em>.
+</div>
+<div id="ref-phillippo2016tsd18" class="csl-entry" role="listitem">
+Phillippo, David M., A. E. Ades, Sofia Dias, Stephen Palmer, Keith R. Abrams, and Nicky J. Welton. 2016. <em>NICE DSU Technical Support Document 18: Methods for Population-Adjusted Indirect Comparisons in Submissions to NICE</em>. Decision Support Unit, ScHARR, University of Sheffield.
+</div>
+<div id="ref-phillippo2019thesis" class="csl-entry" role="listitem">
+Phillippo, David Mark. 2019. <span>“Calibration of Treatment Effects in Network Meta-Analysis Using Individual Patient Data.”</span> PhD thesis, University of Bristol.
+</div>
+<div id="ref-phillippo2020mlnmr" class="csl-entry" role="listitem">
+Phillippo, David M., Sofia Dias, A. E. Ades, et al. 2020. <span>“Multilevel Network Meta-Regression for Population-Adjusted Treatment Comparisons.”</span> <em>Journal of the Royal Statistical Society: Series A</em> 183 (3): 1189–210. <a href="https://doi.org/10.1111/rssa.12579">https://doi.org/10.1111/rssa.12579</a>.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/choxos\.github\.io\/Mathematics-of-ITC\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../chapters/part3/15-network-meta-analysis.html" class="pagination-link" aria-label="Network Meta-Analysis: Models and Identifiability">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Network Meta-Analysis: Models and Identifiability</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../chapters/part4/17-population-adjustment-theory.html" class="pagination-link" aria-label="Population Adjustment Theory">
+        <span class="nav-page-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Population Adjustment Theory</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

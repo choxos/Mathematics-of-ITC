@@ -1,0 +1,1549 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>20&nbsp; Multilevel Network Meta-Regression I: The Aggregation Principle – The Mathematics of Indirect Treatment Comparisons</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../chapters/part5/21-mlnmr-discrete.html" rel="next">
+<link href="../../chapters/part4/19-stc.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-aafe154f14b83768199b70e6209de778.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/part5/20-mlnmr-aggregation.html">Part V: Multilevel Network Meta-Regression</a></li><li class="breadcrumb-item"><a href="../../chapters/part5/20-mlnmr-aggregation.html"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression I: The Aggregation Principle</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">The Mathematics of Indirect Treatment Comparisons</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/choxos/Mathematics-of-ITC" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../notation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Notation and Conventions</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part I: Mathematical Foundations</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/01-linear-algebra-i.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Linear Algebra I: Vector Spaces, Linear Maps, and Rank</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/02-linear-algebra-ii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Linear Algebra II: Orthogonality and the Projection Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/03-linear-algebra-iii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Linear Algebra III: Spectral Theory and Quadratic Forms</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/04-probability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Probability and Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/05-inference.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Statistical Inference</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/06-linear-regression.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Linear Regression from First Principles</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/07-glm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Generalized Linear Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/08-hierarchical-bayes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Hierarchical Models, Shrinkage, and Bayesian Inference</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Causal Inference and Estimands</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/09-potential-outcomes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Potential Outcomes and Identification</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/10-adjustment-methods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Adjustment Methods</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/11-effect-modification-collapsibility.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Effect Modification, Interaction, and Collapsibility</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/12-transportability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Transportability: The Estimand-Based Theory</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Meta-Analysis and Network Meta-Analysis</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/13-pairwise-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Pairwise Meta-Analysis</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/14-bucher.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Indirect Comparison and Bucher’s Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/15-network-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Network Meta-Analysis: Models and Identifiability</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/16-limits-of-nma.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">The Limits of Standard Network Meta-Analysis</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Population Adjustment: MAIC and STC</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/17-population-adjustment-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Population Adjustment Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/18-maic.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">Matching-Adjusted Indirect Comparison</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/19-stc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Simulated Treatment Comparison</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part V: Multilevel Network Meta-Regression</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/20-mlnmr-aggregation.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression I: The Aggregation Principle</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/21-mlnmr-discrete.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression II: Discrete Outcomes and Approximation Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/22-mlnmr-integration.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression III: Numerical Integration Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/23-mlnmr-estimands.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression IV: Estimands, Identifiability, and Generality</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/24-computation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Bayesian Computation and Diagnostics</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/25-general-likelihoods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">General Likelihoods: Survival and Ordered Categorical Outcomes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/26-ml-umr.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Multilevel Unanchored Meta-Regression</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part VI: Bias, Comparator Selection, and Rigor</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/27-distance-matching.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Aggregate-Level Covariate-Distance Matching</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/28-qba.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Quantitative Bias Analysis for Indirect Comparisons</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/29-simulation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Simulation Study Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/30-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Machine-Checked Foundations: The Coq Formalization</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/A-notation-glossary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Notation Glossary</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/B-matrix-calculus.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Matrix Calculus</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/C-distributions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">Probability Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/D-special-functions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">D</span>&nbsp; <span class="chapter-title">Special Functions for Numerical Integration</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/E-reference-implementations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">E</span>&nbsp; <span class="chapter-title">Reference Implementations: multinma, mlumr, and uitc</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/F-solutions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">F</span>&nbsp; <span class="chapter-title">Solutions to Selected Exercises</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/G-reading-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">G</span>&nbsp; <span class="chapter-title">Reading the Coq Proofs</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#sec-agg-intro" id="toc-sec-agg-intro" class="nav-link active" data-scroll-target="#sec-agg-intro"><span class="header-section-number">20.1</span> Introduction</a></li>
+  <li><a href="#sec-agg-running" id="toc-sec-agg-running" class="nav-link" data-scroll-target="#sec-agg-running"><span class="header-section-number">20.2</span> A running clinical example</a></li>
+  <li><a href="#sec-agg-setup" id="toc-sec-agg-setup" class="nav-link" data-scroll-target="#sec-agg-setup"><span class="header-section-number">20.3</span> The network and its covariate distributions</a></li>
+  <li><a href="#sec-agg-individual" id="toc-sec-agg-individual" class="nav-link" data-scroll-target="#sec-agg-individual"><span class="header-section-number">20.4</span> The individual-level model</a></li>
+  <li><a href="#sec-agg-aggregate" id="toc-sec-agg-aggregate" class="nav-link" data-scroll-target="#sec-agg-aggregate"><span class="header-section-number">20.5</span> The aggregate-level model</a></li>
+  <li><a href="#sec-agg-theorem" id="toc-sec-agg-theorem" class="nav-link" data-scroll-target="#sec-agg-theorem"><span class="header-section-number">20.6</span> The aggregation theorem</a></li>
+  <li><a href="#sec-agg-bias" id="toc-sec-agg-bias" class="nav-link" data-scroll-target="#sec-agg-bias"><span class="header-section-number">20.7</span> The aggregation-bias theorem</a>
+  <ul class="collapse">
+  <li><a href="#sec-agg-leading-bias" id="toc-sec-agg-leading-bias" class="nav-link" data-scroll-target="#sec-agg-leading-bias"><span class="header-section-number">20.7.1</span> The leading-order bias</a></li>
+  </ul></li>
+  <li><a href="#sec-agg-heat" id="toc-sec-agg-heat" class="nav-link" data-scroll-target="#sec-agg-heat"><span class="header-section-number">20.8</span> A unifying view: aggregation is heat flow</a></li>
+  <li><a href="#sec-agg-identity" id="toc-sec-agg-identity" class="nav-link" data-scroll-target="#sec-agg-identity"><span class="header-section-number">20.9</span> The identity link: exact aggregation</a></li>
+  <li><a href="#sec-agg-log" id="toc-sec-agg-log" class="nav-link" data-scroll-target="#sec-agg-log"><span class="header-section-number">20.10</span> The log link: a closed form through the moment generating function</a></li>
+  <li><a href="#sec-agg-logit" id="toc-sec-agg-logit" class="nav-link" data-scroll-target="#sec-agg-logit"><span class="header-section-number">20.11</span> The logit link: no elementary closed form</a></li>
+  <li><a href="#sec-agg-example" id="toc-sec-agg-example" class="nav-link" data-scroll-target="#sec-agg-example"><span class="header-section-number">20.12</span> A fully worked example</a>
+  <ul class="collapse">
+  <li><a href="#sec-agg-example-logit" id="toc-sec-agg-example-logit" class="nav-link" data-scroll-target="#sec-agg-example-logit"><span class="header-section-number">20.12.1</span> Logit link with a binary effect modifier</a></li>
+  <li><a href="#sec-agg-example-log" id="toc-sec-agg-example-log" class="nav-link" data-scroll-target="#sec-agg-example-log"><span class="header-section-number">20.12.2</span> Log link with a normal covariate</a></li>
+  </ul></li>
+  <li><a href="#sec-agg-noncollapse" id="toc-sec-agg-noncollapse" class="nav-link" data-scroll-target="#sec-agg-noncollapse"><span class="header-section-number">20.13</span> Aggregation bias and non-collapsibility</a></li>
+  <li><a href="#sec-agg-notes" id="toc-sec-agg-notes" class="nav-link" data-scroll-target="#sec-agg-notes"><span class="header-section-number">20.14</span> Notes and references</a></li>
+  <li><a href="#sec-agg-exercises" id="toc-sec-agg-exercises" class="nav-link" data-scroll-target="#sec-agg-exercises"><span class="header-section-number">20.15</span> Exercises</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/part5/20-mlnmr-aggregation.html">Part V: Multilevel Network Meta-Regression</a></li><li class="breadcrumb-item"><a href="../../chapters/part5/20-mlnmr-aggregation.html"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression I: The Aggregation Principle</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression I: The Aggregation Principle</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="sec-agg-intro" class="level2" data-number="20.1">
+<h2 data-number="20.1" class="anchored" data-anchor-id="sec-agg-intro"><span class="header-section-number">20.1</span> Introduction</h2>
+<p>Part IV gave two ways to repair the indirect comparison once one trial hands us individual patient data (IPD). Matching-adjusted indirect comparison (MAIC, Chapter 18) reweights the IPD trial so that its weighted covariate moments equal the aggregate comparator’s, then reads off the relative effect in the reweighted pseudo-population; simulated treatment comparison (STC, Chapter 19) fits an outcome regression to the IPD and predicts what its arms would do in the comparator’s covariate distribution. Both are <em>pairwise</em> repairs of a single Bucher triangle, both target the <em>comparator</em> population and no other, and both buy their cure with assumptions that are exact only on a linear scale. On a nonlinear link such as the logit or the log, matching covariate <em>means</em> and plugging those means into the model is not the same as averaging the model over the population: the difference is the ecological bias of <a href="../part3/16-limits-of-nma.html#def-ecological-bias" class="quarto-xref">Definition&nbsp;<span>16.2</span></a>, and it is the residue that <a href="../part3/16-limits-of-nma.html#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a> could not remove from aggregate data alone.</p>
+<p>This chapter opens Part V with the method that resolves all three limitations at once: multilevel network meta-regression (ML-NMR), introduced by <span class="citation" data-cites="phillippo2020mlnmr">Phillippo et al. (<a href="../../references.html#ref-phillippo2020mlnmr" role="doc-biblioref">2020</a>)</span> and <span class="citation" data-cites="phillippo2019thesis">Phillippo (<a href="../../references.html#ref-phillippo2019thesis" role="doc-biblioref">2019</a>)</span>. The idea is a single change of viewpoint. Instead of repairing one triangle at a time, write <em>one</em> individual-level outcome model for the whole network, with study baselines, prognostic main effects, and treatment-by-covariate effect modifiers (the <strong>individual model</strong>, <a href="#def-individual-model" class="quarto-xref">Definition&nbsp;<span>20.1</span></a>). Every study, whether it reports IPD or only summaries, is a sample from this one model restricted to its own covariate distribution. For a study that reports only aggregate data (AgD), the quantity we can predict is not an individual outcome but a <em>study average</em>, and the correct study average is obtained by integrating the individual model over that study’s covariate distribution (the <strong>aggregate model</strong>, <a href="#def-aggregate-model" class="quarto-xref">Definition&nbsp;<span>20.2</span></a>). The bridge between the two levels is the <strong>aggregation theorem</strong> (<a href="#thm-aggregation" class="quarto-xref">Theorem&nbsp;<span>20.1</span></a>): the mean outcome of an AgD arm is the integral of the inverse link of the linear predictor against the covariate density, <span class="math display">\[
+\theta_{\bullet jk}=\int_{\mathcal X} g^{-1}\!\big(\eta_{jk}(\mathbf x)\big)\,f_j(\mathbf x)\,d\mathbf x .
+\]</span> This single identity is the whole of ML-NMR’s claim to coherence. IPD studies contribute their patients one by one, with no integration because each covariate vector is observed; AgD studies contribute through the integral, with the covariate distribution standing in for the individuals we cannot see. The two contributions enter one likelihood and estimate one set of parameters.</p>
+<p>The aggregation theorem also explains, in one line, why everyone before us was biased. If you do the cheap thing and plug the <em>mean</em> covariate into the model, you compute <span class="math inline">\(g^{-1}(\eta_{jk}(\bar{\mathbf x}_j))\)</span>, the inverse link <em>of the average</em>; the correct quantity is the <em>average of the inverse link</em>. Because <span class="math inline">\(g^{-1}\)</span> is nonlinear, Jensen’s inequality (<a href="../part1/04-probability.html#thm-jensen" class="quarto-xref">Theorem&nbsp;<span>4.6</span></a>) separates the two, and the gap is exactly the ecological bias (<a href="#thm-aggregation-bias" class="quarto-xref">Theorem&nbsp;<span>20.2</span></a>). ML-NMR removes that gap not by an approximation but by performing the integral. The remainder of the chapter studies the integral itself across the three links that organize the applied literature. On the identity link the inverse link is affine, the integral is the mean, and aggregation is <em>exact</em>: there is nothing to integrate and ML-NMR collapses to ordinary meta-regression on covariate means (<a href="#thm-identity-link-exact" class="quarto-xref">Theorem&nbsp;<span>20.3</span></a>). On the log link with normally distributed covariates the integral is the moment generating function of a normal (<a href="../part1/04-probability.html#def-mgf" class="quarto-xref">Definition&nbsp;<span>4.7</span></a>), which we know in closed form, and the aggregate mean is an explicit exponential (<a href="#thm-log-link-mgf" class="quarto-xref">Theorem&nbsp;<span>20.4</span></a>). On the logit link the integral is the mean of a logit-normal, which has <em>no</em> elementary closed form (<a href="#thm-logit-no-closed-form" class="quarto-xref">Theorem&nbsp;<span>20.5</span></a>); this is the obstruction that forces the quasi-Monte Carlo machinery of Chapter 22. An optional unifying lemma (<a href="#lem-agg-heat-flow" class="quarto-xref">Lemma&nbsp;<span>20.2</span></a>, developed in <a href="#sec-agg-heat" class="quarto-xref"><span>Section 20.8</span></a>) shows that all three cases are one object viewed three ways: the aggregate mean is the inverse link smoothed by the heat semigroup, and the three links differ only in whether that smoothing has a closed form.</p>
+<p>We close with a fully worked numerical example, computable by hand on a calculator, that contrasts the naive plug-in aggregate mean with the integrated one on the logit scale, exhibits the sign reversal of the bias between a low-risk and a high-risk arm, and reads off the resulting distortion of the marginal odds ratio. The chapter owns results H.1 to H.7 of the proof catalogue. Throughout, <span class="math inline">\(g\)</span> is the link function of <a href="../part1/07-glm.html#def-link-function" class="quarto-xref">Definition&nbsp;<span>7.2</span></a>, <span class="math inline">\(\eta_{jk}\)</span> the study-<span class="math inline">\(j\)</span>, arm-<span class="math inline">\(k\)</span> linear predictor, <span class="math inline">\(f_j\)</span> the study-<span class="math inline">\(j\)</span> covariate density, and <span class="math inline">\(\boldsymbol\xi\)</span> the full parameter vector, all as in <a href="../../notation.html">Notation</a>. Later chapters of Part V build on this foundation: discrete outcomes and the approximation theory (Chapter 21), numerical integration by copulas and low-discrepancy sequences (Chapter 22), target-population estimands, identifiability, and the sense in which ML-NMR generalizes standard network meta-analysis (Chapter 23), Bayesian computation (Chapter 24), general likelihoods (Chapter 25), and the unanchored extension ML-UMR (Chapter 26).</p>
+</section>
+<section id="sec-agg-running" class="level2" data-number="20.2">
+<h2 data-number="20.2" class="anchored" data-anchor-id="sec-agg-running"><span class="header-section-number">20.2</span> A running clinical example</h2>
+<p>Before any formalism, fix a concrete picture to carry through the chapter. It is deliberately small, and every abstract object introduced below will be pointed back to it.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>The plaque psoriasis network (running example).</strong> Suppose a health technology assessment (HTA) body must choose between two active drugs for moderate-to-severe plaque psoriasis: treatment <span class="math inline">\(B\)</span>, a new interleukin-17 (IL-17) inhibitor, and treatment <span class="math inline">\(C\)</span>, an established competitor. The outcome is <strong>PASI 75</strong>, a binary success indicator equal to <span class="math inline">\(1\)</span> if a patient achieves a <span class="math inline">\(75\%\)</span> reduction in the Psoriasis Area and Severity Index by week 12 and <span class="math inline">\(0\)</span> otherwise. No trial compares <span class="math inline">\(B\)</span> against <span class="math inline">\(C\)</span> directly. Instead:</p>
+<ul>
+<li>an <strong>IPD trial</strong> randomizes patients to placebo <span class="math inline">\(A\)</span> and the new drug <span class="math inline">\(B\)</span>, and reports every patient’s covariates and outcome, including whether the patient is <em>biologic-naive</em> (has never taken a biologic drug) or <em>biologic-experienced</em>;</li>
+<li>an <strong>AgD trial</strong> randomizes patients to placebo <span class="math inline">\(A\)</span> and the competitor <span class="math inline">\(C\)</span>, but reports only arm-level summaries: how many patients in each arm achieved PASI 75, the arm sizes, and the mean and standard deviation of the covariates.</li>
+</ul>
+<p>The analyst wants the relative effect of <span class="math inline">\(B\)</span> versus <span class="math inline">\(C\)</span> in a chosen target population. This is the anchored indirect comparison of Part III (both trials share the placebo anchor <span class="math inline">\(A\)</span>), now with a mix of individual and aggregate evidence. Two features of the outcome drive everything. First, PASI 75 response depends on covariates: biologic-naive patients respond more often, and the IL-17 inhibitor <span class="math inline">\(B\)</span> works especially well in them, so <em>biologic-naive status is an effect modifier</em> of the <span class="math inline">\(B\)</span>-versus-placebo contrast. Second, because the outcome is binary, the natural model is logistic regression, whose link is nonlinear; and it is exactly on a nonlinear link that “average the patients, then predict” and “predict at the average patient” come apart. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>Why insist on a <em>population-averaged</em> (marginal) answer rather than the effect at some typical patient? Because that is what the decision maker buys. An HTA body reimburses a drug for a whole target population and wants the average response it will produce there; it does not want the response of a hypothetical patient whose every covariate sits exactly at the population mean, a patient who may not exist. The estimand of interest is therefore the <em>marginal</em> effect in the target population, and the central technical question of this chapter is how to compute an arm’s marginal response from an individual-level model. (The choice of target population, and the precise estimand, are the subject of Chapter 23; here the target is simply each AgD study’s own population.)</p>
+<p>What ML-NMR does with the two trials is asymmetric, and the asymmetry is the whole method. For the IPD trial it uses each patient one at a time: it reads that patient’s covariates, forms the predicted response, and compares it with the observed outcome. For the AgD trial it cannot do this, because it never sees an individual patient’s covariates; it sees only that (say) <span class="math inline">\(37\)</span> of <span class="math inline">\(100\)</span> patients on arm <span class="math inline">\(C\)</span> responded, together with the arm’s covariate summaries. So it must predict the arm’s <em>average</em> response, and the correct average is obtained by running the individual model across the whole spread of covariates in that arm and averaging the predictions. That spread of covariates is the study’s <strong>case mix</strong>, written <span class="math inline">\(f_j\)</span> below. For the AgD trial the case mix is not observed patient-by-patient; it is reconstructed from the reported means, standard deviations, and (where available) correlations. We treat that reconstruction as given for now and return to it in Chapter 22; the reader should simply hold the picture that <span class="math inline">\(f_j\)</span> is “the distribution of patient types in study <span class="math inline">\(j\)</span>.”</p>
+<p>By the end of the chapter we will compute, for a single AgD study of this kind, that plugging the mean covariate into the logistic model reports a <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> odds ratio inflated by about <span class="math inline">\(8\%\)</span> relative to the correct integrated value, a distortion produced entirely by predicting at the average patient instead of averaging over patients. Everything between here and there is the machinery that makes that statement precise and general.</p>
+</section>
+<section id="sec-agg-setup" class="level2" data-number="20.3">
+<h2 data-number="20.3" class="anchored" data-anchor-id="sec-agg-setup"><span class="header-section-number">20.3</span> The network and its covariate distributions</h2>
+<p>We fix the data structure for the whole of Part V.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>The mixed network.</strong> A network comprises <span class="math inline">\(J\)</span> studies indexed by <span class="math inline">\(j\)</span> and <span class="math inline">\(K\)</span> treatments indexed by <span class="math inline">\(k\)</span>. Study <span class="math inline">\(j\)</span> randomizes patients to a subset of the treatments (its <em>arms</em>); we write <span class="math inline">\(k\)</span> for an arm and reuse <span class="math inline">\(k\)</span> for the treatment given on that arm, the network being connected in the sense of Chapter 15 so that every treatment is reachable. Each study is one of two kinds. An <strong>IPD study</strong> reports, for every patient <span class="math inline">\(i\)</span> on arm <span class="math inline">\(k\)</span>, the baseline covariate vector <span class="math inline">\(\mathbf x_{ijk}\in\mathbb R^d\)</span>, the arm, and the outcome <span class="math inline">\(Y_{ijk}\)</span>. An <strong>AgD study</strong> reports only summaries: arm sizes <span class="math inline">\(n_{jk}\)</span>, an outcome summary per arm (an event count, a sample mean, a Kaplan-Meier curve), and enough covariate information to pin down a covariate distribution, typically the per-covariate means and standard deviations and, with luck, a correlation matrix. The covariate distribution of study <span class="math inline">\(j\)</span> is a probability density <span class="math inline">\(f_j\)</span> on the covariate space <span class="math inline">\(\mathcal X\subseteq\mathbb R^d\)</span>, with distribution function <span class="math inline">\(F_j\)</span>, mean <span class="math inline">\(\bar{\mathbf x}_j=\int_{\mathcal X}\mathbf x\,f_j(\mathbf x)\,d\mathbf x\)</span>, and covariance <span class="math inline">\(\boldsymbol\Sigma_j\)</span>. For an IPD study <span class="math inline">\(f_j\)</span> is the empirical distribution of the observed covariates, known exactly; for an AgD study <span class="math inline">\(f_j\)</span> must be reconstructed from the reported marginal summaries and a dependence assumption, the construction we postpone to Chapter 22. Discrete covariates replace the density <span class="math inline">\(f_j\)</span> by a probability mass function and the integral by a sum throughout, with no change to any statement of this chapter. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>The phrase “covariate distribution of a study” deserves a word, because it is where ML-NMR parts company with the per-patient potential-outcomes language of Part II. We treat the covariate vector of a randomly drawn patient in study <span class="math inline">\(j\)</span> as a random variable <span class="math inline">\(X\)</span> with law <span class="math inline">\(f_j\)</span>, and we treat the outcome model as fixed across the network. The randomness in an AgD summary then has two sources: the sampling of covariates from <span class="math inline">\(f_j\)</span> and the conditional sampling of outcomes given covariates. Integrating out the first source is precisely the aggregation operation. We make this explicit now.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>What is known about <span class="math inline">\(f_j\)</span>, and what is reconstructed.</strong> For an IPD study <span class="math inline">\(f_j\)</span> is not modeled at all: it is the observed empirical distribution of the covariates, so any average against <span class="math inline">\(f_j\)</span> is just a sample average over the actual patients. For an AgD study <span class="math inline">\(f_j\)</span> is a genuine modeling assumption. A trial that reports only the mean and standard deviation of age and of body-mass index pins down each covariate’s <em>marginal</em> distribution (often taken normal, or a suitable bounded law), but says nothing about how the covariates co-vary. To get the <em>joint</em> case mix <span class="math inline">\(f_j\)</span> one must supply the missing dependence, typically by assuming a Gaussian copula (Chapter 22) with a correlation borrowed from the IPD study or from external data, for instance a correlation of <span class="math inline">\(0.3\)</span> between age and body-mass index. This is real modeling with real uncertainty, and it is the price an AgD study pays for not releasing its patients. We carry <span class="math inline">\(f_j\)</span> as given throughout this chapter and treat its construction, and the sensitivity of the answer to it, in Chapter 22. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-agg-individual" class="level2" data-number="20.4">
+<h2 data-number="20.4" class="anchored" data-anchor-id="sec-agg-individual"><span class="header-section-number">20.4</span> The individual-level model</h2>
+<p>The model is the IPD network meta-regression of Chapter 17 written for an arbitrary number of studies and treatments. Its only novelty relative to that chapter is the use to which we put it: it will be the <em>common</em> model from which both IPD and AgD likelihoods descend.</p>
+<div id="def-individual-model" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 20.1 (The ML-NMR individual-level model)</strong></span> Fix a link function <span class="math inline">\(g\)</span> (<a href="../part1/07-glm.html#def-link-function" class="quarto-xref">Definition&nbsp;<span>7.2</span></a>) with inverse <span class="math inline">\(g^{-1}\)</span>. For individual <span class="math inline">\(i\)</span> in study <span class="math inline">\(j\)</span> on arm <span class="math inline">\(k\)</span> with covariate vector <span class="math inline">\(\mathbf x\in\mathcal X\)</span>, the <strong>individual-level model</strong> specifies the conditional mean outcome <span class="math inline">\(\theta_{ijk}=\mathbb E[Y_{ijk}\mid X=\mathbf x,\,\text{arm }k]\)</span> through the linear predictor <span id="eq-agg-individual-model"><span class="math display">\[
+g(\theta_{ijk})=\eta_{jk}(\mathbf x)
+:=\mu_j+\mathbf x^\top\boldsymbol\beta_1+\mathbf x^\top\boldsymbol\beta_{2,k}+\gamma_k ,
+\tag{20.1}\]</span></span> where <span class="math display">\[
+\mu_j\ \text{is the study-}j\text{ baseline},\quad
+\boldsymbol\beta_1\ \text{prognostic main effects},\quad
+\boldsymbol\beta_{2,k}\ \text{effect-modifier interactions},\quad
+\gamma_k\ \text{the treatment effect},
+\]</span> subject to the reference-treatment constraints <span class="math inline">\(\boldsymbol\beta_{2,1}=\mathbf 0\)</span> and <span class="math inline">\(\gamma_1=0\)</span> for the network reference treatment <span class="math inline">\(k=1\)</span>. Conditional on the covariate and the arm, outcomes are drawn independently from an outcome family <span class="math inline">\(\pi_{\mathrm{Ind}}\)</span> (the conditional distribution of the outcome given its mean; for PASI 75 this is the Bernoulli or binomial law, for a count the Poisson, for a continuous measurement the normal) with mean <span class="math inline">\(\theta_{ijk}\)</span> and possible dispersion parameter <span class="math inline">\(\boldsymbol\phi\)</span>, <span class="math display">\[
+Y_{ijk}\mid X=\mathbf x,\ \text{arm }k\ \sim\ \pi_{\mathrm{Ind}}\!\big(g^{-1}(\eta_{jk}(\mathbf x)),\,\boldsymbol\phi\big).
+\]</span> The full parameter vector is <span class="math inline">\(\boldsymbol\xi=\big(\{\mu_j\}_{j=1}^J,\ \boldsymbol\beta_1,\ \{\boldsymbol\beta_{2,k}\}_{k=2}^K,\ \{\gamma_k\}_{k=2}^K,\ \boldsymbol\phi\big)\)</span>. We write <span class="math inline">\(\boldsymbol\beta_{\mathrm{tot},k}:=\boldsymbol\beta_1+\boldsymbol\beta_{2,k}\)</span> for the <strong>total covariate slope</strong> on arm <span class="math inline">\(k\)</span>, so that <span class="math inline">\(\eta_{jk}(\mathbf x)=\mu_j+\gamma_k+\mathbf x^\top\boldsymbol\beta_{\mathrm{tot},k}\)</span> is affine in <span class="math inline">\(\mathbf x\)</span> (affine means linear plus a constant: a straight-line function of <span class="math inline">\(\mathbf x\)</span>, with no squared or self-interaction terms, so that its average equals its value at the average covariate). <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Reading the four terms.</strong> The decomposition <a href="#eq-agg-individual-model" class="quarto-xref">Equation&nbsp;<span>20.1</span></a> is the GLM linear predictor of <a href="../part1/07-glm.html#def-link-function" class="quarto-xref">Definition&nbsp;<span>7.2</span></a> organized by causal role. The baseline <span class="math inline">\(\mu_j\)</span> is a study-specific intercept; it absorbs the prognostic level of study <span class="math inline">\(j\)</span> and is treated either as a free fixed effect or, in a random-effects version, as exchangeable across studies (<a href="../part1/08-hierarchical-bayes.html#def-random-effects" class="quarto-xref">Definition&nbsp;<span>8.3</span></a>, <a href="../part1/08-hierarchical-bayes.html#def-exchangeability" class="quarto-xref">Definition&nbsp;<span>8.1</span></a>). The prognostic slope <span class="math inline">\(\boldsymbol\beta_1\)</span> multiplies the covariate the <em>same way on every arm</em>: it shifts the outcome level but cancels from any within-study contrast, so it is <em>not</em> an effect modifier. The interaction <span class="math inline">\(\boldsymbol\beta_{2,k}\)</span> multiplies the covariate <em>differently across arms</em>: it bends the conditional treatment contrast and is therefore the effect modification of <a href="../part2/11-effect-modification-collapsibility.html#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a>. The treatment effect <span class="math inline">\(\gamma_k\)</span> is the arm-<span class="math inline">\(k\)</span>-versus-reference contrast at <span class="math inline">\(\mathbf x=\mathbf 0\)</span>. The shared effect modifier assumption (<a href="../part4/17-population-adjustment-theory.html#def-sema" class="quarto-xref">Definition&nbsp;<span>17.6</span></a>) is the structural hypothesis <span class="math inline">\(\boldsymbol\beta_{2,k}\)</span> shared across the treatments being compared; it is what makes the network identifiable from a mix of IPD and AgD, a matter we take up in Chapter 23. The whole apparatus reduces to standard network meta-analysis when <span class="math inline">\(\boldsymbol\beta_1=\mathbf 0\)</span> and every <span class="math inline">\(\boldsymbol\beta_{2,k}=\mathbf 0\)</span>, and to IPD network meta-regression when every study reports IPD; both reductions are proved in Chapter 23. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Clinical translation of the model terms.</strong> For the running example, with the single covariate <span class="math inline">\(x=\)</span> biologic-naive status, the four terms read as follows.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Symbol</th>
+<th>Name</th>
+<th>Plain meaning in the running example</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\mu_j\)</span></td>
+<td>study baseline</td>
+<td>log-odds of PASI 75 in study <span class="math inline">\(j\)</span> for a placebo patient at <span class="math inline">\(\mathbf x=\mathbf 0\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\gamma_k\)</span></td>
+<td>treatment effect</td>
+<td>how much arm <span class="math inline">\(k\)</span> shifts the log-odds versus placebo, at <span class="math inline">\(\mathbf x=\mathbf 0\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\boldsymbol\beta_1\)</span></td>
+<td>prognostic effect</td>
+<td>how biologic-naive status shifts response <em>the same way on every arm</em></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\boldsymbol\beta_{2,k}\)</span></td>
+<td>effect modification</td>
+<td>how biologic-naive status shifts the <em>benefit</em> of arm <span class="math inline">\(k\)</span> specifically</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(f_j\)</span></td>
+<td>case mix</td>
+<td>the fraction of biologic-naive versus experienced patients in study <span class="math inline">\(j\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>The distinction between the two slopes is the whole reason effect modification matters. Suppose biologic-naive patients respond better <em>whatever they take</em>: that is a prognostic effect, carried by <span class="math inline">\(\boldsymbol\beta_1\)</span>, and it raises both arms equally, so it cancels from the <span class="math inline">\(B\)</span>-minus-placebo contrast. Now suppose instead that being biologic-naive makes the IL-17 inhibitor <span class="math inline">\(B\)</span> work <em>even better</em> than it makes placebo look: that is effect modification, carried by <span class="math inline">\(\boldsymbol\beta_{2,B}\)</span>, and it does <em>not</em> cancel from the contrast. A study with more biologic-naive patients will then report a larger <span class="math inline">\(B\)</span>-versus-placebo effect, purely through its case mix. That is why an indirect comparison across studies with different case mixes needs the covariate model at all.</p>
+<p>The constraints <span class="math inline">\(\boldsymbol\beta_{2,1}=\mathbf 0\)</span> and <span class="math inline">\(\gamma_1=0\)</span> are <strong>identifiability conventions</strong>, not clinical claims. They fix the reference treatment <span class="math inline">\(k=1\)</span> as the origin against which the others are measured, exactly as a regression with a categorical predictor drops one level as its baseline. They do not assert that the reference treatment has no biological effect or no effect modification; they only say that the <em>other</em> treatments are measured relative to it. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>This is result H.1 of the proof catalogue (corresponds to H.1; Phillippo et al.&nbsp;2020, Eq. 2; Phillippo 2019, Eq. 4.1b).</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Why a shared effect modifier assumption is needed (preview).</strong> The interaction <span class="math inline">\(\boldsymbol\beta_{2,k}\)</span> is the one thing an AgD study cannot see directly: an AgD study reports one number per arm, so it cannot reveal how outcome varies with covariate <em>within</em> an arm. Only an IPD study exposes that within-study slope. ML-NMR can still use AgD studies to help estimate effect modification, but only under the <strong>shared effect modifier assumption</strong> (SEMA, <a href="../part4/17-population-adjustment-theory.html#def-sema" class="quarto-xref">Definition&nbsp;<span>17.6</span></a>): the interaction coefficients <span class="math inline">\(\boldsymbol\beta_{2,k}\)</span> are the same across studies, because they attach to the treatment, not to the study. Under SEMA the IPD trial estimates <span class="math inline">\(\boldsymbol\beta_{2,B}\)</span>, and the AgD trial’s case mix <span class="math inline">\(f_j\)</span> then tells us how much of its reported effect is explained by that same interaction, which is what links the two into one estimable model. If SEMA fails, say the IL-17 inhibitor’s effect modification by biologic-naive status differs between the IPD and AgD populations, then the AgD study’s single summary per arm cannot separate a genuine treatment effect from a case-mix artifact, and the indirect comparison is not identified from aggregate data alone. This is the same identification wall that Chapter 16 hit for standard NMA; ML-NMR does not repeal it, it makes the assumption explicit and testable wherever IPD overlaps. The full identifiability analysis is Chapter 23. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-agg-aggregate" class="level2" data-number="20.5">
+<h2 data-number="20.5" class="anchored" data-anchor-id="sec-agg-aggregate"><span class="header-section-number">20.5</span> The aggregate-level model</h2>
+<p>An AgD study reports an arm average, not individual outcomes. The model for that average must be a function of the parameters <span class="math inline">\(\boldsymbol\xi\)</span> and the study covariate distribution <span class="math inline">\(f_j\)</span>, and the right function is the one that respects the level at which the nonlinearity acts.</p>
+<div id="def-aggregate-model" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 20.2 (The ML-NMR aggregate-level model)</strong></span> For an AgD study <span class="math inline">\(j\)</span> on arm <span class="math inline">\(k\)</span> with covariate density <span class="math inline">\(f_j\)</span>, the <strong>aggregate-level mean outcome</strong> is the average over the covariate distribution of the response-scale conditional mean, <span id="eq-agg-aggregate-mean"><span class="math display">\[
+\theta_{\bullet jk}:=\int_{\mathcal X} g^{-1}\!\big(\eta_{jk}(\mathbf x)\big)\,f_j(\mathbf x)\,d\mathbf x ,
+\tag{20.2}\]</span></span> the bullet subscript <span class="math inline">\(\bullet\)</span> denoting the average over individuals. Read <span class="math inline">\(\theta_{\bullet jk}\)</span> as “the dot-mean”: it is the model-predicted arm-level response (an event risk, a mean, or a rate) for study <span class="math inline">\(j\)</span> and arm <span class="math inline">\(k\)</span> after averaging over that study’s case mix, and the bullet marks the individual index that has been averaged away. The reported arm summary is modeled by an aggregate outcome family with this mean, <span class="math display">\[
+\text{summary}_{jk}\ \sim\ \pi_{\mathrm{Agg}}\!\big(\theta_{\bullet jk},\,n_{jk}\big),
+\]</span> for example <span class="math inline">\(\mathrm{Bin}(n_{jk},\theta_{\bullet jk})\)</span> for a binary event count, the appropriate normal law for a continuous sample mean, or a count model for an event rate. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>One statistical point deserves to be said in the main text rather than buried, because most readers meet ML-NMR through binary outcomes. For a binary outcome the arm’s event count is a sum of <span class="math inline">\(n_{jk}\)</span> patient-level Bernoulli draws whose success probabilities <span class="math inline">\(g^{-1}(\eta_{jk}(\mathbf x_i))\)</span> <em>differ from patient to patient</em>, since the covariates differ. A sum of non-identical Bernoulli variables is a Poisson-binomial random variable (<a href="../part1/04-probability.html#def-poisson-binomial" class="quarto-xref">Definition&nbsp;<span>4.11</span></a>), not a binomial; the binomial law <span class="math inline">\(\mathrm{Bin}(n_{jk},\theta_{\bullet jk})\)</span> used in <a href="#def-aggregate-model" class="quarto-xref">Definition&nbsp;<span>20.2</span></a> therefore replaces those varying probabilities by their common average <span class="math inline">\(\theta_{\bullet jk}\)</span> and is, strictly, an approximation. It is an excellent approximation when the probabilities do not vary wildly across the arm, and Chapter 21 quantifies exactly when it is safe; we flag it now so the reader knows from the outset that the “right” aggregate law for binary data is not quite the binomial they might expect.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Integrate the response scale, not the link scale.</strong> The single decision that defines ML-NMR is <em>where</em> the inverse link is applied. Equation <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> applies <span class="math inline">\(g^{-1}\)</span> to the linear predictor at each covariate value and <em>then</em> averages; it does not average the linear predictor and then apply <span class="math inline">\(g^{-1}\)</span>. The two operations agree only when <span class="math inline">\(g^{-1}\)</span> is affine. For every other link they differ by the ecological bias of <a href="../part3/16-limits-of-nma.html#def-ecological-bias" class="quarto-xref">Definition&nbsp;<span>16.2</span></a>, and the order in <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> is the order that matches the data-generating process, because the data are generated patient by patient at the response scale and only then summed. The choice of <span class="math inline">\(\pi_{\mathrm{Agg}}\)</span> is a separate modeling step; for binary outcomes the exact law of the event count is a Poisson binomial (<a href="../part1/04-probability.html#def-poisson-binomial" class="quarto-xref">Definition&nbsp;<span>4.11</span></a>) rather than a binomial, and the discrepancy and its control are the subject of Chapter 21. In this chapter we study the mean <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a>, which all choices of <span class="math inline">\(\pi_{\mathrm{Agg}}\)</span> share. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>A first taste of the gap, in one line of arithmetic.</strong> Take a single arm of the running example whose patients split evenly into two covariate groups, and suppose the individual model gives a PASI 75 response probability of <span class="math inline">\(0.60\)</span> for the biologic-naive half and <span class="math inline">\(0.10\)</span> for the biologic-experienced half. The arm’s true average response is the <em>average of the two risks</em>, <span class="math display">\[
+\theta_\bullet=\tfrac12(0.60)+\tfrac12(0.10)=0.35 .
+\]</span> The naive alternative summarizes the arm by its average log-odds and converts back. The two log-odds are <span class="math inline">\(\mathrm{logit}(0.60)=0.405\)</span> and <span class="math inline">\(\mathrm{logit}(0.10)=-2.197\)</span>, their average is <span class="math inline">\(-0.896\)</span>, and <span class="math display">\[
+\theta^{\mathrm{naive}}=\mathrm{expit}(-0.896)=0.290 .
+\]</span> The true arm response is <span class="math inline">\(35\%\)</span>; the plug-in reports <span class="math inline">\(29\%\)</span>. The six-percentage-point gap is pure Jensen inequality: averaging on the risk scale is not the same as averaging on the log-odds scale and converting back. This tiny sum is the whole chapter in miniature. The theorems below say when the gap is zero (identity link), when it has a closed form (log link), when it changes sign (logit), and how it distorts a treatment contrast. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Response scale versus link scale, by outcome type.</strong> The order-of-operations warning is easiest to hold onto through the three outcome types a reader will actually meet. The <em>response scale</em> is where the outcome lives (a risk, a rate, a mean); the <em>link scale</em> is where the model is linear (log-odds, log-rate, or the mean itself). Aggregation must average on the response scale.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Outcome type</th>
+<th>Example endpoint</th>
+<th>Response scale <span class="math inline">\(\theta\)</span></th>
+<th>Link scale <span class="math inline">\(\eta\)</span></th>
+<th>Link <span class="math inline">\(g\)</span></th>
+<th>Aggregation</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Continuous</td>
+<td>change in PASI score, blood pressure</td>
+<td>mean</td>
+<td>mean</td>
+<td>identity</td>
+<td>exact (<a href="#sec-agg-identity" class="quarto-xref"><span>Section 20.9</span></a>)</td>
+</tr>
+<tr class="even">
+<td>Count or rate</td>
+<td>exacerbations or relapses per year</td>
+<td>rate</td>
+<td>log-rate</td>
+<td>log</td>
+<td>closed form under normal covariates (<a href="#sec-agg-log" class="quarto-xref"><span>Section 20.10</span></a>)</td>
+</tr>
+<tr class="odd">
+<td>Binary</td>
+<td>PASI 75 response, mortality</td>
+<td>risk (probability)</td>
+<td>log-odds</td>
+<td>logit</td>
+<td>numerical only (<a href="#sec-agg-logit" class="quarto-xref"><span>Section 20.11</span></a>)</td>
+</tr>
+</tbody>
+</table>
+<p>The three rows are the three sections that close the chapter, and the last column is their punchline: the more the response scale bends away from the link scale, the more aggregation costs, from nothing on the identity link to an unavoidable numerical integral on the logit. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>This is result H.2 of the proof catalogue (corresponds to H.2; Phillippo 2019, Eq. 4.1d).</p>
+</section>
+<section id="sec-agg-theorem" class="level2" data-number="20.6">
+<h2 data-number="20.6" class="anchored" data-anchor-id="sec-agg-theorem"><span class="header-section-number">20.6</span> The aggregation theorem</h2>
+<p>We now prove that <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> is forced, not chosen: it is the mean of the marginal outcome of an AgD patient, and the AgD likelihood is built from the same integral. The argument is elementary, resting only on the chain rule for densities, Fubini’s theorem (<a href="../part1/04-probability.html#thm-fubini-tonelli" class="quarto-xref">Theorem&nbsp;<span>4.8</span></a>), and the tower property (<a href="../part1/04-probability.html#cor-total-expectation" class="quarto-xref">Corollary&nbsp;<span>4.1</span></a>), also called the law of iterated expectations, but it is the load-bearing identity of the whole method.</p>
+<p>In words, before the symbols: imagine for a moment that we <em>could</em> see every patient in the AgD arm. We would evaluate each patient’s conditional response from the individual model, and their likelihood contributions would simply multiply, exactly as for an IPD study. We cannot see them; we see only the arm summary. The theorem says that averaging the individual model over the plausible covariate values, weighted by the case mix <span class="math inline">\(f_j\)</span>, reproduces precisely the marginal law of one such unseen patient, and hence the arm summary. Two consequences follow, and they are why the theorem is worth proving. The arm’s <em>mean</em> is the integral <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> (part (b)), and the arm’s <em>likelihood</em> is built from that same integral (part (c)). Any other rule for turning the individual model into an arm prediction, in particular the plug-in rule of the next section, would be inconsistent with this data-generating process and would bias the estimated treatment effects. That is the sense in which the integral is forced, not chosen.</p>
+<div id="thm-aggregation" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 20.1 (Aggregation theorem)</strong></span> Adopt the individual-level model <a href="#eq-agg-individual-model" class="quarto-xref">Equation&nbsp;<span>20.1</span></a>, and suppose that within study <span class="math inline">\(j\)</span> the covariate vector <span class="math inline">\(X\)</span> of a randomly drawn patient has law <span class="math inline">\(f_j\)</span> and that, conditional on <span class="math inline">\(X=\mathbf x\)</span> and arm <span class="math inline">\(k\)</span>, the outcome <span class="math inline">\(Y\)</span> has the family <span class="math inline">\(\pi_{\mathrm{Ind}}(g^{-1}(\eta_{jk}(\mathbf x)),\boldsymbol\phi)\)</span> with conditional density or mass function <span class="math inline">\(L_{i\mid x}(\boldsymbol\xi;y,\mathbf x):=\pi_{\mathrm{Ind}}(y\mid g^{-1}(\eta_{jk}(\mathbf x)),\boldsymbol\phi)\)</span>. Then:</p>
+<p><strong>(a) Marginal individual likelihood.</strong> The outcome of a patient whose covariate is not observed (the AgD case) has marginal density or mass function <span id="eq-agg-marginal-likelihood"><span class="math display">\[
+L_i(\boldsymbol\xi;y)=\int_{\mathcal X} L_{i\mid x}(\boldsymbol\xi;y,\mathbf x)\,f_j(\mathbf x)\,d\mathbf x .
+\tag{20.3}\]</span></span></p>
+<p><strong>(b) Aggregate mean.</strong> The marginal mean outcome of an AgD patient on arm <span class="math inline">\(k\)</span> in study <span class="math inline">\(j\)</span> is the integral <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a>, <span id="eq-agg-mean-identity"><span class="math display">\[
+\mathbb E[Y_{ijk}]=\int_{\mathcal X} g^{-1}\!\big(\eta_{jk}(\mathbf x)\big)\,f_j(\mathbf x)\,d\mathbf x=\theta_{\bullet jk}.
+\tag{20.4}\]</span></span></p>
+<p><strong>(c) Aggregate likelihood.</strong> If the <span class="math inline">\(n_{jk}\)</span> patients of arm <span class="math inline">\(k\)</span> in study <span class="math inline">\(j\)</span> have independent covariate draws from <span class="math inline">\(f_j\)</span> and conditionally independent outcomes <span class="math inline">\(\mathbf y_{jk}=(y_{1jk},\dots,y_{n_{jk}jk})\)</span>, their joint marginal likelihood factors, <span id="eq-agg-aggregate-likelihood"><span class="math display">\[
+\bar L_{jk}(\boldsymbol\xi;\mathbf y_{jk})=\prod_{i=1}^{n_{jk}} L_i(\boldsymbol\xi;y_{ijk}),
+\tag{20.5}\]</span></span> and when only a summary statistic of <span class="math inline">\(\mathbf y_{jk}\)</span> is reported, the likelihood of that summary is its law under the aggregate family <span class="math inline">\(\pi_{\mathrm{Agg}}(\theta_{\bullet jk},n_{jk})\)</span> of <a href="#def-aggregate-model" class="quarto-xref">Definition&nbsp;<span>20.2</span></a>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span><strong>(a).</strong> By the chain rule for densities the joint density of <span class="math inline">\((Y,X)\)</span> for an AgD patient on arm <span class="math inline">\(k\)</span> factors as the product of the conditional density of <span class="math inline">\(Y\)</span> given <span class="math inline">\(X\)</span> and the marginal density of <span class="math inline">\(X\)</span>, <span class="math display">\[
+p(y,\mathbf x\mid\boldsymbol\xi)=p(y\mid\mathbf x,\boldsymbol\xi)\,f_j(\mathbf x)
+=L_{i\mid x}(\boldsymbol\xi;y,\mathbf x)\,f_j(\mathbf x).
+\]</span> The marginal density of <span class="math inline">\(Y\)</span> is obtained by integrating out <span class="math inline">\(\mathbf x\)</span>, <span class="math display">\[
+L_i(\boldsymbol\xi;y)=\int_{\mathcal X} p(y,\mathbf x\mid\boldsymbol\xi)\,d\mathbf x
+=\int_{\mathcal X} L_{i\mid x}(\boldsymbol\xi;y,\mathbf x)\,f_j(\mathbf x)\,d\mathbf x,
+\]</span> which is <a href="#eq-agg-marginal-likelihood" class="quarto-xref">Equation&nbsp;<span>20.3</span></a>. The integrand is nonnegative and jointly measurable, so by the Tonelli half of <a href="../part1/04-probability.html#thm-fubini-tonelli" class="quarto-xref">Theorem&nbsp;<span>4.8</span></a> the integral is well defined and <span class="math inline">\(L_i(\boldsymbol\xi;\cdot)\)</span> is a genuine density: integrating it over <span class="math inline">\(y\)</span> and exchanging the order of integration, <span class="math inline">\(\int_y\int_{\mathbf x} L_{i\mid x}f_j
+=\int_{\mathbf x}\big(\int_y L_{i\mid x}\,dy\big)f_j=\int_{\mathbf x} 1\cdot f_j=1\)</span>, since each conditional law <span class="math inline">\(L_{i\mid x}(\boldsymbol\xi;\cdot,\mathbf x)\)</span> integrates to one.</p>
+<p><strong>(b).</strong> By the model the conditional mean is <span class="math inline">\(\mathbb E[Y\mid X=\mathbf x]=g^{-1}(\eta_{jk}(\mathbf x))\)</span>. The tower property (<a href="../part1/04-probability.html#cor-total-expectation" class="quarto-xref">Corollary&nbsp;<span>4.1</span></a>) gives <span class="math display">\[
+\mathbb E[Y_{ijk}]=\mathbb E\big[\,\mathbb E[Y\mid X]\,\big]
+=\mathbb E\big[g^{-1}(\eta_{jk}(X))\big]
+=\int_{\mathcal X} g^{-1}(\eta_{jk}(\mathbf x))\,f_j(\mathbf x)\,d\mathbf x=\theta_{\bullet jk},
+\]</span> the last equality being the definition of expectation under <span class="math inline">\(f_j\)</span>. Equivalently, multiply <a href="#eq-agg-marginal-likelihood" class="quarto-xref">Equation&nbsp;<span>20.3</span></a> by <span class="math inline">\(y\)</span> and integrate, exchanging the order of integration by the Fubini half of <a href="../part1/04-probability.html#thm-fubini-tonelli" class="quarto-xref">Theorem&nbsp;<span>4.8</span></a> (legitimate whenever <span class="math inline">\(\mathbb E|Y|&lt;\infty\)</span>, which holds for every outcome family used in practice): <span class="math inline">\(\int_y y\,L_i(\boldsymbol\xi;y)\,dy=\int_{\mathbf x}\big(\int_y y\,L_{i\mid x}\,dy\big)f_j
+=\int_{\mathbf x} g^{-1}(\eta_{jk}(\mathbf x))\,f_j(\mathbf x)\,d\mathbf x\)</span>, the inner integral being the conditional mean. This is <a href="#eq-agg-mean-identity" class="quarto-xref">Equation&nbsp;<span>20.4</span></a>.</p>
+<p><strong>(c).</strong> Conditional on <span class="math inline">\(\boldsymbol\xi\)</span>, distinct patients have independent covariate draws and conditionally independent outcomes, so the pairs <span class="math inline">\((Y_{ijk},X_{ijk})\)</span> are mutually independent; independence is preserved under the marginalization of part (a), because a function (here the marginal density) of independent random variables computed coordinatewise yields independent marginals. Hence the joint marginal density of <span class="math inline">\(\mathbf y_{jk}\)</span> is the product <a href="#eq-agg-aggregate-likelihood" class="quarto-xref">Equation&nbsp;<span>20.5</span></a>. If the data reduce to a summary statistic <span class="math inline">\(T(\mathbf y_{jk})\)</span>, its likelihood is by definition the density or mass of <span class="math inline">\(T\)</span> under the joint law; modeling that law by <span class="math inline">\(\pi_{\mathrm{Agg}}(\theta_{\bullet jk},n_{jk})\)</span>, whose mean is <span class="math inline">\(\theta_{\bullet jk}\)</span> by part (b), is the aggregate-level model of <a href="#def-aggregate-model" class="quarto-xref">Definition&nbsp;<span>20.2</span></a>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Why this is the defining identity.</strong> Part (b) is the sentence “the aggregate mean is the integral of the inverse link against the covariate density,” and it is the whole content of ML-NMR’s coherence claim. An IPD study evaluates <a href="#eq-agg-individual-model" class="quarto-xref">Equation&nbsp;<span>20.1</span></a> at each observed <span class="math inline">\(\mathbf x_{ijk}\)</span> and needs no integral; an AgD study evaluates the integral <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> against <span class="math inline">\(f_j\)</span>. Both feed the <em>same</em> parameters <span class="math inline">\(\boldsymbol\xi\)</span> into one likelihood, the product over studies of <a href="#eq-agg-aggregate-likelihood" class="quarto-xref">Equation&nbsp;<span>20.5</span></a> and the IPD analogue. The price of admission is the integral, and the rest of Part V is the study of how to compute it: in closed form when the link and covariate distribution permit (the next three sections), and by numerical integration when they do not (Chapter 22). <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>This is result H.3 of the proof catalogue (corresponds to H.3; Phillippo 2019, Eq. 4.1c; Phillippo et al. 2020, Section 3).</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>IPD and AgD contributions, side by side.</strong> Make the two likelihood contributions concrete on the running example. Suppose the AgD trial reports that <span class="math inline">\(37\)</span> of the <span class="math inline">\(100\)</span> patients on its competitor arm <span class="math inline">\(C\)</span> achieved PASI 75. ML-NMR models that count with the aggregate law of <a href="#def-aggregate-model" class="quarto-xref">Definition&nbsp;<span>20.2</span></a>, <span class="math inline">\(\mathrm{Bin}(100,\theta_{\bullet
+jC})\)</span>, where the single arm-level risk <span class="math inline">\(\theta_{\bullet jC}\)</span> is itself the case-mix average <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> of the individual risks <span class="math inline">\(\mathrm{expit}(\eta_{jC}(\mathbf x))\)</span> over that arm’s covariate distribution <span class="math inline">\(f_j\)</span>. Contrast the IPD trial: there a patient with observed covariate <span class="math inline">\(\mathbf x_i\)</span> on arm <span class="math inline">\(B\)</span> contributes the <em>conditional</em> Bernoulli factor <span class="math inline">\(\mathrm{expit}(\eta_{jB}(\mathbf x_i))^{y_i}\big(1-\mathrm{expit}(\eta_{jB}(\mathbf x_i))\big)^{1-y_i}\)</span>, with no integral, because the covariate is known. The two study types thus differ only in whether the covariate is integrated out: IPD conditions on each observed <span class="math inline">\(\mathbf x_i\)</span>; AgD integrates over the unseen ones. Both feed the <em>same</em> coefficients <span class="math inline">\(\mu_j,\gamma_k,\boldsymbol\beta_1,\boldsymbol\beta_{2,k}\)</span>. One point of possible confusion: parts (a) and (c) wrote a per-patient marginal likelihood <span class="math inline">\(L_i\)</span> for the AgD arm even though we never observe an individual AgD patient. That is a derivational device. Writing the per-patient marginal first makes the arm-summary likelihood, the thing we actually fit, drop out cleanly from the independence in part (c). <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Reduction to standard network meta-analysis (the bridge from Chapter 15).</strong> A reader arriving from Chapter 15 can see the old model sitting inside this one. Set <span class="math inline">\(\boldsymbol\beta_1=\mathbf 0\)</span> and every <span class="math inline">\(\boldsymbol\beta_{2,k}=\mathbf 0\)</span>, so there are no covariate terms. Then <span class="math inline">\(\eta_{jk}(\mathbf x)=\mu_j+\gamma_k\)</span> does not depend on <span class="math inline">\(\mathbf x\)</span>, the integral <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> has a constant integrand, and <span class="math display">\[
+\theta_{\bullet jk}=\int_{\mathcal X} g^{-1}(\mu_j+\gamma_k)\,f_j(\mathbf x)\,d\mathbf x=g^{-1}(\mu_j+\gamma_k),
+\]</span> with no dependence on <span class="math inline">\(f_j\)</span> at all. The aggregate likelihood <a href="#eq-agg-aggregate-likelihood" class="quarto-xref">Equation&nbsp;<span>20.5</span></a> then reduces to the standard network meta-analysis likelihood with study baselines <span class="math inline">\(\mu_j\)</span> and treatment effects <span class="math inline">\(\gamma_k\)</span>: aggregation does nothing, because there is nothing to average over. Consequently aggregation bias vanishes identically here for <em>every</em> link, consistent with <a href="#thm-aggregation-bias" class="quarto-xref">Theorem&nbsp;<span>20.2</span></a> below (the linear predictor is degenerate, <span class="math inline">\(\mathrm{Var}(\eta_{jk}(X))=0\)</span>). Standard NMA is thus the covariate-free corner of ML-NMR; the full statement, including the reduction to IPD network meta-regression, is Chapter 23. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-agg-bias" class="level2" data-number="20.7">
+<h2 data-number="20.7" class="anchored" data-anchor-id="sec-agg-bias"><span class="header-section-number">20.7</span> The aggregation-bias theorem</h2>
+<p>The temptation, and the practice of pre-ML-NMR meta-regression, is to skip the integral and feed the model the study mean covariate. We now show exactly what that costs. Define the <strong>plug-in (naive) aggregate mean</strong> <span id="eq-agg-naive"><span class="math display">\[
+\theta^{\mathrm{naive}}_{\bullet jk}:=g^{-1}\!\big(\eta_{jk}(\bar{\mathbf x}_j)\big),
+\qquad
+\bar{\mathbf x}_j=\int_{\mathcal X}\mathbf x\,f_j(\mathbf x)\,d\mathbf x ,
+\tag{20.6}\]</span></span> the inverse link evaluated at the linear predictor of the mean covariate. Because <span class="math inline">\(\eta_{jk}\)</span> is affine, linearity of expectation gives <span class="math inline">\(\eta_{jk}(\bar{\mathbf x}_j)=\mathbb E[\eta_{jk}(X)]\)</span>, so <span class="math inline">\(\theta^{\mathrm{naive}}_{\bullet jk}=g^{-1}\big(\mathbb E[\eta_{jk}(X)]\big)\)</span> is the inverse link <em>of the average linear predictor</em>, whereas the correct <span class="math inline">\(\theta_{\bullet jk}=\mathbb E\big[g^{-1}(\eta_{jk}(X))\big]\)</span> is the <em>average of the inverse link</em>. Jensen’s inequality is the precise statement of their difference. It is worth naming the two objects clearly, because the whole chapter turns on keeping them apart: the plug-in is a <em>conditional</em> prediction (the response at one covariate value, namely the mean) wearing the costume of an arm summary, whereas the integral is the genuinely <em>marginal</em> prediction (the response averaged over the arm’s case mix). “Marginal over <span class="math inline">\(f_j\)</span>” and “conditional at a covariate value” are different quantities on any curved link, and ML-NMR’s target estimand is the marginal one while the model is written conditionally.</p>
+<div id="thm-aggregation-bias" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 20.2 (Aggregation bias)</strong></span> Let <span class="math inline">\(\eta_{jk}(X)\)</span> be the linear predictor evaluated at the random covariate <span class="math inline">\(X\sim f_j\)</span>, with <span class="math inline">\(\bar{\mathbf x}_j=\mathbb E[X]\)</span>, and suppose <span class="math inline">\(g^{-1}\)</span> is convex or concave on an interval containing the support of <span class="math inline">\(\eta_{jk}(X)\)</span>. Then the plug-in and integrated aggregate means <a href="#eq-agg-naive" class="quarto-xref">Equation&nbsp;<span>20.6</span></a> and <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> satisfy <span id="eq-agg-bias"><span class="math display">\[
+\begin{aligned}
+g^{-1}\ \text{convex on the support}&amp;:\quad \theta^{\mathrm{naive}}_{\bullet jk}\ \le\ \theta_{\bullet jk},\\
+g^{-1}\ \text{concave on the support}&amp;:\quad \theta^{\mathrm{naive}}_{\bullet jk}\ \ge\ \theta_{\bullet jk},
+\end{aligned}
+\tag{20.7}\]</span></span> and the inequality is an equality if and only if either <span class="math inline">\(g^{-1}\)</span> is affine on the support of <span class="math inline">\(\eta_{jk}(X)\)</span> or <span class="math inline">\(\eta_{jk}(X)\)</span> is degenerate, the latter meaning <span class="math inline">\(\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}=0\)</span>. The signed discrepancy is exactly the ecological bias of <a href="../part3/16-limits-of-nma.html#def-ecological-bias" class="quarto-xref">Definition&nbsp;<span>16.2</span></a>, <span id="eq-agg-eb"><span class="math display">\[
+\mathrm{EB}_{jk}:=\theta^{\mathrm{naive}}_{\bullet jk}-\theta_{\bullet jk}
+=g^{-1}\!\big(\eta_{jk}(\bar{\mathbf x}_j)\big)-\int_{\mathcal X} g^{-1}\!\big(\eta_{jk}(\mathbf x)\big)f_j(\mathbf x)\,d\mathbf x .
+\tag{20.8}\]</span></span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Apply Jensen’s inequality (<a href="../part1/04-probability.html#thm-jensen" class="quarto-xref">Theorem&nbsp;<span>4.6</span></a>) with the convex function <span class="math inline">\(\varphi=g^{-1}\)</span> and the integrable random variable <span class="math inline">\(W:=\eta_{jk}(X)\)</span>. The inequality reads <span class="math inline">\(\varphi(\mathbb E[W])\le\mathbb E[\varphi(W)]\)</span>, that is <span class="math inline">\(g^{-1}(\mathbb E[\eta_{jk}(X)])\le\mathbb E[g^{-1}(\eta_{jk}(X))]\)</span>. By the affine identity <span class="math inline">\(\mathbb E[\eta_{jk}(X)]=\eta_{jk}(\bar{\mathbf x}_j)\)</span> the left side is <span class="math inline">\(\theta^{\mathrm{naive}}_{\bullet jk}\)</span> and by <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> the right side is <span class="math inline">\(\theta_{\bullet jk}\)</span>, which is the convex case of <a href="#eq-agg-bias" class="quarto-xref">Equation&nbsp;<span>20.7</span></a>. If <span class="math inline">\(g^{-1}\)</span> is concave then <span class="math inline">\(-g^{-1}\)</span> is convex and the same argument applied to <span class="math inline">\(-g^{-1}\)</span> reverses the inequality, giving the concave case.</p>
+<p>For the equality case, the strict form of <a href="../part1/04-probability.html#thm-jensen" class="quarto-xref">Theorem&nbsp;<span>4.6</span></a> states that for a strictly convex <span class="math inline">\(\varphi\)</span> the inequality is strict unless <span class="math inline">\(W\)</span> is almost surely constant. Decompose: if <span class="math inline">\(g^{-1}\)</span> is affine on the support, then <span class="math inline">\(g^{-1}(w)=a+bw\)</span> there and <span class="math inline">\(\mathbb E[g^{-1}(W)]=a+b\,\mathbb E[W]=g^{-1}(\mathbb E[W])\)</span>, an equality; this is the degenerate-curvature case. Otherwise <span class="math inline">\(g^{-1}\)</span> is strictly convex (or strictly concave) on a subinterval that <span class="math inline">\(W\)</span> charges with positive probability, and then equality forces <span class="math inline">\(W\)</span> to be almost surely constant, that is <span class="math inline">\(\eta_{jk}(X)=\eta_{jk}(\bar{\mathbf x}_j)\)</span> almost surely. Since <span class="math inline">\(\eta_{jk}\)</span> is affine with slope <span class="math inline">\(\boldsymbol\beta_{\mathrm{tot},k}\)</span>, this says <span class="math inline">\(\boldsymbol\beta_{\mathrm{tot},k}^\top(X-\bar{\mathbf x}_j)=0\)</span> almost surely, equivalently <span class="math inline">\(\mathrm{Var}(\eta_{jk}(X))=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}=0\)</span>, which is the stated degeneracy. The identity <a href="#eq-agg-eb" class="quarto-xref">Equation&nbsp;<span>20.8</span></a> is <a href="#eq-agg-naive" class="quarto-xref">Equation&nbsp;<span>20.6</span></a> minus <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> and coincides termwise with the ecological-bias formula <a href="../part3/16-limits-of-nma.html#eq-ecological-bias" class="quarto-xref">Equation&nbsp;<span>16.8</span></a> of <a href="../part3/16-limits-of-nma.html#def-ecological-bias" class="quarto-xref">Definition&nbsp;<span>16.2</span></a>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>This is the resolution of <a href="../part3/16-limits-of-nma.html#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a>.</strong> Chapter 16 diagnosed the bias of the unadjusted indirect comparison as a difference of population-averaged conditional contrasts that did not cancel (<a href="../part3/16-limits-of-nma.html#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a>), and named the arm-level residue the ecological bias (<a href="../part3/16-limits-of-nma.html#def-ecological-bias" class="quarto-xref">Definition&nbsp;<span>16.2</span></a>). Theorem <a href="#thm-aggregation-bias" class="quarto-xref">Theorem&nbsp;<span>20.2</span></a> shows that the residue is exactly the gap between plugging in the mean and integrating, and <a href="#thm-aggregation" class="quarto-xref">Theorem&nbsp;<span>20.1</span></a> shows that ML-NMR closes the gap by <em>doing the integral</em> <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> rather than approximating it. MAIC and STC attack the same gap by other means: MAIC’s first-moment matching (<a href="../part4/18-maic.html#thm-maic-exponential-weights" class="quarto-xref">Theorem&nbsp;<span>18.1</span></a>) makes <span class="math inline">\(\bar{\mathbf x}\)</span> agree across populations but leaves the within-population curvature gap untouched unless higher moments are matched too, and STC’s mean-covariate prediction is precisely the plug-in <a href="#eq-agg-naive" class="quarto-xref">Equation&nbsp;<span>20.6</span></a> unless the regression is centered and integrated (<a href="../part4/19-stc.html#thm-marginal-stc-unbiased" class="quarto-xref">Theorem&nbsp;<span>19.3</span></a>). ML-NMR is the systematic cure because it never plugs in. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Why this matters for an indirect comparison.</strong> A reader might shrug at an arm-level bias of a percentage point or two. The point is that an indirect comparison is a <em>contrast</em> of arm means, and the biases need not cancel. Each arm has its own total slope <span class="math inline">\(\boldsymbol\beta_{\mathrm{tot},k}\)</span>, sits at its own mean linear predictor <span class="math inline">\(m_k\)</span>, and therefore lives in its own curvature region of <span class="math inline">\(g^{-1}\)</span>; on the logit link one arm can be in the convex region and the other in the concave region, so the plug-in underestimates one arm and overestimates the other. When we subtract to form the treatment contrast, the two biases <em>add</em> rather than cancel. A small, innocuous-looking error in each arm becomes a systematic distortion of the exact quantity the HTA body is deciding on. The worked example <a href="#exm-agg-logit-discrete" class="quarto-xref">Example&nbsp;<span>20.1</span></a> makes this concrete: two arm-level biases of about <span class="math inline">\(1\%\)</span> combine into an <span class="math inline">\(8\%\)</span> inflation of the odds ratio. This is the practical reason ML-NMR integrates rather than plugs in. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>The qualitative sign in <a href="#eq-agg-bias" class="quarto-xref">Equation&nbsp;<span>20.7</span></a> is sharpened to a quantity by a second-order expansion, which we will use to predict the bias in the worked example and to read off the closed-form cases that follow.</p>
+<section id="sec-agg-leading-bias" class="level3" data-number="20.7.1">
+<h3 data-number="20.7.1" class="anchored" data-anchor-id="sec-agg-leading-bias"><span class="header-section-number">20.7.1</span> The leading-order bias</h3>
+<p>The next lemma is the workhorse of the chapter: it converts the qualitative sign of the bias into a number, proportional to the variance of the linear predictor, and it is exactly what the log and logit results below specialize. A reader in a hurry can take away one sentence: <em>the aggregation bias is, to leading order, half the curvature of the inverse link times the variance of the linear predictor.</em></p>
+<div id="lem-agg-bias-expansion" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 20.1 (Leading-order aggregation bias)</strong></span> Suppose <span class="math inline">\(g^{-1}\)</span> is three times continuously differentiable with bounded third derivative on a neighborhood of <span class="math inline">\(m:=\eta_{jk}(\bar{\mathbf x}_j)\)</span>, and write <span class="math inline">\(v:=\mathrm{Var}(\eta_{jk}(X))=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}\)</span> for the variance of the linear predictor. Then, as the covariate distribution concentrates so that <span class="math inline">\(v\to 0\)</span> with the standardized linear predictor having bounded third absolute moment, <span id="eq-agg-bias-expansion"><span class="math display">\[
+\theta_{\bullet jk}=g^{-1}(m)+\tfrac12\,(g^{-1})''(m)\,v+o(v),
+\qquad
+\theta_{\bullet jk}-\theta^{\mathrm{naive}}_{\bullet jk}=\tfrac12\,(g^{-1})''(m)\,v+o(v).
+\tag{20.9}\]</span></span> In particular the integrated mean exceeds the plug-in mean to leading order exactly where <span class="math inline">\(g^{-1}\)</span> is convex (<span class="math inline">\((g^{-1})''(m)&gt;0\)</span>), in agreement with <a href="#thm-aggregation-bias" class="quarto-xref">Theorem&nbsp;<span>20.2</span></a>, and the leading bias is proportional to the variance of the linear predictor, which is the quadratic form <span class="math inline">\(\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}\)</span> in the total slope.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Write <span class="math inline">\(\eta_{jk}(X)=m+\sqrt v\,U\)</span>, where <span class="math inline">\(U:=(\eta_{jk}(X)-m)/\sqrt v\)</span> has mean <span class="math inline">\(0\)</span> and variance <span class="math inline">\(1\)</span>; this is legitimate because <span class="math inline">\(\mathbb E[\eta_{jk}(X)]=m\)</span> by the affine identity. Taylor’s theorem with Lagrange remainder gives, for some <span class="math inline">\(\zeta\)</span> between <span class="math inline">\(m\)</span> and <span class="math inline">\(\eta_{jk}(X)\)</span>, <span class="math display">\[
+g^{-1}(\eta_{jk}(X))=g^{-1}(m)+(g^{-1})'(m)\,\sqrt v\,U+\tfrac12 (g^{-1})''(m)\,v\,U^2+\tfrac16 (g^{-1})'''(\zeta)\,v^{3/2}U^3 .
+\]</span> Take expectations. The linear term vanishes because <span class="math inline">\(\mathbb E[U]=0\)</span>; the quadratic term gives <span class="math inline">\(\tfrac12(g^{-1})''(m)\,v\)</span> because <span class="math inline">\(\mathbb E[U^2]=1\)</span>; and the remainder is bounded in absolute value by <span class="math inline">\(\tfrac16\big(\sup|(g^{-1})'''|\big)\,v^{3/2}\,\mathbb E|U|^3\)</span>, which is <span class="math inline">\(O(v^{3/2})=o(v)\)</span> under the bounded third-moment hypothesis. Hence <span class="math inline">\(\theta_{\bullet jk}=\mathbb E[g^{-1}(\eta_{jk}(X))]=g^{-1}(m)+\tfrac12(g^{-1})''(m)v+o(v)\)</span>. Subtracting <span class="math inline">\(\theta^{\mathrm{naive}}_{\bullet jk}=g^{-1}(m)\)</span> gives the second display. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>This refinement and <a href="#thm-aggregation-bias" class="quarto-xref">Theorem&nbsp;<span>20.2</span></a> are result H.4 of the proof catalogue (corresponds to H.4; Phillippo 2019, Eq. 4.8).</p>
+</section>
+</section>
+<section id="sec-agg-heat" class="level2" data-number="20.8">
+<h2 data-number="20.8" class="anchored" data-anchor-id="sec-agg-heat"><span class="header-section-number">20.8</span> A unifying view: aggregation is heat flow</h2>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Optional section; read it for insight, skip it to keep moving.</strong> This section is structural insight, not machinery you need in order to fit or interpret an ML-NMR model. A reader who wants the method can jump straight to <a href="#sec-agg-identity" class="quarto-xref"><span>Section 20.9</span></a> and lose nothing operationally. The payoff for staying is a single organizing picture that answers a question the next three sections would otherwise raise one at a time: <em>why do the identity, log, and probit links keep closed-form aggregate means while the logit does not?</em> The answer is that averaging a function against a normal distribution is the same operation as letting heat diffuse for a moment, and only some functions stay simple under diffusion. The same picture tells you the <em>sign</em> of the aggregation bias at a glance and reproduces the leading-order expansion of the previous section as the first instant of the flow. None of this is required; it is the “one picture for three theorems,” offered for the reader who wants to see the unity. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>Before specializing to the three links, we record the structural fact that ties their closed-form behavior together. When the linear predictor is normally distributed, which by the affine-image theorem (<a href="../part1/04-probability.html#thm-mvn-linear" class="quarto-xref">Theorem&nbsp;<span>4.14</span></a>) happens exactly when the covariates are jointly normal, the integrated aggregate mean is the inverse link <em>smoothed by Gaussian convolution</em> (each value of the inverse link is replaced by a normal-weighted average of its nearby values), and Gaussian convolution is the <em>heat semigroup</em> (the operation that evolves a temperature profile forward in time under the heat equation). The three links then differ only in whether the heat flow of the inverse link is elementary.</p>
+<div id="lem-agg-heat-flow" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 20.2 (The aggregate mean is a heat flow of the inverse link)</strong></span> Let <span class="math inline">\(\psi:\mathbb R\to\mathbb R\)</span> be measurable with <span class="math inline">\(|\psi(z)|\le Ce^{a|z|}\)</span> for some constants <span class="math inline">\(C,a\)</span>, and suppose <span class="math inline">\(\psi\)</span> is twice continuously differentiable with <span class="math inline">\(|\psi'|,|\psi''|\le C e^{a|z|}\)</span>. For <span class="math inline">\(\eta\sim\mathcal N(m,\tau)\)</span> with <span class="math inline">\(\tau\ge 0\)</span> define <span class="math display">\[
+u(m,\tau):=\mathbb E[\psi(\eta)]=\int_{\mathbb R}\psi(z)\,\phi(z;m,\tau)\,dz,
+\]</span> where <span class="math inline">\(\phi(\cdot;m,\tau)\)</span> is the <span class="math inline">\(\mathcal N(m,\tau)\)</span> density. Then <span class="math inline">\(u\)</span> solves the heat equation <span id="eq-agg-heat-equation"><span class="math display">\[
+\frac{\partial u}{\partial \tau}=\frac12\,\frac{\partial^2 u}{\partial m^2},
+\qquad
+\lim_{\tau\downarrow 0} u(m,\tau)=\psi(m),
+\tag{20.10}\]</span></span> so that <span class="math inline">\(u(\cdot,\tau)=e^{(\tau/2)\,\partial_m^2}\psi\)</span> is the inverse link diffused for “time” <span class="math inline">\(\tau\)</span> equal to the variance of the linear predictor. Consequently, if the covariates in study <span class="math inline">\(j\)</span> are jointly normal, <span class="math inline">\(X\sim\mathcal N(\bar{\mathbf x}_j,\boldsymbol\Sigma_j)\)</span>, then with <span class="math inline">\(\psi=g^{-1}\)</span>, <span class="math inline">\(m=\eta_{jk}(\bar{\mathbf x}_j)\)</span>, and <span class="math inline">\(\tau=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}\)</span>, the aggregate mean is <span class="math inline">\(\theta_{\bullet jk}=u(m,\tau)\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>The <span class="math inline">\(\mathcal N(m,\tau)\)</span> density is a translate of the heat kernel: writing <span class="math inline">\(G(\xi,\tau)=(2\pi\tau)^{-1/2}
+\exp(-\xi^2/2\tau)\)</span> we have <span class="math inline">\(\phi(z;m,\tau)=G(z-m,\tau)\)</span>, and a direct differentiation verifies that <span class="math inline">\(G\)</span> solves <span class="math inline">\(\partial_\tau G=\tfrac12\partial_\xi^2 G\)</span> on <span class="math inline">\(\tau&gt;0\)</span>. Indeed <span class="math inline">\(\partial_\tau G=G\big(-\tfrac1{2\tau}+\tfrac{\xi^2}{2\tau^2}\big)\)</span> and <span class="math inline">\(\partial_\xi G=-\tfrac{\xi}{\tau}G\)</span>, so <span class="math inline">\(\partial_\xi^2 G=\big(\tfrac{\xi^2}{\tau^2}-\tfrac1\tau\big)G
+=2\partial_\tau G\)</span>. Because <span class="math inline">\(G(z-m,\tau)\)</span> depends on <span class="math inline">\(m\)</span> and <span class="math inline">\(z\)</span> only through <span class="math inline">\(z-m\)</span>, we have <span class="math inline">\(\partial_m\phi=-\partial_z\phi\)</span> and hence <span class="math inline">\(\partial_m^2\phi=\partial_z^2\phi\)</span>, while <span class="math inline">\(\partial_\tau\phi=\tfrac12\partial_z^2\phi=\tfrac12\partial_m^2\phi\)</span>. Therefore, differentiating under the integral sign, <span class="math display">\[
+\partial_\tau u=\int\psi(z)\,\partial_\tau\phi\,dz=\tfrac12\int\psi(z)\,\partial_m^2\phi\,dz=\tfrac12\,\partial_m^2 u,
+\]</span> which is <a href="#eq-agg-heat-equation" class="quarto-xref">Equation&nbsp;<span>20.10</span></a>. The differentiations under the integral are justified by dominated convergence: the <span class="math inline">\(m\)</span>- and <span class="math inline">\(\tau\)</span>-derivatives of <span class="math inline">\(\phi(z;m,\tau)\)</span> are <span class="math inline">\(\phi\)</span> times polynomials in <span class="math inline">\((z-m)/\tau\)</span>, and the growth bound <span class="math inline">\(|\psi(z)|\le Ce^{a|z|}\)</span> times such a Gaussian-with-polynomial factor is integrable and locally bounded uniformly in <span class="math inline">\((m,\tau)\)</span> on compact subsets of <span class="math inline">\(\{\tau&gt;0\}\)</span>, by completing the square in the exponent. For the initial condition, substitute <span class="math inline">\(z=m+\sqrt\tau\,s\)</span> to write <span class="math inline">\(u(m,\tau)=\int\psi(m+\sqrt\tau\,s)\,\phi(s;0,1)\,ds\)</span>; as <span class="math inline">\(\tau\downarrow0\)</span> the integrand converges pointwise to <span class="math inline">\(\psi(m)\phi(s;0,1)\)</span> and is dominated by <span class="math inline">\(C e^{a|m|}e^{a\sqrt\tau|s|}\phi(s;0,1)\le C'e^{a|m|}(e^{as}+e^{-as})\phi(s;0,1)\)</span> for <span class="math inline">\(\tau\le1\)</span>, an integrable bound, so dominated convergence gives <span class="math inline">\(u(m,\tau)\to\psi(m)\int\phi(s;0,1)ds=\psi(m)\)</span>. The final claim is the affine-image theorem (<a href="../part1/04-probability.html#thm-mvn-linear" class="quarto-xref">Theorem&nbsp;<span>4.14</span></a>): for <span class="math inline">\(X\sim\mathcal N(\bar{\mathbf x}_j,\boldsymbol\Sigma_j)\)</span> the scalar <span class="math inline">\(\eta_{jk}(X)=\mu_j+\gamma_k+X^\top\boldsymbol\beta_{\mathrm{tot},k}\)</span> is normal with mean <span class="math inline">\(\eta_{jk}(\bar{\mathbf x}_j)=m\)</span> and variance <span class="math inline">\(\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}=\tau\)</span>, so <span class="math inline">\(\theta_{\bullet jk}=\mathbb E[g^{-1}(\eta_{jk}(X))]=u(m,\tau)\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>One picture for three theorems.</strong> The heat-flow view organizes the rest of the chapter. The variance <span class="math inline">\(\tau\)</span> plays the role of time: at <span class="math inline">\(\tau=0\)</span> (a degenerate covariate distribution, all mass at <span class="math inline">\(\bar{\mathbf x}_j\)</span>) there is no diffusion and <span class="math inline">\(\theta_{\bullet jk}=g^{-1}(m)=\theta^{\mathrm{naive}}_{\bullet jk}\)</span>, no aggregation bias; as <span class="math inline">\(\tau\)</span> grows the inverse link is smoothed and the bias accumulates. The leading-order expansion <a href="#eq-agg-bias-expansion" class="quarto-xref">Equation&nbsp;<span>20.9</span></a> is the first step of the heat flow, <span class="math inline">\(u\approx\psi+\tfrac{\tau}{2}\psi''\)</span>. The identity link is the fixed point of the flow (<span class="math inline">\(\psi''=0\)</span>); the log link is an eigen-type orbit on which the flow stays exponential; the probit link is carried by the flow to a rescaled probit; and the logit link is carried to a function with no elementary name. We take these in turn. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-agg-identity" class="level2" data-number="20.9">
+<h2 data-number="20.9" class="anchored" data-anchor-id="sec-agg-identity"><span class="header-section-number">20.9</span> The identity link: exact aggregation</h2>
+<p>On the identity scale the inverse link is the identity map, which is affine, so the equality case of <a href="#thm-aggregation-bias" class="quarto-xref">Theorem&nbsp;<span>20.2</span></a> holds <em>for every covariate distribution</em>, not only the normal one. This is the one link on which ML-NMR needs no integral.</p>
+<div id="thm-identity-link-exact" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 20.3 (Exactness of identity-link aggregation)</strong></span> Suppose <span class="math inline">\(g\)</span> is the identity link, <span class="math inline">\(g^{-1}(z)=z\)</span>. Then for every study covariate distribution <span class="math inline">\(f_j\)</span> with mean <span class="math inline">\(\bar{\mathbf x}_j\)</span>, the integrated and plug-in aggregate means coincide and equal the linear predictor at the mean covariate, <span id="eq-agg-identity"><span class="math display">\[
+\theta_{\bullet jk}=\int_{\mathcal X}\eta_{jk}(\mathbf x)\,f_j(\mathbf x)\,d\mathbf x
+=\mu_j+\gamma_k+\bar{\mathbf x}_j^\top\boldsymbol\beta_{\mathrm{tot},k}
+=\eta_{jk}(\bar{\mathbf x}_j)=\theta^{\mathrm{naive}}_{\bullet jk},
+\tag{20.11}\]</span></span> so the aggregation bias <a href="#eq-agg-eb" class="quarto-xref">Equation&nbsp;<span>20.8</span></a> vanishes identically. Conversely, if a link makes <span class="math inline">\(\theta_{\bullet jk}=\theta^{\mathrm{naive}}_{\bullet jk}\)</span> for <em>every</em> covariate distribution supported on an open set, then <span class="math inline">\(g^{-1}\)</span> is affine on that set.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>For the identity link <span class="math inline">\(g^{-1}(\eta_{jk}(\mathbf x))=\eta_{jk}(\mathbf x)\)</span>, so <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> reads <span class="math inline">\(\theta_{\bullet jk}=\int\eta_{jk}(\mathbf x)f_j(\mathbf x)\,d\mathbf x=\mathbb E[\eta_{jk}(X)]\)</span>. Since <span class="math inline">\(\eta_{jk}\)</span> is affine, linearity of expectation gives <span class="math inline">\(\mathbb E[\eta_{jk}(X)]=\mu_j+\gamma_k+\mathbb E[X]^\top\boldsymbol\beta_{\mathrm{tot},k}=\eta_{jk}(\bar{\mathbf x}_j)\)</span>, which is <a href="#eq-agg-identity" class="quarto-xref">Equation&nbsp;<span>20.11</span></a>; the plug-in <a href="#eq-agg-naive" class="quarto-xref">Equation&nbsp;<span>20.6</span></a> is the same quantity, so <span class="math inline">\(\mathrm{EB}_{jk}=0\)</span>.</p>
+<p>For the converse, suppose <span class="math inline">\(g^{-1}(\mathbb E[W])=\mathbb E[g^{-1}(W)]\)</span> for <span class="math inline">\(W=\eta_{jk}(X)\)</span> under every covariate law on an open set, equivalently <span class="math inline">\(\psi(\mathbb E[W])=\mathbb E[\psi(W)]\)</span> for <span class="math inline">\(\psi=g^{-1}\)</span> and every law of <span class="math inline">\(W\)</span> on the open interval <span class="math inline">\(I:=\eta_{jk}(\text{open set})\)</span>. Take <span class="math inline">\(W\)</span> to put mass <span class="math inline">\(\tfrac12\)</span> at each of two points <span class="math inline">\(w_1,w_2\in I\)</span>; then the identity reads <span class="math inline">\(\psi\big(\tfrac{w_1+w_2}{2}\big)=\tfrac12\psi(w_1)+\tfrac12\psi(w_2)\)</span>, which is <em>Jensen’s functional equation</em> (also called the midpoint-affine or Cauchy-Jensen equation): the value at a midpoint equals the average of the values at the two endpoints, for every pair of points. It is a standard fact that a function that is midpoint-affine on an interval and continuous there must be genuinely affine, a straight line <span class="math inline">\(\psi(w)=a+bw\)</span>; continuity is what upgrades the midpoint identity (which on its own only pins down values at dyadic averages) to affinity at every point. Here continuity is free, because <span class="math inline">\(g\)</span>, hence <span class="math inline">\(g^{-1}\)</span>, is <span class="math inline">\(C^2\)</span> by <a href="../part1/07-glm.html#def-link-function" class="quarto-xref">Definition&nbsp;<span>7.2</span></a>. Hence <span class="math inline">\(\psi=g^{-1}\)</span> is affine on <span class="math inline">\(I\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>ML-NMR on the identity scale is meta-regression on means.</strong> When <a href="#eq-agg-identity" class="quarto-xref">Equation&nbsp;<span>20.11</span></a> holds, the aggregate likelihood <a href="#eq-agg-aggregate-likelihood" class="quarto-xref">Equation&nbsp;<span>20.5</span></a> depends on the covariate distribution only through its mean <span class="math inline">\(\bar{\mathbf x}_j\)</span>, and ML-NMR reduces to the familiar network meta-regression that regresses study-level outcomes on study-level mean covariates. This is the precise sense in which the identity scale is benign: there is no within-study aggregation to do, only across-study regression, and the second moments of <span class="math inline">\(f_j\)</span> are irrelevant. It is also why first-moment matching is exactly sufficient for MAIC on the identity scale, a point flagged in the moment-balance discussion of Chapter 18; the curvature that first-moment matching ignores is present on every other scale and absent on this one. Identity-scale exactness is the friendly exception, not the rule: continuous outcomes summarized by means are often modeled this way, but binary, count, and time-to-event outcomes live on the curved scales of the next two sections. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>This is result H.5 of the proof catalogue (corresponds to H.5; Phillippo 2019, Section 4.3.2).</p>
+</section>
+<section id="sec-agg-log" class="level2" data-number="20.10">
+<h2 data-number="20.10" class="anchored" data-anchor-id="sec-agg-log"><span class="header-section-number">20.10</span> The log link: a closed form through the moment generating function</h2>
+<p>On the log scale the inverse link is the exponential, which is convex, so by <a href="#thm-aggregation-bias" class="quarto-xref">Theorem&nbsp;<span>20.2</span></a> the plug-in mean underestimates the truth. When the covariates are jointly normal the integral <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> is the moment generating function of a normal random variable evaluated at <span class="math inline">\(t=1\)</span>, and we computed that transform in closed form in Chapter 4. The result is one of the few exact aggregate means in ML-NMR and underlies the closed-form Poisson aggregate likelihood of Chapter 21.</p>
+<div id="thm-log-link-mgf" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 20.4 (Closed-form log-link aggregation under normal covariates)</strong></span> Suppose <span class="math inline">\(g\)</span> is the log link, <span class="math inline">\(g^{-1}(z)=e^{z}\)</span>, and that the covariates in study <span class="math inline">\(j\)</span> are jointly normal, <span class="math inline">\(X\sim\mathcal N(\bar{\mathbf x}_j,\boldsymbol\Sigma_j)\)</span>. Then the aggregate mean <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> is <span id="eq-agg-log-mgf"><span class="math display">\[
+\theta_{\bullet jk}=\exp\!\Big(\mu_j+\gamma_k+\bar{\mathbf x}_j^\top\boldsymbol\beta_{\mathrm{tot},k}
++\tfrac12\,\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\,\boldsymbol\beta_{\mathrm{tot},k}\Big),
+\qquad \boldsymbol\beta_{\mathrm{tot},k}=\boldsymbol\beta_1+\boldsymbol\beta_{2,k}.
+\tag{20.12}\]</span></span> Equivalently <span class="math inline">\(\theta_{\bullet jk}=\theta^{\mathrm{naive}}_{\bullet jk}\cdot\exp\!\big(\tfrac12\,\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}\big)\)</span>, so the plug-in mean is biased downward by the exact multiplicative factor <span class="math inline">\(e^{\,v/2}\ge 1\)</span> with <span class="math inline">\(v=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}\)</span>, with equality only when the total slope <span class="math inline">\(\boldsymbol\beta_{\mathrm{tot},k}\)</span> lies in the null space of <span class="math inline">\(\boldsymbol\Sigma_j\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Set <span class="math inline">\(W:=\eta_{jk}(X)=\mu_j+\gamma_k+X^\top\boldsymbol\beta_{\mathrm{tot},k}\)</span>, an affine function of the normal vector <span class="math inline">\(X\)</span>. By the affine-image theorem (<a href="../part1/04-probability.html#thm-mvn-linear" class="quarto-xref">Theorem&nbsp;<span>4.14</span></a>), <span class="math inline">\(W\)</span> is univariate normal with mean and variance <span class="math display">\[
+m:=\mathbb E[W]=\mu_j+\gamma_k+\bar{\mathbf x}_j^\top\boldsymbol\beta_{\mathrm{tot},k},
+\qquad
+v:=\mathrm{Var}(W)=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k},
+\]</span> so <span class="math inline">\(W\sim\mathcal N(m,v)\)</span>. By <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> and the definition of the moment generating function (<a href="../part1/04-probability.html#def-mgf" class="quarto-xref">Definition&nbsp;<span>4.7</span></a>), <span class="math display">\[
+\theta_{\bullet jk}=\mathbb E[e^{W}]=M_W(1),
+\]</span> the MGF of <span class="math inline">\(W\)</span> at <span class="math inline">\(t=1\)</span>. The MGF of <span class="math inline">\(\mathcal N(m,v)\)</span> is <span class="math inline">\(M_W(t)=\exp(mt+\tfrac12 v t^2)\)</span>, the scalar case <span class="math inline">\(p=1\)</span> of the multivariate-normal MGF <a href="../part1/04-probability.html#eq-mvn-mgf" class="quarto-xref">Equation&nbsp;<span>4.13</span></a>. Evaluating at <span class="math inline">\(t=1\)</span> gives <span class="math inline">\(\theta_{\bullet jk}=\exp(m+\tfrac12 v)\)</span>, which is <a href="#eq-agg-log-mgf" class="quarto-xref">Equation&nbsp;<span>20.12</span></a>. The factorization <span class="math inline">\(\exp(m+\tfrac12 v)=e^{m}\cdot e^{v/2}=\theta^{\mathrm{naive}}_{\bullet jk}\cdot e^{v/2}\)</span> follows from <span class="math inline">\(\theta^{\mathrm{naive}}_{\bullet jk}=g^{-1}(m)=e^{m}\)</span>, and <span class="math inline">\(v=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}\ge 0\)</span> because <span class="math inline">\(\boldsymbol\Sigma_j\succeq 0\)</span> (<a href="../part1/04-probability.html#thm-cov-psd" class="quarto-xref">Theorem&nbsp;<span>4.9</span></a>), with <span class="math inline">\(v=0\)</span> if and only if <span class="math inline">\(\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}=\mathbf 0\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Consistency with the bias and heat-flow results.</strong> The multiplicative factor <span class="math inline">\(e^{v/2}\ge1\)</span> is the exact form of the downward plug-in bias predicted qualitatively by <a href="#thm-aggregation-bias" class="quarto-xref">Theorem&nbsp;<span>20.2</span></a> (convex <span class="math inline">\(g^{-1}=\exp\)</span>, hence <span class="math inline">\(\theta^{\mathrm{naive}}\le\theta_\bullet\)</span>) and to leading order by <a href="#eq-agg-bias-expansion" class="quarto-xref">Equation&nbsp;<span>20.9</span></a>: there <span class="math inline">\((g^{-1})''(m)=e^{m}\)</span>, so the leading bias is <span class="math inline">\(\tfrac12 e^{m}v=\tfrac{v}{2}\theta^{\mathrm{naive}}\)</span>, matching the expansion <span class="math inline">\(e^{m}(e^{v/2}-1)=e^{m}(\tfrac{v}{2}+o(v))\)</span>. The closed form is also the heat flow of <a href="#lem-agg-heat-flow" class="quarto-xref">Lemma&nbsp;<span>20.2</span></a> with <span class="math inline">\(\psi=\exp\)</span>: the function <span class="math inline">\(u(m,\tau)=e^{m+\tau/2}\)</span> solves <span class="math inline">\(\partial_\tau u=\tfrac12\partial_m^2 u\)</span> with <span class="math inline">\(u(m,0)=e^m\)</span>, because both <span class="math inline">\(\partial_\tau u\)</span> and <span class="math inline">\(\tfrac12\partial_m^2 u\)</span> equal <span class="math inline">\(\tfrac12 e^{m+\tau/2}\)</span>; the exponential is carried by the heat semigroup to a shifted exponential, which is why the log link keeps a closed form. The two hypotheses are essential. Drop joint normality, and <span class="math inline">\(\mathbb E[e^{W}]\)</span> is the MGF of a non-normal law, generally not elementary; drop the log link, and <span class="math inline">\(W\)</span> is still normal but <span class="math inline">\(\mathbb E[g^{-1}(W)]\)</span> is no longer an MGF. The first failure is repaired by numerical integration (Chapter 22); the second is the subject of the next section. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>This is result H.6 of the proof catalogue (corresponds to H.6; Phillippo 2019, Section 4.3.2).</p>
+</section>
+<section id="sec-agg-logit" class="level2" data-number="20.11">
+<h2 data-number="20.11" class="anchored" data-anchor-id="sec-agg-logit"><span class="header-section-number">20.11</span> The logit link: no elementary closed form</h2>
+<p>Binary outcomes are modeled on the logit scale, where <span class="math inline">\(g^{-1}(z)=\mathrm{expit}(z):=e^{z}/(1+e^{z})\)</span> is the standard logistic function, the cumulative distribution function of the logistic law. It is bounded, smooth, convex for <span class="math inline">\(z&lt;0\)</span> and concave for <span class="math inline">\(z&gt;0\)</span>, with the inflection at <span class="math inline">\(z=0\)</span>. The change of curvature across <span class="math inline">\(z=0\)</span> is what makes the logit aggregation bias different in kind from the log: it has no fixed sign, it vanishes at a symmetric configuration, and the integral that defines <span class="math inline">\(\theta_{\bullet jk}\)</span> has no elementary closed form even for normal covariates. We prove the structural facts in full and then explain the absence of a closed form by contrast with the probit link, whose superficially similar integral <em>is</em> elementary.</p>
+<p>The practical bottom line comes first, because it is what a data analyst needs and it does not depend on the proofs: for a binary outcome with genuinely varying covariates, the aggregate risk usually cannot be written in closed form and must be computed by numerical integration (Chapter 22), and the plug-in error can point either way depending on the arm’s baseline risk. Here is the risk interpretation of that sign, stated before we prove it. Because <span class="math inline">\(\mathrm{expit}\)</span> is convex below zero and concave above zero, and because the mean linear predictor <span class="math inline">\(m\)</span> is below zero exactly when the arm’s average risk is below <span class="math inline">\(50\%\)</span>:</p>
+<ul>
+<li>in a <em>low-risk</em> arm (mean risk below <span class="math inline">\(50\%\)</span>, so <span class="math inline">\(m&lt;0\)</span>), covariate heterogeneity pulls the true average risk <em>upward</em> relative to the plug-in value: the plug-in underestimates;</li>
+<li>in a <em>high-risk</em> arm (mean risk above <span class="math inline">\(50\%\)</span>, so <span class="math inline">\(m&gt;0\)</span>), heterogeneity pulls the true average risk <em>downward</em>: the plug-in overestimates;</li>
+<li>at exactly <span class="math inline">\(50\%\)</span> (<span class="math inline">\(m=0\)</span>), the two effects balance and the bias is zero, however spread out the covariates are.</li>
+</ul>
+<p>The following table is that picture in numbers. It tabulates <span class="math inline">\(\mathrm{expit}\)</span> and the sign of its curvature along the linear-predictor axis, and reads off the direction in which integrating moves the arm risk away from the naive plug-in value.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Mean linear predictor <span class="math inline">\(m\)</span></th>
+<th>Arm mean risk <span class="math inline">\(\mathrm{expit}(m)\)</span></th>
+<th>Curvature <span class="math inline">\(\mathrm{expit}''(m)\)</span></th>
+<th>Plug-in versus truth</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(-2\)</span></td>
+<td><span class="math inline">\(0.12\)</span></td>
+<td><span class="math inline">\(&gt;0\)</span> (convex)</td>
+<td>plug-in underestimates</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(-1\)</span></td>
+<td><span class="math inline">\(0.27\)</span></td>
+<td><span class="math inline">\(&gt;0\)</span> (convex)</td>
+<td>plug-in underestimates</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\phantom{-}0\)</span></td>
+<td><span class="math inline">\(0.50\)</span></td>
+<td><span class="math inline">\(0\)</span> (inflection)</td>
+<td>no bias</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(+1\)</span></td>
+<td><span class="math inline">\(0.73\)</span></td>
+<td><span class="math inline">\(&lt;0\)</span> (concave)</td>
+<td>plug-in overestimates</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(+2\)</span></td>
+<td><span class="math inline">\(0.88\)</span></td>
+<td><span class="math inline">\(&lt;0\)</span> (concave)</td>
+<td>plug-in overestimates</td>
+</tr>
+</tbody>
+</table>
+<p>This is the qualitative content of <a href="#thm-logit-no-closed-form" class="quarto-xref">Theorem&nbsp;<span>20.5</span></a>(c) below; the worked example <a href="#exm-agg-logit-discrete" class="quarto-xref">Example&nbsp;<span>20.1</span></a> realizes it with real numbers, one arm on each side of the inflection.</p>
+<div id="prp-agg-probit-closed-form" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 20.1 (The probit aggregate mean is elementary)</strong></span> Suppose the inverse link is the standard normal distribution function, <span class="math inline">\(g^{-1}=\Phi\)</span> (the probit link), and the linear predictor is normal, <span class="math inline">\(\eta_{jk}(X)\sim\mathcal N(m,\tau)\)</span> with <span class="math inline">\(\tau\ge0\)</span>. Then the aggregate mean is the elementary closed form <span id="eq-agg-probit"><span class="math display">\[
+\theta_{\bullet jk}=\mathbb E[\Phi(\eta_{jk}(X))]=\Phi\!\Big(\frac{m}{\sqrt{1+\tau}}\Big).
+\tag{20.13}\]</span></span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>This is the Gaussian probit integral established in Chapter 16 as <a href="../part3/16-limits-of-nma.html#lem-limits-probit-integral" class="quarto-xref">Lemma&nbsp;<span>16.4</span></a>, with <span class="math inline">\(a=0,\,b=1\)</span> and the roles <span class="math inline">\((m,\sigma^2)\leftrightarrow(m,\tau)\)</span>: there it is shown that for <span class="math inline">\(Z\sim\mathcal N(m,\tau)\)</span> one has <span class="math inline">\(\mathbb E[\Phi(a+bZ)]=\Phi\big((a+bm)/\sqrt{1+b^2\tau}\big)\)</span>, by writing <span class="math inline">\(\Phi(a+bZ)=P(U\le a+bZ\mid Z)\)</span> for an independent standard normal <span class="math inline">\(U\)</span> and standardizing the normal difference <span class="math inline">\(U-bZ\)</span> through its moment generating function. Specializing <span class="math inline">\(a=0,b=1\)</span> gives <a href="#eq-agg-probit" class="quarto-xref">Equation&nbsp;<span>20.13</span></a>. Equivalently, in the heat-flow language of <a href="#lem-agg-heat-flow" class="quarto-xref">Lemma&nbsp;<span>20.2</span></a>, <span class="math inline">\(u(m,\tau)=\Phi(m/\sqrt{1+\tau})\)</span> solves <span class="math inline">\(\partial_\tau u=\tfrac12\partial_m^2 u\)</span> with <span class="math inline">\(u(m,0)=\Phi(m)\)</span>: writing <span class="math inline">\(u=\Phi(m\,(1+\tau)^{-1/2})\)</span> and <span class="math inline">\(\varphi=\Phi'\)</span>, one computes <span class="math inline">\(\partial_m u=\varphi\,(1+\tau)^{-1/2}\)</span>, <span class="math inline">\(\partial_m^2 u=\varphi'\,(1+\tau)^{-1}=-\tfrac{m}{(1+\tau)^{2}}\varphi\)</span> using <span class="math inline">\(\varphi'(x)=-x\varphi(x)\)</span>, and <span class="math inline">\(\partial_\tau u=-\tfrac{m}{2}(1+\tau)^{-3/2}\varphi=\tfrac12\partial_m^2 u\)</span>, with <span class="math inline">\(u(m,0)=\Phi(m)\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Probit is easy, logit is not: the same integral, two fates.</strong> It is worth seeing the divide numerically before the theorem explains it. Take a normal linear predictor with mean <span class="math inline">\(m=1\)</span> and variance <span class="math inline">\(\tau=1\)</span>. The probit aggregate mean is elementary by <a href="#eq-agg-probit" class="quarto-xref">Equation&nbsp;<span>20.13</span></a>, <span class="math display">\[
+\Phi\!\Big(\frac{1}{\sqrt{1+1}}\Big)=\Phi(0.7071)=0.7602 .
+\]</span> The logit aggregate mean is the same shape of integral, with <span class="math inline">\(\mathrm{expit}\)</span> in place of <span class="math inline">\(\Phi\)</span>, but it has no such formula; evaluated numerically it is <span class="math display">\[
+J(1,1)=\int_{\mathbb R}\mathrm{expit}(z)\,\phi(z;1,1)\,dz=0.6967 .
+\]</span> Two nearby S-shaped links, fed identical <span class="math inline">\((m,\tau)\)</span>, give different aggregate risks (<span class="math inline">\(0.760\)</span> versus <span class="math inline">\(0.697\)</span>), and only one of the two can be written down. The next theorem isolates exactly why. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div id="thm-logit-no-closed-form" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 20.5 (Logit-link aggregation: structure and the absence of a closed form)</strong></span> Let the inverse link be <span class="math inline">\(g^{-1}=\mathrm{expit}\)</span> and let the linear predictor be normal, <span class="math inline">\(\eta_{jk}(X)\sim\mathcal N(m,\tau)\)</span> with <span class="math inline">\(\tau&gt;0\)</span>, where <span class="math inline">\(m=\eta_{jk}(\bar{\mathbf x}_j)\)</span> and <span class="math inline">\(\tau=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}\)</span>. Define the <strong>logit-normal integral</strong> <span id="eq-agg-logit-integral"><span class="math display">\[
+J(m,\tau):=\int_{\mathbb R}\mathrm{expit}(z)\,\phi(z;m,\tau)\,dz=\theta_{\bullet jk}\in(0,1).
+\tag{20.14}\]</span></span> Then:</p>
+<p><strong>(a) Reflection and the symmetric point.</strong> <span class="math inline">\(J(m,\tau)=1-J(-m,\tau)\)</span> for all <span class="math inline">\(m\)</span>, and in particular <span class="math inline">\(J(0,\tau)=\tfrac12\)</span> for every <span class="math inline">\(\tau\ge0\)</span>. Thus when the linear predictor at the mean covariate is zero the aggregation bias <a href="#eq-agg-eb" class="quarto-xref">Equation&nbsp;<span>20.8</span></a> vanishes <em>exactly</em>, despite <span class="math inline">\(g^{-1}\)</span> being nonlinear and <span class="math inline">\(\tau&gt;0\)</span>.</p>
+<p><strong>(b) Monotonicity.</strong> <span class="math inline">\(J(\cdot,\tau)\)</span> is strictly increasing, with <span class="math inline">\(\partial_m J(m,\tau)=\mathbb E[\mathrm{expit}'(\eta_{jk}(X))]=\mathbb E[\mathrm{expit}(\eta)(1-\mathrm{expit}(\eta))]&gt;0\)</span>.</p>
+<p><strong>(c) Sign of the bias.</strong> To leading order in <span class="math inline">\(\tau\)</span>, <span class="math inline">\(\theta_{\bullet jk}-\theta^{\mathrm{naive}}_{\bullet jk}
+=\tfrac12\,\mathrm{expit}''(m)\,\tau+o(\tau)\)</span> with <span class="math inline">\(\mathrm{expit}''(m)=\mathrm{expit}(m)(1-\mathrm{expit}(m))(1-2\,\mathrm{expit}(m))\)</span>, which is positive for <span class="math inline">\(m&lt;0\)</span> and negative for <span class="math inline">\(m&gt;0\)</span>: the plug-in mean <em>underestimates</em> the integrated mean in the low-risk region (<span class="math inline">\(m&lt;0\)</span>) and <em>overestimates</em> it in the high-risk region (<span class="math inline">\(m&gt;0\)</span>).</p>
+<p><strong>(d) No elementary closed form.</strong> Unlike the probit aggregate mean <a href="#eq-agg-probit" class="quarto-xref">Equation&nbsp;<span>20.13</span></a>, the logit-normal integral <span class="math inline">\(J(m,\tau)\)</span> admits no representation as a finite combination of elementary functions of <span class="math inline">\((m,\tau)\)</span>; the aggregate likelihood under the logit link must therefore be evaluated by numerical integration.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span><strong>(a).</strong> The logistic function satisfies <span class="math inline">\(\mathrm{expit}(-z)=1-\mathrm{expit}(z)\)</span>, since <span class="math inline">\(\mathrm{expit}(z)+\mathrm{expit}(-z)=\frac{e^{z}}{1+e^{z}}+\frac{1}{1+e^{z}}=1\)</span>. Substitute <span class="math inline">\(z\mapsto -z\)</span> in <a href="#eq-agg-logit-integral" class="quarto-xref">Equation&nbsp;<span>20.14</span></a> and use the Gaussian symmetry <span class="math inline">\(\phi(-z;m,\tau)=\phi(z;-m,\tau)\)</span>: <span class="math display">\[
+J(m,\tau)=\int \mathrm{expit}(z)\phi(z;m,\tau)\,dz
+=\int \mathrm{expit}(-z)\phi(-z;m,\tau)\,dz
+=\int\big(1-\mathrm{expit}(z)\big)\phi(z;-m,\tau)\,dz=1-J(-m,\tau).
+\]</span> Setting <span class="math inline">\(m=0\)</span> gives <span class="math inline">\(J(0,\tau)=1-J(0,\tau)\)</span>, hence <span class="math inline">\(J(0,\tau)=\tfrac12\)</span>. Since <span class="math inline">\(\theta^{\mathrm{naive}}_{\bullet jk}=\mathrm{expit}(0)=\tfrac12\)</span> as well, the bias <a href="#eq-agg-eb" class="quarto-xref">Equation&nbsp;<span>20.8</span></a> is zero at <span class="math inline">\(m=0\)</span>.</p>
+<p><strong>(b).</strong> Because <span class="math inline">\(\mathrm{expit}\)</span> is smooth with all derivatives bounded, differentiation under the integral is justified by dominated convergence (the <span class="math inline">\(m\)</span>-derivative of <span class="math inline">\(\phi\)</span> is <span class="math inline">\(\phi\)</span> times a linear factor, integrable against a bounded function). Hence <span class="math inline">\(\partial_m J(m,\tau)=\int\mathrm{expit}(z)\,\partial_m\phi(z;m,\tau)\,dz\)</span>; integrating by parts, or equivalently using <span class="math inline">\(\partial_m\phi=-\partial_z\phi\)</span> and moving the derivative onto <span class="math inline">\(\mathrm{expit}\)</span>, gives <span class="math inline">\(\partial_m J=\int\mathrm{expit}'(z)\phi(z;m,\tau)\,dz=\mathbb E[\mathrm{expit}'(\eta)]\)</span>. Since <span class="math inline">\(\mathrm{expit}'(z)=\mathrm{expit}(z)(1-\mathrm{expit}(z))\in(0,\tfrac14]\)</span> is strictly positive, the integral is strictly positive, so <span class="math inline">\(J(\cdot,\tau)\)</span> is strictly increasing.</p>
+<p><strong>(c).</strong> Apply the leading-order expansion <a href="#lem-agg-bias-expansion" class="quarto-xref">Lemma&nbsp;<span>20.1</span></a> with <span class="math inline">\(g^{-1}=\mathrm{expit}\)</span>, whose third derivative is bounded; then <span class="math inline">\(\theta_{\bullet jk}-\theta^{\mathrm{naive}}_{\bullet jk}=\tfrac12\mathrm{expit}''(m)\tau+o(\tau)\)</span>. Writing <span class="math inline">\(\sigma:=\mathrm{expit}(m)\)</span>, we have <span class="math inline">\(\mathrm{expit}'=\sigma(1-\sigma)\)</span> and, differentiating again, <span class="math inline">\(\mathrm{expit}''=\sigma'(1-2\sigma)=\sigma(1-\sigma)(1-2\sigma)\)</span>. The factor <span class="math inline">\(\sigma(1-\sigma)&gt;0\)</span> always, and <span class="math inline">\(1-2\sigma\)</span> has the sign of <span class="math inline">\(-m\)</span> because <span class="math inline">\(\sigma=\mathrm{expit}(m)&gt;\tfrac12\iff m&gt;0\)</span>. Hence <span class="math inline">\(\mathrm{expit}''(m)&gt;0\)</span> for <span class="math inline">\(m&lt;0\)</span> and <span class="math inline">\(&lt;0\)</span> for <span class="math inline">\(m&gt;0\)</span>, giving the stated signs.</p>
+<p><strong>(d).</strong> We argue by contrast with the probit case and by the structure of the integral. First reduce: by the heat-flow lemma <a href="#lem-agg-heat-flow" class="quarto-xref">Lemma&nbsp;<span>20.2</span></a>, <span class="math inline">\(J(m,\tau)=u(m,\tau)\)</span> is the solution of the heat equation <span class="math inline">\(\partial_\tau u=\tfrac12\partial_m^2 u\)</span> with initial data <span class="math inline">\(u(m,0)=\mathrm{expit}(m)\)</span>. For the probit initial data <span class="math inline">\(\Phi\)</span> the solution is the elementary rescaled probit <a href="#eq-agg-probit" class="quarto-xref">Equation&nbsp;<span>20.13</span></a>, because <span class="math inline">\(\Phi\)</span> is itself a Gaussian integral and Gaussian convolution of a Gaussian integral is again a Gaussian integral, only with an enlarged variance; this is the algebraic miracle exploited in <a href="#prp-agg-probit-closed-form" class="quarto-xref">Proposition&nbsp;<span>20.1</span></a>. The logistic initial data <span class="math inline">\(\mathrm{expit}\)</span> enjoys no such stability: it is not a Gaussian integral, and its Gaussian convolution is the mean of a logit-normal random variable, a transcendental function of <span class="math inline">\((m,\tau)\)</span> for which no closed form in elementary functions, nor in the error function with elementary arguments, is known. The obstruction is specifically the Gaussian weight, not the logistic function alone: the indefinite integral <span class="math inline">\(\int\mathrm{expit}(z)\,dz=\log(1+e^{z})\)</span> is elementary (the softplus function), so the difficulty in <a href="#eq-agg-logit-integral" class="quarto-xref">Equation&nbsp;<span>20.14</span></a> is introduced entirely by integrating against <span class="math inline">\(\phi\)</span>. We record the standard fact, used throughout the ML-NMR literature (<span class="citation" data-cites="phillippo2020mlnmr">Phillippo et al. (<a href="../../references.html#ref-phillippo2020mlnmr" role="doc-biblioref">2020</a>)</span>), that <span class="math inline">\(J(m,\tau)\)</span> is non-elementary and must be computed numerically; the structural facts (a) to (c) are exactly the qualitative information that survives the absence of a formula, and Chapter 22 supplies the numerical method that evaluates <a href="#eq-agg-logit-integral" class="quarto-xref">Equation&nbsp;<span>20.14</span></a> to controlled error. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>The honest status of part (d).</strong> Parts (a) to (c) are theorems in the full sense: the reflection identity, the value <span class="math inline">\(\tfrac12\)</span> at <span class="math inline">\(m=0\)</span>, strict monotonicity, and the sign of the leading bias are proved without appeal to authority. Part (d) is the assertion that no elementary antiderivative-style formula exists, and we have argued it rather than invoked a Liouville-type impossibility theorem, because the latter is outside the scope of this book. The argument is the right one for the purpose: it isolates the obstruction (the Gaussian weight, since <span class="math inline">\(\mathrm{expit}\)</span> alone has the elementary antiderivative <span class="math inline">\(\log(1+e^{z})\)</span>), and it exhibits the neighboring probit problem that <em>does</em> have a closed form (<a href="#prp-agg-probit-closed-form" class="quarto-xref">Proposition&nbsp;<span>20.1</span></a>), so the reader sees precisely why logit and probit, so alike in shape, diverge under aggregation. The practical consequence is unambiguous and is what matters for the method: every binary-outcome ML-NMR model must integrate <a href="#eq-agg-logit-integral" class="quarto-xref">Equation&nbsp;<span>20.14</span></a> numerically, which is the computational problem that occupies Chapter 22. A popular approximation, the probit substitution <span class="math inline">\(\mathrm{expit}(z)\approx\Phi(\kappa z)\)</span> with <span class="math inline">\(\kappa=\sqrt{\pi/8}\approx0.6267\)</span> chosen to match the slopes at the origin (so that <span class="math inline">\(\kappa\,\phi(0)=\mathrm{expit}'(0)=\tfrac14\)</span>), turns <a href="#eq-agg-logit-integral" class="quarto-xref">Equation&nbsp;<span>20.14</span></a> into the elementary <a href="#eq-agg-probit" class="quarto-xref">Equation&nbsp;<span>20.13</span></a> and is sometimes used as a fast initializer; it is an approximation, not an identity, and ML-NMR uses exact numerical integration in the fitted model. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>This is result H.7 of the proof catalogue (corresponds to H.7; Phillippo 2019, Section 4.3.2). The probit companion <a href="#prp-agg-probit-closed-form" class="quarto-xref">Proposition&nbsp;<span>20.1</span></a> is the aggregation counterpart of <a href="../part3/16-limits-of-nma.html#lem-limits-probit-integral" class="quarto-xref">Lemma&nbsp;<span>16.4</span></a> of Chapter 16.</p>
+</section>
+<section id="sec-agg-example" class="level2" data-number="20.12">
+<h2 data-number="20.12" class="anchored" data-anchor-id="sec-agg-example"><span class="header-section-number">20.12</span> A fully worked example</h2>
+<p>We compute the plug-in and integrated aggregate means in two settings: a binary outcome on the logit scale with a discrete covariate, where the integral is a finite sum and every number is verifiable on a calculator, and a count outcome on the log scale with a normal covariate, where the closed form <a href="#eq-agg-log-mgf" class="quarto-xref">Equation&nbsp;<span>20.12</span></a> applies. The logit example is the more instructive, because it exhibits the sign reversal of the bias between arms and its consequence for the marginal odds ratio.</p>
+<section id="sec-agg-example-logit" class="level3" data-number="20.12.1">
+<h3 data-number="20.12.1" class="anchored" data-anchor-id="sec-agg-example-logit"><span class="header-section-number">20.12.1</span> Logit link with a binary effect modifier</h3>
+<div id="exm-agg-logit-discrete" class="theorem example">
+<p><span class="theorem-title"><strong>Example 20.1 (Plug-in versus integrated aggregate risk on the logit scale)</strong></span> Continue the running plaque psoriasis example, now zooming into a single AgD study <span class="math inline">\(j\)</span> that reports PASI 75 response (a binary outcome) on two arms: a reference arm <span class="math inline">\(C\)</span>, an established comparator, and an active arm <span class="math inline">\(B\)</span>, the new IL-17 inhibitor. The one binary effect modifier is <span class="math inline">\(x\in\{0,1\}\)</span>, with <span class="math inline">\(x=1\)</span> for biologic-naive patients and <span class="math inline">\(x=0\)</span> for biologic-experienced, and its study prevalence is <span class="math inline">\(q:=P(x=1)=0.5\)</span> (the study is half biologic-naive). The covariate distribution <span class="math inline">\(f_j\)</span> is the two-point law with <span class="math inline">\(f_j(0)=f_j(1)=\tfrac12\)</span> and mean <span class="math inline">\(\bar x_j=q=0.5\)</span>. On the logit scale (<span class="math inline">\(g=\mathrm{logit}\)</span>, <span class="math inline">\(g^{-1}=\mathrm{expit}\)</span>) take the individual model <a href="#eq-agg-individual-model" class="quarto-xref">Equation&nbsp;<span>20.1</span></a> with <span class="math display">\[
+\mu_j=-1,\qquad \beta_1=0.5\ (\text{prognostic}),\qquad \beta_{2,B}=1.0\ (\text{effect modifier}),\qquad \gamma_B=0.8,
+\]</span> and reference-arm constraints <span class="math inline">\(\beta_{2,C}=0,\ \gamma_C=0\)</span>. The total slopes are <span class="math inline">\(\beta_{\mathrm{tot},C}=\beta_1=0.5\)</span> and <span class="math inline">\(\beta_{\mathrm{tot},B}=\beta_1+\beta_{2,B}=1.5\)</span>, and the arm linear predictors are <span class="math inline">\(\eta_C(x)=-1+0.5x\)</span> and <span class="math inline">\(\eta_B(x)=-1+1.5x+0.8=-0.2+1.5x\)</span>.</p>
+<p><strong>Conditional risks at the two covariate values.</strong> Evaluating <span class="math inline">\(\mathrm{expit}\)</span> (rounding to five decimals):</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>arm</th>
+<th><span class="math inline">\(x\)</span></th>
+<th><span class="math inline">\(\eta(x)\)</span></th>
+<th><span class="math inline">\(\mathrm{expit}(\eta(x))\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(C\)</span></td>
+<td><span class="math inline">\(0\)</span></td>
+<td><span class="math inline">\(-1.00\)</span></td>
+<td><span class="math inline">\(0.26894\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(C\)</span></td>
+<td><span class="math inline">\(1\)</span></td>
+<td><span class="math inline">\(-0.50\)</span></td>
+<td><span class="math inline">\(0.37754\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(B\)</span></td>
+<td><span class="math inline">\(0\)</span></td>
+<td><span class="math inline">\(-0.20\)</span></td>
+<td><span class="math inline">\(0.45017\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(B\)</span></td>
+<td><span class="math inline">\(1\)</span></td>
+<td><span class="math inline">\(\phantom{-}1.30\)</span></td>
+<td><span class="math inline">\(0.78583\)</span></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Integrated aggregate risks</strong> (the correct ML-NMR quantities), by <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> with the two-point <span class="math inline">\(f_j\)</span>: <span class="math display">\[
+\theta_{\bullet C}=\tfrac12(0.26894)+\tfrac12(0.37754)=0.32324,\qquad
+\theta_{\bullet B}=\tfrac12(0.45017)+\tfrac12(0.78583)=0.61800.
+\]</span></p>
+<p><strong>Plug-in aggregate risks</strong> (the naive quantities), by <a href="#eq-agg-naive" class="quarto-xref">Equation&nbsp;<span>20.6</span></a> at <span class="math inline">\(\bar x_j=0.5\)</span>, where <span class="math inline">\(\eta_C(0.5)=-0.75\)</span> and <span class="math inline">\(\eta_B(0.5)=0.55\)</span>: <span class="math display">\[
+\theta^{\mathrm{naive}}_{\bullet C}=\mathrm{expit}(-0.75)=0.32082,\qquad
+\theta^{\mathrm{naive}}_{\bullet B}=\mathrm{expit}(0.55)=0.63414.
+\]</span></p>
+<p><strong>Arm-level bias and the sign reversal.</strong> The ecological biases <a href="#eq-agg-eb" class="quarto-xref">Equation&nbsp;<span>20.8</span></a> are <span class="math display">\[
+\mathrm{EB}_C=\theta^{\mathrm{naive}}_{\bullet C}-\theta_{\bullet C}=0.32082-0.32324=-0.00242,\qquad
+\mathrm{EB}_B=0.63414-0.61800=+0.01614.
+\]</span> The reference arm has <span class="math inline">\(m_C=\eta_C(0.5)=-0.75&lt;0\)</span>, where <span class="math inline">\(\mathrm{expit}\)</span> is convex, so the plug-in <em>underestimates</em> (<span class="math inline">\(\mathrm{EB}_C&lt;0\)</span>); the active arm has <span class="math inline">\(m_B=\eta_B(0.5)=0.55&gt;0\)</span>, where <span class="math inline">\(\mathrm{expit}\)</span> is concave, so the plug-in <em>overestimates</em> (<span class="math inline">\(\mathrm{EB}_B&gt;0\)</span>). This is the sign reversal of <a href="#thm-logit-no-closed-form" class="quarto-xref">Theorem&nbsp;<span>20.5</span></a>(c), and it is the crux: the bias does not cancel across arms but compounds in the contrast.</p>
+<p><strong>The marginal odds ratio.</strong> The reported estimand is the marginal <span class="math inline">\(B\)</span>-versus-<span class="math inline">\(C\)</span> log odds ratio in study <span class="math inline">\(j\)</span>, <span class="math inline">\(g(\theta_{\bullet B})-g(\theta_{\bullet C})\)</span> on the logit scale. The integrated (ML-NMR) value is <span class="math display">\[
+\mathrm{logit}(0.61800)-\mathrm{logit}(0.32324)=0.48107-(-0.73893)=1.22000,
+\]</span> whereas the plug-in value telescopes, because <span class="math inline">\(\mathrm{logit}\circ\mathrm{expit}\)</span> is the identity, to the conditional log odds ratio at the mean covariate: <span class="math display">\[
+\mathrm{logit}(\theta^{\mathrm{naive}}_{\bullet B})-\mathrm{logit}(\theta^{\mathrm{naive}}_{\bullet C})
+=\eta_B(0.5)-\eta_C(0.5)=0.55-(-0.75)=1.30000=\gamma_B+\beta_{2,B}\,\bar x_j .
+\]</span> The naive aggregation thus reports the conditional-at-the-mean log odds ratio <span class="math inline">\(1.30000\)</span>, while the correct marginal log odds ratio is <span class="math inline">\(1.22000\)</span>. The ecological bias of the contrast is <span class="math display">\[
+1.30000-1.22000=0.08000\ \text{on the log-odds scale},
+\]</span> an odds-ratio inflation of <span class="math inline">\(e^{0.08000}=1.0833\)</span>, roughly an eight percent distortion produced entirely by plugging in the mean instead of integrating. ML-NMR reports <span class="math inline">\(1.22000\)</span>; pre-ML-NMR meta-regression on the mean covariate reports <span class="math inline">\(1.30000\)</span>. In HTA terms, the naive analysis would credit the IL-17 inhibitor with an odds ratio of <span class="math inline">\(e^{1.30000}=3.669\)</span> against the comparator, when the correct population-average figure is <span class="math inline">\(e^{1.22000}=3.387\)</span>: a real difference in the number a reimbursement decision would rest on, and it came from nothing but the order of two operations. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>A remark on what made this hand-computable: the discrete covariate turned the integral <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> into a two-term sum, so the logit-normal obstruction of <a href="#thm-logit-no-closed-form" class="quarto-xref">Theorem&nbsp;<span>20.5</span></a> did not arise; with a continuous covariate the same contrast would require the numerical integration of Chapter 22. Note also the clean identity that the <em>plug-in</em> marginal log odds ratio equals exactly the conditional log odds ratio at the mean covariate, <span class="math inline">\(\gamma_B+\beta_{2,B}\bar x_j\)</span>, which is why naive meta-regression silently estimates a conditional, not a marginal, effect; the difference is the non-collapsibility gap of <a href="../part1/07-glm.html#def-non-collapsibility" class="quarto-xref">Definition&nbsp;<span>7.7</span></a>, here realized as aggregation bias.</p>
+</section>
+<section id="sec-agg-example-log" class="level3" data-number="20.12.2">
+<h3 data-number="20.12.2" class="anchored" data-anchor-id="sec-agg-example-log"><span class="header-section-number">20.12.2</span> Log link with a normal covariate</h3>
+<div id="exm-agg-log-gaussian" class="theorem example">
+<p><span class="theorem-title"><strong>Example 20.2 (Closed-form aggregate rate on the log scale)</strong></span> Consider an AgD study <span class="math inline">\(j\)</span> reporting a count outcome on the log scale (<span class="math inline">\(g=\log\)</span>, <span class="math inline">\(g^{-1}=\exp\)</span>) with a single continuous covariate <span class="math inline">\(X\sim\mathcal N(\bar x_j,\sigma_j^2)\)</span>, <span class="math inline">\(\bar x_j=2\)</span>, <span class="math inline">\(\sigma_j^2=1\)</span>. Take the active-arm parameters <span class="math inline">\(\mu_j=0\)</span>, <span class="math inline">\(\beta_1=0.3\)</span>, <span class="math inline">\(\beta_{2,k}=0.2\)</span>, <span class="math inline">\(\gamma_k=0.5\)</span>, so <span class="math inline">\(\beta_{\mathrm{tot},k}=\beta_1+\beta_{2,k}=0.5\)</span> and <span class="math inline">\(v=\beta_{\mathrm{tot},k}^2\sigma_j^2=0.25\cdot1=0.25\)</span>. The mean linear predictor is <span class="math inline">\(m=\mu_j+\gamma_k+\bar x_j\beta_{\mathrm{tot},k}=0+0.5+2(0.5)=1.5\)</span>.</p>
+<p>By the closed form <a href="#eq-agg-log-mgf" class="quarto-xref">Equation&nbsp;<span>20.12</span></a>, <span class="math display">\[
+\theta_{\bullet jk}=\exp\!\big(m+\tfrac12 v\big)=\exp(1.5+0.125)=\exp(1.625)=5.0784,
+\]</span> while the plug-in rate is <span class="math display">\[
+\theta^{\mathrm{naive}}_{\bullet jk}=\exp(m)=\exp(1.5)=4.4817 .
+\]</span> The plug-in underestimates by the exact multiplicative factor <span class="math inline">\(e^{v/2}=e^{0.125}=1.1331\)</span>, a thirteen percent correction; the leading-order prediction of <a href="#eq-agg-bias-expansion" class="quarto-xref">Equation&nbsp;<span>20.9</span></a>, <span class="math inline">\(\theta_\bullet-\theta^{\mathrm{naive}}
+\approx\tfrac12 e^{m}v=\tfrac12(4.4817)(0.25)=0.5602\)</span>, is close to the exact difference <span class="math inline">\(5.0784-4.4817=0.5967\)</span>, the small discrepancy being the <span class="math inline">\(o(v)\)</span> curvature beyond second order. Because <span class="math inline">\(\exp\)</span> is convex everywhere, the bias here has a fixed sign (<span class="math inline">\(\theta^{\mathrm{naive}}\le\theta_\bullet\)</span> always), in contrast to the logit case where the sign reversed between arms. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+</section>
+<section id="sec-agg-noncollapse" class="level2" data-number="20.13">
+<h2 data-number="20.13" class="anchored" data-anchor-id="sec-agg-noncollapse"><span class="header-section-number">20.13</span> Aggregation bias and non-collapsibility</h2>
+<p>The worked example ended on a claim that deserves its own statement, because it links this chapter to a long-running debate in epidemiology. Recall the two odds ratios it produced. The plug-in log odds ratio was exactly <span class="math inline">\(1.30\)</span>, and it equaled the <em>conditional</em> log odds ratio at the mean covariate, <span class="math inline">\(\gamma_B+\beta_{2,B}\bar x_j\)</span>; the integrated log odds ratio was <span class="math inline">\(1.22\)</span>, the <em>marginal</em> log odds ratio in the study population. They differ not because of any estimation error but because the odds ratio is <strong>non-collapsible</strong> (<a href="../part1/07-glm.html#def-non-collapsibility" class="quarto-xref">Definition&nbsp;<span>7.7</span></a>): the population-average of conditional odds ratios is not the odds ratio of the population-average risks, even with no confounding and no modeling mistake.</p>
+<p>This is worth isolating, because it is a genuine source of confusion. Aggregation bias, as this chapter defines it, is a Jensen gap between “predict at the mean” and “average the predictions.” Non-collapsibility is the statement that the odds ratio, specifically, changes when you marginalize a conditional model over a covariate, even a covariate that is not a confounder. On the logit scale these are two names for one piece of arithmetic: marginalizing the conditional logistic model over the case mix <em>is</em> the integral <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a>, and the gap it opens between the conditional-at-the-mean contrast and the marginal contrast <em>is</em> the non-collapsibility of the odds ratio. The worked example shows the marginal odds ratio <span class="math inline">\(e^{1.22}=3.39\)</span> pulled toward the null relative to the conditional <span class="math inline">\(e^{1.30}=3.67\)</span>; this attenuation toward the null is the characteristic direction of odds-ratio non-collapsibility for a covariate that affects the outcome, and it is why a marginal odds ratio from an aggregate trial and a conditional odds ratio from a patient-level model are not directly comparable numbers.</p>
+<p>Two practical consequences follow. First, an analyst must decide which estimand the decision maker wants; ML-NMR targets the marginal effect in a stated population and computes it honestly by integrating, whereas plug-in meta-regression silently reports a conditional-at-the-mean effect and mislabels it as a population effect. Second, the risk difference and the log risk ratio are <em>collapsible</em> in the no-confounding case, so on the identity and log links this particular gap does not arise. (Aggregation can still bias the log link through Jensen, as <a href="#thm-log-link-mgf" class="quarto-xref">Theorem&nbsp;<span>20.4</span></a> shows, but that is variance-driven curvature, not non-collapsibility.) The odds ratio is the scale on which the two phenomena coincide, which is why binary outcomes are where the fights happen. Chapter 7 introduced non-collapsibility for a single logistic regression; this section has shown that it is the same phenomenon as logit aggregation bias, now playing out across a network.</p>
+</section>
+<section id="sec-agg-notes" class="level2" data-number="20.14">
+<h2 data-number="20.14" class="anchored" data-anchor-id="sec-agg-notes"><span class="header-section-number">20.14</span> Notes and references</h2>
+<p>Multilevel network meta-regression was introduced by <span class="citation" data-cites="phillippo2020mlnmr">Phillippo et al. (<a href="../../references.html#ref-phillippo2020mlnmr" role="doc-biblioref">2020</a>)</span> and developed at length in the doctoral thesis <span class="citation" data-cites="phillippo2019thesis">Phillippo (<a href="../../references.html#ref-phillippo2019thesis" role="doc-biblioref">2019</a>)</span>, whose Chapter 4 is the source of the aggregation principle treated here. The individual model <a href="#eq-agg-individual-model" class="quarto-xref">Equation&nbsp;<span>20.1</span></a> is their Equation (2) and thesis Equation (4.1b); the aggregate mean <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> is thesis Equation (4.1d); the aggregation theorem <a href="#thm-aggregation" class="quarto-xref">Theorem&nbsp;<span>20.1</span></a> is the likelihood identity of thesis Equation (4.1c) and the manuscript’s Section 3; and the aggregation-bias identity <a href="#eq-agg-eb" class="quarto-xref">Equation&nbsp;<span>20.8</span></a> is thesis Equation (4.8). The names “individual-level model” and “aggregate-level model” follow the multilevel-modeling reading in which patients are nested within studies, and the two levels are linked by integration rather than by the usual random intercept.</p>
+<p>The aggregation-bias theorem <a href="#thm-aggregation-bias" class="quarto-xref">Theorem&nbsp;<span>20.2</span></a> is Jensen’s inequality (<a href="../part1/04-probability.html#thm-jensen" class="quarto-xref">Theorem&nbsp;<span>4.6</span></a>) applied to the inverse link, and it is the same mathematical fact as the ecological bias of aggregate regression (<a href="../part3/16-limits-of-nma.html#def-ecological-bias" class="quarto-xref">Definition&nbsp;<span>16.2</span></a>) diagnosed in Chapter 16 and as the non-collapsibility of marginal effects (<a href="../part1/07-glm.html#def-non-collapsibility" class="quarto-xref">Definition&nbsp;<span>7.7</span></a>) discussed in Chapter 7. The leading-order expansion <a href="#lem-agg-bias-expansion" class="quarto-xref">Lemma&nbsp;<span>20.1</span></a> is the delta-method or Laplace heuristic made into a theorem with a remainder bound; it is folklore in the ecological-inference literature. The heat-flow lemma <a href="#lem-agg-heat-flow" class="quarto-xref">Lemma&nbsp;<span>20.2</span></a> is the observation that Gaussian smoothing is the heat semigroup <span class="math inline">\(e^{(\tau/2)\partial^2}\)</span>; we have not seen it stated for ML-NMR, though it is implicit whenever a closed-form aggregate mean is derived under normal covariates, and it gives the cleanest account of why the log and probit links keep closed forms (their inverse links, <span class="math inline">\(\exp\)</span> and <span class="math inline">\(\Phi\)</span>, are stable under Gaussian convolution) while the logit link does not. The probit closed form <a href="#prp-agg-probit-closed-form" class="quarto-xref">Proposition&nbsp;<span>20.1</span></a> reuses the Gaussian probit integral of <span class="citation" data-cites="owen1956">Owen (<a href="../../references.html#ref-owen1956" role="doc-biblioref">1956</a>)</span>, derived in this book as <a href="../part3/16-limits-of-nma.html#lem-limits-probit-integral" class="quarto-xref">Lemma&nbsp;<span>16.4</span></a>.</p>
+<p>The log-link closed form <a href="#thm-log-link-mgf" class="quarto-xref">Theorem&nbsp;<span>20.4</span></a> is the log-normal mean and is standard; it underlies the closed-form Poisson aggregate likelihood that Chapter 21 takes up. The logit-normal integral <a href="#eq-agg-logit-integral" class="quarto-xref">Equation&nbsp;<span>20.14</span></a> is the mean of a logit-normal distribution; its non-elementarity (<a href="#thm-logit-no-closed-form" class="quarto-xref">Theorem&nbsp;<span>20.5</span></a>) is well known and is the reason ML-NMR for binary outcomes is a numerical-integration method, treated in Chapter 22 via Sklar’s theorem (<span class="citation" data-cites="sklar1959">Sklar (<a href="../../references.html#ref-sklar1959" role="doc-biblioref">1959</a>)</span>), Sobol’ sequences (<span class="citation" data-cites="sobol1967">Sobol’ (<a href="../../references.html#ref-sobol1967" role="doc-biblioref">1967</a>)</span>), and the quasi-Monte Carlo error theory descending from the Koksma-Hlawka inequality. The probit substitution <span class="math inline">\(\mathrm{expit}(z)\approx\Phi(\kappa z)\)</span> mentioned in the remark after <a href="#thm-logit-no-closed-form" class="quarto-xref">Theorem&nbsp;<span>20.5</span></a> is the logistic-to-normal slope match; it is an approximation only and is not used in the fitted ML-NMR likelihood, which integrates numerically.</p>
+<p>There is no machine-checked counterpart to this chapter. The Coq development accompanying the book (<span class="citation" data-cites="phillippo2019thesis">Phillippo (<a href="../../references.html#ref-phillippo2019thesis" role="doc-biblioref">2019</a>)</span> notwithstanding) formalizes the potential-outcomes, propensity-score, MAIC, and STC material of Parts II to IV but stops short of ML-NMR, whose mathematical content is the numerical analysis of Chapters 21 and 22 rather than the algebra of the earlier parts; we note this gap in the work log. The aggregation identity <a href="#thm-aggregation" class="quarto-xref">Theorem&nbsp;<span>20.1</span></a> is, however, a single application of the chain rule, Fubini’s theorem (<a href="../part1/04-probability.html#thm-fubini-tonelli" class="quarto-xref">Theorem&nbsp;<span>4.8</span></a>), and the tower property (<a href="../part1/04-probability.html#cor-total-expectation" class="quarto-xref">Corollary&nbsp;<span>4.1</span></a>), all of which are formalized in the probability libraries the development depends on, so a future formalization would be short.</p>
+</section>
+<section id="sec-agg-exercises" class="level2" data-number="20.15">
+<h2 data-number="20.15" class="anchored" data-anchor-id="sec-agg-exercises"><span class="header-section-number">20.15</span> Exercises</h2>
+<p>A starred exercise (<span class="math inline">\(\star\)</span>) has a full worked solution in Appendix F. The exercises are graded: the first two are warm-ups and interpretation questions that need only arithmetic and the ideas of the chapter; the later ones build to the algebra and the proofs. Read the warm-ups even if you skip the proofs, since they carry the applied message.</p>
+<div id="exr-agg-same-mean-different-prediction" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 20.1 (Warm-up: same mean covariate, different aggregate risk)</strong></span> Two AgD studies enroll patients for the same binary outcome on the logit scale and report the <em>same</em> mean covariate <span class="math inline">\(\bar x\)</span>, but study 1’s patients are tightly clustered around <span class="math inline">\(\bar x\)</span> while study 2’s are widely spread. Explain in one short paragraph, without any calculation, why the ML-NMR aggregate risk can differ between the two studies even though their plug-in risks <span class="math inline">\(\mathrm{expit}(\eta(\bar x))\)</span> are identical. Which study’s true risk sits further from its plug-in value, and why? (You are re-deriving in words why matching only the mean covariate, as first-moment MAIC does, cannot by itself remove aggregation bias.)</p>
+</div>
+<div id="exr-agg-mini-arithmetic" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 20.2 (Warm-up: the six-point gap by hand)</strong></span> An arm splits evenly into two covariate groups with individual PASI 75 response probabilities <span class="math inline">\(0.60\)</span> and <span class="math inline">\(0.10\)</span>. (a) Compute the true aggregate response as the average of the two risks. (b) Compute the two log-odds, average them, and apply <span class="math inline">\(\mathrm{expit}\)</span> to obtain the plug-in response. (c) Confirm the plug-in underestimates, and say which case of <a href="#thm-aggregation-bias" class="quarto-xref">Theorem&nbsp;<span>20.2</span></a> (convex or concave <span class="math inline">\(g^{-1}\)</span>) you are in by checking the sign of the mean log-odds. (This is the mini-example of <a href="#sec-agg-aggregate" class="quarto-xref"><span>Section 20.5</span></a> redone from scratch.)</p>
+</div>
+<div id="exr-agg-prevalence" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 20.3 (Bias as a function of prevalence (<span class="math inline">\(\star\)</span>))</strong></span> Repeat the logit worked example <a href="#exm-agg-logit-discrete" class="quarto-xref">Example&nbsp;<span>20.1</span></a> with the effect-modifier prevalence changed to <span class="math inline">\(q=P(x=1)=0.3\)</span>, keeping all four parameters <span class="math inline">\(\mu_j=-1,\ \beta_1=0.5,\ \beta_{2,B}=1.0,\ \gamma_B=0.8\)</span>. (a) Recompute the integrated aggregate risks <span class="math inline">\(\theta_{\bullet C},\theta_{\bullet B}\)</span> as the two-point averages <span class="math inline">\((1-q)\,\mathrm{expit}(\eta(0))+q\,\mathrm{expit}(\eta(1))\)</span>. (b) Recompute the plug-in risks at <span class="math inline">\(\bar x_j=q=0.3\)</span>. (c) Confirm that the plug-in marginal log odds ratio again equals <span class="math inline">\(\gamma_B+\beta_{2,B}\bar x_j\)</span> exactly, and report the ecological bias of the contrast. (d) Explain, using <a href="#thm-logit-no-closed-form" class="quarto-xref">Theorem&nbsp;<span>20.5</span></a>(c), why decreasing <span class="math inline">\(q\)</span> moves both arms’ mean linear predictors <span class="math inline">\(m_C,m_B\)</span> downward and what that does to the sign of each arm’s bias.</p>
+</div>
+<div id="exr-agg-identity-uniqueness" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 20.4 (The identity link is the only universally exact link (<span class="math inline">\(\star\)</span>))</strong></span> Prove that a twice-differentiable link <span class="math inline">\(g\)</span> satisfies <span class="math inline">\(\theta_{\bullet jk}=\theta^{\mathrm{naive}}_{\bullet jk}\)</span> for <em>every</em> nondegenerate covariate distribution and every choice of total slope <span class="math inline">\(\boldsymbol\beta_{\mathrm{tot},k}\)</span> if and only if <span class="math inline">\(g\)</span> is the identity link up to an affine reparameterization, that is <span class="math inline">\(g^{-1}(z)=a+bz\)</span> with <span class="math inline">\(b\ne0\)</span>. (Hint: by <a href="#thm-identity-link-exact" class="quarto-xref">Theorem&nbsp;<span>20.3</span></a> the condition forces <span class="math inline">\(g^{-1}\)</span> affine on every interval; deduce <span class="math inline">\(g^{-1}\)</span> is globally affine, and translate this into a statement about <span class="math inline">\(g\)</span>.) Conclude that aggregation bias is unavoidable on any genuinely nonlinear scale, including the logit, log, probit, and complementary log-log.</p>
+</div>
+<div id="exr-agg-log-multiplicative" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 20.5 (Variance, not mean, drives the log-link bias)</strong></span> On the log scale with normal covariates, use <a href="#thm-log-link-mgf" class="quarto-xref">Theorem&nbsp;<span>20.4</span></a> to show that the multiplicative plug-in bias <span class="math inline">\(\theta_{\bullet jk}/\theta^{\mathrm{naive}}_{\bullet jk}=e^{v/2}\)</span> depends on the covariate distribution only through the variance <span class="math inline">\(v=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}\)</span> of the linear predictor and not at all through its mean. Two studies with identical covariate means <span class="math inline">\(\bar{\mathbf x}_j\)</span> but different covariance matrices therefore have identical plug-in rates but different true rates; compute the ratio of their true rates when <span class="math inline">\(\boldsymbol\Sigma_j\)</span> is scaled by a factor <span class="math inline">\(c&gt;0\)</span>.</p>
+</div>
+<div id="exr-agg-heat-verify" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 20.6 (Verifying the heat-flow lemma on the three links)</strong></span> Using <a href="#lem-agg-heat-flow" class="quarto-xref">Lemma&nbsp;<span>20.2</span></a>, verify directly that each of the following is the solution <span class="math inline">\(u(m,\tau)\)</span> of the heat equation <span class="math inline">\(\partial_\tau u=\tfrac12\partial_m^2 u\)</span> with the stated initial data, and identify which link each corresponds to. (a) <span class="math inline">\(u(m,\tau)=m\)</span> with <span class="math inline">\(u(m,0)=m\)</span>. (b) <span class="math inline">\(u(m,\tau)=e^{m+\tau/2}\)</span> with <span class="math inline">\(u(m,0)=e^m\)</span>. (c) <span class="math inline">\(u(m,\tau)=\Phi(m/\sqrt{1+\tau})\)</span> with <span class="math inline">\(u(m,0)=\Phi(m)\)</span>. (d) Explain why no elementary <span class="math inline">\(u\)</span> exists for <span class="math inline">\(u(m,0)=\mathrm{expit}(m)\)</span>, relating your answer to <a href="#thm-logit-no-closed-form" class="quarto-xref">Theorem&nbsp;<span>20.5</span></a>(d).</p>
+</div>
+<div id="exr-agg-second-moment" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 20.7 (When first-moment matching is not enough)</strong></span> Two AgD studies report the same covariate mean <span class="math inline">\(\bar x=0\)</span> for a single continuous effect modifier, but study 1 has variance <span class="math inline">\(\sigma_1^2=0.25\)</span> and study 2 has variance <span class="math inline">\(\sigma_2^2=4\)</span>. The outcome is binary on the logit scale with <span class="math inline">\(\eta(x)=\beta_{\mathrm{tot}}\,x\)</span> and <span class="math inline">\(\beta_{\mathrm{tot}}=1\)</span>. (a) Using <a href="#thm-logit-no-closed-form" class="quarto-xref">Theorem&nbsp;<span>20.5</span></a>(a), show that <em>both</em> studies have aggregate risk exactly <span class="math inline">\(\tfrac12\)</span>, so that here the variance does not bias the arm mean. (b) Now shift the baseline to <span class="math inline">\(\eta(x)=0.8+x\)</span> so that the mean linear predictor is <span class="math inline">\(m=0.8\)</span>; using <a href="#lem-agg-bias-expansion" class="quarto-xref">Lemma&nbsp;<span>20.1</span></a>, estimate the aggregation bias in each study to leading order and explain why first-moment matching (which equates <span class="math inline">\(\bar x\)</span> but ignores <span class="math inline">\(\sigma^2\)</span>) leaves a residual bias that differs between the two studies. Relate this to the second-moment-matching remark in Chapter 18.</p>
+</div>
+<div id="exr-agg-correlated" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 20.8 (Closed-form aggregation with two correlated covariates)</strong></span> Let <span class="math inline">\(\mathbf X\sim\mathcal N(\bar{\mathbf x}_j,\boldsymbol\Sigma_j)\)</span> in <span class="math inline">\(\mathbb R^2\)</span> with <span class="math inline">\(\bar{\mathbf x}_j=(1,2)^\top\)</span> and <span class="math inline">\(\boldsymbol\Sigma_j=\begin{pmatrix}1&amp;0.5\\0.5&amp;2\end{pmatrix}\)</span>, log link, and total slope <span class="math inline">\(\boldsymbol\beta_{\mathrm{tot},k}=(0.4,-0.3)^\top\)</span>, with <span class="math inline">\(\mu_j=0\)</span> and <span class="math inline">\(\gamma_k=0.2\)</span>. (a) Compute <span class="math inline">\(m=\mu_j+\gamma_k+\bar{\mathbf x}_j^\top\boldsymbol\beta_{\mathrm{tot},k}\)</span> and <span class="math inline">\(v=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}\)</span>. (b) Report the integrated aggregate rate <span class="math inline">\(\theta_{\bullet jk}=e^{m+v/2}\)</span> and the plug-in rate <span class="math inline">\(e^m\)</span>. (c) Show that flipping the sign of the off-diagonal covariance to <span class="math inline">\(-0.5\)</span> changes <span class="math inline">\(v\)</span> and hence the bias, even though the marginal variances and means are unchanged, and interpret this as the dependence of aggregation bias on the joint, not merely marginal, covariate distribution.</p>
+</div>
+<div id="exr-agg-nma-reduction" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 20.9 (Reduction to network meta-analysis)</strong></span> Show that when <span class="math inline">\(\boldsymbol\beta_1=\mathbf 0\)</span> and <span class="math inline">\(\boldsymbol\beta_{2,k}=\mathbf 0\)</span> for every <span class="math inline">\(k\)</span>, the linear predictor <a href="#eq-agg-individual-model" class="quarto-xref">Equation&nbsp;<span>20.1</span></a> reduces to <span class="math inline">\(\eta_{jk}=\mu_j+\gamma_k\)</span>, the integral <a href="#eq-agg-aggregate-mean" class="quarto-xref">Equation&nbsp;<span>20.2</span></a> reduces to <span class="math inline">\(\theta_{\bullet jk}=g^{-1}(\mu_j+\gamma_k)\)</span> with no dependence on <span class="math inline">\(f_j\)</span>, and hence the aggregate likelihood <a href="#eq-agg-aggregate-likelihood" class="quarto-xref">Equation&nbsp;<span>20.5</span></a> is exactly the standard network meta-analysis likelihood with study baselines <span class="math inline">\(\mu_j\)</span> and treatment effects <span class="math inline">\(\gamma_k\)</span>. (This is the NMA special case proved in full generality in Chapter 23.) Explain why aggregation bias is identically zero in this case for <em>every</em> link, and reconcile this with <a href="#thm-aggregation-bias" class="quarto-xref">Theorem&nbsp;<span>20.2</span></a>.</p>
+</div>
+<div id="exr-agg-jensen-gap-bound" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 20.10 (A two-sided bound on the logit aggregation bias)</strong></span> Let <span class="math inline">\(\eta_{jk}(X)\sim\mathcal N(m,\tau)\)</span> on the logit scale. Using <span class="math inline">\(0\le\mathrm{expit}''(z)\le\)</span> its maximum modulus and the exact second-moment identity <span class="math inline">\(\mathbb E[(\eta-m)^2]=\tau\)</span>, prove the nonasymptotic bound <span class="math display">\[
+\big|\,\theta_{\bullet jk}-\theta^{\mathrm{naive}}_{\bullet jk}\,\big|\ \le\ \tfrac12\Big(\sup_z|\mathrm{expit}''(z)|\Big)\,\tau
+=\tfrac{1}{12\sqrt3}\,\tau,
+\]</span> where <span class="math inline">\(\sup_z|\mathrm{expit}''(z)|=1/(6\sqrt3)\)</span> is attained at <span class="math inline">\(z=\pm\log(2+\sqrt3)\)</span>. (Hint: bound the Taylor remainder of <a href="#lem-agg-bias-expansion" class="quarto-xref">Lemma&nbsp;<span>20.1</span></a> by the supremum of the second derivative rather than discarding it, using <span class="math inline">\(\mathrm{expit}(\eta)-\mathrm{expit}(m)-\mathrm{expit}'(m)(\eta-m)=\tfrac12\mathrm{expit}''(\zeta)(\eta-m)^2\)</span>.) Compare this guaranteed bound with the exact bias computed in <a href="#exm-agg-logit-discrete" class="quarto-xref">Example&nbsp;<span>20.1</span></a>.</p>
+</div>
+<p>Solutions to the starred exercises <a href="#exr-agg-prevalence" class="quarto-xref">Exercise&nbsp;<span>20.3</span></a> and <a href="#exr-agg-identity-uniqueness" class="quarto-xref">Exercise&nbsp;<span>20.4</span></a> appear in Appendix F.</p>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-owen1956" class="csl-entry" role="listitem">
+Owen, Donald B. 1956. <span>“Tables for Computing Bivariate Normal Probabilities.”</span> <em>The Annals of Mathematical Statistics</em> 27 (4): 1075–90.
+</div>
+<div id="ref-phillippo2019thesis" class="csl-entry" role="listitem">
+Phillippo, David Mark. 2019. <span>“Calibration of Treatment Effects in Network Meta-Analysis Using Individual Patient Data.”</span> PhD thesis, University of Bristol.
+</div>
+<div id="ref-phillippo2020mlnmr" class="csl-entry" role="listitem">
+Phillippo, David M., Sofia Dias, A. E. Ades, et al. 2020. <span>“Multilevel Network Meta-Regression for Population-Adjusted Treatment Comparisons.”</span> <em>Journal of the Royal Statistical Society: Series A</em> 183 (3): 1189–210. <a href="https://doi.org/10.1111/rssa.12579">https://doi.org/10.1111/rssa.12579</a>.
+</div>
+<div id="ref-sklar1959" class="csl-entry" role="listitem">
+Sklar, Abe. 1959. <span>“Fonctions de r<span>é</span>partition <span class="nocase">à</span> <span class="math inline">\(n\)</span> Dimensions Et Leurs Marges.”</span> <em>Publications de l’Institut de Statistique de l’Universit<span>é</span> de Paris</em> 8: 229–31.
+</div>
+<div id="ref-sobol1967" class="csl-entry" role="listitem">
+Sobol’, Ilya M. 1967. <span>“On the Distribution of Points in a Cube and the Approximate Evaluation of Integrals.”</span> <em>USSR Computational Mathematics and Mathematical Physics</em> 7 (4): 86–112.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/choxos\.github\.io\/Mathematics-of-ITC\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../chapters/part4/19-stc.html" class="pagination-link" aria-label="Simulated Treatment Comparison">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Simulated Treatment Comparison</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../chapters/part5/21-mlnmr-discrete.html" class="pagination-link" aria-label="Multilevel Network Meta-Regression II: Discrete Outcomes and Approximation Theory">
+        <span class="nav-page-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression II: Discrete Outcomes and Approximation Theory</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

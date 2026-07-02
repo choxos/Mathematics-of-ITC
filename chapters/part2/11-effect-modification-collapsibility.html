@@ -1,0 +1,1637 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>11&nbsp; Effect Modification, Interaction, and Collapsibility – The Mathematics of Indirect Treatment Comparisons</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../chapters/part2/12-transportability.html" rel="next">
+<link href="../../chapters/part2/10-adjustment-methods.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-aafe154f14b83768199b70e6209de778.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/part2/09-potential-outcomes.html">Part II: Causal Inference and Estimands</a></li><li class="breadcrumb-item"><a href="../../chapters/part2/11-effect-modification-collapsibility.html"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Effect Modification, Interaction, and Collapsibility</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">The Mathematics of Indirect Treatment Comparisons</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/choxos/Mathematics-of-ITC" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../notation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Notation and Conventions</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part I: Mathematical Foundations</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/01-linear-algebra-i.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Linear Algebra I: Vector Spaces, Linear Maps, and Rank</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/02-linear-algebra-ii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Linear Algebra II: Orthogonality and the Projection Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/03-linear-algebra-iii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Linear Algebra III: Spectral Theory and Quadratic Forms</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/04-probability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Probability and Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/05-inference.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Statistical Inference</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/06-linear-regression.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Linear Regression from First Principles</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/07-glm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Generalized Linear Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/08-hierarchical-bayes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Hierarchical Models, Shrinkage, and Bayesian Inference</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Causal Inference and Estimands</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/09-potential-outcomes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Potential Outcomes and Identification</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/10-adjustment-methods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Adjustment Methods</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/11-effect-modification-collapsibility.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Effect Modification, Interaction, and Collapsibility</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/12-transportability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Transportability: The Estimand-Based Theory</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Meta-Analysis and Network Meta-Analysis</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/13-pairwise-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Pairwise Meta-Analysis</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/14-bucher.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Indirect Comparison and Bucher’s Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/15-network-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Network Meta-Analysis: Models and Identifiability</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/16-limits-of-nma.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">The Limits of Standard Network Meta-Analysis</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Population Adjustment: MAIC and STC</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/17-population-adjustment-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Population Adjustment Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/18-maic.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">Matching-Adjusted Indirect Comparison</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/19-stc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Simulated Treatment Comparison</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part V: Multilevel Network Meta-Regression</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/20-mlnmr-aggregation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression I: The Aggregation Principle</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/21-mlnmr-discrete.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression II: Discrete Outcomes and Approximation Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/22-mlnmr-integration.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression III: Numerical Integration Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/23-mlnmr-estimands.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression IV: Estimands, Identifiability, and Generality</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/24-computation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Bayesian Computation and Diagnostics</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/25-general-likelihoods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">General Likelihoods: Survival and Ordered Categorical Outcomes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/26-ml-umr.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Multilevel Unanchored Meta-Regression</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part VI: Bias, Comparator Selection, and Rigor</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/27-distance-matching.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Aggregate-Level Covariate-Distance Matching</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/28-qba.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Quantitative Bias Analysis for Indirect Comparisons</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/29-simulation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Simulation Study Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/30-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Machine-Checked Foundations: The Coq Formalization</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/A-notation-glossary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Notation Glossary</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/B-matrix-calculus.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Matrix Calculus</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/C-distributions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">Probability Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/D-special-functions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">D</span>&nbsp; <span class="chapter-title">Special Functions for Numerical Integration</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/E-reference-implementations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">E</span>&nbsp; <span class="chapter-title">Reference Implementations: multinma, mlumr, and uitc</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/F-solutions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">F</span>&nbsp; <span class="chapter-title">Solutions to Selected Exercises</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/G-reading-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">G</span>&nbsp; <span class="chapter-title">Reading the Coq Proofs</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#sec-emcoll-intro" id="toc-sec-emcoll-intro" class="nav-link active" data-scroll-target="#sec-emcoll-intro"><span class="header-section-number">11.1</span> Why a constant effect can still move</a>
+  <ul class="collapse">
+  <li><a href="#sec-emcoll-running" id="toc-sec-emcoll-running" class="nav-link" data-scroll-target="#sec-emcoll-running"><span class="header-section-number">11.1.1</span> A running example and the effect-measure scales</a></li>
+  </ul></li>
+  <li><a href="#sec-emcoll-cond-marg" id="toc-sec-emcoll-cond-marg" class="nav-link" data-scroll-target="#sec-emcoll-cond-marg"><span class="header-section-number">11.2</span> Conditional and marginal effects</a></li>
+  <li><a href="#sec-emcoll-em-interaction" id="toc-sec-emcoll-em-interaction" class="nav-link" data-scroll-target="#sec-emcoll-em-interaction"><span class="header-section-number">11.3</span> Effect modification and statistical interaction</a>
+  <ul class="collapse">
+  <li><a href="#sec-emcoll-scale" id="toc-sec-emcoll-scale" class="nav-link" data-scroll-target="#sec-emcoll-scale"><span class="header-section-number">11.3.1</span> Effect modification is scale dependent</a></li>
+  </ul></li>
+  <li><a href="#sec-emcoll-pv" id="toc-sec-emcoll-pv" class="nav-link" data-scroll-target="#sec-emcoll-pv"><span class="header-section-number">11.4</span> Prognostic variables, and why they differ from effect modifiers</a></li>
+  <li><a href="#sec-emcoll-collapse" id="toc-sec-emcoll-collapse" class="nav-link" data-scroll-target="#sec-emcoll-collapse"><span class="header-section-number">11.5</span> Collapsibility, direct collapsibility, and non-collapsibility</a>
+  <ul class="collapse">
+  <li><a href="#sec-emcoll-noncollapse" id="toc-sec-emcoll-noncollapse" class="nav-link" data-scroll-target="#sec-emcoll-noncollapse"><span class="header-section-number">11.5.1</span> The odds ratio and the hazard ratio are non-collapsible</a></li>
+  </ul></li>
+  <li><a href="#sec-emcoll-synthesis" id="toc-sec-emcoll-synthesis" class="nav-link" data-scroll-target="#sec-emcoll-synthesis"><span class="header-section-number">11.6</span> Synthesis: two scale-dependent axes</a></li>
+  <li><a href="#sec-emcoll-worked" id="toc-sec-emcoll-worked" class="nav-link" data-scroll-target="#sec-emcoll-worked"><span class="header-section-number">11.7</span> A fully worked example</a></li>
+  <li><a href="#sec-emcoll-notes" id="toc-sec-emcoll-notes" class="nav-link" data-scroll-target="#sec-emcoll-notes"><span class="header-section-number">11.8</span> Notes and references</a></li>
+  <li><a href="#sec-emcoll-exercises" id="toc-sec-emcoll-exercises" class="nav-link" data-scroll-target="#sec-emcoll-exercises"><span class="header-section-number">11.9</span> Exercises</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/part2/09-potential-outcomes.html">Part II: Causal Inference and Estimands</a></li><li class="breadcrumb-item"><a href="../../chapters/part2/11-effect-modification-collapsibility.html"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Effect Modification, Interaction, and Collapsibility</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Effect Modification, Interaction, and Collapsibility</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<section id="sec-emcoll-intro" class="level2" data-number="11.1">
+<h2 data-number="11.1" class="anchored" data-anchor-id="sec-emcoll-intro"><span class="header-section-number">11.1</span> Why a constant effect can still move</h2>
+<p>Two randomized trials study the same active drug against the same placebo. They report the relative effect on the same outcome, fit the same model, and yet their headline numbers disagree. There are exactly two pure reasons this can happen, and they are completely different in kind.</p>
+<p>The first reason is <strong>effect modification</strong>. The drug genuinely helps younger patients more than older ones, the two trials enrolled different age mixes, and so the population-averaged effect differs because the populations differ. Here the per-patient story is heterogeneous, and the disagreement is a faithful reflection of that heterogeneity. Adjusting for age would reconcile the trials.</p>
+<p>The second reason is <strong>non-collapsibility</strong>. The drug helps every patient by exactly the same amount on the scale the model uses, with no heterogeneity whatsoever, and yet the population-averaged effect still differs between the trials because the reporting scale does not <em>commute with averaging</em>. To say a scale does not commute with averaging is to say that the order of two operations matters: averaging the patient risks first and then converting to an odds ratio gives a different number than converting each patient to an odds ratio first and then averaging. Here the per-patient story is perfectly homogeneous, and the disagreement is an arithmetic artifact of the chosen effect measure. No covariate adjustment can remove it, because there is nothing in the data generating mechanism to adjust away; the gap is built into the odds ratio and the hazard ratio themselves.</p>
+<p>These two phenomena are routinely confused, partly because both are sometimes called “heterogeneity” and partly because both make a marginal number depend on the covariate distribution. This chapter separates them with full proofs. It is the conceptual hinge of Part II: every later method, Bucher’s indirect comparison (<a href="../part3/14-bucher.html#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a>), the transportability calculus of Chapter 12, matching and simulated comparison, rests on knowing precisely which covariates must be balanced, on which scale, and which apparent discrepancies are not about balance at all.</p>
+<p>The plan is as follows. <a href="#sec-emcoll-cond-marg" class="quarto-xref"><span>Section 11.2</span></a> defines the two population estimands that the rest of the chapter contrasts: the conditional effect and the marginal effect. <a href="#sec-emcoll-em-interaction" class="quarto-xref"><span>Section 11.3</span></a> defines an effect modifier, separates it from the looser notion of a statistical interaction, and proves that effect modification is scale dependent. <a href="#sec-emcoll-pv" class="quarto-xref"><span>Section 11.4</span></a> defines a prognostic variable and proves, with a machine-checked counterexample, that effect modifiers and prognostic variables are logically distinct; this is the algebraic engine behind the anchored-versus-unanchored divide. <a href="#sec-emcoll-collapse" class="quarto-xref"><span>Section 11.5</span></a> defines collapsibility and direct collapsibility, proves the risk difference directly collapsible, and proves the odds ratio and the hazard ratio non-collapsible, with closed-form examples. <a href="#sec-emcoll-synthesis" class="quarto-xref"><span>Section 11.6</span></a> ties the two axes together, and <a href="#sec-emcoll-worked" class="quarto-xref"><span>Section 11.7</span></a> carries out one fully numerical example in which every number is reproducible by hand. Before all of this, <a href="#sec-emcoll-running" class="quarto-xref"><span>Section 11.1.1</span></a> fixes one small trial and a table of effect-measure scales, and we return to that trial at every transition.</p>
+<p>Throughout we adopt the potential-outcome framework of <a href="09-potential-outcomes.html#def-potential-outcome" class="quarto-xref">Definition&nbsp;<span>9.1</span></a> under <a href="09-potential-outcomes.html#def-sutva" class="quarto-xref">Definition&nbsp;<span>9.3</span></a>, so that the observed outcome obeys the consistency identity <a href="09-potential-outcomes.html#thm-consistency-identity" class="quarto-xref">Theorem&nbsp;<span>9.2</span></a>. Write <span class="math inline">\(\mu_t(x)=\mathbb E[Y(t)\mid X=x]\)</span> for the stratum-specific mean potential outcome under treatment <span class="math inline">\(t\)</span>, as in <a href="../../notation.html">Notation</a>. In words, <span class="math inline">\(\mu_0(x)\)</span> is the average outcome (for a binary outcome, the <em>risk</em>) we would see under control among patients whose covariate value is <span class="math inline">\(x\)</span>, and <span class="math inline">\(\mu_1(x)\)</span> is the same under treatment; these two functions carry everything the population knows about the treatment. When several populations are in play we write <span class="math inline">\(\mu_t^{\mathcal P}(x)\)</span> to name the population; inside a single fixed population we drop the superscript and write <span class="math inline">\(\mu_t(x)\)</span>. Inside a single randomized trial the no-confounding identity <span id="eq-emcoll-nocon"><span class="math display">\[
+\mathbb E[Y(t)] = \mathbb E_X[\mu_t(X)]
+\tag{11.1}\]</span></span> holds by <a href="09-potential-outcomes.html#def-ignorability" class="quarto-xref">Definition&nbsp;<span>9.7</span></a> and <a href="09-potential-outcomes.html#def-positivity" class="quarto-xref">Definition&nbsp;<span>9.8</span></a>; it is the within-trial g-formula of <a href="09-potential-outcomes.html#thm-ate-identification" class="quarto-xref">Theorem&nbsp;<span>9.3</span></a> and <a href="10-adjustment-methods.html#thm-g-computation-unbiased" class="quarto-xref">Theorem&nbsp;<span>10.4</span></a>. This is a restatement of the g-formula, not a new assumption: because randomization makes treatment independent of the potential outcomes, the population mean under treatment <span class="math inline">\(t\)</span> is obtained by averaging the stratum means <span class="math inline">\(\mu_t(x)\)</span> over the covariate distribution. We invoke <a href="#eq-emcoll-nocon" class="quarto-xref">Equation&nbsp;<span>11.1</span></a> freely. The single most important thing to keep in mind is that everything in this chapter happens <em>inside</em> a randomized experiment, where treatment is assigned by coin flip and no confounding is possible. Every discrepancy we exhibit below is therefore not bias: it is not something a better-designed study or a cleverer adjustment could remove.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em> (Reader’s map: five ideas, kept apart). </span>A novice can hold this whole chapter together with two questions and one warning.</p>
+<p>Two questions to ask of any covariate and any effect measure.</p>
+<ol type="1">
+<li><em>Effect modification.</em> Does the treatment work differently in different patients, measured on the scale you plan to report? If the per-stratum contrast changes across patients, the covariate is an <strong>effect modifier</strong> on that scale.</li>
+<li><em>Collapsibility.</em> If you imagine the treatment working <em>equally</em> in everyone, does the population-average effect still equal that common value after you average over the patient mix? If yes the measure is <strong>collapsible</strong>; if no it is <strong>non-collapsible</strong>.</li>
+</ol>
+<p>These are separate checks. The first is about real variation across patients; the second is about the arithmetic of the effect measure itself.</p>
+<p>One warning. Non-collapsibility is <em>not</em> bias. It happens inside a perfect randomized trial, with no confounding to adjust away; the boxed remark in <a href="#sec-emcoll-collapse" class="quarto-xref"><span>Section 11.5</span></a> states this precisely.</p>
+<p>The five terms the chapter keeps apart:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>term</th>
+<th>plain-language question it answers</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>effect modification</td>
+<td>Does the treatment effect vary across patients, on your reporting scale?</td>
+</tr>
+<tr class="even">
+<td>statistical interaction</td>
+<td>Does a fitted model need a treatment-by-covariate product term, on its scale?</td>
+</tr>
+<tr class="odd">
+<td>prognostic variable</td>
+<td>Does the covariate predict the outcome within an arm, ignoring treatment?</td>
+</tr>
+<tr class="even">
+<td>collapsibility</td>
+<td>If the effect is the same in everyone, does the average effect equal it?</td>
+</tr>
+<tr class="odd">
+<td>non-collapsibility</td>
+<td>The failure of that: the average effect differs even with no variation.</td>
+</tr>
+</tbody>
+</table>
+<p>Four pairs never to conflate: effect modification is not the same as having a prognostic variable; a statistical interaction is not automatically a causal effect modifier; non-collapsibility is not confounding; and a marginal odds ratio is not the average of the stratum odds ratios. Each is proved below. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<section id="sec-emcoll-running" class="level3" data-number="11.1.1">
+<h3 data-number="11.1.1" class="anchored" data-anchor-id="sec-emcoll-running"><span class="header-section-number">11.1.1</span> A running example and the effect-measure scales</h3>
+<p><em>Why this matters (ITC).</em> Every indirect comparison reports its answer on some scale: a risk difference, a risk ratio, an odds ratio, or a hazard ratio. The word <strong>scale</strong> in this chapter means the mathematical form of that effect measure, not the units of the outcome. A <strong>link</strong> <span class="math inline">\(g\)</span> (<a href="../part1/07-glm.html#def-link-function" class="quarto-xref">Definition&nbsp;<span>7.2</span></a>) is the strictly increasing function that turns a mean outcome into the number the model treats as additive, and the effect on scale <span class="math inline">\(g\)</span> is a difference on the <span class="math inline">\(g\)</span>-transformed outcomes. The four measures a health researcher meets correspond to four links.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>effect measure</th>
+<th>link <span class="math inline">\(g\)</span></th>
+<th>contrast on the <span class="math inline">\(g\)</span>-scale</th>
+<th>outcome range of the mean <span class="math inline">\(\mu\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>risk difference</td>
+<td>identity, <span class="math inline">\(g(\mu)=\mu\)</span></td>
+<td>subtract the risks</td>
+<td>any real number</td>
+</tr>
+<tr class="even">
+<td>risk ratio</td>
+<td>log, <span class="math inline">\(g(\mu)=\log\mu\)</span></td>
+<td>difference of log risks <span class="math inline">\(=\log\)</span> risk ratio</td>
+<td>positive, <span class="math inline">\(\mu\in(0,\infty)\)</span></td>
+</tr>
+<tr class="odd">
+<td>odds ratio</td>
+<td>logit, <span class="math inline">\(g(\mu)=\log\tfrac{\mu}{1-\mu}\)</span></td>
+<td>difference of logits <span class="math inline">\(=\log\)</span> odds ratio</td>
+<td>probability, <span class="math inline">\(\mu\in(0,1)\)</span></td>
+</tr>
+<tr class="even">
+<td>hazard ratio</td>
+<td>log-hazard</td>
+<td>difference of log hazards <span class="math inline">\(=\log\)</span> hazard ratio</td>
+<td>positive rate, over time</td>
+</tr>
+</tbody>
+</table>
+<p>Reading the table left to right, choosing an effect measure <em>is</em> choosing a link, and the effect on scale <span class="math inline">\(g\)</span> is always a plain subtraction once the outcomes have been pushed through <span class="math inline">\(g\)</span>. Keep this table nearby: the whole chapter is about how the choice of <span class="math inline">\(g\)</span> changes the answers. We fix one small trial now and return to it at every transition.</p>
+<div id="exm-emcoll-teaser" class="theorem example">
+<p><span class="theorem-title"><strong>Example 11.1 (The running trial)</strong></span> A randomized trial compares an active treatment (<span class="math inline">\(t=1\)</span>) against control (<span class="math inline">\(t=0\)</span>) on a binary outcome, say one-year relapse. Patients split evenly, <span class="math inline">\(P(X=1)=\tfrac12\)</span>, by a binary prognostic covariate <span class="math inline">\(X\)</span>: read <span class="math inline">\(X=0\)</span> as a lower-risk stratum and <span class="math inline">\(X=1\)</span> as a higher-risk stratum. The stratum risks are <span class="math display">\[
+\mu_0(0)=0.1,\quad \mu_1(0)=0.4,\qquad \mu_0(1)=0.4,\quad \mu_1(1)=0.8 .
+\]</span> So in the lower-risk stratum control relapse is <span class="math inline">\(10\%\)</span> and treated <span class="math inline">\(40\%\)</span>; in the higher-risk stratum control is <span class="math inline">\(40\%\)</span> and treated <span class="math inline">\(80\%\)</span>.</p>
+<p>Look at the treatment effect <em>within each stratum</em> on the odds-ratio scale. In stratum <span class="math inline">\(0\)</span> the odds ratio is <span class="math inline">\(\dfrac{0.4/0.6}{0.1/0.9}=6\)</span>; in stratum <span class="math inline">\(1\)</span> it is <span class="math inline">\(\dfrac{0.8/0.2}{0.4/0.6}=6\)</span>. The odds ratio is <em>the same</em> <span class="math inline">\(6\)</span> in both strata, so on the odds-ratio scale the treatment behaves identically in the two patient types: no effect modification.</p>
+<p>Now average the risks over the two strata, as a trial reports a single headline number: <span class="math inline">\(\mathbb E[\mu_0]=\tfrac12(0.1+0.4)=0.25\)</span> and <span class="math inline">\(\mathbb E[\mu_1]=\tfrac12(0.4+0.8)=0.60\)</span>. The odds ratio <em>of these averaged risks</em> is <span class="math inline">\(\dfrac{0.60/0.40}{0.25/0.75}=4.5\)</span>, not <span class="math inline">\(6\)</span>.</p>
+<p>The same treatment, with a perfectly constant per-patient odds ratio of <span class="math inline">\(6\)</span>, produces a population odds ratio of <span class="math inline">\(4.5\)</span>. Convert each stratum first and you get <span class="math inline">\(6\)</span>; average first and you get <span class="math inline">\(4.5\)</span>. That <span class="math inline">\(6\)</span> versus <span class="math inline">\(4.5\)</span> is the whole chapter in one line, and we return to it at every step; the full computation is <a href="#exm-emcoll-worked" class="quarto-xref">Example&nbsp;<span>11.3</span></a>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+</section>
+<section id="sec-emcoll-cond-marg" class="level2" data-number="11.2">
+<h2 data-number="11.2" class="anchored" data-anchor-id="sec-emcoll-cond-marg"><span class="header-section-number">11.2</span> Conditional and marginal effects</h2>
+<p><em>Why this matters (ITC).</em> Bucher’s indirect comparison, network meta-analysis, MAIC, and STC each estimate one of two different numbers: the average of the per-patient effects, or the effect on the average patient. This section defines both. Confusing them is the root of most disagreements between an individual-level model and a trial’s headline result.</p>
+<p>The rest of the chapter contrasts two ways to turn the stratum means <span class="math inline">\(\mu_a(x),\mu_b(x)\)</span> into a single effect. They differ only in the order of two operations, <em>transform</em> (apply the link <span class="math inline">\(g\)</span>) and <em>average</em> (over the covariate <span class="math inline">\(X\)</span>).</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>step</th>
+<th><em>transform, then average</em> (conditional)</th>
+<th><em>average, then transform</em> (marginal)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>1</td>
+<td>convert each stratum’s risks to the <span class="math inline">\(g\)</span>-scale</td>
+<td>average the arm risks over patients</td>
+</tr>
+<tr class="even">
+<td>2</td>
+<td>average the stratum contrasts over patients</td>
+<td>convert the two averaged risks to the <span class="math inline">\(g\)</span>-scale</td>
+</tr>
+<tr class="odd">
+<td>result</td>
+<td><span class="math inline">\(\Delta^{\mathrm{Cond},g}_{ab}\)</span> (defined below)</td>
+<td><span class="math inline">\(\Delta^{\mathrm{Marg},g}_{ab}\)</span> (defined below)</td>
+</tr>
+</tbody>
+</table>
+<p>When <span class="math inline">\(g\)</span> is the identity these two orders always agree; when <span class="math inline">\(g\)</span> bends (the log, the logit, the log-hazard) they generally do not. This is the same commutative-square idea as in <a href="#exm-emcoll-teaser" class="quarto-xref">Example&nbsp;<span>11.1</span></a>, and everything below is a consequence of that one asymmetry. With the picture in mind, here are the two estimands.</p>
+<p>Fix two treatments, a control <span class="math inline">\(a\)</span> and an active treatment <span class="math inline">\(b\)</span> (for binary problems we also write <span class="math inline">\(0\)</span> and <span class="math inline">\(1\)</span>). Fix a population <span class="math inline">\(\mathcal P\)</span> with covariate density <span class="math inline">\(f_{\mathcal P}\)</span> on <span class="math inline">\(\mathcal X\)</span>, and a strictly increasing, twice differentiable <strong>link</strong> <span class="math inline">\(g\)</span> (<a href="../part1/07-glm.html#def-link-function" class="quarto-xref">Definition&nbsp;<span>7.2</span></a>) on the range of the mean outcome, for example the identity for a mean difference, <span class="math inline">\(\log\)</span> for a risk or rate ratio, the logit for an odds ratio. The conditional mean functions <span class="math inline">\(\mu_a^{\mathcal P}(x)\)</span> and <span class="math inline">\(\mu_b^{\mathcal P}(x)\)</span> carry all the information about the population; everything else is a contrast built from them. Two contrasts are natural, and they are not the same.</p>
+<div id="def-conditional-effect" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 11.1 (Conditional effect)</strong></span> The <strong>conditional effect</strong> of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span> on scale <span class="math inline">\(g\)</span> at covariate value <span class="math inline">\(x\)</span> in population <span class="math inline">\(\mathcal P\)</span> is the stratum-specific contrast <span id="eq-emcoll-cate"><span class="math display">\[
+\tau^{g}_{ab}(x) \;=\; g\bigl(\mu_b^{\mathcal P}(x)\bigr) - g\bigl(\mu_a^{\mathcal P}(x)\bigr).
+\tag{11.2}\]</span></span> Its average over the population is the <strong>population-average conditional effect</strong> <span id="eq-emcoll-delta-cond"><span class="math display">\[
+\Delta^{\mathrm{Cond},g}_{ab}(\mathcal P) \;=\; \mathbb E_{X\sim f_{\mathcal P}}\bigl[\tau^{g}_{ab}(X)\bigr]
+   \;=\; \int \bigl[g(\mu_b(x)) - g(\mu_a(x))\bigr]\, f_{\mathcal P}(x)\,dx .
+\tag{11.3}\]</span></span> For binary treatments with <span class="math inline">\(g\)</span> fixed we abbreviate <span class="math inline">\(\tau^{g}_{01}(x)=\psi_g(x)\)</span>, matching the notation of 1. <span class="math inline">\(\blacktriangleleft\)</span><a href="#fn1" class="footnote-ref" id="fnref1" role="doc-noteref"><sup>1</sup></a></p>
+</div>
+<p><em>Reader translation.</em> <span class="math inline">\(\tau^g_{ab}(x)\)</span> is the treatment effect for <em>one kind of patient</em>, those with covariate value <span class="math inline">\(x\)</span>, expressed on your reporting scale <span class="math inline">\(g\)</span>. Averaging it over the patients, <span class="math inline">\(\Delta^{\mathrm{Cond},g}_{ab}\)</span>, answers the question: what is the typical per-patient effect? For the running trial <a href="#exm-emcoll-teaser" class="quarto-xref">Example&nbsp;<span>11.1</span></a> on the odds-ratio scale, <span class="math inline">\(\tau^{\mathrm{logit}}_{01}(x)=\log 6\)</span> in both strata, so the average is <span class="math inline">\(\log 6\)</span>: the conditional odds ratio is <span class="math inline">\(6\)</span>.</p>
+<div id="def-marginal-effect" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 11.2 (Marginal effect)</strong></span> The <strong>marginal effect</strong> of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span> on scale <span class="math inline">\(g\)</span> (equivalently, the marginal effect on the effect-measure scale <span class="math inline">\(h=g\)</span>) in population <span class="math inline">\(\mathcal P\)</span> is the contrast of the transformed population-mean outcomes, <span id="eq-emcoll-delta-marg"><span class="math display">\[
+\Delta^{\mathrm{Marg},g}_{ab}(\mathcal P)
+   \;=\; g\bigl(\mathbb E_{f_{\mathcal P}}[\mu_b(X)]\bigr) - g\bigl(\mathbb E_{f_{\mathcal P}}[\mu_a(X)]\bigr).
+\tag{11.4}\]</span></span> For binary treatments we write <span class="math inline">\(\psi_g^{\mathrm M}\)</span> for <span class="math inline">\(\Delta^{\mathrm{Marg},g}_{01}(\mathcal P)\)</span>, again matching 1. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p><em>Reader translation.</em> <span class="math inline">\(\Delta^{\mathrm{Marg},g}_{ab}\)</span> first averages the outcomes as if the whole population took <span class="math inline">\(a\)</span>, then as if it took <span class="math inline">\(b\)</span>, and only then forms the contrast on scale <span class="math inline">\(g\)</span>. It answers the population question a health technology assessment usually asks: if everyone switched from <span class="math inline">\(a\)</span> to <span class="math inline">\(b\)</span>, how far would the population-average outcome move on scale <span class="math inline">\(g\)</span>? For the running trial on the odds-ratio scale this is <span class="math inline">\(\log 4.5\)</span>, not <span class="math inline">\(\log 6\)</span>. The two definitions in one table:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>notation</th>
+<th>plain meaning</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\mu_0(x)\)</span></td>
+<td>expected outcome (risk) under control for patients with covariate value <span class="math inline">\(x\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mu_1(x)\)</span></td>
+<td>expected outcome (risk) under treatment for those patients</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\tau^g_{01}(x)\)</span></td>
+<td>treatment effect within that stratum, on scale <span class="math inline">\(g\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\Delta^{\mathrm{Cond},g}\)</span></td>
+<td>average of the stratum effects: transform, then average</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\Delta^{\mathrm{Marg},g}\)</span></td>
+<td>effect of the averaged outcomes: average, then transform</td>
+</tr>
+</tbody>
+</table>
+<p>The distinction is the order of two operations. The conditional effect transforms first, by <span class="math inline">\(g\)</span>, then averages over <span class="math inline">\(X\)</span>; the marginal effect averages first, on the outcome scale, then transforms. The two quantities answer different scientific questions. The marginal effect asks: if the whole population received <span class="math inline">\(b\)</span> rather than <span class="math inline">\(a\)</span>, by how much would the population-mean outcome move, measured on scale <span class="math inline">\(g\)</span>? The population-average conditional effect asks: what is the average of the per-stratum effects, each measured on scale <span class="math inline">\(g\)</span>? Health technology assessment usually wants the former; reasoning about an individual patient usually wants the latter. The catalogue records both as the two target estimands (corresponds to E.0 and E.12 in the proof catalogue).</p>
+<p>A note on notation, since two conventions run in parallel from here on. For binary treatments the conditional contrast <span class="math inline">\(\tau^g_{01}(x)\)</span> is also written <span class="math inline">\(\psi_g(x)\)</span>, and the marginal contrast <span class="math inline">\(\Delta^{\mathrm{Marg},g}_{01}(\mathcal P)\)</span> is also written <span class="math inline">\(\psi_g^{\mathrm M}\)</span>, matching 1; we use the <span class="math inline">\(\psi\)</span> letters in the collapsibility discussion of <a href="#sec-emcoll-collapse" class="quarto-xref"><span>Section 11.5</span></a> and the <span class="math inline">\(\tau,\Delta\)</span> letters when the treatment pair <span class="math inline">\((a,b)\)</span> is general. They name the same objects; only the notation changes with context.</p>
+<p>The next lemma is the whole reason the chapter exists. It quantifies exactly when the two estimands agree. It rests on one inequality, which is worth recalling first.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em> (Jensen’s inequality, in one line). </span>For a convex link <span class="math inline">\(g\)</span> and any random mean <span class="math inline">\(Z\)</span>, transforming the average never exceeds averaging the transform: <span class="math display">\[
+g\bigl(\mathbb E[Z]\bigr)\;\le\;\mathbb E\bigl[g(Z)\bigr],
+\]</span> with strict inequality when <span class="math inline">\(g\)</span> is <em>strictly</em> convex and <span class="math inline">\(Z\)</span> is non-degenerate (genuinely varies). For a concave <span class="math inline">\(g\)</span> the inequality reverses. This is <a href="../part1/04-probability.html#thm-jensen" class="quarto-xref">Theorem&nbsp;<span>4.6</span></a>. The logit and the log are the nonlinear links that concern us, and the difference between the two sides is exactly the gap the next lemma names. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div id="lem-emcoll-gap" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 11.1 (The marginal-conditional gap)</strong></span> Fix a population <span class="math inline">\(\mathcal P\)</span> and a link <span class="math inline">\(g\)</span>. Then <span id="eq-emcoll-gap"><span class="math display">\[
+\Delta^{\mathrm{Marg},g}_{ab}(\mathcal P) - \Delta^{\mathrm{Cond},g}_{ab}(\mathcal P)
+   \;=\; J_g(\mu_b) - J_g(\mu_a),
+   \qquad J_g(\mu_t) \;:=\; g\bigl(\mathbb E_{f_{\mathcal P}}[\mu_t(X)]\bigr) - \mathbb E_{f_{\mathcal P}}\bigl[g(\mu_t(X))\bigr].
+\tag{11.5}\]</span></span> If <span class="math inline">\(g\)</span> is affine (that is, linear plus a constant), <span class="math inline">\(g(u)=cu+d\)</span> with <span class="math inline">\(c\neq0\)</span>, then <span class="math inline">\(J_g\equiv 0\)</span> and the two effects coincide for every population and every pair of mean functions. If <span class="math inline">\(g\)</span> is strictly convex (respectively strictly concave) and <span class="math inline">\(\mu_t(X)\)</span> is non-degenerate, then <span class="math inline">\(J_g(\mu_t)&lt;0\)</span> (respectively <span class="math inline">\(&gt;0\)</span>) strictly.</p>
+</div>
+<p>The quantity <span class="math inline">\(J_g(\mu_t)\)</span> is the <strong>Jensen gap</strong> (or nonlinearity gap) of the mean <span class="math inline">\(\mu_t(X)\)</span> under <span class="math inline">\(g\)</span>: the amount by which transforming the average differs from averaging the transform.</p>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Write out the two estimands. By <a href="#eq-emcoll-delta-marg" class="quarto-xref">Equation&nbsp;<span>11.4</span></a> and <a href="#eq-emcoll-delta-cond" class="quarto-xref">Equation&nbsp;<span>11.3</span></a>, <span class="math display">\[
+\Delta^{\mathrm{Marg},g}_{ab}=g(\mathbb E[\mu_b])-g(\mathbb E[\mu_a]),
+\qquad
+\Delta^{\mathrm{Cond},g}_{ab}=\mathbb E[g(\mu_b)]-\mathbb E[g(\mu_a)],
+\]</span> where in the second equality we used linearity of expectation to split <span class="math inline">\(\mathbb E[g(\mu_b)-g(\mu_a)]=\mathbb E[g(\mu_b)]-\mathbb E[g(\mu_a)]\)</span>, and every expectation is over <span class="math inline">\(X\sim f_{\mathcal P}\)</span>. Subtract the second from the first and regroup by treatment: <span class="math display">\[
+\Delta^{\mathrm{Marg},g}_{ab} - \Delta^{\mathrm{Cond},g}_{ab}
+= \underbrace{\Bigl[g(\mathbb E[\mu_b]) - \mathbb E[g(\mu_b)]\Bigr]}_{J_g(\mu_b)}
+- \underbrace{\Bigl[g(\mathbb E[\mu_a]) - \mathbb E[g(\mu_a)]\Bigr]}_{J_g(\mu_a)}
+= J_g(\mu_b) - J_g(\mu_a),
+\]</span> which is <a href="#eq-emcoll-gap" class="quarto-xref">Equation&nbsp;<span>11.5</span></a>. If <span class="math inline">\(g(u)=cu+d\)</span> is affine then <span class="math inline">\(g(\mathbb E[\mu_t])=c\,\mathbb E[\mu_t]+d
+=\mathbb E[c\mu_t+d]=\mathbb E[g(\mu_t)]\)</span>, so each <span class="math inline">\(J_g(\mu_t)=0\)</span> and the gap vanishes identically. If <span class="math inline">\(g\)</span> is strictly convex and <span class="math inline">\(\mu_t(X)\)</span> is non-degenerate, the strict form of Jensen’s inequality (<a href="../part1/04-probability.html#thm-jensen" class="quarto-xref">Theorem&nbsp;<span>4.6</span></a>) gives <span class="math inline">\(g(\mathbb E[\mu_t(X)]) &lt; \mathbb E[g(\mu_t(X))]\)</span>, that is <span class="math inline">\(J_g(\mu_t)&lt;0\)</span>; the concave case is identical with the inequality reversed. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>Two consequences are worth stating immediately. First, on the identity scale the marginal and the population-average conditional effect are <em>always</em> equal, for every population and every pair of mean functions, because <span class="math inline">\(J_{\mathrm{id}}\equiv 0\)</span>. The mean difference therefore never produces the second kind of discrepancy described in <a href="#sec-emcoll-intro" class="quarto-xref"><span>Section 11.1</span></a>. Second, the gap <a href="#eq-emcoll-gap" class="quarto-xref">Equation&nbsp;<span>11.5</span></a> is generally nonzero on a nonlinear scale even when the two treatments share the same conditional mean function up to a constant; the two terms <span class="math inline">\(J_g(\mu_a)\)</span> and <span class="math inline">\(J_g(\mu_b)\)</span> need not cancel because they apply the same nonlinear <span class="math inline">\(g\)</span> to two different mean functions. This non-cancellation is non-collapsibility, made precise in <a href="#sec-emcoll-collapse" class="quarto-xref"><span>Section 11.5</span></a>.</p>
+<p><em>Why this matters.</em> The gap <a href="#eq-emcoll-gap" class="quarto-xref">Equation&nbsp;<span>11.5</span></a> is the exact reason two correct trials, or two correct systematic reviews, can report different marginal effects on a nonlinear scale even when every patient responds identically. For the running trial <a href="#exm-emcoll-teaser" class="quarto-xref">Example&nbsp;<span>11.1</span></a> on the logit scale the marginal effect is <span class="math inline">\(\log 4.5\)</span> and the conditional effect is <span class="math inline">\(\log 6\)</span>, so the gap is <span class="math display">\[
+J_{\mathrm{logit}}(\mu_1)-J_{\mathrm{logit}}(\mu_0)
+=\Delta^{\mathrm{Marg},\mathrm{logit}}_{01}-\Delta^{\mathrm{Cond},\mathrm{logit}}_{01}
+=\log 4.5-\log 6=-0.288 :
+\]</span> transforming after averaging shaved the log odds ratio down by <span class="math inline">\(0.288\)</span>. On the identity scale the same computation gives <span class="math inline">\(0\)</span>, which is why the risk difference never shows this effect. Bucher, NMA, MAIC, and STC all inherit this gap the moment they report an odds ratio or a hazard ratio; <a href="#sec-emcoll-collapse" class="quarto-xref"><span>Section 11.5</span></a> makes it precise and <a href="#exm-emcoll-worked" class="quarto-xref">Example&nbsp;<span>11.3</span></a> carries the numbers through to an indirect comparison.</p>
+</section>
+<section id="sec-emcoll-em-interaction" class="level2" data-number="11.3">
+<h2 data-number="11.3" class="anchored" data-anchor-id="sec-emcoll-em-interaction"><span class="header-section-number">11.3</span> Effect modification and statistical interaction</h2>
+<p><em>Why this matters (ITC).</em> Anchored indirect comparisons (Bucher, NMA) are unbiased only when the trials are balanced on the <em>effect modifiers</em> of the reported scale (<a href="../part3/14-bucher.html#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a>). This section says exactly what an effect modifier is, why it is not the same as a regression interaction term, and why the answer depends on the scale you report.</p>
+<p>We now define an effect modifier and contrast it with the looser, model-bound notion of an interaction.</p>
+<div id="def-effect-modifier" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 11.3 (Effect modifier)</strong></span> A covariate <span class="math inline">\(X\)</span> is an <strong>effect modifier</strong> of treatment <span class="math inline">\(b\)</span> versus treatment <span class="math inline">\(a\)</span> on scale <span class="math inline">\(g\)</span> in population <span class="math inline">\(\mathcal P\)</span> if the conditional effect <a href="#eq-emcoll-cate" class="quarto-xref">Equation&nbsp;<span>11.2</span></a> depends non-trivially on <span class="math inline">\(x\)</span>, that is, if there exist <span class="math inline">\(x,x'\)</span> in the support of <span class="math inline">\(f_{\mathcal P}\)</span> with <span id="eq-emcoll-em"><span class="math display">\[
+\tau^{g}_{ab}(x) \;\neq\; \tau^{g}_{ab}(x').
+\tag{11.6}\]</span></span> Otherwise <span class="math inline">\(\tau^{g}_{ab}(\cdot)\)</span> is constant on the support and <span class="math inline">\(X\)</span> is <strong>not</strong> an effect modifier on scale <span class="math inline">\(g\)</span> for the pair <span class="math inline">\((a,b)\)</span> in <span class="math inline">\(\mathcal P\)</span>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p><em>Reader translation.</em> <span class="math inline">\(X\)</span> is an effect modifier when the treatment genuinely helps (or harms) one kind of patient more than another, measured on scale <span class="math inline">\(g\)</span>. In the running trial <a href="#exm-emcoll-teaser" class="quarto-xref">Example&nbsp;<span>11.1</span></a> the drug adds <span class="math inline">\(0.3\)</span> to the risk in the low-risk stratum and <span class="math inline">\(0.4\)</span> in the high-risk stratum, so on the risk-difference scale <span class="math inline">\(X\)</span> <em>is</em> an effect modifier; but the odds ratio is <span class="math inline">\(6\)</span> in both strata, so on the odds-ratio scale it is <em>not</em>. Same drug, same patients, opposite verdicts, because the scale differs.</p>
+<p>The definition is parameterized by three things, each of which can change the answer (corresponds to E.1 in the proof catalogue). It depends on the <strong>treatment pair</strong> <span class="math inline">\((a,b)\)</span>: a covariate can modify the effect of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span> but not of <span class="math inline">\(c\)</span> versus <span class="math inline">\(a\)</span>. It depends on the <strong>scale</strong> <span class="math inline">\(g\)</span>: the central <a href="#prp-emcoll-scale" class="quarto-xref">Proposition&nbsp;<span>11.1</span></a> below shows a covariate that modifies the effect on one scale and not on another. And it depends on the <strong>population</strong> <span class="math inline">\(\mathcal P\)</span>, through the conditional mean functions, since <span class="math inline">\(\mu_t^{\mathcal P}\)</span> is itself population specific. Informal usage that says “<span class="math inline">\(X\)</span> is an effect modifier” without naming all three is incomplete, and the omission is the source of much confusion in applied indirect comparison.</p>
+<div id="exm-emcoll-pop-dependent" class="theorem example">
+<p><span class="theorem-title"><strong>Example 11.2 (Effect-modifier status depends on the population)</strong></span> Keep the stratum means of the running trial, <span class="math inline">\(\mu_0(0)=0.1,\mu_1(0)=0.4,\mu_0(1)=0.4,\mu_1(1)=0.8\)</span>, and change only <em>which patients are enrolled</em>. In a broad trial <span class="math inline">\(\mathcal P\)</span> that enrolls both strata, <span class="math inline">\(X\)</span> takes both values, the risk-difference contrast is <span class="math inline">\(0.3\)</span> at <span class="math inline">\(x=0\)</span> and <span class="math inline">\(0.4\)</span> at <span class="math inline">\(x=1\)</span>, and these differ, so <span class="math inline">\(X\)</span> is an effect modifier on the identity scale. In a narrow trial <span class="math inline">\(\mathcal P'\)</span> that enrolls only lower-risk patients (<span class="math inline">\(X\equiv 0\)</span>), the covariate does not vary at all, so <a href="#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a> is vacuous: with no <span class="math inline">\(x\neq x'\)</span> in the support, <span class="math inline">\(X\)</span> cannot be an effect modifier in <span class="math inline">\(\mathcal P'\)</span>. The mean functions are identical; only the support of <span class="math inline">\(X\)</span> changed, and with it the verdict. This is why “<span class="math inline">\(X\)</span> is an effect modifier” is a statement about a population, not about a drug alone. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>In a regression model the notion is operationalized by an interaction term. Consider the conditional mean model, linear on the <span class="math inline">\(g\)</span>-scale, that the network meta-regression of <span class="citation" data-cites="dias2018nma">Dias et al. (<a href="../../references.html#ref-dias2018nma" role="doc-biblioref">2018</a>)</span> uses, <span id="eq-emcoll-model"><span class="math display">\[
+g\bigl(\mu_t(x)\bigr) \;=\; \alpha + \boldsymbol\beta_1^\top x + \bigl(\gamma + \boldsymbol\beta_2^\top x\bigr)\,t,
+\qquad t\in\{0,1\}.
+\tag{11.7}\]</span></span> Here <span class="math inline">\(\boldsymbol\beta_1\)</span> are the prognostic main effects, <span class="math inline">\(\gamma\)</span> is the treatment main effect, and <span class="math inline">\(\boldsymbol\beta_2\)</span> are the treatment-by-covariate interactions, the parameter labeled <span class="math inline">\(\boldsymbol\beta_{2,k}\)</span> in <a href="../../notation.html">Notation</a>. The next lemma makes the link between the estimand notion (effect modification) and the parametric notion (a nonzero interaction coefficient) exact.</p>
+<div id="lem-emcoll-interaction" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 11.2 (Effect modification equals a nonzero interaction on the model scale)</strong></span> Under the model <a href="#eq-emcoll-model" class="quarto-xref">Equation&nbsp;<span>11.7</span></a>, the conditional effect on scale <span class="math inline">\(g\)</span> is <span class="math display">\[
+\tau^{g}_{01}(x) \;=\; \gamma + \boldsymbol\beta_2^\top x .
+\]</span> Consequently, the covariate component <span class="math inline">\(X_j\)</span> is an effect modifier on scale <span class="math inline">\(g\)</span> if and only if its interaction coefficient is nonzero, <span class="math inline">\(\beta_{2,j}\neq 0\)</span>, and <span class="math inline">\(X_j\)</span> has nondegenerate support. If <span class="math inline">\(\boldsymbol\beta_2=\mathbf 0\)</span>, no component is an effect modifier on scale <span class="math inline">\(g\)</span> and the conditional effect is the constant <span class="math inline">\(\gamma\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Set <span class="math inline">\(t=1\)</span> in <a href="#eq-emcoll-model" class="quarto-xref">Equation&nbsp;<span>11.7</span></a>: <span class="math inline">\(g(\mu_1(x)) = \alpha + \boldsymbol\beta_1^\top x + \gamma +
+\boldsymbol\beta_2^\top x\)</span>. Set <span class="math inline">\(t=0\)</span>: the treatment terms drop and <span class="math inline">\(g(\mu_0(x)) = \alpha +
+\boldsymbol\beta_1^\top x\)</span>. Here <span class="math inline">\(\boldsymbol\beta_2^\top x=\sum_j\beta_{2,j}x_j\)</span> is the dot product, the sum of the interaction coefficients times the covariate values. Subtract the second from the first. The intercept <span class="math inline">\(\alpha\)</span> sits in both and cancels; the prognostic term <span class="math inline">\(\boldsymbol\beta_1^\top x\)</span> sits in both and cancels; what survives is exactly the treatment terms, <span class="math display">\[
+\tau^{g}_{01}(x)=\bigl[\alpha+\boldsymbol\beta_1^\top x+\gamma+\boldsymbol\beta_2^\top x\bigr]
+-\bigl[\alpha+\boldsymbol\beta_1^\top x\bigr]=\gamma+\boldsymbol\beta_2^\top x .
+\]</span> Now hold every covariate but <span class="math inline">\(X_j\)</span> fixed and vary <span class="math inline">\(X_j\)</span>: the contrast <span class="math inline">\(\gamma+\boldsymbol\beta_2^\top x\)</span> moves with <span class="math inline">\(X_j\)</span> if and only if its coefficient <span class="math inline">\(\beta_{2,j}\)</span> is nonzero (and <span class="math inline">\(X_j\)</span> genuinely varies). So <a href="#eq-emcoll-em" class="quarto-xref">Equation&nbsp;<span>11.6</span></a> holds for <span class="math inline">\(X_j\)</span> exactly when <span class="math inline">\(\beta_{2,j}\neq 0\)</span>. If <span class="math inline">\(\boldsymbol\beta_2=\mathbf 0\)</span> the contrast is the constant <span class="math inline">\(\gamma\)</span>, so <a href="#eq-emcoll-em" class="quarto-xref">Equation&nbsp;<span>11.6</span></a> fails for every component and there is no effect modification. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Why this matters.</em> In the network meta-regression <a href="#eq-emcoll-model" class="quarto-xref">Equation&nbsp;<span>11.7</span></a> that NMA and ML-NMR fit, effect modification is not a vague notion: it is exactly a nonzero interaction coefficient <span class="math inline">\(\beta_{2,j}\)</span> on the model’s scale. When such a model is correctly specified you can read effect-modifier status straight off the fitted coefficients, which is what makes the interaction term the workhorse of population adjustment.</p>
+<p>This equivalence tempts one to treat “effect modifier” and “statistical interaction” as synonyms. They are not, and the difference matters. We record the model-bound notion as a definition for contrast.</p>
+<div id="def-statistical-interaction" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 11.4 (Statistical interaction)</strong></span> A <strong>statistical interaction</strong> between treatment <span class="math inline">\(T\)</span> and covariate <span class="math inline">\(X_j\)</span> on scale <span class="math inline">\(g\)</span>, relative to a specified model, is a departure of the model from additivity on the <span class="math inline">\(g\)</span>-scale in <span class="math inline">\(T\)</span> and <span class="math inline">\(X_j\)</span>; in the parameterization <a href="#eq-emcoll-model" class="quarto-xref">Equation&nbsp;<span>11.7</span></a> it is the statement <span class="math inline">\(\beta_{2,j}\neq 0\)</span>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>Three differences separate the two notions; see <span class="citation" data-cites="hernan2020whatif">Hernán and Robins (<a href="../../references.html#ref-hernan2020whatif" role="doc-biblioref">2020</a>)</span>, Chapters 4 and 5, for the epidemiological development.</p>
+<p>First, <strong>symmetry</strong>. A statistical interaction is symmetric in its two arguments: the product term <span class="math inline">\(\beta_{2,j}\,t\,x_j\)</span> treats treatment and covariate interchangeably, and one may equally say “the effect of <span class="math inline">\(X_j\)</span> is modified by <span class="math inline">\(T\)</span>.” Effect modification is asymmetric by construction: it singles out the treatment <span class="math inline">\(T\)</span> as the manipulated cause whose effect is being studied, and asks how that effect varies across levels of the second variable. The arithmetic is the same; the causal reading is not.</p>
+<p>Second, <strong>scale dependence with a model</strong>. A statistical interaction is a property of a chosen model on a chosen scale; it can be created or destroyed by re-expressing the same conditional means through a different link. Effect modification is likewise scale dependent (<a href="#prp-emcoll-scale" class="quarto-xref">Proposition&nbsp;<span>11.1</span></a>), but it is a property of the conditional means themselves, not of a fitted parameterization, so it is well defined even when no parametric model has been written down.</p>
+<p>Third, <strong>manipulability and surrogates</strong>. The product term in <a href="#eq-emcoll-model" class="quarto-xref">Equation&nbsp;<span>11.7</span></a> can be nonzero for a covariate that is a mere marker, correlated with the true modifier but with no causal role; conversely a genuine biological interaction can be masked in a marginal analysis. Effect modification, defined through potential-outcome means, is agnostic about the mechanism: it asserts only that the contrast varies across strata, whether because <span class="math inline">\(X\)</span> acts causally or because it is a surrogate for something that does. For the indirect-comparison mathematics of this book the estimand notion in <a href="#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a> is the operative one, and we use “effect modifier” in that sense throughout. The equivalence <a href="#lem-emcoll-interaction" class="quarto-xref">Lemma&nbsp;<span>11.2</span></a> lets us read effect modification off a correctly specified model when one is available.</p>
+<p>In applied terms, suppose you fit a treatment-by-covariate interaction and its coefficient is not zero. Should you call it effect modification? On the model’s scale, and if the covariate has real variation and the coefficient is estimated with reasonable precision, yes: <a href="#lem-emcoll-interaction" class="quarto-xref">Lemma&nbsp;<span>11.2</span></a> makes the two equivalent. Be cautious in three cases. When the covariate is a surrogate for the true modifier, the interaction is real but the mechanism is not the covariate you named. When the model’s scale is not the scale you will report, a nonzero interaction on the logit scale need not be one on the risk-difference scale, by the next proposition. And when the interaction is a small, noisy estimate, statistical significance is not the same as a modeling decision. The estimand notion in <a href="#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a> is the one this book uses; the regression interaction is how you detect it when a correct model is available.</p>
+<section id="sec-emcoll-scale" class="level3" data-number="11.3.1">
+<h3 data-number="11.3.1" class="anchored" data-anchor-id="sec-emcoll-scale"><span class="header-section-number">11.3.1</span> Effect modification is scale dependent</h3>
+<p>The single most consequential fact about effect modification is that it cannot be discussed without naming a scale. A covariate can be an effect modifier on the logit scale and not on the identity scale, and the choice of scale for an analysis is therefore a substantive modeling decision, not a convention.</p>
+<div id="prp-emcoll-scale" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 11.1 (Scale dependence of effect-modifier status)</strong></span> There exist a binary covariate <span class="math inline">\(X\in\{0,1\}\)</span> and binary potential outcomes <span class="math inline">\(Y(0),Y(1)\in\{0,1\}\)</span> such that <span class="math inline">\(X\)</span> is <strong>not</strong> an effect modifier on the identity (risk-difference) scale but <strong>is</strong> an effect modifier on the logit (odds-ratio) scale.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Imagine a lower-risk stratum <span class="math inline">\(x=0\)</span> and a higher-risk stratum <span class="math inline">\(x=1\)</span>, with a drug that adds a constant <span class="math inline">\(0.1\)</span> of absolute risk in each. Take the stratum risks <span class="math display">\[
+\mu_0(0)=0.1,\quad \mu_1(0)=0.2,\qquad \mu_0(1)=0.5,\quad \mu_1(1)=0.6 .
+\]</span> On the identity scale the conditional effects are <span class="math display">\[
+\tau^{\mathrm{id}}_{01}(0)=0.2-0.1=0.1,\qquad \tau^{\mathrm{id}}_{01}(1)=0.6-0.5=0.1,
+\]</span> equal in the two strata, so by <a href="#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a> <span class="math inline">\(X\)</span> is not an effect modifier on the identity scale. On the logit scale, <span class="math display">\[
+\tau^{\mathrm{logit}}_{01}(0)=\operatorname{logit}(0.2)-\operatorname{logit}(0.1)
+=\log\frac{0.2/0.8}{0.1/0.9}=\log\frac{0.25}{0.1111\ldots}=\log 2.25=0.8109\ldots,
+\]</span> <span class="math display">\[
+\tau^{\mathrm{logit}}_{01}(1)=\operatorname{logit}(0.6)-\operatorname{logit}(0.5)
+=\log\frac{0.6/0.4}{0.5/0.5}=\log 1.5=0.4055\ldots .
+\]</span> These differ, so by <a href="#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a> <span class="math inline">\(X\)</span> is an effect modifier on the logit scale. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>The proposition (corresponds to E.10 in the proof catalogue) has an immediate methodological corollary: the assumption “<span class="math inline">\(X\)</span> is not an effect modifier”, which underwrites every anchored indirect comparison through the shared-effect-modifier assumption of <a href="12-transportability.html#thm-sema-insufficient" class="quarto-xref">Theorem&nbsp;<span>12.6</span></a>, is meaningful only relative to a named scale. An analyst who balances covariates on the risk-difference scale and reports an odds ratio, or vice versa, has not balanced the quantity that governs the reported estimand. The reason the two scales cannot be reconciled by a constant is exactly non-collapsibility, which we prove next; the present example is its shadow at the level of effect modification.</p>
+<p><em>Reader translation.</em> A health researcher might ask: if age modifies the risk difference but not the odds ratio, is it “wrong” to call age an effect modifier? It is not wrong, but it is incomplete. Effect-modifier status has no scale-free meaning (<a href="#prp-emcoll-scale" class="quarto-xref">Proposition&nbsp;<span>11.1</span></a>), so the honest statement always names the scale, as in “age modifies the risk difference but not the odds ratio here.” An analyst who balances covariates on one scale and reports an effect on another has not balanced the quantity that governs the reported number.</p>
+</section>
+</section>
+<section id="sec-emcoll-pv" class="level2" data-number="11.4">
+<h2 data-number="11.4" class="anchored" data-anchor-id="sec-emcoll-pv"><span class="header-section-number">11.4</span> Prognostic variables, and why they differ from effect modifiers</h2>
+<p><em>Why this matters (ITC).</em> Here is the single most important practical rule this chapter proves: <strong>anchored indirect comparisons need to balance only effect modifiers, while unanchored ones must balance all prognostic variables.</strong> The reason is that a covariate can influence each treatment arm yet leave the between-arm contrast untouched; such a <em>purely prognostic</em> covariate cancels when two arms are compared against a shared comparator, but not when an absolute arm mean is transported on its own. This section proves that effect modifiers and prognostic variables are genuinely different, and isolates the cancellation. In the transportability literature the first rule is the <strong>shared effect modifier assumption (SEMA)</strong> and the second the <strong>shared prognostic factor assumption (SPFA)</strong>; both names, listed in <a href="../../notation.html">Notation</a>, return in Chapter 12.</p>
+<p>Effect modification concerns the <em>contrast</em> <span class="math inline">\(\tau^g_{ab}\)</span>. A different and weaker condition concerns each arm separately.</p>
+<div id="def-prognostic-variable" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 11.5 (Prognostic variable)</strong></span> A covariate <span class="math inline">\(X\)</span> is a <strong>prognostic variable</strong> for treatment <span class="math inline">\(t\)</span> in population <span class="math inline">\(\mathcal P\)</span> if the conditional mean <span class="math inline">\(\mu_t^{\mathcal P}(x)\)</span> depends non-trivially on <span class="math inline">\(x\)</span>, that is, if there exist <span class="math inline">\(x,x'\)</span> in the support with <span class="math inline">\(\mu_t^{\mathcal P}(x)\neq \mu_t^{\mathcal P}(x')\)</span>. A covariate is <strong>prognostic but not an effect modifier</strong> for the pair <span class="math inline">\((a,b)\)</span> on scale <span class="math inline">\(g\)</span> if both <span class="math inline">\(\mu_a\)</span> and <span class="math inline">\(\mu_b\)</span> depend on <span class="math inline">\(x\)</span> while the contrast <span class="math inline">\(\tau^g_{ab}\)</span> does not. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p><em>Reader translation.</em> <span class="math inline">\(X\)</span> is a prognostic variable for an arm if it predicts the outcome <em>within</em> that arm, treatment aside: sicker patients do worse whether or not they are treated. Baseline severity, age, and biomarker level are typical prognostic variables. A prognostic variable becomes an effect modifier only if it changes the <em>contrast</em> between arms, not merely the level of each arm. In the running trial the higher-risk stratum has worse outcomes in both arms, so <span class="math inline">\(X\)</span> is prognostic for both; it also changes the risk-difference contrast, so on that scale it is additionally an effect modifier; on the odds-ratio scale it is prognostic but not an effect modifier.</p>
+<p>This is the catalogue’s E.2. The two concepts partition into a four-cell table, for the treatment pair <span class="math inline">\((a,b)\)</span> on a fixed scale <span class="math inline">\(g\)</span> in a fixed population. Read “not prognostic” strictly: it means the covariate predicts the outcome in <em>neither</em> arm.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th></th>
+<th>prognostic for both <span class="math inline">\(a\)</span> and <span class="math inline">\(b\)</span></th>
+<th>prognostic for neither arm</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><strong>effect modifier on <span class="math inline">\(g\)</span></strong></td>
+<td>both arms vary and so does the contrast. Running trial, identity scale: <span class="math inline">\(\mu_a=(0.1,0.4)\)</span>, <span class="math inline">\(\mu_b=(0.4,0.8)\)</span>, contrasts <span class="math inline">\(0.3\)</span> then <span class="math inline">\(0.4\)</span></td>
+<td>impossible: a varying contrast forces at least one arm to vary</td>
+</tr>
+<tr class="even">
+<td><strong>not an effect modifier on <span class="math inline">\(g\)</span></strong></td>
+<td>both arms vary but the contrast is constant (purely prognostic): <span class="math inline">\(\mu_a=(0.3,0.7)\)</span>, <span class="math inline">\(\mu_b=(0.5,0.9)\)</span>, contrast <span class="math inline">\(0.2\)</span> in both</td>
+<td>neither arm varies: <span class="math inline">\(\mu_a\equiv 0.4\)</span>, <span class="math inline">\(\mu_b\equiv 0.6\)</span>, contrast <span class="math inline">\(0.2\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>Each cell lists <span class="math inline">\((\text{value at }x=0,\ \text{value at }x=1)\)</span> for the two arms. The lower-left cell, <strong>purely prognostic</strong>, is the one that powers anchored comparison: each arm depends on the covariate, but in the same way on the <span class="math inline">\(g\)</span>-scale, so the contrast is free of it. The upper-right cell is empty, which is the content of the following proposition; it is the one forced implication between the two concepts.</p>
+<p>One subtlety before the proofs. The two columns above, “prognostic for both” and “prognostic for neither arm,” do not exhaust the possibilities: a covariate can be prognostic for exactly <em>one</em> arm. Those one-arm cases are exactly where an effect modifier can be “not prognostic for a <em>specified</em> treatment,” which is Part 2 of <a href="#thm-emcoll-em-pv-distinct" class="quarto-xref">Theorem&nbsp;<span>11.1</span></a> below. There is no contradiction with the “impossible” cell: an effect modifier must be prognostic for <em>at least one</em> arm (that is <a href="#prp-emcoll-em-implies-pv" class="quarto-xref">Proposition&nbsp;<span>11.2</span></a>), but it need not be prognostic for <em>both</em>, and in particular need not be prognostic for the one arm you happen to name.</p>
+<div id="prp-emcoll-em-implies-pv" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 11.2 (An effect modifier is prognostic for at least one treatment)</strong></span> If <span class="math inline">\(X\)</span> is an effect modifier of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span> on scale <span class="math inline">\(g\)</span>, then <span class="math inline">\(X\)</span> is a prognostic variable for <span class="math inline">\(a\)</span> or for <span class="math inline">\(b\)</span> (or both).</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Contrapositive. Suppose <span class="math inline">\(X\)</span> is prognostic for neither <span class="math inline">\(a\)</span> nor <span class="math inline">\(b\)</span>: then <span class="math inline">\(\mu_a(x)=\mu_a(x')\)</span> and <span class="math inline">\(\mu_b(x)=\mu_b(x')\)</span> for all <span class="math inline">\(x,x'\)</span> in the support. Apply the link <span class="math inline">\(g\)</span> to all four values. Because <span class="math inline">\(\mu_a(x)=\mu_a(x')\)</span> we get <span class="math inline">\(g(\mu_a(x))=g(\mu_a(x'))\)</span>, and because <span class="math inline">\(\mu_b(x)=\mu_b(x')\)</span> we get <span class="math inline">\(g(\mu_b(x))=g(\mu_b(x'))\)</span>. Subtracting the two control values from the two treated values, <span class="math display">\[
+\tau^g_{ab}(x)=g(\mu_b(x))-g(\mu_a(x))=g(\mu_b(x'))-g(\mu_a(x'))=\tau^g_{ab}(x'),
+\]</span> so the contrast is constant and <span class="math inline">\(X\)</span> is not an effect modifier. Contrapositively, an effect modifier must be prognostic for <span class="math inline">\(a\)</span> or for <span class="math inline">\(b\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>The reverse implications all fail, and this is the crucial separation. A prognostic variable need not be an effect modifier (the purely prognostic case), and an effect modifier need not be prognostic for a <em>given</em> treatment (it may be prognostic only for the other arm). The first failure is the deeper one, because it is what distinguishes anchored from unanchored adjustment, and it is verified in the Coq development.</p>
+<div id="thm-emcoll-em-pv-distinct" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 11.1 (Effect modifiers and prognostic variables are logically distinct)</strong></span> Both of the following hold.</p>
+<ol type="1">
+<li>There exist mean functions <span class="math inline">\(\mu_a,\mu_b\)</span> and a covariate <span class="math inline">\(X\)</span> such that <span class="math inline">\(X\)</span> is prognostic for both <span class="math inline">\(a\)</span> and <span class="math inline">\(b\)</span> yet is <strong>not</strong> an effect modifier of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span> on the identity scale. Hence “prognostic variable” does not imply “effect modifier.”</li>
+<li>There exist mean functions <span class="math inline">\(\mu_a,\mu_b\)</span> and a covariate <span class="math inline">\(X\)</span> such that <span class="math inline">\(X\)</span> is an effect modifier of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span> yet is <strong>not</strong> prognostic for <span class="math inline">\(a\)</span>. Hence “effect modifier” does not imply “prognostic for a specified treatment.”</li>
+</ol>
+<p>[machine-checked: <code>theories/EffectModifiers.v</code>, <code>Theorem not_EM_does_not_imply_not_PV</code>]</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span><strong>Part 1.</strong> Take <span class="math inline">\(X\in\{0,1\}\)</span> with both values in the support, and set the identity-scale means equal across arms, <span class="math inline">\(\mu_a(0)=\mu_b(0)=0.3\)</span> and <span class="math inline">\(\mu_a(1)=\mu_b(1)=0.7\)</span>. Each arm depends on <span class="math inline">\(x\)</span> (rising from <span class="math inline">\(0.3\)</span> to <span class="math inline">\(0.7\)</span>), so <span class="math inline">\(X\)</span> is prognostic for both <span class="math inline">\(a\)</span> and <span class="math inline">\(b\)</span>. The contrast is <span class="math inline">\(\tau^{\mathrm{id}}_{ab}(x)=\mu_b(x)-\mu_a(x)=0\)</span> for every <span class="math inline">\(x\)</span>, constant, so <span class="math inline">\(X\)</span> is not an effect modifier. This is exactly the purely prognostic configuration: the two arms move together and their difference is free of <span class="math inline">\(x\)</span>. (The Coq file proves the same fact with the two arms written as <span class="math inline">\(\mu_a(x,w)=\mu_b(x,w)=\mathbf 1\{w\}\)</span> over a binary unmeasured covariate <span class="math inline">\(w\)</span>: <code>counterexample_not_EM</code> shows the contrast is identically zero and <code>counterexample_not_PV_fails</code> shows each arm genuinely depends on <span class="math inline">\(w\)</span>, and together they give <code>not_EM_does_not_imply_not_PV</code>.)</p>
+<p><strong>Part 2.</strong> Let <span class="math inline">\(X\in\{0,1\}\)</span>, set <span class="math inline">\(\mu_a(x)=0.4\)</span> constant in <span class="math inline">\(x\)</span>, and <span class="math inline">\(\mu_b(0)=0.4\)</span>, <span class="math inline">\(\mu_b(1)=0.7\)</span>. Then <span class="math inline">\(X\)</span> is not prognostic for <span class="math inline">\(a\)</span>, since <span class="math inline">\(\mu_a\)</span> is constant. The identity-scale contrast is <span class="math inline">\(\tau^{\mathrm{id}}_{ab}(0)=0\)</span> and <span class="math inline">\(\tau^{\mathrm{id}}_{ab}(1)=0.3\)</span>, which differ, so <span class="math inline">\(X\)</span> is an effect modifier of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span>. Thus a covariate can modify the contrast while being prognostic only for the active arm, never for the control arm. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>Part 1 is the workhorse. It says the purely prognostic configuration genuinely exists: covariates whose influence on each arm is real but whose influence on the link-scale contrast is nil. The next lemma turns this into the cancellation that anchored comparisons exploit.</p>
+<p>Picture the simplest anchored network. Trial 1 compares <span class="math inline">\(b\)</span> against a common comparator <span class="math inline">\(C\)</span>, trial 2 compares <span class="math inline">\(a\)</span> against the same <span class="math inline">\(C\)</span>, and the indirect estimate of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span> subtracts the two contrasts, <span class="math inline">\((b\text{ versus }C)-(a\text{ versus }C)\)</span>. Anything that sits identically in both contrasts, in particular a purely prognostic covariate that shifts every arm the same way on the <span class="math inline">\(g\)</span>-scale, is removed by that subtraction. The lemma proves this at the level of the conditional contrast.</p>
+<div id="lem-emcoll-anchored-cancellation" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 11.3 (Anchored cancellation of purely prognostic variables)</strong></span> Suppose the covariate vector splits as <span class="math inline">\((X,W)\)</span>, with <span class="math inline">\(X\)</span> measured and <span class="math inline">\(W\)</span> possibly unmeasured, and suppose <span class="math inline">\(W\)</span> is not an effect modifier of <span class="math inline">\(b\)</span> versus <span class="math inline">\(a\)</span> on the model scale <span class="math inline">\(g\)</span> given <span class="math inline">\(X\)</span>, meaning <span id="eq-emcoll-notEM"><span class="math display">\[
+g\bigl(\mu_b(x,w)\bigr) - g\bigl(\mu_a(x,w)\bigr) \;=\; g\bigl(\mu_b(x,w')\bigr) - g\bigl(\mu_a(x,w')\bigr)
+\qquad\text{for all } x,w,w'.
+\tag{11.8}\]</span></span> Then the conditional contrast <span class="math inline">\(\tau^g_{ab}(x,w)\)</span> does not depend on <span class="math inline">\(w\)</span>, and for any two populations <span class="math inline">\(\mathcal P_1,\mathcal P_2\)</span> with the same marginal law of <span class="math inline">\(X\)</span> but different conditional laws of <span class="math inline">\(W\)</span> given <span class="math inline">\(X\)</span>, the population-average conditional contrast is the same: <span class="math display">\[
+\Delta^{\mathrm{Cond},g}_{ab}(\mathcal P_1) \;=\; \Delta^{\mathrm{Cond},g}_{ab}(\mathcal P_2).
+\]</span></p>
+<p>[machine-checked: <code>theories/EffectModifiers.v</code>, <code>Theorem anchored_PV_cancellation</code>]</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>By <a href="#eq-emcoll-notEM" class="quarto-xref">Equation&nbsp;<span>11.8</span></a> the map <span class="math inline">\(w\mapsto \tau^g_{ab}(x,w)\)</span> is constant for each fixed <span class="math inline">\(x\)</span>; write its common value as <span class="math inline">\(\bar\tau^g_{ab}(x)\)</span>. Any population <span class="math inline">\(\mathcal P\)</span> has a joint covariate density that factors as <span class="math inline">\(f(x,w)=f(w\mid x)\,f_X(x)\)</span>, the conditional density of <span class="math inline">\(W\)</span> given <span class="math inline">\(X\)</span> times the marginal density of <span class="math inline">\(X\)</span>. Then <span class="math display">\[
+\Delta^{\mathrm{Cond},g}_{ab}(\mathcal P)
+= \int\!\!\int \tau^g_{ab}(x,w)\, f(w\mid x)\,dw\, f_X(x)\,dx
+= \int \bar\tau^g_{ab}(x)\Bigl(\int f(w\mid x)\,dw\Bigr) f_X(x)\,dx .
+\]</span> The inner integral <span class="math inline">\(\int f(w\mid x)\,dw = 1\)</span>, because <span class="math inline">\(f(w\mid x)\)</span> is a conditional probability density and integrates to one over <span class="math inline">\(w\)</span> for each fixed <span class="math inline">\(x\)</span>. Hence <span class="math display">\[
+\Delta^{\mathrm{Cond},g}_{ab}(\mathcal P) = \int \bar\tau^g_{ab}(x)\, f_X(x)\,dx,
+\]</span> which depends on <span class="math inline">\(\mathcal P\)</span> only through the marginal law <span class="math inline">\(f_X\)</span> of <span class="math inline">\(X\)</span>, not through the conditional law <span class="math inline">\(f(w\mid x)\)</span> of <span class="math inline">\(W\)</span>. Two populations with the same <span class="math inline">\(f_X\)</span> therefore give the same value, however differently <span class="math inline">\(W\)</span> is distributed given <span class="math inline">\(X\)</span>. The Coq theorem <code>anchored_PV_cancellation</code> proves the pointwise step, that the contrast is independent of <span class="math inline">\(w\)</span> under the not-an-effect-modifier hypothesis. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>The lemma is the formal basis of the slogan “prognostic variables cancel in anchored comparisons but not in unanchored ones,” and it explains the asymmetry in covariate requirements between the two designs. In an anchored comparison the estimator combines two contrasts that each share the comparator <span class="math inline">\(C\)</span>, and any covariate that is purely prognostic on the model scale, even an unmeasured one, drops out of each contrast by <a href="#lem-emcoll-anchored-cancellation" class="quarto-xref">Lemma&nbsp;<span>11.3</span></a>; only effect modifiers, whose distribution genuinely alters the contrast, must be balanced. In an unanchored comparison the estimator works with the absolute arm means <span class="math inline">\(\mu_t\)</span> directly, with no comparator to subtract, so <a href="#thm-emcoll-em-pv-distinct" class="quarto-xref">Theorem&nbsp;<span>11.1</span></a> part 1 bites: a purely prognostic <span class="math inline">\(W\)</span> that is imbalanced between source and target changes <span class="math inline">\(\mu_t\)</span> and is not cancelled. This is why <a href="../part3/14-bucher.html#thm-bucher-unbiased" class="quarto-xref">Theorem&nbsp;<span>14.1</span></a> requires balancing only effect modifiers, while the unanchored case of Chapter 12 requires balancing all imbalanced prognostic variables as well. The precise estimand-level consequences are developed there; here we have isolated the algebraic mechanism and tied it to the machine-checked counterexample. In the language of the section opener, <a href="#lem-emcoll-anchored-cancellation" class="quarto-xref">Lemma&nbsp;<span>11.3</span></a> is the mathematical content of the shared effect modifier assumption (SEMA): balance the effect modifiers and the anchored contrast transports. The shared prognostic factor assumption (SPFA) is the stronger requirement the unanchored case needs, developed in Chapter 12.</p>
+</section>
+<section id="sec-emcoll-collapse" class="level2" data-number="11.5">
+<h2 data-number="11.5" class="anchored" data-anchor-id="sec-emcoll-collapse"><span class="header-section-number">11.5</span> Collapsibility, direct collapsibility, and non-collapsibility</h2>
+<p><em>Why this matters (ITC).</em> Whether your reported effect measure is even <em>transportable in principle</em> across trials with different patient mixes depends on whether it is collapsible. The risk difference and risk ratio are collapsible; the odds ratio and hazard ratio are not, which is why marginal odds ratios and hazard ratios are treated throughout this book as population-specific quantities that cannot simply be pooled.</p>
+<p>We turn to the second axis. <a href="#sec-emcoll-em-interaction" class="quarto-xref"><span>Section 11.3</span></a> was about whether the conditional effect varies across strata. Collapsibility is about whether, when the conditional effect does <em>not</em> vary, the marginal effect equals it. Chapter 7 (1) defined collapsibility of an effect measure under a constant conditional effect. We now refine that definition to separate two strengths, because the risk ratio and the risk difference behave differently even though both are collapsible in the Chapter 7 sense.</p>
+<div id="def-collapsibility" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 11.6 (Collapsibility and direct collapsibility)</strong></span> Let an effect measure be defined by a strictly increasing link <span class="math inline">\(g\)</span>, with conditional and marginal effects <span class="math inline">\(\psi_g(x)=g(\mu_1(x))-g(\mu_0(x))\)</span> and <span class="math inline">\(\psi_g^{\mathrm M}=g(\mathbb E_X[\mu_1(X)])-g(\mathbb
+E_X[\mu_0(X)])\)</span> as in <a href="#def-conditional-effect" class="quarto-xref">Definition&nbsp;<span>11.1</span></a> and <a href="#def-marginal-effect" class="quarto-xref">Definition&nbsp;<span>11.2</span></a>. The measure is:</p>
+<ul>
+<li><strong>collapsible over <span class="math inline">\(X\)</span></strong> if, whenever <span class="math inline">\(\psi_g(\cdot)\equiv\psi_g\)</span> is constant in <span class="math inline">\(x\)</span>, the marginal effect equals that common value, <span class="math inline">\(\psi_g^{\mathrm M}=\psi_g\)</span>, for every distribution of <span class="math inline">\(X\)</span> and every pair of stratum means consistent with it; it is <strong>non-collapsible</strong> otherwise. This is the notion of
+<ol class="example" type="1">
+<li></li>
+</ol></li>
+<li><strong>directly collapsible over <span class="math inline">\(X\)</span></strong> if the marginal effect is always a weighting-respecting average of the conditional effects, namely <span id="eq-emcoll-direct"><span class="math display">\[
+\psi_g^{\mathrm M} \;=\; \mathbb E_X\bigl[\psi_g(X)\bigr] \;=\; \Delta^{\mathrm{Cond},g}_{01}(\mathcal P),
+\tag{11.9}\]</span></span> for every distribution of <span class="math inline">\(X\)</span> and every pair of stratum means, <em>whether or not</em> the conditional effect is constant.</li>
+</ul>
+<p>Direct collapsibility is the statement that the marginal-conditional gap <a href="#eq-emcoll-gap" class="quarto-xref">Equation&nbsp;<span>11.5</span></a> vanishes identically; collapsibility is the weaker statement that it vanishes when the conditional effect is constant. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p><em>Reader translation.</em> Two nested questions. <strong>Collapsibility</strong> asks: <em>if the effect is the same constant in every stratum, does that constant survive averaging over the patient mix?</em> <strong>Direct collapsibility</strong> asks more: <em>even when the effect varies across strata, is the marginal effect exactly the patient-mix-weighted average of those stratum effects?</em> Directly collapsible is the stronger, friendlier property, because the marginal number is then always the honest average of the per-patient numbers. Merely collapsible guarantees only that a <em>constant</em> effect is reported faithfully; if the effect varies, the marginal number can drift away from the average. The risk difference is directly collapsible; the risk ratio is collapsible but not directly; the odds ratio and hazard ratio are neither.</p>
+<p>Direct collapsibility implies collapsibility: if <span class="math inline">\(\psi_g^{\mathrm M}=\mathbb E_X[\psi_g(X)]\)</span> always, then in particular when <span class="math inline">\(\psi_g(X)\equiv\psi_g\)</span> is constant the average is <span class="math inline">\(\psi_g\)</span>, giving <span class="math inline">\(\psi_g^{\mathrm M}=\psi_g\)</span>. The converse fails, and the risk ratio is the witness. The terminology and the distinction follow <span class="citation" data-cites="chandler2026transport">Chandler and Ishak (<a href="../../references.html#ref-chandler2026transport" role="doc-biblioref">2026</a>)</span>, who make direct collapsibility the pivotal property for transporting a marginal effect across populations.</p>
+<div id="prp-emcoll-rd-direct" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 11.3 (The risk difference is directly collapsible)</strong></span> On the identity scale, <span class="math inline">\(g(\mu)=\mu\)</span>, the effect measure is directly collapsible over every covariate <span class="math inline">\(X\)</span>. In particular the risk difference is collapsible, and the marginal risk difference equals the population-average conditional risk difference for every distribution of <span class="math inline">\(X\)</span>, even when the conditional risk difference is itself an effect modifier.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>With <span class="math inline">\(g\)</span> the identity, <a href="#eq-emcoll-gap" class="quarto-xref">Equation&nbsp;<span>11.5</span></a> gives <span class="math inline">\(J_{\mathrm{id}}(\mu_t)=\mathbb E_X[\mu_t(X)]-\mathbb
+E_X[\mu_t(X)]=0\)</span>, so by <a href="#lem-emcoll-gap" class="quarto-xref">Lemma&nbsp;<span>11.1</span></a> <span class="math display">\[
+\psi_{\mathrm{id}}^{\mathrm M} = \mathbb E_X[\mu_1(X)] - \mathbb E_X[\mu_0(X)]
+= \mathbb E_X\bigl[\mu_1(X)-\mu_0(X)\bigr] = \mathbb E_X[\psi_{\mathrm{id}}(X)],
+\]</span> which is <a href="#eq-emcoll-direct" class="quarto-xref">Equation&nbsp;<span>11.9</span></a>. Direct collapsibility holds with no constancy assumption, hence the parenthetical remark about effect modification. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Why this matters.</em> On the risk-difference scale the population effect is always the genuine average of the per-patient effects, so a trial’s headline risk difference is a faithful summary even when the drug helps some patients more than others. This is the cleanest possible behavior, and it is why absolute-scale reasoning is so robust in anchored comparisons.</p>
+<p>This is the strongest possible good behavior: on the identity scale the marginal effect is the genuine population average of the per-stratum effects, so the two questions of <a href="#sec-emcoll-cond-marg" class="quarto-xref"><span>Section 11.2</span></a> have the same answer, and a varying conditional effect is faithfully summarized by its average. Chapter 7 (1) established the collapsibility half of this for the risk difference and the risk ratio; <a href="#prp-emcoll-rd-direct" class="quarto-xref">Proposition&nbsp;<span>11.3</span></a> sharpens it to direct collapsibility for the risk difference. The risk ratio is collapsible but not directly collapsible, which is the next proposition and the reason the two strengths are worth distinguishing.</p>
+<div id="prp-emcoll-rr" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 11.4 (The risk ratio is collapsible but not directly collapsible)</strong></span> On the log scale, <span class="math inline">\(g(\mu)=\log\mu\)</span> (the risk ratio): (i) the measure is collapsible over every <span class="math inline">\(X\)</span>; (ii) it is not directly collapsible, that is, there is a covariate <span class="math inline">\(X\)</span> and stratum means for which <span class="math inline">\(\psi_{\log}^{\mathrm M}\neq\mathbb E_X[\psi_{\log}(X)]\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span><strong>(i) Collapsibility.</strong> Suppose the conditional log risk ratio is constant, <span class="math inline">\(\psi_{\log}(x)=\log\mu_1(x)-\log\mu_0(x)\equiv\rho\)</span>, equivalently <span class="math inline">\(\mu_1(x)=e^\rho\mu_0(x)\)</span> for all <span class="math inline">\(x\)</span>. Taking expectations over <span class="math inline">\(X\)</span>, <span class="math inline">\(\mathbb E_X[\mu_1(X)]=e^\rho\,\mathbb E_X[\mu_0(X)]\)</span>, so <span class="math display">\[
+\psi_{\log}^{\mathrm M}=\log\frac{\mathbb E_X[\mu_1(X)]}{\mathbb E_X[\mu_0(X)]}=\log e^\rho=\rho
+=\psi_{\log},
+\]</span> for every distribution of <span class="math inline">\(X\)</span>; the measure is collapsible.</p>
+<p><strong>(ii) Not directly collapsible.</strong> Take <span class="math inline">\(X\in\{0,1\}\)</span> with <span class="math inline">\(P(X=0)=P(X=1)=\tfrac12\)</span> and stratum means <span class="math inline">\(\mu_0(0)=0.1,\ \mu_1(0)=0.4,\ \mu_0(1)=0.4,\ \mu_1(1)=0.8\)</span>. The conditional log risk ratios are <span class="math inline">\(\psi_{\log}(0)=\log(0.4/0.1)=\log 4\)</span> and <span class="math inline">\(\psi_{\log}(1)=\log(0.8/0.4)=\log 2\)</span>, with average <span class="math inline">\(\mathbb E_X[\psi_{\log}(X)]=\tfrac12(\log 4+\log 2)=\tfrac12\log 8=\log 2\sqrt2=1.0397\ldots\)</span>. The marginal risks are <span class="math inline">\(\mathbb E[\mu_0]=\tfrac12(0.1+0.4)=0.25\)</span> and <span class="math inline">\(\mathbb
+E[\mu_1]=\tfrac12(0.4+0.8)=0.60\)</span>, so <span class="math inline">\(\psi_{\log}^{\mathrm M}=\log(0.60/0.25)=\log 2.4=0.8755\ldots\)</span>. Since <span class="math inline">\(0.8755\ldots\neq1.0397\ldots\)</span>, <a href="#eq-emcoll-direct" class="quarto-xref">Equation&nbsp;<span>11.9</span></a> fails and the risk ratio is not directly collapsible. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Reader translation.</em> Why is the risk ratio collapsible but not <em>directly</em> collapsible? Collapsibility only has to handle a <em>constant</em> log risk ratio, and a constant <span class="math inline">\(\rho\)</span> with <span class="math inline">\(\mu_1(x)=e^\rho\mu_0(x)\)</span> scales both averaged risks by the same <span class="math inline">\(e^\rho\)</span>, so the constant survives (part i). Direct collapsibility must handle a <em>varying</em> log risk ratio, and there the log of a ratio of averages is not the average of the logs of the ratios: the strata with larger control risk <span class="math inline">\(\mu_0(x)\)</span> pull more weight into the marginal ratio than they carry in the plain average of the log ratios, so the two disagree (part ii). Collapsibility asks “does the constant survive averaging?”; direct collapsibility asks “does a varying effect average correctly?” The risk ratio passes the first test and fails the second.</p>
+<p>The gap in part (ii) appears only because the conditional risk ratio varies across strata; whenever it is constant, part (i) guarantees agreement. This is precisely the difference between the two strengths: a collapsible measure summarizes a <em>constant</em> conditional effect correctly, while a directly collapsible measure summarizes a <em>varying</em> one correctly too. The risk difference manages both; the risk ratio only the former. For an anchored indirect comparison reporting a log risk ratio under the shared-effect-modifier assumption, collapsibility suffices and the comparison transports (<a href="12-transportability.html#thm-collapsible-transport" class="quarto-xref">Theorem&nbsp;<span>12.5</span></a>, <a href="12-transportability.html#thm-scale-alignment" class="quarto-xref">Theorem&nbsp;<span>12.4</span></a>); the failure of direct collapsibility becomes relevant only when the conditional effect is allowed to vary, which is the effect-modification axis again.</p>
+<section id="sec-emcoll-noncollapse" class="level3" data-number="11.5.1">
+<h3 data-number="11.5.1" class="anchored" data-anchor-id="sec-emcoll-noncollapse"><span class="header-section-number">11.5.1</span> The odds ratio and the hazard ratio are non-collapsible</h3>
+<p>The odds ratio and the hazard ratio fail even collapsibility. They can differ between the conditional and the marginal scale with no effect modification at all, purely because their links are nonlinear and the gap <a href="#eq-emcoll-gap" class="quarto-xref">Equation&nbsp;<span>11.5</span></a> does not cancel between the two arms. This is the catalogue’s B.13, and it is the formal reason the rest of the book treats marginal odds ratios and hazard ratios as population-specific quantities.</p>
+<p>We first prove a clean general statement for the odds ratio, with strict attenuation toward the null, using a change-of-measure argument; then the hazard ratio, in closed form, with the additional feature that its marginal version varies with time.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em> (The odds-ratio phenomenon before the proof). </span>The running trial <a href="#exm-emcoll-teaser" class="quarto-xref">Example&nbsp;<span>11.1</span></a> already shows it. The conditional odds ratio is exactly <span class="math inline">\(6\)</span> in both strata, so there is no effect modification on the odds-ratio scale and nothing to adjust for. Yet the odds ratio of the population-averaged risks is <span class="math display">\[
+\frac{0.60/0.40}{0.25/0.75}=4.5 \; &lt; \; 6 .
+\]</span> A perfectly homogeneous per-patient odds ratio of <span class="math inline">\(6\)</span> became a marginal odds ratio of <span class="math inline">\(4.5\)</span>, pulled toward the null value <span class="math inline">\(1\)</span>, purely by averaging. The theorem below shows this attenuation is <em>universal</em> (it always happens when the baseline risk varies) and <em>unidirectional</em> (always toward <span class="math inline">\(1\)</span>); the change-of-measure proof is the machinery, but <span class="math inline">\(6\to 4.5\)</span> is the fact. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div id="thm-noncollapsibility-or-hr" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 11.2 (Non-collapsibility of the odds ratio and the hazard ratio)</strong></span> Work under the no-confounding identity <a href="#eq-emcoll-nocon" class="quarto-xref">Equation&nbsp;<span>11.1</span></a>, so that no confounding is present.</p>
+<p><strong>(a) Odds ratio.</strong> Let <span class="math inline">\(X\)</span> be a covariate, let <span class="math inline">\(\mu_t(X)\in(0,1)\)</span> be the stratum risks, and suppose the conditional odds ratio is constant across strata, <span class="math display">\[
+\omega \;=\; \frac{\mu_1(x)/(1-\mu_1(x))}{\mu_0(x)/(1-\mu_0(x))}\qquad\text{for all } x,
+\]</span> so that <span class="math inline">\(X\)</span> is <strong>not</strong> an effect modifier on the logit scale. If <span class="math inline">\(\omega\neq 1\)</span> and the baseline odds <span class="math inline">\(W:=\mu_0(X)/(1-\mu_0(X))\)</span> are non-degenerate, then the marginal odds ratio <span class="math display">\[
+\omega^{\mathrm M} \;=\; \frac{\mathbb E[\mu_1(X)]/(1-\mathbb E[\mu_1(X)])}{\mathbb E[\mu_0(X)]/(1-\mathbb E[\mu_0(X)])}
+\]</span> satisfies <span class="math inline">\(1&lt;\omega^{\mathrm M}&lt;\omega\)</span> when <span class="math inline">\(\omega&gt;1\)</span>, and <span class="math inline">\(\omega&lt;\omega^{\mathrm M}&lt;1\)</span> when <span class="math inline">\(\omega&lt;1\)</span>. In particular <span class="math inline">\(\omega^{\mathrm M}\neq\omega\)</span>: the odds ratio is non-collapsible, and the marginal odds ratio is strictly attenuated toward the null value <span class="math inline">\(1\)</span>.</p>
+<p><strong>(b) Hazard ratio.</strong> For time-to-event outcomes with a covariate <span class="math inline">\(X\)</span> and constant conditional hazard ratio <span class="math inline">\(r=h_1(x)/h_0(x)\)</span> across strata (no effect modification on the log-hazard scale), the marginal hazard ratio, formed from the population-averaged survival functions <span class="math inline">\(\bar
+S_t(u)=\mathbb E_X[\exp(-\int_0^u h_t(X)\,ds)]\)</span>, is in general not equal to <span class="math inline">\(r\)</span> and varies with the time <span class="math inline">\(u\)</span>. Hence the hazard ratio is non-collapsible.</p>
+</div>
+<p><em>Why this matters (ITC).</em> 2(a) is the reason you cannot pool marginal odds ratios across trials with different baseline risks, even when every trial is a flawless randomized experiment and the conditional odds ratio is identical in all of them. Two trials with the same drug and the same per-patient odds ratio will report different marginal odds ratios if they enrolled different risk mixes. For hazard ratios, part (b) is why almost every oncology health technology assessment, which reports a single Cox hazard ratio, is summarizing a quantity that in truth drifts with follow-up time. The consequence, not the proof, is the point; <a href="#exm-emcoll-worked" class="quarto-xref">Example&nbsp;<span>11.3</span></a> Step 3 carries it into an indirect comparison.</p>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span><strong>(a) Odds ratio.</strong></p>
+<p><em>Step 1 (setup: reduce to the baseline odds).</em> Because the conditional odds ratio is the constant <span class="math inline">\(\omega\)</span>, the treated odds equal <span class="math inline">\(\omega\)</span> times the control odds in every stratum: <span class="math inline">\(\dfrac{\mu_1(x)}{1-\mu_1(x)} = \omega\,\dfrac{\mu_0(x)}{1-\mu_0(x)}\)</span>. Write the control odds as the random variable <span class="math inline">\(W=\mu_0(X)/(1-\mu_0(X))\ge 0\)</span>, non-degenerate by hypothesis. Then the stratum risks are <span class="math display">\[
+\mu_0(X)=\frac{W}{1+W},\qquad \mu_1(X)=\frac{\omega W}{1+\omega W},
+\]</span> since solving the constant-odds-ratio relation for the treated risk gives exactly the second expression. For any <span class="math inline">\(a&gt;0\)</span> define <span class="math display">\[
+A(a) \;=\; \frac{\mathbb E\!\left[\dfrac{aW}{1+aW}\right]}{\mathbb E\!\left[\dfrac{1}{1+aW}\right]} .
+\]</span> Using <span class="math inline">\(1-\dfrac{aW}{1+aW}=\dfrac{1}{1+aW}\)</span>, the marginal control and treated odds are <span class="math display">\[
+\frac{\mathbb E[\mu_0]}{1-\mathbb E[\mu_0]}=\frac{\mathbb E[W/(1+W)]}{\mathbb E[1/(1+W)]}=A(1),
+\qquad
+\frac{\mathbb E[\mu_1]}{1-\mathbb E[\mu_1]}=\frac{\mathbb E[\omega W/(1+\omega W)]}{\mathbb E[1/(1+\omega W)]}=A(\omega),
+\]</span> so that the marginal odds ratio is <span class="math inline">\(\omega^{\mathrm M}=A(\omega)/A(1)\)</span>. <em>What we showed:</em> the whole problem is now about the single function <span class="math inline">\(A\)</span>.</p>
+<p><em>Step 2 (reweighting: a plain average with tilted weights).</em> The idea is to rewrite <span class="math inline">\(A(a)\)</span> as an ordinary average of <span class="math inline">\(W\)</span>, but with the patients reweighted. Give each patient a positive weight proportional to <span class="math inline">\(1/(1+aW)\)</span> and renormalize so the weights sum to one; call the resulting reweighted distribution <span class="math inline">\(Q_a\)</span>. Formally, <span class="math inline">\(Q_a\)</span> is the <em>tilted probability measure</em> whose density relative to the original law <span class="math inline">\(P\)</span> of <span class="math inline">\(X\)</span>, its <em>Radon-Nikodym derivative</em>, is <span class="math display">\[
+\frac{dQ_a}{dP}=\frac{1/(1+aW)}{\mathbb E[1/(1+aW)]};
+\]</span> the weights are positive and integrate to one, so <span class="math inline">\(Q_a\)</span> is a genuine probability distribution. Writing <span class="math inline">\(Q:=Q_1\)</span> for the control tilt and keeping <span class="math inline">\(Q_\omega\)</span> for the treated tilt, a direct computation gives <span class="math inline">\(A(1)=\mathbb E_Q[W]\)</span> and <span class="math inline">\(A(\omega)=\omega\,\mathbb E_{Q_\omega}[W]\)</span>, because <span class="math display">\[
+\mathbb E_Q[W]=\frac{\mathbb E[W/(1+W)]}{\mathbb E[1/(1+W)]}=A(1),\qquad
+\mathbb E_{Q_\omega}[W]=\frac{\mathbb E[W/(1+\omega W)]}{\mathbb E[1/(1+\omega W)]}=\frac{A(\omega)}{\omega}.
+\]</span> Therefore <span id="eq-emcoll-omega-tilt"><span class="math display">\[
+\omega^{\mathrm M}=\frac{A(\omega)}{A(1)}=\omega\,\frac{\mathbb E_{Q_\omega}[W]}{\mathbb E_Q[W]} .
+\tag{11.10}\]</span></span> <em>What we showed:</em> the marginal odds ratio is the conditional odds ratio <span class="math inline">\(\omega\)</span> times a ratio of two reweighted averages of the baseline odds. If the two reweightings gave the same average, <span class="math inline">\(\omega^{\mathrm
+M}\)</span> would equal <span class="math inline">\(\omega\)</span>; non-collapsibility is precisely that they do not.</p>
+<p><em>Step 3 (compare the two reweighted means through a covariance).</em> Compare <span class="math inline">\(\mathbb E_{Q_\omega}[W]\)</span> with <span class="math inline">\(\mathbb E_Q[W]\)</span> by writing one tilt as a reweighting of the other. The likelihood ratio (the ratio of the two weight functions) is, up to the positive constant <span class="math inline">\(c=\mathbb E[1/(1+W)]/\mathbb E[1/(1+\omega W)]\)</span>, <span class="math display">\[
+\ell(W)=\frac{dQ_\omega}{dQ}=c\,\frac{1+W}{1+\omega W},
+\qquad \ell'(W)=c\,\frac{(1+\omega W)-\omega(1+W)}{(1+\omega W)^2}=c\,\frac{1-\omega}{(1+\omega W)^2}.
+\]</span> For <span class="math inline">\(\omega&gt;1\)</span> this derivative is strictly negative, so <span class="math inline">\(\ell\)</span> is a strictly <em>decreasing</em> function of <span class="math inline">\(W\)</span>, and by construction <span class="math inline">\(\mathbb E_Q[\ell(W)]=1\)</span>. Using the definition of covariance, <span class="math inline">\(\operatorname{Cov}_Q(U,V)=\mathbb E_Q[UV]-\mathbb E_Q[U]\,\mathbb E_Q[V]\)</span>, with <span class="math inline">\(U=W\)</span>, <span class="math inline">\(V=\ell(W)\)</span>, and <span class="math inline">\(\mathbb E_Q[\ell(W)]=1\)</span>, <span class="math display">\[
+\mathbb E_{Q_\omega}[W]-\mathbb E_Q[W]=\mathbb E_Q[W\,\ell(W)]-\mathbb E_Q[W]\,\mathbb E_Q[\ell(W)]
+=\operatorname{Cov}_Q\bigl(W,\ell(W)\bigr).
+\]</span> Now <span class="math inline">\(W\)</span> is increasing in itself while <span class="math inline">\(\ell(W)\)</span> is decreasing in <span class="math inline">\(W\)</span>, and two oppositely monotone functions of the same random variable have non-positive covariance. Concretely, for an independent copy <span class="math inline">\(W'\)</span> of <span class="math inline">\(W\)</span> under <span class="math inline">\(Q\)</span>, <span class="math display">\[
+\operatorname{Cov}_Q(W,\ell(W))=\tfrac12\,\mathbb E_Q\bigl[(W-W')(\ell(W)-\ell(W'))\bigr]\le 0,
+\]</span> because whenever <span class="math inline">\(W&gt;W'\)</span> we have <span class="math inline">\(\ell(W)&lt;\ell(W')\)</span> and vice versa, so each product <span class="math inline">\((W-W')(\ell(W)-\ell(W'))\le 0\)</span>; the inequality is strict because <span class="math inline">\(W\)</span> is non-degenerate, so the product is strictly negative on an event of positive probability. Hence <span class="math inline">\(\mathbb E_{Q_\omega}[W]&lt;\mathbb E_Q[W]\)</span>. <em>What we showed:</em> the treated reweighting shifts the average baseline odds strictly down, so by <a href="#eq-emcoll-omega-tilt" class="quarto-xref">Equation&nbsp;<span>11.10</span></a>, <span class="math inline">\(\omega^{\mathrm M}&lt;\omega\)</span>.</p>
+<p><em>Step 4 (the lower bound and the sign).</em> For <span class="math inline">\(\omega&gt;1\)</span>, the constant-odds-ratio relation gives <span class="math inline">\(\mu_1(x)=\omega W/(1+\omega W)&gt;W/(1+W)=\mu_0(x)\)</span> in every stratum, so <span class="math inline">\(\mathbb E[\mu_1]&gt;\mathbb E[\mu_0]\)</span>; the marginal treated odds then exceed the marginal control odds and <span class="math inline">\(\omega^{\mathrm M}=A(\omega)/A(1)&gt;1\)</span>. Combining with Step 3, <span class="math inline">\(1&lt;\omega^{\mathrm M}&lt;\omega\)</span>. The case <span class="math inline">\(\omega&lt;1\)</span> is identical with <span class="math inline">\(\ell\)</span> strictly increasing and every inequality reversed, giving <span class="math inline">\(\omega&lt;\omega^{\mathrm M}&lt;1\)</span>.</p>
+<p><strong>(b) Hazard ratio.</strong> We exhibit a closed-form two-stratum example; a single counterexample proves both non-collapsibility and time-variation. Let <span class="math inline">\(X\in\{0,1\}\)</span> with <span class="math inline">\(P(X=0)=P(X=1)=\tfrac12\)</span>; read <span class="math inline">\(x=0\)</span> as a lower-risk subgroup and <span class="math inline">\(x=1\)</span> as a higher-risk subgroup, for instance early versus advanced disease. Outcomes are exponential with constant stratum hazards <span class="math inline">\(h_0(0)=1\)</span>, <span class="math inline">\(h_0(1)=4\)</span> under control, and a constant conditional hazard ratio <span class="math inline">\(r=\tfrac12\)</span>, so the treated hazards are <span class="math inline">\(h_1(0)=\tfrac12\)</span>, <span class="math inline">\(h_1(1)=2\)</span>. The conditional hazard ratio is <span class="math inline">\(\tfrac12\)</span> in both strata, so <span class="math inline">\(X\)</span> is not an effect modifier on the log-hazard scale. For an exponential stratum with hazard <span class="math inline">\(h\)</span> the survival function is <span class="math inline">\(e^{-hu}\)</span>, so averaging over the two strata gives the population survival functions <span class="math display">\[
+\bar S_0(u)=\tfrac12 e^{-u}+\tfrac12 e^{-4u},\qquad \bar S_1(u)=\tfrac12 e^{-u/2}+\tfrac12 e^{-2u} .
+\]</span> The <em>marginal hazard</em> is defined, as always, as minus the derivative of the log survival, <span class="math inline">\(\bar h_t(u)=-\frac{d}{du}\log\bar S_t(u)=-\bar S_t'(u)/\bar S_t(u)\)</span>; the minus sign is there because survival decreases, so the derivative of its logarithm is negative and the hazard is a positive rate. (Equivalently, the hazard is the instantaneous event rate among those still at risk, and for a mixture of exponentials it is a <em>survival-weighted</em> average of the stratum hazards, not a fixed average.) Differentiating, <span class="math display">\[
+\bar h_0(u)=\frac{e^{-u}+4e^{-4u}}{e^{-u}+e^{-4u}},\qquad
+\bar h_1(u)=\frac{\tfrac12 e^{-u/2}+2 e^{-2u}}{e^{-u/2}+e^{-2u}} .
+\]</span> The marginal hazard ratio is <span class="math inline">\(\overline{\mathrm{HR}}(u)=\bar h_1(u)/\bar h_0(u)\)</span>. At <span class="math inline">\(u\to 0\)</span> both averaged hazards reduce to the equal-weight averages, <span class="math inline">\(\bar h_0(0)=\tfrac12(1+4)=2.5\)</span> and <span class="math inline">\(\bar
+h_1(0)=\tfrac12(\tfrac12+2)=1.25\)</span>, so <span class="math inline">\(\overline{\mathrm{HR}}(0)=0.5=r\)</span>. But at <span class="math inline">\(u=1\)</span>, using <span class="math inline">\(e^{-1}=0.36788\)</span>, <span class="math inline">\(e^{-4}=0.018316\)</span>, <span class="math inline">\(e^{-1/2}=0.60653\)</span>, <span class="math inline">\(e^{-2}=0.13534\)</span>, <span class="math display">\[
+\bar h_0(1)=\frac{0.36788+4(0.018316)}{0.36788+0.018316}=\frac{0.44114}{0.38620}=1.1423,\qquad
+\bar h_1(1)=\frac{\tfrac12(0.60653)+2(0.13534)}{0.60653+0.13534}=\frac{0.57394}{0.74187}=0.77364,
+\]</span> so <span class="math inline">\(\overline{\mathrm{HR}}(1)=0.77364/1.1423=0.6773\neq 0.5=r\)</span>. The marginal hazard ratio therefore differs from the constant conditional hazard ratio and depends on the time <span class="math inline">\(u\)</span>, both of which establish non-collapsibility of the hazard ratio.</p>
+<p>Why does the marginal hazard ratio move over time when nothing about any patient changed? Because the two arms deplete their high-hazard stratum at different rates. Early on (<span class="math inline">\(u\to 0\)</span>) nobody has had the event yet, both arms are still the equal-weight mixtures, and <span class="math inline">\(\overline{\mathrm{HR}}(0)=r\)</span>. As time passes the high-hazard stratum <span class="math inline">\(x=1\)</span> dies out faster, and it dies out fastest in the arm with the higher hazards, so the survivors in the two arms come to have <em>different</em> stratum mixes and the marginal hazard ratio drifts away from <span class="math inline">\(r\)</span>. This selection-of-the-frail is not confounding: it is a mechanical consequence of averaging survival curves, and it happens in a perfect randomized trial. <span class="math inline">\(\square\)</span></p>
+</div>
+<div id="cor-emcoll-or-attenuation" class="theorem corollary">
+<p><span class="theorem-title"><strong>Corollary 11.1 (Attenuation of the marginal odds ratio toward the null)</strong></span> Under the hypotheses of 2(a), the marginal log odds ratio is strictly smaller in magnitude than the conditional log odds ratio: <span class="math inline">\(0&lt;|\log\omega^{\mathrm M}|&lt;|\log\omega|\)</span> with the same sign. The conditional and marginal odds ratios agree, <span class="math inline">\(\omega^{\mathrm M}=\omega\)</span>, if and only if the baseline odds <span class="math inline">\(W\)</span> are degenerate (a single stratum), in which case there is no prognostic variation to average over.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>The strict inequalities <span class="math inline">\(1&lt;\omega^{\mathrm M}&lt;\omega\)</span> (for <span class="math inline">\(\omega&gt;1\)</span>) and <span class="math inline">\(\omega&lt;\omega^{\mathrm M}&lt;1\)</span> (for <span class="math inline">\(\omega&lt;1\)</span>) translate under the strictly increasing <span class="math inline">\(\log\)</span> into <span class="math inline">\(0&lt;\log\omega^{\mathrm M}&lt;\log\omega\)</span> and <span class="math inline">\(\log\omega&lt;\log\omega^{\mathrm M}&lt;0\)</span> respectively, which is the magnitude-and-sign statement. If <span class="math inline">\(W\)</span> is degenerate at a single value <span class="math inline">\(w_0\)</span> (that is, the baseline odds are identical for every patient, so there is effectively one stratum of baseline risk), then <span class="math inline">\(X\)</span> has one stratum and the covariance in the proof of 2 is zero, giving <span class="math inline">\(\mathbb E_{Q_\omega}[W]=\mathbb E_Q[W]=w_0\)</span> and <span class="math inline">\(\omega^{\mathrm M}=\omega\)</span> by <a href="#eq-emcoll-omega-tilt" class="quarto-xref">Equation&nbsp;<span>11.10</span></a>. Conversely, if <span class="math inline">\(W\)</span> is non-degenerate the covariance is strictly negative and <span class="math inline">\(\omega^{\mathrm M}&lt;\omega\)</span> strictly, so equality forces degeneracy. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>The agreement-iff-degenerate clause is the precise sense in which non-collapsibility of the odds ratio is driven by prognostic heterogeneity in the baseline risk, not by effect modification: in 2 the conditional effect is held <em>constant</em>, so there is no effect modification whatsoever, and yet the moment the baseline risk varies across strata, the marginal and conditional odds ratios part company. The example <a href="../part1/07-glm.html#exm-noncollapsible-or" class="quarto-xref">Example&nbsp;<span>7.5</span></a> of Chapter 7 is one numerical instance of this theorem; the present result shows the phenomenon is universal and unidirectional, and gives the change-of-measure mechanism behind it.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em> (Non-collapsibility is not confounding). </span>It is essential to read 2 correctly: the gap between the marginal and the conditional odds ratio is <em>not</em> bias, and adjusting for <span class="math inline">\(X\)</span> does not remove it, because there is nothing to remove. The theorem is proved under the no-confounding identity <a href="#eq-emcoll-nocon" class="quarto-xref">Equation&nbsp;<span>11.1</span></a>, the very identity that holds in a randomized trial where <span class="math inline">\(X\)</span> is a pure prognostic factor balanced across arms by design. No backdoor path, no omitted common cause, no selection. The conditional odds ratio and the marginal odds ratio are simply two different functionals of the same confounding-free data generating mechanism, and they disagree because the logit does not commute with averaging. By <a href="#lem-emcoll-gap" class="quarto-xref">Lemma&nbsp;<span>11.1</span></a> the gap is exactly the Jensen defect <a href="#eq-emcoll-gap" class="quarto-xref">Equation&nbsp;<span>11.5</span></a>, <span class="math inline">\(J_{\mathrm{logit}}(\mu_1)-J_{\mathrm{logit}}(\mu_0)\)</span>, which is generically nonzero for the strictly convex-then-concave logit, and which the risk difference escapes because its link is affine. Confounding is a statement about <em>which</em> expectation identifies the causal effect; non-collapsibility is a statement about how a <em>correctly identified</em> effect changes when you transform before or after averaging. The two are independent, and conflating them is a standard error. The catalogue records this under B.13. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>We summarize the collapsibility axis in a table; “collapsible” and “directly collapsible” are in the sense of <a href="#def-collapsibility" class="quarto-xref">Definition&nbsp;<span>11.6</span></a>. The effect-modification axis is separate and is governed by <a href="#prp-emcoll-scale" class="quarto-xref">Proposition&nbsp;<span>11.1</span></a>: whenever a measure is non-collapsible, whether a covariate is an effect modifier on its scale can differ from the answer on the identity scale. The table below is only about collapsibility.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>effect measure</th>
+<th>link <span class="math inline">\(g\)</span></th>
+<th>collapsible</th>
+<th>directly collapsible</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>risk difference</td>
+<td>identity</td>
+<td>yes</td>
+<td>yes</td>
+</tr>
+<tr class="even">
+<td>risk ratio</td>
+<td><span class="math inline">\(\log\)</span></td>
+<td>yes</td>
+<td>no</td>
+</tr>
+<tr class="odd">
+<td>odds ratio</td>
+<td>logit</td>
+<td>no</td>
+<td>no</td>
+</tr>
+<tr class="even">
+<td>hazard ratio</td>
+<td>log-hazard</td>
+<td>no</td>
+<td>no (also time-varying)</td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="sec-emcoll-synthesis" class="level2" data-number="11.6">
+<h2 data-number="11.6" class="anchored" data-anchor-id="sec-emcoll-synthesis"><span class="header-section-number">11.6</span> Synthesis: two scale-dependent axes</h2>
+<p><em>Why this matters (ITC).</em> An analyst planning an indirect comparison makes two independent decisions: which scale to report (this fixes whether the marginal estimand is transportable at all), and which covariates are effect modifiers on that scale (this fixes what must be balanced). This section shows the two decisions are genuinely independent, so neither can substitute for the other.</p>
+<p>Effect modification and collapsibility are two independent reasons a stratified and a pooled analysis can disagree, and both are scale dependent, but they are not the same axis. It is worth stating the logical relationship cleanly, because the applied literature often collapses the two.</p>
+<p>Effect modification (<a href="#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a>) is a property of how the conditional effect <span class="math inline">\(\tau^g_{ab}(x)\)</span> varies <em>across strata of a covariate</em>. Non-collapsibility (<a href="#def-collapsibility" class="quarto-xref">Definition&nbsp;<span>11.6</span></a>) is a property of how the effect measure behaves <em>under averaging within a population</em>, when the conditional effect does not vary at all. The worked example below realizes all four combinations on one data set. The following proposition records that the two axes are genuinely orthogonal.</p>
+<div id="prp-emcoll-orthogonal" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 11.5 (Effect modification and non-collapsibility are independent)</strong></span> Each of the four combinations occurs.</p>
+<ol type="1">
+<li>No effect modification and collapsible: a covariate with constant conditional risk difference, on the risk-difference scale.</li>
+<li>Effect modification and collapsible: a covariate with non-constant conditional risk difference, on the risk-difference scale, where the marginal effect is still the exact average of the conditional effects by <a href="#prp-emcoll-rd-direct" class="quarto-xref">Proposition&nbsp;<span>11.3</span></a>.</li>
+<li>No effect modification and non-collapsible: a covariate with constant conditional odds ratio and non-degenerate baseline risk, on the odds-ratio scale, where marginal and conditional disagree by
+<ol start="2" class="example" type="1">
+<li></li>
+</ol></li>
+<li>Effect modification and non-collapsible: a covariate with non-constant conditional odds ratio, on the odds-ratio scale.</li>
+</ol>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Combination 1 is any covariate whose conditional risk difference is constant, for instance the identity-scale reading of the risks in <a href="#prp-emcoll-scale" class="quarto-xref">Proposition&nbsp;<span>11.1</span></a>, where the risk difference is <span class="math inline">\(0.1\)</span> in both strata; collapsibility holds by <a href="#prp-emcoll-rd-direct" class="quarto-xref">Proposition&nbsp;<span>11.3</span></a>. Combination 2 is the worked example <a href="#exm-emcoll-worked" class="quarto-xref">Example&nbsp;<span>11.3</span></a> below, whose conditional risk differences <span class="math inline">\(0.3\)</span> and <span class="math inline">\(0.4\)</span> differ yet whose marginal risk difference equals their average. Combination 3 is the worked example read on the odds-ratio scale, where the conditional odds ratio is constant at <span class="math inline">\(6\)</span> and the marginal odds ratio is <span class="math inline">\(\dfrac{0.60/0.40}{0.25/0.75}=4.5\)</span> (the arithmetic is in <a href="#exm-emcoll-worked" class="quarto-xref">Example&nbsp;<span>11.3</span></a> Step 2), by 2. Combination 4 is the logit-scale reading of <a href="#prp-emcoll-scale" class="quarto-xref">Proposition&nbsp;<span>11.1</span></a>, whose conditional odds ratios <span class="math inline">\(2.25\)</span> and <span class="math inline">\(1.5\)</span> differ. All four are realized. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>The practical upshot is a discipline for indirect comparison. An analyst must decide two things separately: on which scale to model and report (which fixes whether the measure is collapsible and hence whether the marginal estimand is even transportable in principle), and which covariates are effect modifiers on that scale (which fixes what must be balanced). Confusing the two leads to the classic errors: balancing effect modifiers on one scale while reporting a non-collapsible measure on another, or attributing a non-collapsibility gap to unmeasured confounding and “adjusting” it away. Chapter 12 turns this discipline into the transportability theorems <a href="12-transportability.html#thm-scale-alignment" class="quarto-xref">Theorem&nbsp;<span>12.4</span></a> and <a href="12-transportability.html#thm-collapsible-transport" class="quarto-xref">Theorem&nbsp;<span>12.5</span></a>, and Chapter 16 shows the failure mode <a href="../part3/16-limits-of-nma.html#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a> and the ecological bias <a href="../part3/16-limits-of-nma.html#def-ecological-bias" class="quarto-xref">Definition&nbsp;<span>16.2</span></a> that result when the two axes are mishandled.</p>
+</section>
+<section id="sec-emcoll-worked" class="level2" data-number="11.7">
+<h2 data-number="11.7" class="anchored" data-anchor-id="sec-emcoll-worked"><span class="header-section-number">11.7</span> A fully worked example</h2>
+<p>We now carry out one example end to end, with every number reproducible by hand. It exhibits effect modification and non-collapsibility simultaneously, on different scales, and then shows the downstream consequence for an indirect comparison. This completes the running trial of <a href="#exm-emcoll-teaser" class="quarto-xref">Example&nbsp;<span>11.1</span></a>: the same four numbers, now carried through every scale and into an indirect comparison. Recall <span class="math inline">\(\mu_0(x)\)</span> is the control risk and <span class="math inline">\(\mu_1(x)\)</span> the treated risk among patients with covariate value <span class="math inline">\(x\)</span>.</p>
+<div id="exm-emcoll-worked" class="theorem example">
+<p><span class="theorem-title"><strong>Example 11.3 (Effect modification and non-collapsibility in one trial)</strong></span> A randomized trial compares an active treatment (<span class="math inline">\(t=1\)</span>) against control (<span class="math inline">\(t=0\)</span>) on a binary outcome, in a population stratified by a binary prognostic covariate <span class="math inline">\(X\in\{0,1\}\)</span> with <span class="math inline">\(P(X=1)=\tfrac12\)</span>. The stratum-specific risks are <span class="math display">\[
+\mu_0(0)=0.1,\quad \mu_1(0)=0.4,\qquad \mu_0(1)=0.4,\quad \mu_1(1)=0.8 .
+\]</span></p>
+<p><strong>Step 1: effect-modifier status, three scales.</strong> The conditional contrasts are</p>
+<ul>
+<li>risk difference: <span class="math inline">\(\tau^{\mathrm{id}}(0)=0.4-0.1=0.3\)</span> and <span class="math inline">\(\tau^{\mathrm{id}}(1)=0.8-0.4=0.4\)</span>. These differ, so <span class="math inline">\(X\)</span> <em>is</em> an effect modifier on the risk-difference scale.</li>
+<li>risk ratio: <span class="math inline">\(\mathrm{RR}(0)=0.4/0.1=4\)</span> and <span class="math inline">\(\mathrm{RR}(1)=0.8/0.4=2\)</span>. These differ, so <span class="math inline">\(X\)</span> <em>is</em> an effect modifier on the risk-ratio scale.</li>
+<li>odds ratio: in stratum <span class="math inline">\(0\)</span>, <span class="math inline">\(\dfrac{0.4/0.6}{0.1/0.9}=\dfrac{2/3}{1/9}=6\)</span>; in stratum <span class="math inline">\(1\)</span>, <span class="math inline">\(\dfrac{0.8/0.2}{0.4/0.6}=\dfrac{4}{2/3}=6\)</span>. These are equal, so <span class="math inline">\(X\)</span> is <em>not</em> an effect modifier on the odds-ratio scale; the conditional odds ratio is the constant <span class="math inline">\(\omega=6\)</span>.</li>
+</ul>
+<p>So the same covariate modifies the effect on two scales and not on the third. This is <a href="#prp-emcoll-scale" class="quarto-xref">Proposition&nbsp;<span>11.1</span></a> made concrete, and it already shows that “is <span class="math inline">\(X\)</span> an effect modifier?” has no scale-free answer.</p>
+<p><strong>Step 2: the marginal effects.</strong> The marginal risks are the equal-weight stratum averages, <span class="math display">\[
+\mathbb E[\mu_0]=\tfrac12(0.1+0.4)=0.25,\qquad \mathbb E[\mu_1]=\tfrac12(0.4+0.8)=0.60 .
+\]</span> On the three scales:</p>
+<ul>
+<li>marginal risk difference: <span class="math inline">\(0.60-0.25=0.35\)</span>. The average of the conditional risk differences is <span class="math inline">\(\tfrac12(0.3+0.4)=0.35\)</span>. They agree exactly: the risk difference is directly collapsible (<a href="#prp-emcoll-rd-direct" class="quarto-xref">Proposition&nbsp;<span>11.3</span></a>), even though <span class="math inline">\(X\)</span> is an effect modifier on this scale. This is combination 2 of
+<ol start="3" class="example" type="1">
+<li></li>
+</ol></li>
+<li>marginal odds ratio: <span class="math inline">\(\dfrac{0.60/0.40}{0.25/0.75}=\dfrac{1.5}{1/3}=4.5\)</span>. The conditional odds ratio is <span class="math inline">\(\omega=6\)</span>. They disagree: <span class="math inline">\(\omega^{\mathrm M}=4.5\neq 6\)</span>, with <span class="math inline">\(1&lt;4.5&lt;6\)</span>, exactly the strict attenuation of 2 and <a href="#cor-emcoll-or-attenuation" class="quarto-xref">Corollary&nbsp;<span>11.1</span></a>. There is no effect modification on this scale, and yet the marginal and conditional measures differ. This is combination 3 of 3.</li>
+</ul>
+<p>The two findings sit side by side: on the risk-difference scale the covariate is an effect modifier but the measure collapses perfectly; on the odds-ratio scale the covariate is not an effect modifier but the measure fails to collapse. Effect modification and non-collapsibility are different phenomena, demonstrated on one data set.</p>
+<p><strong>Step 3: consequence for an indirect comparison.</strong> Suppose a second trial, sharing the same conditional mean functions (conditional constancy of relative effects, <a href="../part3/14-bucher.html#def-constancy-relative-effects" class="quarto-xref">Definition&nbsp;<span>14.2</span></a>), enrolled a different covariate mix, <span class="math inline">\(P(X=1)=0.8\)</span>. Its marginal risks are <span class="math display">\[
+\mathbb E'[\mu_0]=0.1(0.2)+0.4(0.8)=0.34,\qquad \mathbb E'[\mu_1]=0.4(0.2)+0.8(0.8)=0.72 .
+\]</span> On the risk-difference scale its marginal effect is <span class="math inline">\(0.72-0.34=0.38=0.3(0.2)+0.4(0.8)\)</span>, the population average of the same conditional risk differences. Because <span class="math inline">\(X\)</span> is an effect modifier on this scale, the marginal effect moved from <span class="math inline">\(0.35\)</span> to <span class="math inline">\(0.38\)</span> purely through the change in covariate distribution; a naive unadjusted comparison of the two trials would be biased by <span class="math inline">\(0.03\)</span> on the risk-difference scale. This is the failure-of-Bucher mechanism <a href="../part3/16-limits-of-nma.html#thm-failure-of-bucher" class="quarto-xref">Theorem&nbsp;<span>16.1</span></a>, and the cure is to reweight both trials to a common target distribution.</p>
+<p>On the odds-ratio scale the second trial’s marginal odds ratio is <span class="math display">\[
+\frac{0.72/0.28}{0.34/0.66}=\frac{18/7}{17/33}=\frac{18\cdot 33}{7\cdot 17}=\frac{594}{119}=4.992 ,
+\]</span> compared with <span class="math inline">\(4.5\)</span> in the first trial, even though the conditional odds ratio is the constant <span class="math inline">\(6\)</span> in both and <span class="math inline">\(X\)</span> is not an effect modifier on this scale. Here the marginal estimand moved from <span class="math inline">\(4.5\)</span> to <span class="math inline">\(4.992\)</span> not because of effect modification but because of non-collapsibility: the marginal odds ratio depends on the baseline-risk distribution, which the covariate mix changed. No covariate balancing on the logit scale can equalize these two marginal odds ratios while preserving the trials’ own populations, because the discrepancy is not about an imbalanced effect modifier; it is the structural population-dependence of a non-collapsible marginal effect. This is exactly the caveat that makes a marginal odds ratio non-transportable across populations even under the shared-effect-modifier assumption (<a href="12-transportability.html#thm-sema-insufficient" class="quarto-xref">Theorem&nbsp;<span>12.6</span></a>), and it is why Chapter 12 distinguishes conditional from marginal estimands so carefully. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>The example is small enough to verify with a calculator and rich enough to contain the entire chapter: scale-dependent effect modification (Step 1), the contrast between a directly collapsible and a non-collapsible measure (Step 2), and the two distinct ways a marginal effect can fail to transport across populations (Step 3). If the reader internalizes one numerical fact from this chapter, let it be that <span class="math inline">\(0.35\)</span> is the honest average of <span class="math inline">\(0.3\)</span> and <span class="math inline">\(0.4\)</span>, while <span class="math inline">\(4.5\)</span> is not equal to <span class="math inline">\(6\)</span> even though nothing varied.</p>
+</section>
+<section id="sec-emcoll-notes" class="level2" data-number="11.8">
+<h2 data-number="11.8" class="anchored" data-anchor-id="sec-emcoll-notes"><span class="header-section-number">11.8</span> Notes and references</h2>
+<p>The separation of effect modification from statistical interaction follows <span class="citation" data-cites="hernan2020whatif">Hernán and Robins (<a href="../../references.html#ref-hernan2020whatif" role="doc-biblioref">2020</a>)</span>, Chapters 4 and 5, whose treatment emphasizes the asymmetry of effect modification and the scale dependence of additive versus multiplicative interaction; the symmetry of the product term and the surrogate-modifier phenomenon are theirs. The scale-conditional definitions of effect modifier and prognostic variable, and the four-cell table, are the formulation of <span class="citation" data-cites="phillippo2019thesis">Phillippo (<a href="../../references.html#ref-phillippo2019thesis" role="doc-biblioref">2019</a>)</span> and the catalogue results E.1 and E.2; the regression operationalization <a href="#eq-emcoll-model" class="quarto-xref">Equation&nbsp;<span>11.7</span></a> is the network meta-regression model of <span class="citation" data-cites="dias2018nma">Dias et al. (<a href="../../references.html#ref-dias2018nma" role="doc-biblioref">2018</a>)</span>, Chapter 8, in the notation of <a href="../../notation.html">Notation</a>. The conditional and marginal estimands of <a href="#def-conditional-effect" class="quarto-xref">Definition&nbsp;<span>11.1</span></a> and <a href="#def-marginal-effect" class="quarto-xref">Definition&nbsp;<span>11.2</span></a>, and the marginal-conditional gap <a href="#lem-emcoll-gap" class="quarto-xref">Lemma&nbsp;<span>11.1</span></a>, are the estimand-scale framework of <span class="citation" data-cites="chandler2026transport">Chandler and Ishak (<a href="../../references.html#ref-chandler2026transport" role="doc-biblioref">2026</a>)</span>, who name the two estimands and make the collapsibility gap the organizing idea; these correspond to E.0 and E.12 in the proof catalogue.</p>
+<p>Collapsibility and non-collapsibility were defined in Chapter 7 (1), where the risk difference and risk ratio were shown collapsible and the odds ratio non-collapsible with the numerical instance <a href="../part1/07-glm.html#exm-noncollapsible-or" class="quarto-xref">Example&nbsp;<span>7.5</span></a>. The refinement to <em>direct</em> collapsibility (<a href="#def-collapsibility" class="quarto-xref">Definition&nbsp;<span>11.6</span></a>), and the observation that the risk ratio is collapsible but not directly collapsible (<a href="#prp-emcoll-rr" class="quarto-xref">Proposition&nbsp;<span>11.4</span></a>), follow <span class="citation" data-cites="chandler2026transport">Chandler and Ishak (<a href="../../references.html#ref-chandler2026transport" role="doc-biblioref">2026</a>)</span>; direct collapsibility is the property their transportability theorems require, and it is sharper than the constant-effect collapsibility of the classical literature. The general non-collapsibility and strict attenuation of the odds ratio, 2(a) and <a href="#cor-emcoll-or-attenuation" class="quarto-xref">Corollary&nbsp;<span>11.1</span></a>, are the catalogue’s B.13; the monotone-attenuation phenomenon is classical in categorical data analysis and the change-of-measure proof given here packages the convexity argument of <a href="#lem-emcoll-gap" class="quarto-xref">Lemma&nbsp;<span>11.1</span></a> into a covariance inequality. The non-collapsibility and time-variation of the marginal hazard ratio, 2(b), is the survival-analysis counterpart; the closed-form two-stratum frailty computation is standard, and the same mechanism reappears in the survival chapters of this book where the marginal hazard ratio of a conditionally proportional-hazards model is shown to drift with time.</p>
+<p>The machine-checked content is in <code>theories/EffectModifiers.v</code> of the companion Coq development. <a href="#thm-emcoll-em-pv-distinct" class="quarto-xref">Theorem&nbsp;<span>11.1</span></a> (part 1) is <code>Theorem not_EM_does_not_imply_not_PV</code>, with the supporting lemmas <code>counterexample_not_EM</code> and <code>counterexample_not_PV_fails</code>; it formalizes that a purely prognostic variable need not be an effect modifier, the algebraic heart of the anchored-versus-unanchored distinction. <a href="#lem-emcoll-anchored-cancellation" class="quarto-xref">Lemma&nbsp;<span>11.3</span></a> is <code>Theorem anchored_PV_cancellation</code>, the pointwise statement that a non-effect-modifier cancels in the link-scale contrast. The Coq file deliberately does not formalize the scale-specific population-adjustment consistency theorems, which depend on estimand scale, overlap, and model correctness beyond the algebraic abstraction; those live in the paper proofs of Part E and in Chapter 12 of this book.</p>
+<p>Two bibliographic additions are proposed in the chapter work log for the orchestrator: the original collapsibility analysis of Greenland, Robins, and Pearl (1999), to which the term non-collapsibility and the odds-ratio attenuation are usually attributed, and the early demonstration by Gail and colleagues (1984) that omitting a balanced prognostic covariate biases a nonlinear-model treatment coefficient. The present chapter cites the keys available in <code>references.bib</code>.</p>
+</section>
+<section id="sec-emcoll-exercises" class="level2" data-number="11.9">
+<h2 data-number="11.9" class="anchored" data-anchor-id="sec-emcoll-exercises"><span class="header-section-number">11.9</span> Exercises</h2>
+<p>The exercises progress from interpretation and warm-ups to computation and proof. A starred exercise, marked <span class="math inline">\(\star\)</span>, has a full worked solution in Appendix F.</p>
+<div id="exr-emcoll-interpret" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 11.1</strong></span> <strong>(Interpretation.)</strong> A colleague reports that two well-conducted randomized trials of the same drug, on the same outcome, gave different odds ratios, and concludes that one of them must be biased. Give the two distinct innocent explanations this chapter provides (<a href="#sec-emcoll-intro" class="quarto-xref"><span>Section 11.1</span></a>), and say for each whether adjusting for a covariate would reconcile the trials. Which explanation can occur even if both trials enrolled patients identical on every measured and unmeasured covariate?</p>
+</div>
+<div id="exr-emcoll-order-ops" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 11.2</strong></span> <strong>(Warm-up.)</strong> For the running trial <a href="#exm-emcoll-teaser" class="quarto-xref">Example&nbsp;<span>11.1</span></a>, with <span class="math inline">\(\mu_0(0)=0.1,\mu_1(0)=0.4,\mu_0(1)=0.4,\mu_1(1)=0.8\)</span> and <span class="math inline">\(P(X=1)=\tfrac12\)</span>: (a) compute the odds ratio within each stratum and confirm both equal <span class="math inline">\(6\)</span> (transform, then average); (b) compute the population-average risks <span class="math inline">\(\mathbb E[\mu_0],\mathbb E[\mu_1]\)</span> and then their odds ratio (average, then transform), confirming <span class="math inline">\(4.5\)</span>; (c) do the same on the identity scale and confirm the two orders agree at <span class="math inline">\(0.35\)</span>. Say in one sentence which scale is collapsible and why.</p>
+</div>
+<div id="exr-emcoll-classify" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 11.3</strong></span> <strong>(Classification.)</strong> For each of the four two-stratum tables below (equal stratum sizes, <span class="math inline">\(P(X=1)=\tfrac12\)</span>), state (i) whether <span class="math inline">\(X\)</span> is an effect modifier on the risk-difference scale, (ii) whether <span class="math inline">\(X\)</span> is an effect modifier on the odds-ratio scale, and (iii) if the conditional odds ratio is constant across strata, whether the marginal odds ratio equals it (and if the conditional odds ratio varies, say so).</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>table</th>
+<th><span class="math inline">\(\mu_0(0),\ \mu_1(0)\)</span></th>
+<th><span class="math inline">\(\mu_0(1),\ \mu_1(1)\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>A</td>
+<td><span class="math inline">\(0.2,\ 0.3\)</span></td>
+<td><span class="math inline">\(0.2,\ 0.3\)</span></td>
+</tr>
+<tr class="even">
+<td>B</td>
+<td><span class="math inline">\(0.1,\ 0.2\)</span></td>
+<td><span class="math inline">\(0.5,\ 0.6\)</span></td>
+</tr>
+<tr class="odd">
+<td>C</td>
+<td><span class="math inline">\(0.1,\ 0.4\)</span></td>
+<td><span class="math inline">\(0.4,\ 0.8\)</span></td>
+</tr>
+<tr class="even">
+<td>D</td>
+<td><span class="math inline">\(0.2,\ 0.5\)</span></td>
+<td><span class="math inline">\(0.5,\ 0.8\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>Which table is the running example, and which tables show non-collapsibility of the odds ratio with no effect modification on the odds-ratio scale?</p>
+</div>
+<div id="exr-emcoll-scale-flip" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 11.4</strong></span> <strong>Constructing a scale flip.</strong> Find stratum risks <span class="math inline">\(\mu_0(0),\mu_1(0),\mu_0(1),\mu_1(1)\in(0,1)\)</span>, different from those in <a href="#prp-emcoll-scale" class="quarto-xref">Proposition&nbsp;<span>11.1</span></a>, such that the covariate is an effect modifier on the risk-difference scale but <em>not</em> on the odds-ratio scale. Verify your construction by computing both conditional contrasts in both strata. Explain why your example is combination 2, not combination 4, of 3.</p>
+</div>
+<div id="exr-emcoll-rr-direct" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 11.5</strong></span> <strong>When is the risk ratio directly collapsible?</strong> Prove that on the log scale, if the conditional risk ratio is constant in <span class="math inline">\(x\)</span>, then the marginal log risk ratio equals the (then constant) conditional log risk ratio, recovering collapsibility. Then show by a two-stratum example that if the conditional risk ratio varies, the marginal log risk ratio is <em>not</em> the population average of the conditional log risk ratios, and determine whether it is larger or smaller than that average for your example. Relate the direction to the convexity of <span class="math inline">\(\log\)</span>.</p>
+</div>
+<div id="exr-emcoll-or-attenuation" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 11.6</strong></span> <strong>(<span class="math inline">\(\star\)</span>) General monotone attenuation of the odds ratio.</strong> Reprove 2(a) for an arbitrary, possibly continuous, distribution of the baseline odds <span class="math inline">\(W\)</span> by the monotonicity route. (The theorem’s own proof already covers this case through the covariance inequality; here you establish the same conclusion more directly, which is often easier to remember.) Specifically, with <span class="math inline">\(A(a)=\mathbb E[aW/(1+aW)]/\mathbb E[1/(1+aW)]\)</span> and <span class="math inline">\(\omega^{\mathrm
+M}=A(\omega)/A(1)\)</span>, show that (a) <span class="math inline">\(a\mapsto A(a)\)</span> is strictly increasing, so <span class="math inline">\(\omega^{\mathrm M}&gt;1\)</span> for <span class="math inline">\(\omega&gt;1\)</span>; and (b) <span class="math inline">\(a\mapsto A(a)/a\)</span> is strictly decreasing, so <span class="math inline">\(\omega^{\mathrm M}&lt;\omega\)</span> for <span class="math inline">\(\omega&gt;1\)</span>. For (b), use the change-of-measure identity <a href="#eq-emcoll-omega-tilt" class="quarto-xref">Equation&nbsp;<span>11.10</span></a> and the covariance inequality for oppositely monotone functions. Deduce the agreement-iff-degenerate clause of <a href="#cor-emcoll-or-attenuation" class="quarto-xref">Corollary&nbsp;<span>11.1</span></a>.</p>
+</div>
+<div id="exr-emcoll-hr-limits" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 11.7</strong></span> <strong>Endpoints of the marginal hazard ratio.</strong> In 2(b), prove that <span class="math inline">\(\overline{\mathrm{HR}}(u)\to r\)</span> as both <span class="math inline">\(u\to 0\)</span> and <span class="math inline">\(u\to\infty\)</span>, and that <span class="math inline">\(\overline{\mathrm{HR}}(u)\neq r\)</span> for <span class="math inline">\(u\in(0,\infty)\)</span> unless the baseline hazards are equal across strata. Interpret the <span class="math inline">\(u\to\infty\)</span> limit as a frailty-selection effect: the survivors in both arms come to be dominated by the lowest-hazard stratum. Sketch <span class="math inline">\(\overline{\mathrm{HR}}(u)\)</span> for the given numbers and identify the time at which it departs furthest from <span class="math inline">\(r\)</span>.</p>
+</div>
+<div id="exr-emcoll-anchored-unanchored" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 11.8</strong></span> <strong>(<span class="math inline">\(\star\)</span>) Why unanchored adjustment needs prognostic variables.</strong> Consider treatments <span class="math inline">\(A\)</span> and <span class="math inline">\(C\)</span> with a measured covariate <span class="math inline">\(X\)</span> and an unmeasured covariate <span class="math inline">\(W\)</span>, and conditional means <span class="math inline">\(\mu_A(x,w)\)</span>, <span class="math inline">\(\mu_C(x,w)\)</span> on the identity scale. (a) Suppose <span class="math inline">\(W\)</span> is purely prognostic, <span class="math inline">\(\mu_A(x,w)-\mu_C(x,w)\)</span> free of <span class="math inline">\(w\)</span>. Using <a href="#lem-emcoll-anchored-cancellation" class="quarto-xref">Lemma&nbsp;<span>11.3</span></a>, show that the anchored contrast <span class="math inline">\(\Delta^{\mathrm{Cond,id}}_{AC}\)</span> is unchanged when the conditional law of <span class="math inline">\(W\)</span> given <span class="math inline">\(X\)</span> differs between a source and a target population, so <span class="math inline">\(W\)</span> need not be balanced. (b) Now consider the unanchored target <span class="math inline">\(\mathbb E_{f_*}[\mu_A(X,W)]\)</span> alone. Give explicit <span class="math inline">\(\mu_A\)</span> and two conditional laws of <span class="math inline">\(W\)</span> given <span class="math inline">\(X\)</span>, agreeing in <span class="math inline">\(f_X\)</span>, for which this absolute mean differs between source and target. Conclude that an imbalanced purely prognostic variable biases the unanchored estimand even though it cancels in the anchored one, and connect this to <a href="#thm-emcoll-em-pv-distinct" class="quarto-xref">Theorem&nbsp;<span>11.1</span></a> part 1.</p>
+</div>
+<div id="exr-emcoll-saturated" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 11.9</strong></span> <strong>Interaction in a saturated model.</strong> Write the saturated logistic model for binary <span class="math inline">\(X\)</span> and <span class="math inline">\(T\)</span>, <span class="math inline">\(\operatorname{logit}\mu_t(x)=\beta_0+\beta_1 x+\beta_2 t+\beta_3 (xt)\)</span>. Express the four stratum risks of <a href="#exm-emcoll-worked" class="quarto-xref">Example&nbsp;<span>11.3</span></a> through <span class="math inline">\(\beta_0,\dots,\beta_3\)</span>, solve for the coefficients, and verify that <span class="math inline">\(\beta_3=0\)</span> corresponds exactly to the absence of effect modification on the logit scale (<a href="#lem-emcoll-interaction" class="quarto-xref">Lemma&nbsp;<span>11.2</span></a>). Then compute, from the same fitted model, the marginal odds ratio <span class="math inline">\(4.5\)</span> by averaging the fitted risks, and confirm that no value of <span class="math inline">\((\beta_0,\beta_1,\beta_2,\beta_3)\)</span> makes the marginal odds ratio equal the conditional odds ratio <span class="math inline">\(e^{\beta_2}\)</span> unless <span class="math inline">\(\beta_1=0\)</span>. Interpret <span class="math inline">\(\beta_1=0\)</span> as the degeneracy clause of <a href="#cor-emcoll-or-attenuation" class="quarto-xref">Corollary&nbsp;<span>11.1</span></a>.</p>
+</div>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-chandler2026transport" class="csl-entry" role="listitem">
+Chandler, Conor, and K. Jack Ishak. 2026. <span>“Reframing Population-Adjusted Indirect Comparisons as a Transportability Problem: An Estimand-Based Perspective and Implications for Health Technology Assessment.”</span> <em>arXiv Preprint arXiv:2602.17041</em>.
+</div>
+<div id="ref-dias2018nma" class="csl-entry" role="listitem">
+Dias, Sofia, A. E. Ades, Nicky J. Welton, Jeroen P. Jansen, and Alexander J. Sutton. 2018. <em>Network Meta-Analysis for Decision-Making</em>. Statistics in Practice. Wiley.
+</div>
+<div id="ref-hernan2020whatif" class="csl-entry" role="listitem">
+Hernán, Miguel A., and James M. Robins. 2020. <em>Causal Inference: What If</em>. Chapman &amp; Hall/CRC.
+</div>
+<div id="ref-phillippo2019thesis" class="csl-entry" role="listitem">
+Phillippo, David Mark. 2019. <span>“Calibration of Treatment Effects in Network Meta-Analysis Using Individual Patient Data.”</span> PhD thesis, University of Bristol.
+</div>
+</div>
+</section>
+<section id="footnotes" class="footnotes footnotes-end-of-document" role="doc-endnotes">
+<hr>
+<ol>
+<li id="fn1"><p>Throughout, the symbol <span class="math inline">\(\blacktriangleleft\)</span> marks the end of a definition, example, or remark, and <span class="math inline">\(\square\)</span> marks the end of a proof; both are only visual bookends.<a href="#fnref1" class="footnote-back" role="doc-backlink">↩︎</a></p></li>
+</ol>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/choxos\.github\.io\/Mathematics-of-ITC\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../chapters/part2/10-adjustment-methods.html" class="pagination-link" aria-label="Adjustment Methods">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Adjustment Methods</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../chapters/part2/12-transportability.html" class="pagination-link" aria-label="Transportability: The Estimand-Based Theory">
+        <span class="nav-page-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Transportability: The Estimand-Based Theory</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

@@ -1,0 +1,1386 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Appendix D — Special Functions for Numerical Integration – The Mathematics of Indirect Treatment Comparisons</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../appendices/E-reference-implementations.html" rel="next">
+<link href="../appendices/C-distributions.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-aafe154f14b83768199b70e6209de778.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../appendices/A-notation-glossary.html">Appendices</a></li><li class="breadcrumb-item"><a href="../appendices/D-special-functions.html"><span class="chapter-number">D</span>&nbsp; <span class="chapter-title">Special Functions for Numerical Integration</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">The Mathematics of Indirect Treatment Comparisons</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/choxos/Mathematics-of-ITC" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Notation and Conventions</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part I: Mathematical Foundations</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/01-linear-algebra-i.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Linear Algebra I: Vector Spaces, Linear Maps, and Rank</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/02-linear-algebra-ii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Linear Algebra II: Orthogonality and the Projection Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/03-linear-algebra-iii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Linear Algebra III: Spectral Theory and Quadratic Forms</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/04-probability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Probability and Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/05-inference.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Statistical Inference</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/06-linear-regression.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Linear Regression from First Principles</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/07-glm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Generalized Linear Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/08-hierarchical-bayes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Hierarchical Models, Shrinkage, and Bayesian Inference</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Causal Inference and Estimands</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part2/09-potential-outcomes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Potential Outcomes and Identification</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part2/10-adjustment-methods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Adjustment Methods</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part2/11-effect-modification-collapsibility.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Effect Modification, Interaction, and Collapsibility</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part2/12-transportability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Transportability: The Estimand-Based Theory</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Meta-Analysis and Network Meta-Analysis</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part3/13-pairwise-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Pairwise Meta-Analysis</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part3/14-bucher.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Indirect Comparison and Bucher’s Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part3/15-network-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Network Meta-Analysis: Models and Identifiability</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part3/16-limits-of-nma.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">The Limits of Standard Network Meta-Analysis</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Population Adjustment: MAIC and STC</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part4/17-population-adjustment-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Population Adjustment Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part4/18-maic.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">Matching-Adjusted Indirect Comparison</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part4/19-stc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Simulated Treatment Comparison</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part V: Multilevel Network Meta-Regression</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/20-mlnmr-aggregation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression I: The Aggregation Principle</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/21-mlnmr-discrete.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression II: Discrete Outcomes and Approximation Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/22-mlnmr-integration.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression III: Numerical Integration Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/23-mlnmr-estimands.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression IV: Estimands, Identifiability, and Generality</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/24-computation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Bayesian Computation and Diagnostics</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/25-general-likelihoods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">General Likelihoods: Survival and Ordered Categorical Outcomes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/26-ml-umr.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Multilevel Unanchored Meta-Regression</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part VI: Bias, Comparator Selection, and Rigor</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part6/27-distance-matching.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Aggregate-Level Covariate-Distance Matching</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part6/28-qba.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Quantitative Bias Analysis for Indirect Comparisons</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part6/29-simulation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Simulation Study Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part6/30-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Machine-Checked Foundations: The Coq Formalization</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/A-notation-glossary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Notation Glossary</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/B-matrix-calculus.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Matrix Calculus</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/C-distributions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">Probability Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/D-special-functions.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">D</span>&nbsp; <span class="chapter-title">Special Functions for Numerical Integration</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/E-reference-implementations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">E</span>&nbsp; <span class="chapter-title">Reference Implementations: multinma, mlumr, and uitc</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/F-solutions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">F</span>&nbsp; <span class="chapter-title">Solutions to Selected Exercises</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/G-reading-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">G</span>&nbsp; <span class="chapter-title">Reading the Coq Proofs</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#sec-sf-guide" id="toc-sec-sf-guide" class="nav-link active" data-scroll-target="#sec-sf-guide"><span class="header-section-number">D.1</span> How to use this appendix</a></li>
+  <li><a href="#sec-sf-mgf" id="toc-sec-sf-mgf" class="nav-link" data-scroll-target="#sec-sf-mgf"><span class="header-section-number">D.2</span> The moment generating function of the normal</a></li>
+  <li><a href="#sec-sf-erf" id="toc-sec-sf-erf" class="nav-link" data-scroll-target="#sec-sf-erf"><span class="header-section-number">D.3</span> The error function</a></li>
+  <li><a href="#sec-sf-owen" id="toc-sec-sf-owen" class="nav-link" data-scroll-target="#sec-sf-owen"><span class="header-section-number">D.4</span> Owen’s <span class="math inline">\(T\)</span> function</a></li>
+  <li><a href="#sec-sf-probit-logit" id="toc-sec-sf-probit-logit" class="nav-link" data-scroll-target="#sec-sf-probit-logit"><span class="header-section-number">D.5</span> Probit approximations to the logistic function</a></li>
+  <li><a href="#sec-sf-sobol" id="toc-sec-sf-sobol" class="nav-link" data-scroll-target="#sec-sf-sobol"><span class="header-section-number">D.6</span> Sobol’ sequences and the radical inverse</a></li>
+  <li><a href="#sec-sf-notes" id="toc-sec-sf-notes" class="nav-link" data-scroll-target="#sec-sf-notes"><span class="header-section-number">D.7</span> Notes and references</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../appendices/A-notation-glossary.html">Appendices</a></li><li class="breadcrumb-item"><a href="../appendices/D-special-functions.html"><span class="chapter-number">D</span>&nbsp; <span class="chapter-title">Special Functions for Numerical Integration</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">Appendix D — Special Functions for Numerical Integration</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>The numerical machinery of multilevel network meta-regression (ML-NMR) rests on a small library of special functions, and the analytic shortcuts that occasionally rescue a closed form rest on the same library. This appendix is the proved reference for those functions. It collects, in one place and with full derivations, the four objects that Part V calls on repeatedly: the moment generating function of the normal, which closes the log-link aggregation integral of <a href="../chapters/part5/20-mlnmr-aggregation.html#thm-log-link-mgf" class="quarto-xref">Theorem&nbsp;<span>20.4</span></a>; the error function, the analyst’s name for the normal distribution function and the gateway to its series and tail expansions; Owen’s <span class="math inline">\(T\)</span> function, which evaluates bivariate normal probabilities and, through them, the expected squared probit needed for probit-link aggregation; and the radical-inverse function, the arithmetic atom of the Sobol’ sequences that drive the quasi-Monte Carlo (QMC) integration of <a href="../chapters/part5/22-mlnmr-integration.html#thm-hypercube-integration" class="quarto-xref">Theorem&nbsp;<span>22.6</span></a>. Two further functions that arise in this circle of ideas, the one-probit and two-probit approximations to the logistic function, are derived here because they turn the otherwise non-elementary logit aggregation integral of <a href="../chapters/part5/20-mlnmr-aggregation.html#thm-logit-no-closed-form" class="quarto-xref">Theorem&nbsp;<span>20.5</span></a> into an explicit, fast, and surprisingly accurate closed form.</p>
+<p>Everything is proved or derived. Where a result is established in the main text we cite it by slug and, when it sharpens the reference to restate the derivation, reprove it self-contained. Symbols follow <a href="../notation.html">Notation</a>: <span class="math inline">\(\Phi\)</span> and <span class="math inline">\(\phi\)</span> are the standard normal distribution and density functions, <span class="math inline">\(\mathrm{expit}(z)=e^{z}/(1+e^{z})\)</span> is the inverse logit (also called the logistic sigmoid), <span class="math inline">\(\Phi^{-1}\)</span> is the normal quantile function, and <span class="math inline">\(M_X(\mathbf{t})=\mathbb{E}[e^{\mathbf{t}^\top X}]\)</span> is the moment generating function of <a href="../chapters/part1/04-probability.html#def-mgf" class="quarto-xref">Definition&nbsp;<span>4.7</span></a>. Two standard facts of real analysis are used without proof: the Gaussian normalization <span class="math inline">\(\int_{-\infty}^{\infty}e^{-t^{2}}\,dt=\sqrt{\pi}\)</span> (equivalently <span class="math inline">\(\int\phi=1\)</span>), proved by the polar- coordinates evaluation of its square, and differentiation under the integral sign, justified by dominated convergence (<a href="../chapters/part1/04-probability.html#thm-dominated-convergence" class="quarto-xref">Theorem&nbsp;<span>4.2</span></a>) whenever a dominating integrable envelope is exhibited, which we do at each use.</p>
+<section id="sec-sf-guide" class="level2" data-number="D.1">
+<h2 data-number="D.1" class="anchored" data-anchor-id="sec-sf-guide"><span class="header-section-number">D.1</span> How to use this appendix</h2>
+<p><em>Scope, and what is deliberately left out.</em> This appendix is the proved reference for the five objects that the Part V integration machinery calls on: the normal moment generating function, the error function, Owen’s <span class="math inline">\(T\)</span> function, the one- and two-probit approximations to the logistic, and the radical inverse behind the Sobol’ point set. It is not a general catalogue of the special functions of statistics. The gamma function, its logarithm, the digamma function, and the beta function do appear in Part V, but only as the fixed normalizing constants of standard likelihoods, for example the log-gamma terms in the Poisson and binomial log-likelihoods of Chapters 21 and 25; they are classical, are not special to indirect comparison, and are not reproved here. Everything below, by contrast, is tied to a concrete ML-NMR integration task and is proved in full.</p>
+<p><em>A concrete task to keep in mind.</em> Picture the setting the whole appendix serves. An aggregate-data (AgD) study arm reports an event count and a summary of its patients, say a mean and variance of age, but no individual records. The model has a link function <span class="math inline">\(g\)</span>, and to predict this arm’s event probability the model must average the individual probability <span class="math inline">\(g^{-1}(\eta)\)</span> over the arm’s covariate distribution. The three regimes below are exactly the three ways that average can be computed, and each is the job of one group of functions in this appendix.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Function or object</th>
+<th>Section</th>
+<th>Feeds (chapter, result)</th>
+<th>What it does for the average</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Normal MGF</td>
+<td><a href="#sec-sf-mgf" class="quarto-xref"><span>Section D.2</span></a></td>
+<td>Chapter 20, <a href="../chapters/part5/20-mlnmr-aggregation.html#thm-log-link-mgf" class="quarto-xref">Theorem&nbsp;<span>20.4</span></a> (catalogue H.6)</td>
+<td>gives the log-link average in exact closed form</td>
+</tr>
+<tr class="even">
+<td>Error function <span class="math inline">\(\operatorname{erf}\)</span>, <span class="math inline">\(\operatorname{erfc}\)</span></td>
+<td><a href="#sec-sf-erf" class="quarto-xref"><span>Section D.3</span></a></td>
+<td>Chapter 22, <a href="../chapters/part5/22-mlnmr-integration.html#thm-hypercube-integration" class="quarto-xref">Theorem&nbsp;<span>22.6</span></a> and <a href="../chapters/part5/22-mlnmr-integration.html#thm-inverse-cdf" class="quarto-xref">Theorem&nbsp;<span>22.4</span></a></td>
+<td>how software actually computes <span class="math inline">\(\Phi\)</span> and <span class="math inline">\(\Phi^{-1}\)</span> for every Sobol’ node</td>
+</tr>
+<tr class="odd">
+<td>Owen’s <span class="math inline">\(T\)</span></td>
+<td><a href="#sec-sf-owen" class="quarto-xref"><span>Section D.4</span></a></td>
+<td>Chapter 20 probit aggregation <a href="../chapters/part5/20-mlnmr-aggregation.html#prp-agg-probit-closed-form" class="quarto-xref">Proposition&nbsp;<span>20.1</span></a></td>
+<td>supplies the probit second moment <span class="math inline">\(\mathbb{E}[\Phi(\eta)^2]\)</span></td>
+</tr>
+<tr class="even">
+<td>One- and two-probit approximation</td>
+<td><a href="#sec-sf-probit-logit" class="quarto-xref"><span>Section D.5</span></a></td>
+<td>Chapter 22 logit aggregation <a href="../chapters/part5/20-mlnmr-aggregation.html#thm-logit-no-closed-form" class="quarto-xref">Theorem&nbsp;<span>20.5</span></a></td>
+<td>a fast explicit approximation to the logit average</td>
+</tr>
+<tr class="odd">
+<td>Radical inverse, Sobol’ construction</td>
+<td><a href="#sec-sf-sobol" class="quarto-xref"><span>Section D.6</span></a></td>
+<td>Chapters 22 and 25, <a href="../chapters/part5/22-mlnmr-integration.html#thm-hypercube-integration" class="quarto-xref">Theorem&nbsp;<span>22.6</span></a></td>
+<td>builds the low-discrepancy points for the general numerical average</td>
+</tr>
+</tbody>
+</table>
+<p>Read the table as a decision tree for the averaging task: the log link is a closed form (the MGF); the probit link has a closed form for the first moment and an Owen’s <span class="math inline">\(T\)</span> closed form for the second; the logit link has no closed form but an accurate explicit probit approximation; and every remaining case, including the survival and ordinal likelihood kernels of Chapter 25, is handled by Sobol’ quasi-Monte Carlo, whose points are built from the radical inverse and pushed onto the covariate scale through <span class="math inline">\(\Phi^{-1}\)</span>, that is, through <span class="math inline">\(\operatorname{erf}^{-1}\)</span>. The sections are ordered from the easiest regime to the most general, and they rise in difficulty: the MGF section is short and gentle, the error-function section is moderate, Owen’s <span class="math inline">\(T\)</span> is the hardest section and carries the Plackett partial differential equation, and the Sobol’ section is moderate but dense with quasi-Monte Carlo (QMC) vocabulary. A reader who wants only the applied picture can take the closed forms and the worked examples from each section and leave the digital-net algebra of <a href="#sec-sf-sobol" class="quarto-xref"><span>Section D.6</span></a> to software.</p>
+</section>
+<section id="sec-sf-mgf" class="level2" data-number="D.2">
+<h2 data-number="D.2" class="anchored" data-anchor-id="sec-sf-mgf"><span class="header-section-number">D.2</span> The moment generating function of the normal</h2>
+<p>The moment generating function (MGF) of <a href="../chapters/part1/04-probability.html#def-mgf" class="quarto-xref">Definition&nbsp;<span>4.7</span></a> turns the average of an exponential into an algebraic expression. Because the log link sends a linear predictor <span class="math inline">\(\eta\)</span> to the mean <span class="math inline">\(e^{\eta}\)</span>, and because a linear predictor in jointly normal covariates is itself normal, the aggregate mean on the log scale is the expectation of an exponential of a normal, that is, a normal MGF evaluated at <span class="math inline">\(t=1\)</span>. This is the one nonlinear link for which ML-NMR has an exact closed form, and the MGF is the reason.</p>
+<p>The name “moment generating” comes from a fact we do not actually use but which explains the terminology: differentiating <span class="math inline">\(M_X(t)=\mathbb{E}[e^{tX}]\)</span> a total of <span class="math inline">\(k\)</span> times and setting <span class="math inline">\(t=0\)</span> returns the <span class="math inline">\(k\)</span>-th moment <span class="math inline">\(\mathbb{E}[X^{k}]\)</span>, because each derivative brings down one factor of <span class="math inline">\(X\)</span>. We exploit the MGF for a different reason. The log link sets the mean equal to <span class="math inline">\(e^{\eta}\)</span>, so an aggregate mean on the log scale is literally <span class="math inline">\(\mathbb{E}[e^{W}]\)</span> for the (normal) linear predictor <span class="math inline">\(W\)</span>; that is the MGF evaluated at <span class="math inline">\(t=1\)</span>, not a derivative at <span class="math inline">\(t=0\)</span>. This is why the log link, alone among the common nonlinear links, yields a closed form: its inverse link is the exponential, and the exponential of a normal is exactly what the normal MGF integrates.</p>
+<div id="thm-normal-mgf" class="theorem">
+<p><span class="theorem-title"><strong>Theorem D.1 (Moment generating function of the normal)</strong></span> Let <span class="math inline">\(X\sim\mathcal{N}(\mu,\sigma^{2})\)</span> be univariate normal. Then the MGF of <span class="math inline">\(X\)</span> is finite for every <span class="math inline">\(t\in\mathbb{R}\)</span> and <span id="eq-sf-normal-mgf"><span class="math display">\[
+M_X(t)=\mathbb{E}\big[e^{tX}\big]=\exp\!\Big(\mu t+\tfrac12\sigma^{2}t^{2}\Big).
+\tag{D.1}\]</span></span> More generally, let <span class="math inline">\(\mathbf{X}\sim\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})\)</span> be <span class="math inline">\(p\)</span>-variate normal with <span class="math inline">\(\boldsymbol{\Sigma}\succeq 0\)</span> (positive semidefinite). Then for every <span class="math inline">\(\mathbf{t}\in\mathbb{R}^{p}\)</span>, <span id="eq-sf-mvn-mgf"><span class="math display">\[
+M_{\mathbf{X}}(\mathbf{t})=\mathbb{E}\big[e^{\mathbf{t}^\top\mathbf{X}}\big]
+=\exp\!\Big(\mathbf{t}^\top\boldsymbol{\mu}+\tfrac12\,\mathbf{t}^\top\boldsymbol{\Sigma}\,\mathbf{t}\Big).
+\tag{D.2}\]</span></span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span><em>Univariate case.</em> Fix <span class="math inline">\(t\in\mathbb{R}\)</span>. Writing the density of <span class="math inline">\(\mathcal{N}(\mu,\sigma^{2})\)</span> and collecting the exponent, <span class="math display">\[
+\mathbb{E}\big[e^{tX}\big]
+=\int_{-\infty}^{\infty}e^{tx}\,\frac{1}{\sqrt{2\pi}\,\sigma}\,
+e^{-\frac{(x-\mu)^{2}}{2\sigma^{2}}}\,dx
+=\frac{1}{\sqrt{2\pi}\,\sigma}\int_{-\infty}^{\infty}
+\exp\!\Big(-\frac{(x-\mu)^{2}-2\sigma^{2}tx}{2\sigma^{2}}\Big)\,dx .
+\]</span> Complete the square in <span class="math inline">\(x\)</span>. The numerator of the exponent is <span class="math display">\[
+(x-\mu)^{2}-2\sigma^{2}tx
+=\big(x-(\mu+\sigma^{2}t)\big)^{2}-2\sigma^{2}t\mu-\sigma^{4}t^{2},
+\]</span> which one verifies by expanding the completed square, <span class="math inline">\(\big(x-(\mu+\sigma^{2}t)\big)^{2}=x^{2}-2\mu x-2\sigma^{2}tx+\mu^{2}+2\mu\sigma^{2}t+\sigma^{4}t^{2}\)</span>: then subtracting the two constants <span class="math inline">\(2\sigma^{2}t\mu\)</span> and <span class="math inline">\(\sigma^{4}t^{2}\)</span> cancels the final two terms and leaves <span class="math inline">\(x^{2}-2\mu x-2\sigma^{2}tx+\mu^{2}=(x-\mu)^{2}-2\sigma^{2}tx\)</span>, the left side. Substituting and factoring out the constant terms, <span class="math display">\[
+\mathbb{E}\big[e^{tX}\big]
+=e^{\mu t+\frac12\sigma^{2}t^{2}}\cdot
+\frac{1}{\sqrt{2\pi}\,\sigma}\int_{-\infty}^{\infty}
+e^{-\frac{(x-(\mu+\sigma^{2}t))^{2}}{2\sigma^{2}}}\,dx
+=e^{\mu t+\frac12\sigma^{2}t^{2}},
+\]</span> the remaining integral being that of a <span class="math inline">\(\mathcal{N}(\mu+\sigma^{2}t,\sigma^{2})\)</span> density, which equals <span class="math inline">\(1\)</span>. The expectation is finite for every <span class="math inline">\(t\)</span> because the integrand is a positive constant times a Gaussian density. This is <a href="#eq-sf-normal-mgf" class="quarto-xref">Equation&nbsp;<span>D.1</span></a>.</p>
+<p><em>Multivariate case.</em> The law <span class="math inline">\(\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})\)</span> is defined in <a href="../chapters/part1/04-probability.html#def-mvn" class="quarto-xref">Definition&nbsp;<span>4.13</span></a> through exactly the MGF <a href="#eq-sf-mvn-mgf" class="quarto-xref">Equation&nbsp;<span>D.2</span></a>, so the statement is the consistency of that definition, which we reprove for reference. Let <span class="math inline">\(\boldsymbol{\Sigma}^{1/2}\)</span> be the symmetric positive semidefinite square root of <span class="math inline">\(\boldsymbol{\Sigma}\)</span> (<a href="../chapters/part1/03-linear-algebra-iii.html#thm-spectral-theorem" class="quarto-xref">Theorem&nbsp;<span>3.2</span></a>), let <span class="math inline">\(\mathbf{Z}=(Z_1,\dots,Z_p)^\top\)</span> have independent standard normal entries, and set <span class="math inline">\(\mathbf{X}=\boldsymbol{\mu}+\boldsymbol{\Sigma}^{1/2}\mathbf{Z}\)</span>, which has mean <span class="math inline">\(\boldsymbol{\mu}\)</span> and, since <span class="math inline">\(\boldsymbol{\Sigma}^{1/2}\)</span> is symmetric with <span class="math inline">\(\boldsymbol{\Sigma}^{1/2}\boldsymbol{\Sigma}^{1/2}=\boldsymbol{\Sigma}\)</span>, covariance <span class="math inline">\(\boldsymbol{\Sigma}^{1/2}I_p\boldsymbol{\Sigma}^{1/2}=\boldsymbol{\Sigma}\)</span>. By independence and the univariate MGF <span class="math inline">\(\mathbb{E}[e^{sZ_i}]=e^{s^{2}/2}\)</span> from <a href="#eq-sf-normal-mgf" class="quarto-xref">Equation&nbsp;<span>D.1</span></a>, <span class="math display">\[
+\mathbb{E}\big[e^{\mathbf{t}^\top\mathbf{X}}\big]
+=e^{\mathbf{t}^\top\boldsymbol{\mu}}\prod_{i=1}^{p}\mathbb{E}\big[e^{(\boldsymbol{\Sigma}^{1/2}\mathbf{t})_i Z_i}\big]
+=e^{\mathbf{t}^\top\boldsymbol{\mu}}\exp\!\Big(\tfrac12\big\|\boldsymbol{\Sigma}^{1/2}\mathbf{t}\big\|_2^{2}\Big)
+=\exp\!\Big(\mathbf{t}^\top\boldsymbol{\mu}+\tfrac12\mathbf{t}^\top\boldsymbol{\Sigma}\mathbf{t}\Big),
+\]</span> using <span class="math inline">\(\|\boldsymbol{\Sigma}^{1/2}\mathbf{t}\|_2^{2}=\mathbf{t}^\top\boldsymbol{\Sigma}^{1/2}\boldsymbol{\Sigma}^{1/2}\mathbf{t}=\mathbf{t}^\top\boldsymbol{\Sigma}\mathbf{t}\)</span>. This is <a href="#eq-sf-mvn-mgf" class="quarto-xref">Equation&nbsp;<span>D.2</span></a>, identical to <a href="../chapters/part1/04-probability.html#eq-mvn-mgf" class="quarto-xref">Equation&nbsp;<span>4.13</span></a>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><em>Reader’s translation.</em> <a href="#eq-sf-normal-mgf" class="quarto-xref">Equation&nbsp;<span>D.1</span></a> says the average of <span class="math inline">\(e^{tX}\)</span> over a normal <span class="math inline">\(X\)</span> is itself an exponential, with the variance entering through the quadratic <span class="math inline">\(\tfrac12\sigma^{2}t^{2}\)</span>. That single formula is the entire reason the log-link aggregate mean has a closed form; the next corollary reads it off at <span class="math inline">\(t=1\)</span>.</p>
+<p>The aggregation payoff is immediate. An aggregate mean on the log scale is the expectation of an exponential of a linear predictor; when the covariates are jointly normal the linear predictor is normal, and <a href="#eq-sf-normal-mgf" class="quarto-xref">Equation&nbsp;<span>D.1</span></a> evaluates the expectation at <span class="math inline">\(t=1\)</span>.</p>
+<div id="cor-sf-log-link" class="theorem corollary">
+<p><span class="theorem-title"><strong>Corollary D.1 (Closed-form log-link aggregation)</strong></span> Let the inverse link be <span class="math inline">\(g^{-1}(z)=e^{z}\)</span> (the log link) and let the covariates in study <span class="math inline">\(j\)</span> be jointly normal, <span class="math inline">\(X\sim\mathcal{N}(\bar{\mathbf{x}}_j,\boldsymbol{\Sigma}_j)\)</span>. Write <span class="math inline">\(\boldsymbol{\beta}_{\mathrm{tot},k}=\boldsymbol{\beta}_1+\boldsymbol{\beta}_{2,k}\)</span> for the total slope on arm <span class="math inline">\(k\)</span> and <span class="math inline">\(W=\eta_{jk}(X)=\mu_j+\gamma_k+X^\top\boldsymbol{\beta}_{\mathrm{tot},k}\)</span> for the linear predictor. Then <span class="math inline">\(W\sim\mathcal{N}(m,v)\)</span> with <span class="math display">\[
+m=\mu_j+\gamma_k+\bar{\mathbf{x}}_j^\top\boldsymbol{\beta}_{\mathrm{tot},k},
+\qquad
+v=\boldsymbol{\beta}_{\mathrm{tot},k}^\top\boldsymbol{\Sigma}_j\,\boldsymbol{\beta}_{\mathrm{tot},k},
+\]</span> and the aggregate mean is <span id="eq-sf-log-link"><span class="math display">\[
+\theta_{\bullet jk}=\mathbb{E}\big[e^{W}\big]=M_W(1)=\exp\!\Big(m+\tfrac12 v\Big)
+=\theta^{\mathrm{naive}}_{\bullet jk}\cdot e^{\,v/2},
+\qquad
+\theta^{\mathrm{naive}}_{\bullet jk}=e^{m}.
+\tag{D.3}\]</span></span> This is the closed form <a href="../chapters/part5/20-mlnmr-aggregation.html#eq-agg-log-mgf" class="quarto-xref">Equation&nbsp;<span>20.12</span></a> of <a href="../chapters/part5/20-mlnmr-aggregation.html#thm-log-link-mgf" class="quarto-xref">Theorem&nbsp;<span>20.4</span></a>; the multiplicative correction <span class="math inline">\(e^{v/2}\ge 1\)</span> is the exact downward bias of the plug-in mean, with equality if and only if <span class="math inline">\(\boldsymbol{\Sigma}_j\boldsymbol{\beta}_{\mathrm{tot},k}=\mathbf{0}\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>The linear predictor <span class="math inline">\(W\)</span> is an affine function of the normal vector <span class="math inline">\(X\)</span>, hence univariate normal by the affine-image theorem <a href="../chapters/part1/04-probability.html#thm-mvn-linear" class="quarto-xref">Theorem&nbsp;<span>4.14</span></a>, with the stated mean <span class="math inline">\(m\)</span> and variance <span class="math inline">\(v=\boldsymbol{\beta}_{\mathrm{tot},k}^\top\boldsymbol{\Sigma}_j\boldsymbol{\beta}_{\mathrm{tot},k}\)</span>. The aggregate mean of <a href="../chapters/part5/20-mlnmr-aggregation.html#def-aggregate-model" class="quarto-xref">Definition&nbsp;<span>20.2</span></a> is <span class="math inline">\(\theta_{\bullet jk}=\mathbb{E}[g^{-1}(W)]=\mathbb{E}[e^{W}]\)</span>, which is <span class="math inline">\(M_W(1)\)</span> by <a href="../chapters/part1/04-probability.html#def-mgf" class="quarto-xref">Definition&nbsp;<span>4.7</span></a>. Evaluating <a href="#eq-sf-normal-mgf" class="quarto-xref">Equation&nbsp;<span>D.1</span></a> at <span class="math inline">\(t=1\)</span> gives <span class="math inline">\(M_W(1)=\exp(m+\tfrac12 v)\)</span>. Finally <span class="math inline">\(e^{m+v/2}=e^{m}e^{v/2}=\theta^{\mathrm{naive}}_{\bullet jk}e^{v/2}\)</span>, and <span class="math inline">\(v\ge 0\)</span> because <span class="math inline">\(\boldsymbol{\Sigma}_j\succeq 0\)</span> (<a href="../chapters/part1/04-probability.html#thm-cov-psd" class="quarto-xref">Theorem&nbsp;<span>4.9</span></a>), with <span class="math inline">\(v=0\)</span> exactly when <span class="math inline">\(\boldsymbol{\beta}_{\mathrm{tot},k}\)</span> lies in the null space of <span class="math inline">\(\boldsymbol{\Sigma}_j\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div id="exm-sf-log-link" class="theorem example">
+<p><span class="theorem-title"><strong>Example D.1 (A multivariate log-link aggregate by hand)</strong></span> Take two covariates, <span class="math inline">\(X\sim\mathcal{N}(\bar{\mathbf{x}}_j,\boldsymbol{\Sigma}_j)\)</span> with <span class="math inline">\(\bar{\mathbf{x}}_j=(2,1)^\top\)</span> and <span class="math inline">\(\boldsymbol{\Sigma}_j=\left(\begin{smallmatrix}1&amp;0.5\\0.5&amp;2\end{smallmatrix}\right)\)</span>, total slope <span class="math inline">\(\boldsymbol{\beta}_{\mathrm{tot},k}=(0.4,0.3)^\top\)</span>, and intercept-plus-treatment <span class="math inline">\(\mu_j+\gamma_k=-1\)</span>. The mean linear predictor is <span class="math inline">\(m=-1+\bar{\mathbf{x}}_j^\top\boldsymbol{\beta}_{\mathrm{tot},k}=-1+(2)(0.4)+(1)(0.3)=0.1\)</span>. The variance is the quadratic form <span class="math display">\[
+v=\boldsymbol{\beta}_{\mathrm{tot},k}^\top\boldsymbol{\Sigma}_j\boldsymbol{\beta}_{\mathrm{tot},k}
+=(0.4,0.3)\begin{pmatrix}0.55\\0.80\end{pmatrix}=(0.4)(0.55)+(0.3)(0.80)=0.46,
+\]</span> where <span class="math inline">\(\boldsymbol{\Sigma}_j\boldsymbol{\beta}_{\mathrm{tot},k}=(0.55,0.80)^\top\)</span>. By <a href="#eq-sf-log-link" class="quarto-xref">Equation&nbsp;<span>D.3</span></a> the exact aggregate rate is <span class="math inline">\(\theta_{\bullet jk}=e^{0.1+0.23}=e^{0.33}=1.3910\)</span>, against the plug-in <span class="math inline">\(\theta^{\mathrm{naive}}_{\bullet jk}=e^{0.1}=1.1052\)</span>. The covariance off-diagonal enters only through <span class="math inline">\(v\)</span>: the same margins with <span class="math inline">\(\boldsymbol{\Sigma}_j\)</span> diagonal would give <span class="math inline">\(v=(0.16)(1)+(0.09)(2)=0.34\)</span> and <span class="math inline">\(\theta_{\bullet jk}=e^{0.27}=1.3100\)</span>, so the positive covariance inflates the aggregate by the factor <span class="math inline">\(e^{(0.46-0.34)/2}=e^{0.06}=1.0618\)</span>. The MGF makes the dependence on the full covariance matrix exact and explicit. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-sf-erf" class="level2" data-number="D.3">
+<h2 data-number="D.3" class="anchored" data-anchor-id="sec-sf-erf"><span class="header-section-number">D.3</span> The error function</h2>
+<p>The normal distribution function has no elementary antiderivative, so numerical analysis works with a rescaled, standardized version of it called the error function. Software computes <span class="math inline">\(\Phi\)</span> and <span class="math inline">\(\Phi^{-1}\)</span> through <span class="math inline">\(\operatorname{erf}\)</span> and <span class="math inline">\(\operatorname{erf}^{-1}\)</span>, and the series and asymptotic expansions of the error function are the practical tools for evaluating tail probabilities and normal quantiles.</p>
+<p>This is not decorative. In the Chapter 22 integration pipeline every Sobol’ node is a point <span class="math inline">\(u\in(0,1)\)</span> that must be pushed onto the covariate scale through the normal quantile <span class="math inline">\(\Phi^{-1}(u)\)</span> (the inverse-CDF transform of <a href="../chapters/part5/22-mlnmr-integration.html#thm-inverse-cdf" class="quarto-xref">Theorem&nbsp;<span>22.4</span></a>), and <span class="math inline">\(\Phi^{-1}\)</span> is computed as <span class="math inline">\(\sqrt{2}\,\operatorname{erf}^{-1}(2u-1)\)</span>. Every normal probability the fitted model reports, including the small tail probabilities that arise for rare events, is computed as an <span class="math inline">\(\operatorname{erf}\)</span> or <span class="math inline">\(\operatorname{erfc}\)</span> value. Stable evaluation of these functions is therefore part of what makes the integration numerically reliable, which is why they earn a section of their own rather than hiding inside a call to <span class="math inline">\(\Phi\)</span>.</p>
+<div id="def-error-function" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition D.1 (Error function and complementary error function)</strong></span> The <strong>error function</strong> is <span id="eq-sf-erf-def"><span class="math display">\[
+\operatorname{erf}(x)=\frac{2}{\sqrt{\pi}}\int_{0}^{x}e^{-t^{2}}\,dt,\qquad x\in\mathbb{R},
+\tag{D.4}\]</span></span> and the <strong>complementary error function</strong> is <span class="math inline">\(\operatorname{erfc}(x)=1-\operatorname{erf}(x)=\dfrac{2}{\sqrt{\pi}}\displaystyle\int_{x}^{\infty}e^{-t^{2}}\,dt\)</span>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p><em>Reader’s translation.</em> The error function is the normal distribution function in disguise: it integrates the same Gaussian bump <span class="math inline">\(e^{-t^{2}}\)</span>, but centered at <span class="math inline">\(0\)</span>, scaled so that <span class="math inline">\(\operatorname{erf}(\pm\infty)=\pm1\)</span>, and measured from the center outward. The complement <span class="math inline">\(\operatorname{erfc}=1-\operatorname{erf}\)</span> is what you use when the interesting probability is a small tail, because it is computed directly instead of by subtracting two nearly equal numbers.</p>
+<div id="prp-erf-phi" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition D.1 (The error function and the normal distribution function)</strong></span> The error function is odd, <span class="math inline">\(\operatorname{erf}(-x)=-\operatorname{erf}(x)\)</span>, with <span class="math inline">\(\operatorname{erf}(0)=0\)</span> and <span class="math inline">\(\operatorname{erf}(\pm\infty)=\pm 1\)</span>. It is related to the standard normal distribution function by <span id="eq-sf-erf-phi"><span class="math display">\[
+\Phi(x)=\frac12\Big(1+\operatorname{erf}\!\big(x/\sqrt{2}\big)\Big)
+=\frac12\operatorname{erfc}\!\big(-x/\sqrt{2}\big),
+\qquad
+\operatorname{erf}(x)=2\Phi\!\big(x\sqrt{2}\big)-1,
+\tag{D.5}\]</span></span> and the quantile functions are related by <span id="eq-sf-erfinv-phiinv"><span class="math display">\[
+\Phi^{-1}(p)=\sqrt{2}\,\operatorname{erf}^{-1}(2p-1),\qquad p\in(0,1).
+\tag{D.6}\]</span></span> The densities satisfy <span class="math inline">\(\phi(x)=\frac{1}{\sqrt{2\pi}}e^{-x^{2}/2}\)</span> and <span class="math inline">\(\operatorname{erf}'(x)=\frac{2}{\sqrt{\pi}}e^{-x^{2}}\)</span>, consistent with <a href="#eq-sf-erf-phi" class="quarto-xref">Equation&nbsp;<span>D.5</span></a> by the chain rule.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Oddness is immediate from <a href="#eq-sf-erf-def" class="quarto-xref">Equation&nbsp;<span>D.4</span></a>, since <span class="math inline">\(t\mapsto e^{-t^{2}}\)</span> is even, so reversing the sign of the upper limit reverses the sign of the integral; <span class="math inline">\(\operatorname{erf}(0)=0\)</span> is the empty integral, and <span class="math inline">\(\operatorname{erf}(+\infty)=\frac{2}{\sqrt{\pi}}\int_0^\infty e^{-t^2}\,dt=\frac{2}{\sqrt\pi}\cdot\frac{\sqrt\pi}{2}=1\)</span> by the Gaussian normalization, with <span class="math inline">\(\operatorname{erf}(-\infty)=-1\)</span> by oddness.</p>
+<p>For <a href="#eq-sf-erf-phi" class="quarto-xref">Equation&nbsp;<span>D.5</span></a>, start from <span class="math inline">\(\Phi(x)=\int_{-\infty}^{x}\phi(u)\,du=\frac12+\int_{0}^{x}\frac{1}{\sqrt{2\pi}}e^{-u^{2}/2}\,du\)</span>, the constant <span class="math inline">\(\frac12\)</span> being <span class="math inline">\(\Phi(0)\)</span> by the symmetry of <span class="math inline">\(\phi\)</span>. Substitute <span class="math inline">\(u=\sqrt{2}\,t\)</span>, so <span class="math inline">\(du=\sqrt{2}\,dt\)</span> and the upper limit becomes <span class="math inline">\(x/\sqrt{2}\)</span>: <span class="math display">\[
+\Phi(x)=\frac12+\int_{0}^{x/\sqrt{2}}\frac{1}{\sqrt{2\pi}}e^{-t^{2}}\sqrt{2}\,dt
+=\frac12+\frac{1}{\sqrt{\pi}}\int_{0}^{x/\sqrt{2}}e^{-t^{2}}\,dt
+=\frac12+\frac12\operatorname{erf}\!\big(x/\sqrt{2}\big),
+\]</span> using <span class="math inline">\(\frac{1}{\sqrt\pi}=\frac12\cdot\frac{2}{\sqrt\pi}\)</span> to recognize <a href="#eq-sf-erf-def" class="quarto-xref">Equation&nbsp;<span>D.4</span></a>. This is the first equality of <a href="#eq-sf-erf-phi" class="quarto-xref">Equation&nbsp;<span>D.5</span></a>; the second is <span class="math inline">\(\operatorname{erf}=1-\operatorname{erfc}\)</span> together with oddness, and inverting <span class="math inline">\(p=\frac12(1+\operatorname{erf}(x/\sqrt2))\)</span> for <span class="math inline">\(x\)</span> gives <a href="#eq-sf-erfinv-phiinv" class="quarto-xref">Equation&nbsp;<span>D.6</span></a>. The density identity <span class="math inline">\(\operatorname{erf}'(x)=\frac{2}{\sqrt\pi}e^{-x^{2}}\)</span> is the fundamental theorem of calculus applied to <a href="#eq-sf-erf-def" class="quarto-xref">Equation&nbsp;<span>D.4</span></a>, and differentiating <a href="#eq-sf-erf-phi" class="quarto-xref">Equation&nbsp;<span>D.5</span></a> reproduces <span class="math inline">\(\phi(x)=\frac{1}{\sqrt 2}\cdot\frac12\operatorname{erf}'(x/\sqrt2)=\frac{1}{\sqrt{2\pi}}e^{-x^{2}/2}\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>What the error function does in health statistics.</strong> Every normal probability a health technology assessment (HTA) reports is an error-function value in disguise. Three tasks recur.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Health-statistics task</th>
+<th>Function used</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>a normal <span class="math inline">\(p\)</span>-value or a confidence-limit tail</td>
+<td><span class="math inline">\(\Phi\)</span>, <span class="math inline">\(\operatorname{erfc}\)</span></td>
+</tr>
+<tr class="even">
+<td>turning a Sobol’ uniform <span class="math inline">\(u\)</span> into a normal covariate</td>
+<td><span class="math inline">\(\Phi^{-1}\)</span>, hence <span class="math inline">\(\operatorname{erf}^{-1}\)</span></td>
+</tr>
+<tr class="odd">
+<td>avoiding numerical underflow in an extreme tail</td>
+<td><span class="math inline">\(\operatorname{erfc}\)</span> or <span class="math inline">\(\operatorname{erfcx}\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>For a concrete instance, the familiar two-sided <span class="math inline">\(95\%\)</span> cutoff <span class="math inline">\(1.96\)</span> satisfies, by <a href="#eq-sf-erf-phi" class="quarto-xref">Equation&nbsp;<span>D.5</span></a>, <span class="math inline">\(\Phi(1.96)=\tfrac12\big(1+\operatorname{erf}(1.96/\sqrt2)\big)=\tfrac12\big(1+\operatorname{erf}(1.3859)\big)=\tfrac12(1+0.9500)=0.9750\)</span>, and the upper tail is <span class="math inline">\(1-\Phi(1.96)=\tfrac12\operatorname{erfc}(1.3859)=\tfrac12(0.0500)=0.0250\)</span>. The tail form earns its keep far out: <span class="math inline">\(1-\Phi(10)=\tfrac12\operatorname{erfc}(10/\sqrt2)\approx 7.6\times10^{-24}\)</span> is returned accurately by <span class="math inline">\(\operatorname{erfc}\)</span>, whereas forming <span class="math inline">\(\Phi(10)\approx 1\)</span> first and subtracting would return <span class="math inline">\(0\)</span> by cancellation. This is the sense in which the tail-safe functions are part of the pipeline, not an ornament. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>For evaluation one needs a convergent series near the origin and an asymptotic expansion in the tail. Both follow from <a href="#eq-sf-erf-def" class="quarto-xref">Equation&nbsp;<span>D.4</span></a> by elementary calculus.</p>
+<div id="prp-erf-expansions" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition D.2 (Series and tail expansions)</strong></span> The error function has the everywhere-convergent Maclaurin series <span id="eq-sf-erf-series"><span class="math display">\[
+\operatorname{erf}(x)=\frac{2}{\sqrt{\pi}}\sum_{n=0}^{\infty}\frac{(-1)^{n}x^{2n+1}}{n!\,(2n+1)}
+=\frac{2}{\sqrt{\pi}}\Big(x-\frac{x^{3}}{3}+\frac{x^{5}}{10}-\frac{x^{7}}{42}+\cdots\Big),
+\tag{D.7}\]</span></span> and the complementary error function has the asymptotic expansion, as <span class="math inline">\(x\to+\infty\)</span>, <span id="eq-sf-erfc-asymptotic"><span class="math display">\[
+\operatorname{erfc}(x)=\frac{e^{-x^{2}}}{x\sqrt{\pi}}\Big(1-\frac{1}{2x^{2}}+\frac{3}{4x^{4}}-\cdots\Big),
+\tag{D.8}\]</span></span> which translates, through <a href="#eq-sf-erf-phi" class="quarto-xref">Equation&nbsp;<span>D.5</span></a>, into the normal-tail statement (the Mills ratio is the tail-to-density ratio <span class="math inline">\((1-\Phi(x))/\phi(x)\)</span>) <span class="math inline">\(1-\Phi(x)=\phi(x)\big(\tfrac{1}{x}-\tfrac{1}{x^{3}}+\tfrac{3}{x^{5}}-\cdots\big)\)</span> as <span class="math inline">\(x\to+\infty\)</span>, so in particular <span class="math inline">\(1-\Phi(x)\sim\phi(x)/x\)</span>, where the symbol <span class="math inline">\(\sim\)</span> means the ratio of the two sides tends to <span class="math inline">\(1\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>The series <a href="#eq-sf-erf-series" class="quarto-xref">Equation&nbsp;<span>D.7</span></a> is the termwise integration of the everywhere-convergent power series <span class="math inline">\(e^{-t^{2}}=\sum_{n\ge0}(-1)^{n}t^{2n}/n!\)</span>, legitimate because the series converges uniformly on every bounded interval; integrating <span class="math inline">\(t^{2n}\)</span> from <span class="math inline">\(0\)</span> to <span class="math inline">\(x\)</span> gives <span class="math inline">\(x^{2n+1}/(2n+1)\)</span> and the factor <span class="math inline">\(\frac{2}{\sqrt\pi}\)</span> from <a href="#eq-sf-erf-def" class="quarto-xref">Equation&nbsp;<span>D.4</span></a>.</p>
+<p>For <a href="#eq-sf-erfc-asymptotic" class="quarto-xref">Equation&nbsp;<span>D.8</span></a>, integrate by parts in <span class="math inline">\(\operatorname{erfc}(x)=\frac{2}{\sqrt\pi}\int_x^\infty e^{-t^{2}}\,dt\)</span>, writing <span class="math inline">\(e^{-t^{2}}=\frac{1}{-2t}\,\frac{d}{dt}e^{-t^{2}}\)</span>: <span class="math display">\[
+\int_x^\infty e^{-t^{2}}\,dt
+=\Big[-\frac{e^{-t^{2}}}{2t}\Big]_x^\infty-\int_x^\infty\frac{e^{-t^{2}}}{2t^{2}}\,dt
+=\frac{e^{-x^{2}}}{2x}-\frac12\int_x^\infty\frac{e^{-t^{2}}}{t^{2}}\,dt .
+\]</span> Iterating the same step on the remainder integral generates the alternating series in inverse powers of <span class="math inline">\(x\)</span>; the expansion is asymptotic rather than convergent because the integrated-by-parts remainder, after <span class="math inline">\(N\)</span> steps, is bounded by a constant times <span class="math inline">\(e^{-x^{2}}x^{-(2N+1)}\)</span>, which is smaller than the last retained term but does not tend to zero as <span class="math inline">\(N\to\infty\)</span> at fixed <span class="math inline">\(x\)</span>. Multiplying by <span class="math inline">\(\frac{2}{\sqrt\pi}\)</span> gives <a href="#eq-sf-erfc-asymptotic" class="quarto-xref">Equation&nbsp;<span>D.8</span></a>. The Mills ratio statement is <a href="#eq-sf-erfc-asymptotic" class="quarto-xref">Equation&nbsp;<span>D.8</span></a> rewritten through <span class="math inline">\(1-\Phi(x)=\frac12\operatorname{erfc}(x/\sqrt2)\)</span> and <span class="math inline">\(\phi(x)=\frac{1}{\sqrt{2\pi}}e^{-x^{2}/2}\)</span>: substituting <span class="math inline">\(x\mapsto x/\sqrt2\)</span> and simplifying <span class="math inline">\(\frac12\cdot\frac{e^{-x^{2}/2}}{(x/\sqrt2)\sqrt\pi}=\frac{e^{-x^{2}/2}}{x\sqrt{2\pi}}=\phi(x)/x\)</span> identifies the leading term, and the subsequent coefficients follow likewise. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Convergent versus asymptotic, and why the tail series is still useful.</strong> The two expansions of <a href="#prp-erf-expansions" class="quarto-xref">Proposition&nbsp;<span>D.2</span></a> behave oppositely. The Maclaurin series <a href="#eq-sf-erf-series" class="quarto-xref">Equation&nbsp;<span>D.7</span></a> is <em>convergent</em>: fix <span class="math inline">\(x\)</span>, keep adding terms, and the partial sums approach <span class="math inline">\(\operatorname{erf}(x)\)</span> without limit, so more terms always mean more accuracy. The tail expansion <a href="#eq-sf-erfc-asymptotic" class="quarto-xref">Equation&nbsp;<span>D.8</span></a> is <em>asymptotic</em>: for a fixed large <span class="math inline">\(x\)</span> the terms first shrink, reach a smallest term, and then grow, so the series diverges if pushed too far. One uses it by stopping at the smallest term, which for large <span class="math inline">\(x\)</span> already gives extraordinary accuracy. The practical rule is: near the origin use the convergent series, in the tail truncate the asymptotic series at its smallest term. This is exactly how library routines for <span class="math inline">\(\Phi\)</span> and <span class="math inline">\(\operatorname{erfc}\)</span> switch regimes. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Why software standardizes on <span class="math inline">\(\operatorname{erf}\)</span>.</strong> The change of variable <span class="math inline">\(u=\sqrt2\,t\)</span> that produced <a href="#eq-sf-erf-phi" class="quarto-xref">Equation&nbsp;<span>D.5</span></a> is the only difference between <span class="math inline">\(\Phi\)</span> and <span class="math inline">\(\operatorname{erf}\)</span>: they are the same function up to an affine rescaling of the argument and the range. Numerical libraries implement <span class="math inline">\(\operatorname{erf}\)</span>, <span class="math inline">\(\operatorname{erfc}\)</span>, and <span class="math inline">\(\operatorname{erf}^{-1}\)</span> as primitives, often with the scaled complement <span class="math inline">\(\operatorname{erfcx}(x)=e^{x^{2}}\operatorname{erfc}(x)\)</span> to avoid overflow in the tail, and obtain <span class="math inline">\(\Phi\)</span>, <span class="math inline">\(1-\Phi\)</span>, and <span class="math inline">\(\Phi^{-1}\)</span> by <a href="#eq-sf-erf-phi" class="quarto-xref">Equation&nbsp;<span>D.5</span></a> and <a href="#eq-sf-erfinv-phiinv" class="quarto-xref">Equation&nbsp;<span>D.6</span></a>. Every appearance of <span class="math inline">\(\Phi\)</span> or <span class="math inline">\(\Phi^{-1}\)</span> in the ML-NMR pipeline of <a href="../chapters/part5/22-mlnmr-integration.html#thm-hypercube-integration" class="quarto-xref">Theorem&nbsp;<span>22.6</span></a>, in the Gaussian copula <a href="../chapters/part5/22-mlnmr-integration.html#eq-qmc-gaussian-copula" class="quarto-xref">Equation&nbsp;<span>22.16</span></a>, and in the inverse-CDF transform <a href="../chapters/part5/22-mlnmr-integration.html#thm-inverse-cdf" class="quarto-xref">Theorem&nbsp;<span>22.4</span></a>, is computed this way. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-sf-owen" class="level2" data-number="D.4">
+<h2 data-number="D.4" class="anchored" data-anchor-id="sec-sf-owen"><span class="header-section-number">D.4</span> Owen’s <span class="math inline">\(T\)</span> function</h2>
+<p>The error function evaluates one-dimensional normal integrals. The two-dimensional analogue, the bivariate normal probability, has no reduction to a single error function; the irreducible new ingredient is Owen’s <span class="math inline">\(T\)</span> function (<span class="citation" data-cites="owen1956">Owen (<a href="../references.html#ref-owen1956" role="doc-biblioref">1956</a>)</span>). We define it, give its probabilistic meaning, prove the bivariate normal probability identity that motivated Owen’s tables, and then prove the identity for the expected squared normal distribution function that probit-link aggregation needs.</p>
+<p>Before the formal definition, here is the picture and the purpose, because both are easy to lose once the integral appears.</p>
+<p><em>The picture.</em> Owen’s <span class="math inline">\(T\)</span> measures the probability that a random point lands in a wedge. Take two independent standard normal draws <span class="math inline">\(X\)</span> and <span class="math inline">\(Y\)</span> and plot the point <span class="math inline">\((X,Y)\)</span> in the plane. Owen’s <span class="math inline">\(T(h,a)\)</span>, for <span class="math inline">\(h\ge 0\)</span> and <span class="math inline">\(a\ge 0\)</span>, is the chance that this point falls into the wedge bounded on the left by the vertical line at <span class="math inline">\(h\)</span> and above by the ray <span class="math inline">\(Y=aX\)</span> through the origin, the region <span class="math inline">\(\{X&gt;h,\ 0&lt;Y&lt;aX\}\)</span>. So <span class="math inline">\(h\)</span> sets a vertical cutoff for the first variable and <span class="math inline">\(a\)</span> sets the slope of the sloped edge for the second: larger <span class="math inline">\(h\)</span> pushes the wedge to the right and shrinks it, larger <span class="math inline">\(a\)</span> tilts the sloped edge upward and enlarges it. The integral in the definition below is simply the analytic formula for the normal-probability content of that wedge.</p>
+<p><em>The purpose.</em> We need this wedge because of probit aggregation. When the link is the probit, the aggregate binomial likelihood of an AgD arm depends on the response through both its mean and its variance, and a Bernoulli response with success probability <span class="math inline">\(\Phi(\eta)\)</span> has variance <span class="math inline">\(\Phi(\eta)(1-\Phi(\eta))\)</span>. Averaging over the covariate distribution, the aggregate needs both the first moment <span class="math inline">\(\mathbb{E}[\Phi(\eta)]\)</span>, which <a href="../chapters/part5/20-mlnmr-aggregation.html#prp-agg-probit-closed-form" class="quarto-xref">Proposition&nbsp;<span>20.1</span></a> gives as a single <span class="math inline">\(\Phi\)</span>, and the second moment <span class="math inline">\(\mathbb{E}[\Phi(\eta)^{2}]\)</span>. That second moment turns out to be a bivariate normal probability, and Owen’s <span class="math inline">\(T\)</span> is precisely the function that reduces a bivariate normal probability to a one-dimensional integral. This is why the error function, which handled one-dimensional normal integrals, cannot finish the job alone.</p>
+<p><em>One analytic signpost.</em> Several proofs below differentiate under the integral sign, meaning they move a derivative inside an integral. This is a genuine theorem, not a formality: it is licensed whenever the integrand’s derivative is bounded by a fixed integrable function (a dominating envelope), which we display at each use. A reader can treat each such step as permitted once the envelope is shown.</p>
+<div id="def-owens-t" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition D.2 (Owen’s <span class="math inline">\(T\)</span> function)</strong></span> For <span class="math inline">\(h\in\mathbb{R}\)</span> and <span class="math inline">\(a\in\mathbb{R}\)</span>, <strong>Owen’s <span class="math inline">\(T\)</span> function</strong> is <span id="eq-sf-owens-t-def"><span class="math display">\[
+T(h,a)=\frac{1}{2\pi}\int_{0}^{a}\frac{\exp\!\big(-\tfrac12 h^{2}(1+x^{2})\big)}{1+x^{2}}\,dx .
+\tag{D.9}\]</span></span> <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>Three structural facts are read directly off <a href="#eq-sf-owens-t-def" class="quarto-xref">Equation&nbsp;<span>D.9</span></a>: <span class="math inline">\(T(h,0)=0\)</span> for all <span class="math inline">\(h\)</span>; <span class="math inline">\(T(h,a)=T(-h,a)\)</span>, because the integrand depends on <span class="math inline">\(h\)</span> only through <span class="math inline">\(h^{2}\)</span>, so <span class="math inline">\(T(h,a)=T(|h|,a)\)</span>; and <span class="math inline">\(T(h,-a)=-T(h,a)\)</span> by reversing the limits. The next lemma gives the probabilistic content.</p>
+<div id="lem-owens-t-representation" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma D.1 (Integral and probabilistic representation)</strong></span> For all <span class="math inline">\(h\in\mathbb{R}\)</span> and <span class="math inline">\(a\ge 0\)</span>, <span id="eq-sf-owens-t-rep"><span class="math display">\[
+T(h,a)=\int_{h}^{\infty}\phi(x)\,\Big(\Phi(ax)-\tfrac12\Big)\,dx .
+\tag{D.10}\]</span></span> If moreover <span class="math inline">\(h\ge 0\)</span>, then <span class="math inline">\(T(h,a)\)</span> is the probability that two independent standard normals <span class="math inline">\(X,Y\sim\mathcal{N}(0,1)\)</span> fall in the wedge <span class="math inline">\(\{X&gt;h,\ 0&lt;Y&lt;aX\}\)</span>: <span id="eq-sf-owens-t-prob"><span class="math display">\[
+T(h,a)=P\big(X&gt;h,\ 0&lt;Y&lt;aX\big),\qquad h\ge 0,\ a\ge 0 .
+\tag{D.11}\]</span></span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Both sides of <a href="#eq-sf-owens-t-rep" class="quarto-xref">Equation&nbsp;<span>D.10</span></a> vanish at <span class="math inline">\(a=0\)</span>: the left by <span class="math inline">\(T(h,0)=0\)</span>, the right because <span class="math inline">\(\Phi(0)-\frac12=0\)</span>. It therefore suffices to show their derivatives in <span class="math inline">\(a\)</span> agree for <span class="math inline">\(a&gt;0\)</span>. The left side, by the fundamental theorem of calculus applied to the upper limit of <a href="#eq-sf-owens-t-def" class="quarto-xref">Equation&nbsp;<span>D.9</span></a>, <span id="eq-sf-owens-t-da"><span class="math display">\[
+\partial_a T(h,a)=\frac{1}{2\pi}\,\frac{e^{-\frac12 h^{2}(1+a^{2})}}{1+a^{2}} .
+\tag{D.12}\]</span></span> For the right side, differentiate under the integral (the integrand’s <span class="math inline">\(a\)</span>-derivative <span class="math inline">\(\phi(x)\,x\,\phi(ax)\)</span> is dominated by the integrable <span class="math inline">\(|x|\phi(x)\cdot\frac{1}{\sqrt{2\pi}}\)</span>): <span class="math display">\[
+\partial_a\int_h^\infty\phi(x)\big(\Phi(ax)-\tfrac12\big)\,dx
+=\int_h^\infty\phi(x)\,x\,\phi(ax)\,dx
+=\frac{1}{2\pi}\int_h^\infty x\,e^{-\frac12 x^{2}(1+a^{2})}\,dx .
+\]</span> The last integral is elementary: an antiderivative of <span class="math inline">\(x\,e^{-\frac12 x^{2}(1+a^{2})}\)</span> is <span class="math inline">\(-\frac{1}{1+a^{2}}e^{-\frac12 x^{2}(1+a^{2})}\)</span>, which vanishes at <span class="math inline">\(+\infty\)</span> and equals <span class="math inline">\(-\frac{1}{1+a^{2}}e^{-\frac12 h^{2}(1+a^{2})}\)</span> at <span class="math inline">\(x=h\)</span>, for every real <span class="math inline">\(h\)</span>. Hence the integral equals <span class="math inline">\(\frac{1}{1+a^{2}}e^{-\frac12 h^{2}(1+a^{2})}\)</span>, and the derivative of the right side is <span class="math inline">\(\frac{1}{2\pi}\frac{e^{-\frac12 h^{2}(1+a^{2})}}{1+a^{2}}\)</span>, matching <a href="#eq-sf-owens-t-da" class="quarto-xref">Equation&nbsp;<span>D.12</span></a>. The two sides of <a href="#eq-sf-owens-t-rep" class="quarto-xref">Equation&nbsp;<span>D.10</span></a> agree at <span class="math inline">\(a=0\)</span> and have equal derivatives, so they are equal for all <span class="math inline">\(a\ge 0\)</span>.</p>
+<p>For <a href="#eq-sf-owens-t-prob" class="quarto-xref">Equation&nbsp;<span>D.11</span></a> with <span class="math inline">\(h\ge 0\)</span>, observe that for <span class="math inline">\(x&gt;h\ge 0\)</span> the inner probability <span class="math inline">\(P(0&lt;Y&lt;ax)=\Phi(ax)-\Phi(0)=\Phi(ax)-\frac12\)</span> is the genuine probability of the interval <span class="math inline">\((0,ax)\)</span>, so <span class="math display">\[
+P(X&gt;h,\ 0&lt;Y&lt;aX)=\int_h^\infty\phi(x)\,P(0&lt;Y&lt;ax)\,dx=\int_h^\infty\phi(x)\big(\Phi(ax)-\tfrac12\big)\,dx
+=T(h,a)
+\]</span> by <a href="#eq-sf-owens-t-rep" class="quarto-xref">Equation&nbsp;<span>D.10</span></a>. (For <span class="math inline">\(h&lt;0\)</span> the same integral <a href="#eq-sf-owens-t-rep" class="quarto-xref">Equation&nbsp;<span>D.10</span></a> remains valid as an analytic identity, but its integrand is negative on <span class="math inline">\((h,0)\)</span> and it is no longer the probability of a wedge.) <span class="math inline">\(\square\)</span></p>
+</div>
+<p>Two special values follow at once and will be needed below.</p>
+<div id="lem-owens-t-special" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma D.2 (Special values of Owen’s <span class="math inline">\(T\)</span>)</strong></span> For every <span class="math inline">\(h\in\mathbb{R}\)</span>, <span id="eq-sf-owens-t-special"><span class="math display">\[
+T(h,1)=\tfrac12\,\Phi(h)\big(1-\Phi(h)\big),
+\qquad
+\lim_{a\to\infty}T(h,a)=\tfrac12\big(1-\Phi(|h|)\big).
+\tag{D.13}\]</span></span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Set <span class="math inline">\(a=1\)</span> in <a href="#eq-sf-owens-t-rep" class="quarto-xref">Equation&nbsp;<span>D.10</span></a>: <span class="math inline">\(T(h,1)=\int_h^\infty\phi(x)\big(\Phi(x)-\tfrac12\big)\,dx
+=\int_h^\infty\phi(x)\Phi(x)\,dx-\tfrac12\int_h^\infty\phi(x)\,dx\)</span>. In the first integral, <span class="math inline">\(\frac{d}{dx}\big[\tfrac12\Phi(x)^{2}\big]=\Phi(x)\phi(x)\)</span>, so <span class="math inline">\(\int_h^\infty\phi\Phi=\tfrac12\Phi(x)^{2}\big|_h^\infty=\tfrac12\big(1-\Phi(h)^{2}\big)\)</span>; the second is <span class="math inline">\(\tfrac12\big(1-\Phi(h)\big)\)</span>. Subtracting, <span class="math inline">\(T(h,1)=\tfrac12(1-\Phi(h)^{2})-\tfrac12(1-\Phi(h))=\tfrac12\Phi(h)\big(1-\Phi(h)\big)\)</span>. For the limit, use <span class="math inline">\(T(h,a)=T(|h|,a)\)</span> and <a href="#eq-sf-owens-t-prob" class="quarto-xref">Equation&nbsp;<span>D.11</span></a> with <span class="math inline">\(|h|\ge 0\)</span>: as <span class="math inline">\(a\to\infty\)</span> the wedge <span class="math inline">\(\{X&gt;|h|,0&lt;Y&lt;aX\}\)</span> increases to <span class="math inline">\(\{X&gt;|h|,Y&gt;0\}\)</span>, whose probability is <span class="math inline">\(P(X&gt;|h|)P(Y&gt;0)=\big(1-\Phi(|h|)\big)\cdot\tfrac12\)</span> by independence. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>The bridge from Owen’s <span class="math inline">\(T\)</span> to bivariate normal probabilities is a classical partial differential equation for the bivariate normal density, due to Plackett: the density’s derivative in the correlation equals its mixed second derivative in the two coordinates.</p>
+<p>Why differentiate in the correlation <span class="math inline">\(\rho\)</span>? Because it lets us build the bivariate probability we want out of a case we already know. At <span class="math inline">\(\rho=0\)</span> the two coordinates are independent and the joint probability factorizes into <span class="math inline">\(\Phi(\lambda)^{2}\)</span>; at the target <span class="math inline">\(\rho\)</span> it is the quantity we are after. Sliding <span class="math inline">\(\rho\)</span> continuously from <span class="math inline">\(0\)</span> to its target and accumulating the change reduces the unknown probability to an integral of its <span class="math inline">\(\rho\)</span>-derivative. Plackett’s identity <a href="#eq-sf-biv-pde" class="quarto-xref">Equation&nbsp;<span>D.14</span></a> is what makes this tractable: it says that <span class="math inline">\(\rho\)</span>-derivative is nothing but the corner value of the density, a quantity we can write down explicitly. The lemma is the engine; the theorem after it turns the crank.</p>
+<div id="lem-bivariate-normal-pde" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma D.3 (The correlation heat equation for the bivariate normal)</strong></span> Let <span class="math inline">\(f(x,y;\rho)=\dfrac{1}{2\pi\sqrt{1-\rho^{2}}}\exp\!\Big(-\dfrac{x^{2}-2\rho xy+y^{2}}{2(1-\rho^{2})}\Big)\)</span> be the standard bivariate normal density with correlation <span class="math inline">\(\rho\in(-1,1)\)</span>. Then <span id="eq-sf-biv-pde"><span class="math display">\[
+\frac{\partial f}{\partial\rho}=\frac{\partial^{2} f}{\partial x\,\partial y}.
+\tag{D.14}\]</span></span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Write <span class="math inline">\(D=1-\rho^{2}\)</span>, <span class="math inline">\(Q=x^{2}-2\rho xy+y^{2}\)</span>, and <span class="math inline">\(g=e^{-Q/(2D)}\)</span>, so <span class="math inline">\(f=(2\pi)^{-1}D^{-1/2}g\)</span>. For the right side, <span class="math inline">\(\partial_x g=g\cdot\big(-(x-\rho y)/D\big)\)</span> and then <span class="math display">\[
+\partial_y\partial_x g
+=g\Big(-\tfrac{y-\rho x}{D}\Big)\Big(-\tfrac{x-\rho y}{D}\Big)+g\cdot\tfrac{\rho}{D}
+=g\Big[\tfrac{(x-\rho y)(y-\rho x)}{D^{2}}+\tfrac{\rho}{D}\Big],
+\]</span> so <span class="math inline">\(\partial_x\partial_y f=(2\pi)^{-1}D^{-1/2}g\big[(x-\rho y)(y-\rho x)/D^{2}+\rho/D\big]\)</span>. For the left side, <span class="math inline">\(\partial_\rho D^{-1/2}=\rho D^{-3/2}\)</span> and, since <span class="math inline">\(\partial_\rho Q=-2xy\)</span>, <span class="math inline">\(\partial_\rho g=g\,\partial_\rho(-Q/2D)=g\big(xy/D-\rho Q/D^{2}\big)\)</span>, whence <span class="math inline">\(\partial_\rho f=(2\pi)^{-1}D^{-1/2}g\big[\rho/D+xy/D-\rho Q/D^{2}\big]\)</span>. The two expressions agree if and only if <span class="math inline">\(xyD-\rho Q=(x-\rho y)(y-\rho x)\)</span>. Expanding both sides, <span class="math display">\[
+(x-\rho y)(y-\rho x)=(1+\rho^{2})xy-\rho(x^{2}+y^{2}),\qquad
+xyD-\rho Q=(1-\rho^{2})xy-\rho(x^{2}-2\rho xy+y^{2})=(1+\rho^{2})xy-\rho(x^{2}+y^{2}),
+\]</span> which are equal. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>We can now prove the bivariate normal probability identity on the diagonal, which is exactly the case probit aggregation requires.</p>
+<div id="thm-owens-t-identity" class="theorem">
+<p><span class="theorem-title"><strong>Theorem D.2 (Bivariate normal probability via Owen’s <span class="math inline">\(T\)</span>)</strong></span> Let <span class="math inline">\((V_1,V_2)\)</span> be standard bivariate normal with correlation <span class="math inline">\(\rho\in(-1,1)\)</span>, and let <span class="math inline">\(\lambda\in\mathbb{R}\)</span>. Then <span id="eq-sf-owens-t-identity"><span class="math display">\[
+P\big(V_1\le\lambda,\ V_2\le\lambda\big)
+=\Phi(\lambda)-2\,T\!\Big(\lambda,\ \sqrt{\tfrac{1-\rho}{1+\rho}}\Big).
+\tag{D.15}\]</span></span></p>
+</div>
+<p><em>Roadmap for the proof.</em> The strategy is the deformation just described. Both sides are checked to agree at <span class="math inline">\(\rho=0\)</span> (the independent base case, where the probability is <span class="math inline">\(\Phi(\lambda)^{2}\)</span>), and then both sides are shown to have the same derivative in <span class="math inline">\(\rho\)</span>. Two functions that start equal and change at the same rate stay equal, so they coincide for every <span class="math inline">\(\rho\)</span>. The one technical point is a change of variable <span class="math inline">\(a(\rho)=\sqrt{(1-\rho)/(1+\rho)}\)</span> that carries <span class="math inline">\(\rho\)</span> into the second argument of <span class="math inline">\(T\)</span>; the checkpoint <span class="math inline">\(1+a(\rho)^{2}=2/(1+\rho)\)</span> is what makes the algebra collapse.</p>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Write <span class="math inline">\(\Psi(\rho)=P(V_1\le\lambda,V_2\le\lambda)=\int_{-\infty}^{\lambda}\int_{-\infty}^{\lambda}f(x,y;\rho)\,dx\,dy\)</span> for fixed <span class="math inline">\(\lambda\)</span>. Differentiating in <span class="math inline">\(\rho\)</span> and using <a href="#eq-sf-biv-pde" class="quarto-xref">Equation&nbsp;<span>D.14</span></a>, <span class="math display">\[
+\Psi'(\rho)=\int_{-\infty}^{\lambda}\int_{-\infty}^{\lambda}\partial_\rho f\,dx\,dy
+=\int_{-\infty}^{\lambda}\int_{-\infty}^{\lambda}\partial_x\partial_y f\,dx\,dy
+=f(\lambda,\lambda;\rho),
+\]</span> the double integral of the mixed derivative collapsing by the fundamental theorem of calculus in each variable, since <span class="math inline">\(f\)</span> and its first derivatives vanish as either argument tends to <span class="math inline">\(-\infty\)</span>. Evaluating the density on the diagonal, with <span class="math inline">\(x^{2}-2\rho xy+y^{2}=2\lambda^{2}(1-\rho)\)</span> at <span class="math inline">\(x=y=\lambda\)</span> and <span class="math inline">\(1-\rho^{2}=(1-\rho)(1+\rho)\)</span>, <span id="eq-sf-biv-diagonal"><span class="math display">\[
+f(\lambda,\lambda;\rho)=\frac{1}{2\pi\sqrt{1-\rho^{2}}}\exp\!\Big(-\frac{2\lambda^{2}(1-\rho)}{2(1-\rho^{2})}\Big)
+=\frac{1}{2\pi\sqrt{1-\rho^{2}}}\,e^{-\lambda^{2}/(1+\rho)} .
+\tag{D.16}\]</span></span> At <span class="math inline">\(\rho=0\)</span> the coordinates are independent, so <span class="math inline">\(\Psi(0)=\Phi(\lambda)^{2}\)</span>, and by <a href="#eq-sf-owens-t-special" class="quarto-xref">Equation&nbsp;<span>D.13</span></a> the base case can be written <span class="math inline">\(\Psi(0)=\Phi(\lambda)-2T(\lambda,1)\)</span>, since <span class="math inline">\(2T(\lambda,1)=\Phi(\lambda)(1-\Phi(\lambda))\)</span> gives <span class="math inline">\(\Phi(\lambda)-2T(\lambda,1)=\Phi(\lambda)\Phi(\lambda)=\Phi(\lambda)^2\)</span>. Define <span class="math inline">\(a(\rho)=\sqrt{(1-\rho)/(1+\rho)}\)</span>, a decreasing bijection from <span class="math inline">\((-1,1)\)</span> onto <span class="math inline">\((0,\infty)\)</span> with <span class="math inline">\(a(0)=1\)</span>. We claim <span class="math inline">\(G(\rho):=\Phi(\lambda)-2T(\lambda,a(\rho))\)</span> has the same derivative as <span class="math inline">\(\Psi\)</span> and the same value at <span class="math inline">\(\rho=0\)</span>, hence equals <span class="math inline">\(\Psi\)</span> throughout.</p>
+<p>The value at <span class="math inline">\(\rho=0\)</span> matches by construction. For the derivative, by the chain rule and <a href="#eq-sf-owens-t-da" class="quarto-xref">Equation&nbsp;<span>D.12</span></a>, <span class="math display">\[
+G'(\rho)=-2\,\partial_a T(\lambda,a)\big|_{a=a(\rho)}\,a'(\rho)
+=-2\cdot\frac{1}{2\pi}\frac{e^{-\frac12\lambda^{2}(1+a(\rho)^{2})}}{1+a(\rho)^{2}}\cdot a'(\rho).
+\]</span> Now <span class="math inline">\(1+a^{2}=1+\frac{1-\rho}{1+\rho}=\frac{2}{1+\rho}\)</span>, so <span class="math inline">\(\frac12\lambda^{2}(1+a^{2})=\frac{\lambda^{2}}{1+\rho}\)</span> and <span class="math inline">\(\frac{1}{1+a^{2}}=\frac{1+\rho}{2}\)</span>. Differentiating <span class="math inline">\(a(\rho)^{2}=(1-\rho)/(1+\rho)\)</span> gives <span class="math inline">\(2a\,a'=\frac{-(1+\rho)-(1-\rho)}{(1+\rho)^{2}}=\frac{-2}{(1+\rho)^{2}}\)</span>, so <span class="math inline">\(a'(\rho)=\frac{-1}{a(1+\rho)^{2}}\)</span> with <span class="math inline">\(a=\sqrt{(1-\rho)/(1+\rho)}\)</span>, that is <span class="math inline">\(a'(\rho)=\frac{-1}{(1+\rho)^{2}}\sqrt{\frac{1+\rho}{1-\rho}}=\frac{-1}{(1+\rho)^{3/2}(1-\rho)^{1/2}}=\frac{-1}{(1+\rho)\sqrt{1-\rho^{2}}}\)</span>. Substituting, <span class="math display">\[
+G'(\rho)=-\frac{1}{\pi}\,e^{-\lambda^{2}/(1+\rho)}\cdot\frac{1+\rho}{2}\cdot\frac{-1}{(1+\rho)\sqrt{1-\rho^{2}}}
+=\frac{1}{2\pi\sqrt{1-\rho^{2}}}\,e^{-\lambda^{2}/(1+\rho)}=f(\lambda,\lambda;\rho)=\Psi'(\rho),
+\]</span> matching <a href="#eq-sf-biv-diagonal" class="quarto-xref">Equation&nbsp;<span>D.16</span></a>. Since <span class="math inline">\(G\)</span> and <span class="math inline">\(\Psi\)</span> agree at <span class="math inline">\(\rho=0\)</span> and have equal derivatives on <span class="math inline">\((-1,1)\)</span>, they are equal, which is <a href="#eq-sf-owens-t-identity" class="quarto-xref">Equation&nbsp;<span>D.15</span></a>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Where this identity is used, and where it is not.</strong> <a href="#eq-sf-owens-t-identity" class="quarto-xref">Equation&nbsp;<span>D.15</span></a> is the workhorse behind the probit second moment of the next theorem, and it is the right tool whenever one needs an analytic bivariate normal probability, for instance to check a probit-link fit by hand. It is not needed to generate the quasi-Monte Carlo covariate nodes of Chapter 22: sampling from a Gaussian copula requires only the marginal quantile <span class="math inline">\(\Phi^{-1}\)</span>, not the bivariate distribution function, so ML-NMR fitting never evaluates the full copula CDF. The identity explains and checks the bivariate object; it does not sit on the sampling path. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>The general Owen reduction.</strong> Off the diagonal, the same differentiate-in-<span class="math inline">\(\rho\)</span> argument yields Owen’s general formula for the standard bivariate normal distribution function <span class="math inline">\(\Phi_2(h,k;\rho)=P(V_1\le h,V_2\le k)\)</span>, <span id="eq-sf-owen-general"><span class="math display">\[
+\Phi_2(h,k;\rho)=\tfrac12\Phi(h)+\tfrac12\Phi(k)
+-T\!\Big(h,\tfrac{k-\rho h}{h\sqrt{1-\rho^{2}}}\Big)
+-T\!\Big(k,\tfrac{h-\rho k}{k\sqrt{1-\rho^{2}}}\Big)-\varepsilon,
+\tag{D.17}\]</span></span> where <span class="math inline">\(\varepsilon=\tfrac12\)</span> when exactly one of <span class="math inline">\(h,k\)</span> is negative and <span class="math inline">\(\varepsilon=0\)</span> otherwise; this is the identity that Owen’s tables (<span class="citation" data-cites="owen1956">Owen (<a href="../references.html#ref-owen1956" role="doc-biblioref">1956</a>)</span>) tabulate, and <a href="#eq-sf-owens-t-identity" class="quarto-xref">Equation&nbsp;<span>D.15</span></a> is its specialization to <span class="math inline">\(h=k=\lambda\)</span>, where the two <span class="math inline">\(T\)</span>-terms coincide and <span class="math inline">\(\varepsilon=0\)</span>. We use only the diagonal case, which we have proved in full; the general formula is stated for reference. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>The probit-link aggregate likelihood needs not only the first moment of a probit response, the closed form <span class="math inline">\(\mathbb{E}[\Phi(a+bZ)]=\Phi(a/\sqrt{1+b^{2}})\)</span> of <a href="../chapters/part5/20-mlnmr-aggregation.html#prp-agg-probit-closed-form" class="quarto-xref">Proposition&nbsp;<span>20.1</span></a>, but also its second moment, which Owen’s <span class="math inline">\(T\)</span> supplies.</p>
+<div id="thm-expected-squared-probit" class="theorem">
+<p><span class="theorem-title"><strong>Theorem D.3 (Expected squared normal distribution function)</strong></span> Let <span class="math inline">\(Z\sim\mathcal{N}(0,1)\)</span> and let <span class="math inline">\(a,b\in\mathbb{R}\)</span>. With <span class="math inline">\(\lambda=a/\sqrt{1+b^{2}}\)</span>, <span id="eq-sf-expected-squared-probit"><span class="math display">\[
+\mathbb{E}\big[\Phi(a+bZ)^{2}\big]
+=\Phi(\lambda)-2\,T\!\Big(\lambda,\ \frac{1}{\sqrt{1+2b^{2}}}\Big).
+\tag{D.18}\]</span></span> Consequently the variance contribution <span class="math inline">\(\mathbb{E}[\Phi(a+bZ)(1-\Phi(a+bZ))]\)</span>, the response-scale Bernoulli variance averaged over the linear predictor, equals <span class="math inline">\(\Phi(\lambda)-\mathbb{E}[\Phi(a+bZ)^{2}]=2\,T\big(\lambda,1/\sqrt{1+2b^{2}}\big)\)</span>.</p>
+</div>
+<p><em>Roadmap for the proof.</em> The key move is to read a squared probability as a joint probability. Since <span class="math inline">\(\Phi(a+bZ)\)</span> is itself the probability that a fresh standard normal <span class="math inline">\(U\)</span> falls below <span class="math inline">\(a+bZ\)</span>, its square is the probability that two independent such draws <span class="math inline">\(U_1,U_2\)</span> both fall below <span class="math inline">\(a+bZ\)</span>. Both comparisons share the same random threshold <span class="math inline">\(a+bZ\)</span>, so once we average over <span class="math inline">\(Z\)</span> the two draws become correlated through their common dependence on <span class="math inline">\(Z\)</span>. That turns <span class="math inline">\(\mathbb{E}[\Phi(a+bZ)^{2}]\)</span> into a bivariate normal probability, which <a href="#thm-owens-t-identity" class="quarto-xref">Theorem&nbsp;<span>D.2</span></a> has already evaluated. In three words: square, condition, correlate.</p>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Let <span class="math inline">\(U_1,U_2,Z\)</span> be independent standard normals. For fixed <span class="math inline">\(Z\)</span>, the definition of <span class="math inline">\(\Phi\)</span> gives <span class="math inline">\(\Phi(a+bZ)=P(U_i\le a+bZ\mid Z)\)</span> for each <span class="math inline">\(i\)</span>, and by conditional independence of <span class="math inline">\(U_1,U_2\)</span>, <span class="math display">\[
+\Phi(a+bZ)^{2}=P\big(U_1\le a+bZ,\ U_2\le a+bZ\mid Z\big).
+\]</span> Taking expectations over <span class="math inline">\(Z\)</span> and rearranging the inequalities, <span class="math display">\[
+\mathbb{E}\big[\Phi(a+bZ)^{2}\big]=P\big(U_1-bZ\le a,\ U_2-bZ\le a\big).
+\]</span> The pair <span class="math inline">\((W_1,W_2)=(U_1-bZ,U_2-bZ)\)</span> is bivariate normal with mean <span class="math inline">\(\mathbf{0}\)</span>, equal variances <span class="math inline">\(\mathrm{Var}(W_i)=1+b^{2}\)</span>, and covariance <span class="math inline">\(\mathrm{Cov}(W_1,W_2)=b^{2}\,\mathrm{Var}(Z)=b^{2}\)</span>, hence correlation <span class="math inline">\(\rho=b^{2}/(1+b^{2})\)</span>. Standardizing, <span class="math inline">\(V_i=W_i/\sqrt{1+b^{2}}\)</span> are standard normal with correlation <span class="math inline">\(\rho\)</span>, and <span class="math inline">\(P(W_1\le a,W_2\le a)=P(V_1\le\lambda,V_2\le\lambda)\)</span> with <span class="math inline">\(\lambda=a/\sqrt{1+b^{2}}\)</span>. By <a href="#thm-owens-t-identity" class="quarto-xref">Theorem&nbsp;<span>D.2</span></a>, <span class="math display">\[
+\mathbb{E}\big[\Phi(a+bZ)^{2}\big]=\Phi(\lambda)-2\,T\!\Big(\lambda,\sqrt{\tfrac{1-\rho}{1+\rho}}\Big).
+\]</span> Finally <span class="math inline">\(\dfrac{1-\rho}{1+\rho}=\dfrac{1-\frac{b^{2}}{1+b^{2}}}{1+\frac{b^{2}}{1+b^{2}}}=\dfrac{1}{1+2b^{2}}\)</span>, so <span class="math inline">\(\sqrt{(1-\rho)/(1+\rho)}=1/\sqrt{1+2b^{2}}\)</span>, giving <a href="#eq-sf-expected-squared-probit" class="quarto-xref">Equation&nbsp;<span>D.18</span></a>. The variance statement follows by subtracting from the first moment <span class="math inline">\(\mathbb{E}[\Phi(a+bZ)]=\Phi(\lambda)\)</span> of <a href="../chapters/part5/20-mlnmr-aggregation.html#prp-agg-probit-closed-form" class="quarto-xref">Proposition&nbsp;<span>20.1</span></a>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div id="exm-sf-owen" class="theorem example">
+<p><span class="theorem-title"><strong>Example D.2 (A probit second moment by hand)</strong></span> Take <span class="math inline">\(a=0.5\)</span>, <span class="math inline">\(b=1\)</span>, so a probit linear predictor <span class="math inline">\(\eta=0.5+Z\)</span> with <span class="math inline">\(Z\sim\mathcal{N}(0,1)\)</span>, that is <span class="math inline">\(\eta\sim\mathcal{N}(0.5,1)\)</span>. The first moment is <span class="math inline">\(\mathbb{E}[\Phi(\eta)]=\Phi(0.5/\sqrt{2})=\Phi(0.3536)=0.6382\)</span> by <a href="../chapters/part5/20-mlnmr-aggregation.html#prp-agg-probit-closed-form" class="quarto-xref">Proposition&nbsp;<span>20.1</span></a>. For the second moment, <span class="math inline">\(\lambda=0.5/\sqrt{2}=0.3536\)</span> and <span class="math inline">\(1/\sqrt{1+2}=1/\sqrt3=0.5774\)</span>, so by <a href="#eq-sf-expected-squared-probit" class="quarto-xref">Equation&nbsp;<span>D.18</span></a> <span class="math display">\[
+\mathbb{E}\big[\Phi(\eta)^{2}\big]=\Phi(0.3536)-2\,T(0.3536,\,0.5774)=0.6382-2(0.0778)=0.4826 .
+\]</span> The averaged Bernoulli variance is then <span class="math inline">\(\mathbb{E}[\Phi(\eta)]-\mathbb{E}[\Phi(\eta)^{2}]=0.6382-0.4826=0.1556\)</span>, and the variance of the probit response itself is <span class="math inline">\(\mathbb{E}[\Phi(\eta)^{2}]-\mathbb{E}[\Phi(\eta)]^{2}=0.4826-0.6382^{2}=0.4826-0.4073=0.0753\)</span>. Both numbers are exact closed forms in <span class="math inline">\(\Phi\)</span> and <span class="math inline">\(T\)</span>; direct numerical integration of <span class="math inline">\(\int\Phi(0.5+z)^{2}\phi(z)\,dz\)</span> returns <span class="math inline">\(0.4826\)</span>, confirming the identity. The Owen value itself is reproducible with standard tools: a Simpson’s rule on the definition integral <span class="math inline">\(T(h,a)=\frac{1}{2\pi}\int_{0}^{a} e^{-\frac12 h^{2}(1+x^{2})}/(1+x^{2})\,dx\)</span> over <span class="math inline">\([0,0.5774]\)</span> returns <span class="math inline">\(0.0778\)</span>, as does the <code>T.Owen</code> function of the R package <code>sn</code>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-sf-probit-logit" class="level2" data-number="D.5">
+<h2 data-number="D.5" class="anchored" data-anchor-id="sec-sf-probit-logit"><span class="header-section-number">D.5</span> Probit approximations to the logistic function</h2>
+<p>The logit aggregation integral <span class="math inline">\(J(m,\tau)=\mathbb{E}[\mathrm{expit}(m+\sqrt\tau\,Z)]\)</span> of <a href="../chapters/part5/20-mlnmr-aggregation.html#eq-agg-logit-integral" class="quarto-xref">Equation&nbsp;<span>20.14</span></a> has no elementary closed form (<a href="../chapters/part5/20-mlnmr-aggregation.html#thm-logit-no-closed-form" class="quarto-xref">Theorem&nbsp;<span>20.5</span></a>), whereas its probit sibling does, by the Gaussian probit integral <a href="../chapters/part3/16-limits-of-nma.html#eq-limits-probit-integral" class="quarto-xref">Equation&nbsp;<span>16.10</span></a>. This asymmetry invites a strategy: approximate the logistic inverse-link <span class="math inline">\(\mathrm{expit}\)</span> by one or two probit terms, for each of which the aggregation integral collapses to a <span class="math inline">\(\Phi\)</span>, and obtain a fast explicit approximation to <span class="math inline">\(J\)</span>. We derive both the one-probit and the two-probit approximation.</p>
+<p>The two approximations share an exact representation that makes their structure transparent. The standard logistic distribution is a scale mixture of normals: there is a probability density <span class="math inline">\(w(s)\)</span> on <span class="math inline">\((0,\infty)\)</span> with <span class="math inline">\(\mathrm{expit}(z)=\int_0^\infty\Phi(z/s)\,w(s)\,ds\)</span>. Approximating this mixture by a one-point or two-point rule, <span class="math inline">\(\mathrm{expit}(z)\approx\sum_{i}\omega_i\Phi(\kappa_i z)\)</span> with <span class="math inline">\(\kappa_i=1/s_i\)</span>, is exactly the one-probit and two-probit construction. The mixture is motivation for the <em>shape</em> only, a positively weighted sum of probits; the density <span class="math inline">\(w(s)\)</span> is never needed, and the numbers below are not read off <span class="math inline">\(w\)</span> by quadrature but come from Taylor matching. We pin the nodes and weights not from <span class="math inline">\(w\)</span> directly but from the equivalent and elementary requirement that the approximation match the Taylor expansion of <span class="math inline">\(\mathrm{expit}\)</span> at the origin. The expansion, obtained from <span class="math inline">\(\mathrm{expit}(z)=\tfrac12\big(1+\tanh(z/2)\big)\)</span> and the series <span class="math inline">\(\tanh(x)=x-\tfrac{x^{3}}{3}+\tfrac{2x^{5}}{15}-\cdots\)</span>, is <span id="eq-sf-expit-taylor"><span class="math display">\[
+\mathrm{expit}(z)=\tfrac12+\tfrac{1}{4}z-\tfrac{1}{48}z^{3}+\tfrac{1}{480}z^{5}-\cdots,
+\tag{D.19}\]</span></span> an odd function of <span class="math inline">\(z\)</span> about the value <span class="math inline">\(\tfrac12\)</span>. The probit term has the matching odd expansion <span class="math inline">\(\Phi(\kappa z)-\tfrac12=\tfrac{1}{\sqrt{2\pi}}\big(\kappa z-\tfrac{(\kappa z)^{3}}{6}+\tfrac{(\kappa z)^{5}}{40}-\cdots\big)\)</span>, from <a href="#eq-sf-erf-series" class="quarto-xref">Equation&nbsp;<span>D.7</span></a> through <a href="#eq-sf-erf-phi" class="quarto-xref">Equation&nbsp;<span>D.5</span></a>.</p>
+<div id="thm-probit-logit-approximation" class="theorem">
+<p><span class="theorem-title"><strong>Theorem D.4 (One-probit approximation and one-probit logit aggregation)</strong></span> Let <span class="math inline">\(\kappa=\sqrt{\pi/8}=0.62666\ldots\)</span> Then <span class="math inline">\(\mathrm{expit}(z)\approx\Phi(\kappa z)\)</span> is the unique one-probit approximation matching <span class="math inline">\(\mathrm{expit}\)</span> in value, first derivative, and second derivative at <span class="math inline">\(z=0\)</span>; the constant <span class="math inline">\(\kappa\)</span> is fixed by the slope condition <span id="eq-sf-one-probit-kappa"><span class="math display">\[
+\kappa\,\phi(0)=\frac{\kappa}{\sqrt{2\pi}}=\mathrm{expit}'(0)=\frac14 .
+\tag{D.20}\]</span></span> Substituting into the logit aggregation integral and applying the Gaussian probit integral <a href="../chapters/part3/16-limits-of-nma.html#eq-limits-probit-integral" class="quarto-xref">Equation&nbsp;<span>16.10</span></a> gives the explicit one-probit aggregate <span id="eq-sf-one-probit-aggregate"><span class="math display">\[
+J(m,\tau)=\mathbb{E}\big[\mathrm{expit}(m+\sqrt\tau\,Z)\big]
+\approx\Phi\!\Big(\frac{\kappa\,m}{\sqrt{1+\kappa^{2}\tau}}\Big).
+\tag{D.21}\]</span></span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Both <span class="math inline">\(\mathrm{expit}(z)-\tfrac12\)</span> and <span class="math inline">\(\Phi(\kappa z)-\tfrac12\)</span> are odd, so they automatically agree in value at <span class="math inline">\(0\)</span> (both <span class="math inline">\(\tfrac12\)</span>) and in every even derivative (all zero); matching is therefore a condition on the odd derivatives. The first-derivative match requires <span class="math inline">\(\frac{d}{dz}\Phi(\kappa z)\big|_0=\kappa\phi(0)\)</span> to equal <span class="math inline">\(\mathrm{expit}'(0)=\mathrm{expit}(0)(1-\mathrm{expit}(0))=\tfrac14\)</span>. Since <span class="math inline">\(\phi(0)=1/\sqrt{2\pi}\)</span>, this is <span class="math inline">\(\kappa/\sqrt{2\pi}=\tfrac14\)</span>, that is <span class="math inline">\(\kappa=\sqrt{2\pi}/4=\sqrt{\pi/8}\)</span>, which is <a href="#eq-sf-one-probit-kappa" class="quarto-xref">Equation&nbsp;<span>D.20</span></a>; the second-derivative match is the vacuous identity <span class="math inline">\(0=0\)</span>. For the aggregate, write <span class="math inline">\(\eta=m+\sqrt\tau\,Z\)</span> with <span class="math inline">\(Z\sim\mathcal{N}(0,1)\)</span> and substitute the approximation: <span class="math display">\[
+J(m,\tau)\approx\mathbb{E}\big[\Phi(\kappa\,\eta)\big]=\mathbb{E}\big[\Phi(\kappa m+\kappa\sqrt\tau\,Z)\big]
+=\Phi\!\Big(\frac{\kappa m}{\sqrt{1+\kappa^{2}\tau}}\Big),
+\]</span> applying <a href="../chapters/part3/16-limits-of-nma.html#eq-limits-probit-integral" class="quarto-xref">Equation&nbsp;<span>16.10</span></a> with <span class="math inline">\(a=\kappa m\)</span>, <span class="math inline">\(b=\kappa\sqrt\tau\)</span>, and <span class="math inline">\(Z\sim\mathcal{N}(0,1)\)</span>, for which <span class="math inline">\(\mathbb{E}[\Phi(a+bZ)]=\Phi(a/\sqrt{1+b^{2}})\)</span>. This is <a href="#eq-sf-one-probit-aggregate" class="quarto-xref">Equation&nbsp;<span>D.21</span></a>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Accuracy and an alternative constant.</strong> The slope-matched one-probit approximation <span class="math inline">\(\mathrm{expit}(z)\approx\Phi(\sqrt{\pi/8}\,z)\)</span> has maximum absolute error <span class="math inline">\(0.0177\)</span> over all <span class="math inline">\(z\)</span>, attained in the shoulders near <span class="math inline">\(|z|\approx 2\)</span>. If instead one minimizes the maximum error over <span class="math inline">\(z\)</span> rather than matching the slope, the optimal constant is <span class="math inline">\(\kappa^{\star}\approx 0.5876\)</span>, with maximum error <span class="math inline">\(0.0095\)</span>; this <span class="math inline">\(\kappa^\star\)</span> is the value tabulated in the logistic-versus-normal literature. The slope-matched <span class="math inline">\(\kappa=\sqrt{\pi/8}\)</span> is the natural choice for aggregation because it makes the approximation exact to second order at the center of the covariate distribution, where most of the integrating mass of <a href="#eq-sf-one-probit-aggregate" class="quarto-xref">Equation&nbsp;<span>D.21</span></a> sits, and because it is the constant used in <a href="../chapters/part5/20-mlnmr-aggregation.html#thm-logit-no-closed-form" class="quarto-xref">Theorem&nbsp;<span>20.5</span></a>. The substitution is an approximation, not an identity; ML-NMR fits use exact numerical integration (<a href="../chapters/part5/22-mlnmr-integration.html#thm-hypercube-integration" class="quarto-xref">Theorem&nbsp;<span>22.6</span></a>), and the probit form serves as a fast initializer and analytic check. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>A single probit cannot reproduce the heavier tails of the logistic, which is the source of the residual <span class="math inline">\(0.0177\)</span> error. A second probit term, with its own scale, corrects the next odd order.</p>
+<div id="prp-two-probit-logit" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition D.3 (Two-probit approximation and two-probit logit aggregation)</strong></span> Seek <span class="math inline">\(\mathrm{expit}(z)\approx\omega_1\Phi(\kappa_1 z)+\omega_2\Phi(\kappa_2 z)\)</span> with <span class="math inline">\(\omega_1+\omega_2=1\)</span>. Matching the Taylor coefficients <a href="#eq-sf-expit-taylor" class="quarto-xref">Equation&nbsp;<span>D.19</span></a> at orders <span class="math inline">\(1\)</span>, <span class="math inline">\(3\)</span>, and <span class="math inline">\(5\)</span> gives the moment conditions <span id="eq-sf-two-probit-moments"><span class="math display">\[
+\sum_{i}\omega_i\kappa_i=\frac{\sqrt{2\pi}}{4},\qquad
+\sum_{i}\omega_i\kappa_i^{3}=\frac{\sqrt{2\pi}}{8},\qquad
+\sum_{i}\omega_i\kappa_i^{5}=\frac{\sqrt{2\pi}}{12},
+\tag{D.22}\]</span></span> whose solution is <span id="eq-sf-two-probit-coeffs"><span class="math display">\[
+\omega_1=0.7371,\quad\kappa_1=0.5191,\qquad
+\omega_2=0.2629,\quad\kappa_2=0.9282 .
+\tag{D.23}\]</span></span> The resulting approximation has maximum absolute error <span class="math inline">\(0.0040\)</span>, a fourfold improvement on the one-probit rule, and yields the explicit two-probit aggregate <span id="eq-sf-two-probit-aggregate"><span class="math display">\[
+J(m,\tau)\approx\sum_{i=1}^{2}\omega_i\,\Phi\!\Big(\frac{\kappa_i\,m}{\sqrt{1+\kappa_i^{2}\tau}}\Big).
+\tag{D.24}\]</span></span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>With <span class="math inline">\(\omega_1+\omega_2=1\)</span> the approximation is automatically exact in value at <span class="math inline">\(0\)</span>. Subtracting <span class="math inline">\(\tfrac12\)</span> from both sides and equating the odd Taylor coefficients of <span class="math inline">\(\sum_i\omega_i\big(\Phi(\kappa_i z)-\tfrac12\big)=\frac{1}{\sqrt{2\pi}}\sum_i\omega_i\big(\kappa_i z-\tfrac{\kappa_i^{3}z^{3}}{6}+\tfrac{\kappa_i^{5}z^{5}}{40}-\cdots\big)\)</span> with those of <a href="#eq-sf-expit-taylor" class="quarto-xref">Equation&nbsp;<span>D.19</span></a>: the <span class="math inline">\(z^{1}\)</span> coefficient gives <span class="math inline">\(\frac{1}{\sqrt{2\pi}}\sum_i\omega_i\kappa_i=\tfrac14\)</span>; the <span class="math inline">\(z^{3}\)</span> coefficient gives <span class="math inline">\(\frac{1}{\sqrt{2\pi}}\sum_i\omega_i\kappa_i^{3}/6=\tfrac{1}{48}\)</span>; and the <span class="math inline">\(z^{5}\)</span> coefficient gives <span class="math inline">\(\frac{1}{\sqrt{2\pi}}\sum_i\omega_i\kappa_i^{5}/40=\tfrac{1}{480}\)</span>. Clearing constants gives the three conditions <a href="#eq-sf-two-probit-moments" class="quarto-xref">Equation&nbsp;<span>D.22</span></a>. Together with <span class="math inline">\(\omega_2=1-\omega_1\)</span> this is a system of three equations in the three unknowns <span class="math inline">\((\omega_1,\kappa_1,\kappa_2)\)</span>; solving it numerically yields <a href="#eq-sf-two-probit-coeffs" class="quarto-xref">Equation&nbsp;<span>D.23</span></a>. This is a numerical construction, not a hand derivation: the system is nonlinear, one solves it with a standard root finder (for example Newton’s method seeded near the one-probit constant <span class="math inline">\(\kappa=\sqrt{\pi/8}\)</span>), and the real solution with <span class="math inline">\(0&lt;\kappa_1&lt;\kappa_2\)</span> is unique up to swapping the two labels. Substituting back confirms the three moment equations to the displayed precision. The maximum-error claim is verified by evaluating <span class="math inline">\(|\mathrm{expit}(z)-\omega_1\Phi(\kappa_1 z)-\omega_2\Phi(\kappa_2 z)|\)</span> on a fine grid, where the supremum is <span class="math inline">\(0.0040\)</span>. The aggregate <a href="#eq-sf-two-probit-aggregate" class="quarto-xref">Equation&nbsp;<span>D.24</span></a> follows by linearity of expectation and applying <a href="#eq-sf-one-probit-aggregate" class="quarto-xref">Equation&nbsp;<span>D.21</span></a> to each term: with the approximation in hand, <span class="math inline">\(J(m,\tau)\approx\sum_i\omega_i\mathbb{E}[\Phi(\kappa_i\eta)]=\sum_i\omega_i\Phi\big(\kappa_i m/\sqrt{1+\kappa_i^{2}\tau}\big)\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div id="exm-sf-probit-logit" class="theorem example">
+<p><span class="theorem-title"><strong>Example D.3 (Approximating the worked logit integral of Chapter 22)</strong></span> The QMC worked example <a href="../chapters/part5/22-mlnmr-integration.html#exm-qmc-logit" class="quarto-xref">Example&nbsp;<span>22.3</span></a> evaluates <span class="math inline">\(J(0.5,1)=\int\mathrm{expit}(0.5+x)\phi(x)\,dx\)</span>, with high-accuracy reference value <span class="math inline">\(0.6020\)</span>. The one-probit aggregate <a href="#eq-sf-one-probit-aggregate" class="quarto-xref">Equation&nbsp;<span>D.21</span></a> gives, with <span class="math inline">\(\kappa=0.62666\)</span> and <span class="math inline">\(\kappa^{2}=0.39270\)</span>, <span class="math display">\[
+J(0.5,1)\approx\Phi\!\Big(\frac{0.62666\cdot 0.5}{\sqrt{1+0.39270}}\Big)
+=\Phi\!\Big(\frac{0.31333}{1.18014}\Big)=\Phi(0.26550)=0.6047,
+\]</span> an error of <span class="math inline">\(+0.0027\)</span>. The two-probit aggregate <a href="#eq-sf-two-probit-aggregate" class="quarto-xref">Equation&nbsp;<span>D.24</span></a> gives <span class="math display">\[
+J(0.5,1)\approx 0.7371\,\Phi\!\Big(\tfrac{0.5191\cdot0.5}{\sqrt{1+0.2695}}\Big)
++0.2629\,\Phi\!\Big(\tfrac{0.9282\cdot0.5}{\sqrt{1+0.8616}}\Big)
+=0.7371\,\Phi(0.23035)+0.2629\,\Phi(0.34020)=0.6022,
+\]</span> an error of <span class="math inline">\(+0.0002\)</span>, an order of magnitude smaller and indistinguishable from the QMC reference at the precision a health technology assessment reports. The two-probit closed form thus reproduces, with two evaluations of <span class="math inline">\(\Phi\)</span>, the integral that <a href="../chapters/part5/22-mlnmr-integration.html#sec-qmc-example" class="quarto-xref"><span>Section 22.11</span></a> computes with a Sobol’ net. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Two different error scales.</strong> The maximum errors quoted above, <span class="math inline">\(0.0177\)</span> for one probit and <span class="math inline">\(0.0040\)</span> for two, are worst-case errors in <span class="math inline">\(\mathrm{expit}(z)\)</span> itself, pointwise on the probability scale and before any averaging. The error that actually matters for a fitted model is the error in the aggregate <span class="math inline">\(J(m,\tau)\)</span> after integrating over the covariate distribution, and it is typically smaller, because the pointwise overshoots and undershoots partly cancel under the average. The worked example makes this concrete: the one-probit pointwise maximum is <span class="math inline">\(0.0177\)</span>, yet the one-probit aggregate error at <span class="math inline">\(J(0.5,1)\)</span> is only <span class="math inline">\(0.0027\)</span>, and the two-probit aggregate error is <span class="math inline">\(0.0002\)</span>. One caveat runs the other way. The matching is done at the center <span class="math inline">\(z=0\)</span>, so the approximation is at its best for event probabilities near <span class="math inline">\(\tfrac12\)</span> and least accurate in the shoulders, which is worth remembering when the linear predictor sits far in a tail. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-sf-sobol" class="level2" data-number="D.6">
+<h2 data-number="D.6" class="anchored" data-anchor-id="sec-sf-sobol"><span class="header-section-number">D.6</span> Sobol’ sequences and the radical inverse</h2>
+<p>The Sobol’ point set of <a href="../chapters/part5/22-mlnmr-integration.html#def-sobol-net" class="quarto-xref">Definition&nbsp;<span>22.3</span></a> is built coordinate by coordinate from a single arithmetic operation on the index <span class="math inline">\(n\)</span>: the radical inverse, which reflects the base-<span class="math inline">\(b\)</span> digits of <span class="math inline">\(n\)</span> about the radix point. We define it, prove the exact equidistribution that makes its one-dimensional version (the van der Corput sequence) a low-discrepancy sequence, and then give the digital construction of the full Sobol’ sequence through generating matrices over the field <span class="math inline">\(\mathbb{F}_2\)</span>, of which the radical inverse is the identity-matrix case.</p>
+<p><em>Why quasi-Monte Carlo at all.</em> The aggregation integrals of Part V are averages over a covariate distribution, and the honest way to compute a <span class="math inline">\(d\)</span>-dimensional average with no closed form is to sample points and average the integrand. Independent random points (plain Monte Carlo) give a root-mean-square error of order <span class="math inline">\(N^{-1/2}\)</span> in the number of points <span class="math inline">\(N\)</span> (<a href="../chapters/part5/22-mlnmr-integration.html#thm-mc-rmse" class="quarto-xref">Theorem&nbsp;<span>22.2</span></a>): to halve the error you must quadruple the sample. Sobol’ points are chosen deterministically to be spread out rather than random, and they achieve an error of order <span class="math inline">\((\log N)^{d}/N\)</span> (<a href="../chapters/part5/22-mlnmr-integration.html#thm-hypercube-integration" class="quarto-xref">Theorem&nbsp;<span>22.6</span></a>), which for a fixed dimension beats <span class="math inline">\(N^{-1/2}\)</span> for all large <span class="math inline">\(N\)</span>. In the low dimensions typical once ML-NMR reduces to a handful of effect-modifying covariates, this is often an order-of-magnitude gain at the same <span class="math inline">\(N\)</span>, which is why the model integrates with Sobol’ points and not random ones.</p>
+<p><em>What to retain, and what software handles.</em> The rest of this section proves why the construction works, and it uses the vocabulary of digital nets: the field <span class="math inline">\(\mathbb{F}_2=\{0,1\}\)</span> with arithmetic modulo <span class="math inline">\(2\)</span> (where addition is the exclusive-or, <span class="math inline">\(1\oplus1=0\)</span>), generating matrices, direction numbers, and primitive polynomials. For applied ML-NMR work almost none of this needs to be carried in the head. What to retain is the applied picture: Sobol’ points fill the unit cube evenly, leaving no large empty region, so that after the inverse-CDF and copula transforms of Chapter 22 the covariate space is covered without gaps. The generating-matrix algebra below is implementation detail that established libraries, with the tabulated direction numbers of Joe and Kuo, handle once and for all. Read the proofs for understanding; you need not reimplement them. Finally, the same point set serves every Part V integrand without change: the integrand may be a mean (Chapter 20), a Bernoulli or binomial likelihood contribution, a censored survival likelihood <span class="math inline">\(h^{\delta}S\)</span>, or an ordinal category probability (Chapter 25). The dimension <span class="math inline">\(d\)</span> is the number of integrated covariates, only the integrand changes, and the Sobol’ machinery is the same throughout.</p>
+<div id="def-radical-inverse" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition D.3 (Radical inverse and the van der Corput sequence)</strong></span> Fix an integer base <span class="math inline">\(b\ge 2\)</span>. Every nonnegative integer <span class="math inline">\(n\)</span> has a unique finite base-<span class="math inline">\(b\)</span> expansion <span class="math inline">\(n=\sum_{\ell\ge 0}a_\ell(n)\,b^{\ell}\)</span> with digits <span class="math inline">\(a_\ell(n)\in\{0,1,\dots,b-1\}\)</span>. The <strong>radical inverse</strong> of <span class="math inline">\(n\)</span> in base <span class="math inline">\(b\)</span> is obtained by reflecting these digits about the radix point (the radix point is the base-<span class="math inline">\(b\)</span> analogue of the decimal point, the marker separating the integer digits from the fractional digits), <span id="eq-sf-radical-inverse"><span class="math display">\[
+\varphi_b(n)=\sum_{\ell\ge 0}a_\ell(n)\,b^{-\ell-1}\in[0,1).
+\tag{D.25}\]</span></span> The <strong>van der Corput sequence</strong> in base <span class="math inline">\(b\)</span> is <span class="math inline">\(\big(\varphi_b(n)\big)_{n\ge 0}\)</span>, and its base-<span class="math inline">\(2\)</span> instance is the first coordinate of the Sobol’ sequence. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p><em>Reader’s translation.</em> In base <span class="math inline">\(2\)</span> the index <span class="math inline">\(n=6=(110)_2\)</span> has its digits reflected to <span class="math inline">\(0.011_2=\tfrac14+\tfrac18=\tfrac38\)</span>. Feeding <span class="math inline">\(n=1,2,3,\dots\)</span> through <span class="math inline">\(\varphi_2\)</span> therefore lays down the points <span class="math inline">\(\tfrac12,\tfrac14,\tfrac34,\tfrac18,\dots\)</span>, each new one dropped into the largest remaining gap. That is the whole idea of a low-discrepancy sequence: successive points avoid where the earlier ones already sit.</p>
+<div id="prp-radical-inverse-net" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition D.4 (Exact equidistribution of the radical inverse)</strong></span> Fix <span class="math inline">\(b\ge 2\)</span> and <span class="math inline">\(m\ge 1\)</span>, and let <span class="math inline">\(N=b^{m}\)</span>. The first <span class="math inline">\(N\)</span> radical-inverse points <span class="math inline">\(\{\varphi_b(n):0\le n&lt;b^{m}\}\)</span> are exactly the <span class="math inline">\(b^{m}\)</span> left endpoints of the equal subintervals of length <span class="math inline">\(b^{-m}\)</span>, <span id="eq-sf-radical-net"><span class="math display">\[
+\big\{\varphi_b(n):0\le n&lt;b^{m}\big\}=\Big\{0,\ \tfrac{1}{b^{m}},\ \tfrac{2}{b^{m}},\ \dots,\ \tfrac{b^{m}-1}{b^{m}}\Big\}.
+\tag{D.26}\]</span></span> Consequently this point set is a <span class="math inline">\((0,m,1)\)</span>-net in base <span class="math inline">\(b\)</span> in the sense of <a href="../chapters/part5/22-mlnmr-integration.html#def-sobol-net" class="quarto-xref">Definition&nbsp;<span>22.3</span></a>: every elementary interval <span class="math inline">\([c\,b^{-d},(c+1)b^{-d})\)</span> with <span class="math inline">\(0\le d\le m\)</span> contains exactly <span class="math inline">\(b^{m-d}\)</span> of the points. Its star discrepancy (the largest mismatch between the fraction of points inside a box <span class="math inline">\([0,u)\)</span> and the box’s own length <span class="math inline">\(u\)</span>, a single number measuring how unevenly the points are spread) is <span class="math inline">\(D_N^{*}=b^{-m}=1/N\)</span>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>For <span class="math inline">\(0\le n&lt;b^{m}\)</span> only the digits <span class="math inline">\(a_0(n),\dots,a_{m-1}(n)\)</span> can be nonzero, so by <a href="#eq-sf-radical-inverse" class="quarto-xref">Equation&nbsp;<span>D.25</span></a> <span class="math display">\[
+\varphi_b(n)=\sum_{\ell=0}^{m-1}a_\ell(n)\,b^{-\ell-1}
+=b^{-m}\sum_{\ell=0}^{m-1}a_\ell(n)\,b^{\,m-1-\ell}=\frac{r(n)}{b^{m}},
+\qquad r(n):=\sum_{\ell=0}^{m-1}a_\ell(n)\,b^{\,m-1-\ell}.
+\]</span> The map <span class="math inline">\(n\mapsto r(n)\)</span> replaces the digit string <span class="math inline">\((a_0,a_1,\dots,a_{m-1})\)</span> by the integer with reversed digit string <span class="math inline">\((a_{m-1},\dots,a_1,a_0)\)</span>. Digit reversal is a bijection of the set of <span class="math inline">\(m\)</span>-digit base-<span class="math inline">\(b\)</span> strings onto itself, hence <span class="math inline">\(n\mapsto r(n)\)</span> is a bijection of <span class="math inline">\(\{0,1,\dots,b^{m}-1\}\)</span> onto itself. Therefore <span class="math inline">\(\{\varphi_b(n):0\le n&lt;b^{m}\}=\{r/b^{m}:0\le r&lt;b^{m}\}\)</span>, which is <a href="#eq-sf-radical-net" class="quarto-xref">Equation&nbsp;<span>D.26</span></a>.</p>
+<p>For the net property, an elementary interval <span class="math inline">\([c\,b^{-d},(c+1)b^{-d})\)</span> of length <span class="math inline">\(b^{-d}\)</span> with <span class="math inline">\(d\le m\)</span> is the union of exactly <span class="math inline">\(b^{m-d}\)</span> of the grid cells <span class="math inline">\([r b^{-m},(r+1)b^{-m})\)</span>, namely those with <span class="math inline">\(c\,b^{m-d}\le r&lt;(c+1)b^{m-d}\)</span>. Since <a href="#eq-sf-radical-net" class="quarto-xref">Equation&nbsp;<span>D.26</span></a> places exactly one point at each grid left endpoint <span class="math inline">\(r/b^{m}\)</span>, the interval contains exactly <span class="math inline">\(b^{m-d}\)</span> points, which is <span class="math inline">\(b^{t}\)</span> with <span class="math inline">\(t=0\)</span>; this is the defining property of a <span class="math inline">\((0,m,1)\)</span>-net (<a href="../chapters/part5/22-mlnmr-integration.html#def-sobol-net" class="quarto-xref">Definition&nbsp;<span>22.3</span></a>). For the star discrepancy, the local discrepancy <span class="math inline">\(\Delta_N(u)=\frac1N\#\{n:\varphi_b(n)&lt;u\}-u\)</span> of the grid <span class="math inline">\(\{r/N\}\)</span> satisfies, for <span class="math inline">\(u\in\big(\tfrac{j}{N},\tfrac{j+1}{N}\big]\)</span>, <span class="math inline">\(\#\{r/N&lt;u\}=j+1\)</span> or <span class="math inline">\(j\)</span> depending on whether <span class="math inline">\(u\)</span> exceeds the right cell endpoint, so <span class="math inline">\(|\Delta_N(u)|\le 1/N\)</span>, attained as <span class="math inline">\(u\uparrow (j+1)/N\)</span>; hence <span class="math inline">\(D_N^{*}=\sup_u|\Delta_N(u)|=1/N\)</span> (<a href="../chapters/part5/22-mlnmr-integration.html#def-star-discrepancy" class="quarto-xref">Definition&nbsp;<span>22.1</span></a>). <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>From the exact net to the sequence rate.</strong> <a href="#prp-radical-inverse-net" class="quarto-xref">Proposition&nbsp;<span>D.4</span></a> controls the point set of size exactly <span class="math inline">\(N=b^{m}\)</span>. For an arbitrary truncation length <span class="math inline">\(N\)</span>, not a power of <span class="math inline">\(b\)</span>, the van der Corput sequence has star discrepancy <span class="math inline">\(D_N^{*}=O\big((\log N)/N\big)\)</span>, the one-dimensional low-discrepancy rate; the proof decomposes <span class="math inline">\(N\)</span> into its base-<span class="math inline">\(b\)</span> digits and applies the exact-net bound on each dyadic block, the <span class="math inline">\(\log N\)</span> factor counting the blocks. This is the <span class="math inline">\(d=1\)</span> case of the Sobol’ rate <span class="math inline">\(D_N^{*}=O((\log N)^{d}/N)\)</span> quoted in <a href="../chapters/part5/22-mlnmr-integration.html#def-sobol-net" class="quarto-xref">Definition&nbsp;<span>22.3</span></a>, and it is realized in the seven-point worked example below. The contrast with the <span class="math inline">\(N^{-1/2}\)</span> spread of independent uniform points (<a href="../chapters/part5/22-mlnmr-integration.html#thm-mc-rmse" class="quarto-xref">Theorem&nbsp;<span>22.2</span></a>) is the quasi-Monte Carlo advantage. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>The full Sobol’ sequence replaces the digit-reversal of <a href="#eq-sf-radical-inverse" class="quarto-xref">Equation&nbsp;<span>D.25</span></a>, which is multiplication of the digit vector by the identity matrix, with multiplication by a carefully chosen matrix over <span class="math inline">\(\mathbb{F}_2=\{0,1\}\)</span>, a different matrix per coordinate. This is the digital construction.</p>
+<div id="def-sobol-construction" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition D.4 (Digital nets and the Sobol’ generating matrices)</strong></span> Work in base <span class="math inline">\(b=2\)</span> and identify a point <span class="math inline">\(u\in[0,1)\)</span> with its binary digit vector <span class="math inline">\(u=\sum_{k\ge 1}y_k 2^{-k}\)</span>, <span class="math inline">\(y_k\in\mathbb{F}_2\)</span>. For each coordinate <span class="math inline">\(i=1,\dots,s\)</span> fix a <strong>generating matrix</strong> <span class="math inline">\(C_i\in\mathbb{F}_2^{\,w\times w}\)</span> (entries in <span class="math inline">\(\mathbb{F}_2\)</span>, with <span class="math inline">\(w\)</span> the working bit depth). The <span class="math inline">\(i\)</span>-th coordinate of the <span class="math inline">\(n\)</span>-th digital point is defined by carrying the binary digits of <span class="math inline">\(n\)</span> through <span class="math inline">\(C_i\)</span> with arithmetic over <span class="math inline">\(\mathbb{F}_2\)</span>: writing <span class="math inline">\(n=\sum_{\ell\ge 0}a_\ell(n)2^{\ell}\)</span> and <span class="math inline">\(\mathbf{a}(n)=(a_0(n),a_1(n),\dots)^\top\)</span>, <span id="eq-sf-digital-point"><span class="math display">\[
+\mathbf{y}^{(i)}=C_i\,\mathbf{a}(n)\ \ (\text{mod }2),\qquad
+u_{n,i}=\sum_{k\ge 1}y^{(i)}_k\,2^{-k}.
+\tag{D.27}\]</span></span> Taking <span class="math inline">\(C_i=I\)</span> (the identity) recovers the radical inverse <span class="math inline">\(u_{n,i}=\varphi_2(n)\)</span> of <a href="#eq-sf-radical-inverse" class="quarto-xref">Equation&nbsp;<span>D.25</span></a>. The <strong>Sobol’ sequence</strong> is the digital sequence whose <span class="math inline">\(i\)</span>-th generating matrix <span class="math inline">\(C_i\)</span> has, as its columns, the binary expansions of the <strong>direction numbers</strong> <span class="math inline">\(v_{i,\ell}=m_{i,\ell}2^{-\ell}\)</span> (a fixed list of dyadic fractions, one per bit level <span class="math inline">\(\ell\)</span>, that encodes how coordinate <span class="math inline">\(i\)</span> is scrambled) generated from a <strong>primitive polynomial</strong> over <span class="math inline">\(\mathbb{F}_2\)</span> (an irreducible polynomial whose root generates every nonzero element of a binary field, the standard device for producing a maximal-length binary recurrence) by the recurrence of <a href="../chapters/part5/22-mlnmr-integration.html#eq-qmc-sobol-point" class="quarto-xref">Equation&nbsp;<span>22.11</span></a>; with that choice <a href="#eq-sf-digital-point" class="quarto-xref">Equation&nbsp;<span>D.27</span></a> reproduces <span class="math inline">\(u_{n,i}=\bigoplus_{\ell:\,a_\ell(n)=1}v_{i,\ell}\)</span>, the exclusive-or of the selected direction numbers. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div id="exm-sf-digital-2d" class="theorem example">
+<p><span class="theorem-title"><strong>Example D.4 (A four-point digital net in two dimensions)</strong></span> The smallest example that shows “balanced in every box” beyond one dimension uses base <span class="math inline">\(2\)</span>, resolution <span class="math inline">\(m=2\)</span>, and <span class="math inline">\(s=2\)</span> coordinates, so <span class="math inline">\(N=2^{2}=4\)</span> points. Take the first coordinate to be the radical inverse, <span class="math inline">\(C_1=I_2\)</span>, and the second to be generated by <span class="math display">\[
+C_2=\begin{pmatrix}1&amp;1\\0&amp;1\end{pmatrix}\ \ (\text{over }\mathbb{F}_2).
+\]</span> Running <span class="math inline">\(n=0,1,2,3\)</span> with index bits <span class="math inline">\(\mathbf{a}(n)=(a_0,a_1)^\top\)</span> through <a href="#eq-sf-digital-point" class="quarto-xref">Equation&nbsp;<span>D.27</span></a> gives the four points <span class="math display">\[
+(0,0),\quad\Big(\tfrac12,\tfrac12\Big),\quad\Big(\tfrac14,\tfrac34\Big),\quad\Big(\tfrac34,\tfrac14\Big).
+\]</span> This set is a <span class="math inline">\((0,2,2)\)</span>-net: every elementary box of area <span class="math inline">\(2^{-2}=\tfrac14\)</span> holds exactly one point. There are three shapes of such box, one per split <span class="math inline">\((d_1,d_2)\)</span> of the two available resolution levels. The four vertical quarter-strips <span class="math inline">\([j/4,(j+1)/4)\times[0,1)\)</span> each catch one point, because the <span class="math inline">\(x\)</span>-coordinates are the four distinct quarters <span class="math inline">\(\{0,\tfrac14,\tfrac12,\tfrac34\}\)</span>; the four horizontal strips likewise, because the <span class="math inline">\(y\)</span>-coordinates are the same four quarters; and the four half-by-half boxes each catch one, as one checks by listing: <span class="math inline">\((0,0)\)</span> and <span class="math inline">\((\tfrac14,\tfrac34)\)</span> lie in the left half, <span class="math inline">\((\tfrac12,\tfrac12)\)</span> and <span class="math inline">\((\tfrac34,\tfrac14)\)</span> in the right, with one high and one low in each. No box of area <span class="math inline">\(\tfrac14\)</span> is empty and none holds two: that is exactly the even coverage the rank condition of <a href="#prp-digital-net-rank" class="quarto-xref">Proposition&nbsp;<span>D.5</span></a> guarantees, here because the row stack <span class="math inline">\(\left(\begin{smallmatrix}1&amp;0\\1&amp;1\end{smallmatrix}\right)\)</span> of the first row of <span class="math inline">\(C_1\)</span> over the first row of <span class="math inline">\(C_2\)</span>, together with <span class="math inline">\(C_1\)</span> and <span class="math inline">\(C_2\)</span> themselves, are each full rank over <span class="math inline">\(\mathbb{F}_2\)</span>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div id="prp-digital-net-rank" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition D.5 (The digital-net equidistribution condition)</strong></span> Let a base-<span class="math inline">\(2\)</span> digital point set <span class="math inline">\(\{(u_{n,1},\dots,u_{n,s}):0\le n&lt;2^{m}\}\)</span> be generated by matrices <span class="math inline">\(C_1,\dots,C_s\in\mathbb{F}_2^{\,m\times m}\)</span> as in <a href="#eq-sf-digital-point" class="quarto-xref">Equation&nbsp;<span>D.27</span></a> (using the low-order <span class="math inline">\(m\)</span> bits). The set is a <span class="math inline">\((t,m,s)\)</span>-net in base <span class="math inline">\(2\)</span> (every elementary interval of volume <span class="math inline">\(2^{t-m}\)</span> holds exactly <span class="math inline">\(2^{t}\)</span> points) provided that for every choice of nonnegative integers <span class="math inline">\(d_1,\dots,d_s\)</span> with <span class="math inline">\(d_1+\cdots+d_s=m-t\)</span>, the <span class="math inline">\((m-t)\times m\)</span> matrix obtained by stacking the <strong>first <span class="math inline">\(d_i\)</span> rows</strong> of each <span class="math inline">\(C_i\)</span> has rank <span class="math inline">\(m-t\)</span> over <span class="math inline">\(\mathbb{F}_2\)</span>. For <span class="math inline">\(s=1\)</span> and <span class="math inline">\(C_1=I\)</span> the condition holds with <span class="math inline">\(t=0\)</span>, recovering <a href="#prp-radical-inverse-net" class="quarto-xref">Proposition&nbsp;<span>D.4</span></a>.</p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>We prove the rank condition is sufficient; the <span class="math inline">\(s=1\)</span> identity case is then immediate and is exactly <a href="#prp-radical-inverse-net" class="quarto-xref">Proposition&nbsp;<span>D.4</span></a>. Fix <span class="math inline">\(d_1,\dots,d_s\)</span> with <span class="math inline">\(\sum_i d_i=m-t\)</span> and consider the elementary interval <span class="math display">\[
+E=\prod_{i=1}^{s}\big[c_i\,2^{-d_i},(c_i+1)2^{-d_i}\big),\qquad 0\le c_i&lt;2^{d_i},
+\]</span> of volume <span class="math inline">\(2^{-(d_1+\cdots+d_s)}=2^{t-m}\)</span>. The condition <span class="math inline">\(u_{n,i}\in[c_i 2^{-d_i},(c_i+1)2^{-d_i})\)</span> constrains exactly the leading <span class="math inline">\(d_i\)</span> binary digits <span class="math inline">\(y^{(i)}_1,\dots,y^{(i)}_{d_i}\)</span> of the <span class="math inline">\(i\)</span>-th coordinate to equal the binary digits of <span class="math inline">\(c_i\)</span>. By <a href="#eq-sf-digital-point" class="quarto-xref">Equation&nbsp;<span>D.27</span></a> each such digit <span class="math inline">\(y^{(i)}_k\)</span> is the inner product over <span class="math inline">\(\mathbb{F}_2\)</span> of the <span class="math inline">\(k\)</span>-th row of <span class="math inline">\(C_i\)</span> with the index vector <span class="math inline">\(\mathbf{a}(n)\in\mathbb{F}_2^{m}\)</span>. Collecting the <span class="math inline">\(\sum_i d_i=m-t\)</span> constrained digits over all coordinates gives a linear system <span class="math inline">\(A\,\mathbf{a}(n)=\mathbf{c}\ (\text{mod }2)\)</span>, where <span class="math inline">\(A\in\mathbb{F}_2^{(m-t)\times m}\)</span> is precisely the stack of the first <span class="math inline">\(d_i\)</span> rows of each <span class="math inline">\(C_i\)</span> and <span class="math inline">\(\mathbf{c}\in\mathbb{F}_2^{m-t}\)</span> encodes the box <span class="math inline">\((c_1,\dots,c_s)\)</span>. By hypothesis <span class="math inline">\(\mathrm{rank}(A)=m-t\)</span>, so <span class="math inline">\(A\)</span> is surjective and the solution set <span class="math inline">\(\{\mathbf{a}\in\mathbb{F}_2^{m}:A\mathbf{a}=\mathbf{c}\}\)</span> is an affine subspace of dimension <span class="math inline">\(m-(m-t)=t\)</span>, containing exactly <span class="math inline">\(2^{t}\)</span> vectors. As <span class="math inline">\(n\)</span> ranges over <span class="math inline">\(\{0,\dots,2^{m}-1\}\)</span> the index vector <span class="math inline">\(\mathbf{a}(n)\)</span> ranges over all of <span class="math inline">\(\mathbb{F}_2^{m}\)</span> bijectively, so exactly <span class="math inline">\(2^{t}\)</span> indices <span class="math inline">\(n\)</span> land in <span class="math inline">\(E\)</span>. Since the box <span class="math inline">\(E\)</span> was an arbitrary elementary interval of volume <span class="math inline">\(2^{t-m}\)</span>, the point set is a <span class="math inline">\((t,m,s)\)</span>-net (<a href="../chapters/part5/22-mlnmr-integration.html#def-sobol-net" class="quarto-xref">Definition&nbsp;<span>22.3</span></a>). For <span class="math inline">\(s=1\)</span>, <span class="math inline">\(C_1=I_m\)</span>: any single <span class="math inline">\(d_1=m\)</span> selects the first <span class="math inline">\(m\)</span> rows of <span class="math inline">\(I_m\)</span>, which is <span class="math inline">\(I_m\)</span>, of rank <span class="math inline">\(m=m-0\)</span>, so <span class="math inline">\(t=0\)</span> and the net is <span class="math inline">\((0,m,1)\)</span>, as in <a href="#prp-radical-inverse-net" class="quarto-xref">Proposition&nbsp;<span>D.4</span></a>. <span class="math inline">\(\square\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>What the rank condition buys, and where Sobol’ directions come from.</strong> <a href="#prp-digital-net-rank" class="quarto-xref">Proposition&nbsp;<span>D.5</span></a> reduces the geometric demand of low discrepancy, exact balance in every dyadic box, to a linear-algebra demand on the generating matrices, full rank of every admissible row-stack over <span class="math inline">\(\mathbb{F}_2\)</span>. The art of constructing a good Sobol’ sequence is choosing the direction numbers so that the resulting matrices <span class="math inline">\(C_i\)</span> keep the net quality parameter <span class="math inline">\(t\)</span> small simultaneously across many coordinates and many resolutions <span class="math inline">\(m\)</span>; the primitive- polynomial recurrence of <a href="../chapters/part5/22-mlnmr-integration.html#eq-qmc-sobol-point" class="quarto-xref">Equation&nbsp;<span>22.11</span></a> guarantees full rank within each single coordinate, and the tabulated initial direction numbers of Joe and Kuo (2008) optimize the joint two-dimensional projections. The whole apparatus serves the one purpose of <a href="../chapters/part5/22-mlnmr-integration.html#thm-hypercube-integration" class="quarto-xref">Theorem&nbsp;<span>22.6</span></a>: a point set whose star discrepancy attains <span class="math inline">\(O((\log N)^{d}/N)\)</span>, so that the Koksma-Hlawka bound <a href="../chapters/part5/22-mlnmr-integration.html#thm-koksma-hlawka" class="quarto-xref">Theorem&nbsp;<span>22.3</span></a> delivers near-<span class="math inline">\(1/N\)</span> integration error for the aggregation integral. The same guarantee carries over unchanged when the integrand is a survival or ordinal likelihood kernel rather than a mean, which is the setting of Chapter 25: the points and the bound do not know what they are integrating. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div id="exm-sf-vandercorput" class="theorem example">
+<p><span class="theorem-title"><strong>Example D.5 (The seven-point van der Corput set)</strong></span> Take <span class="math inline">\(b=2\)</span> and list <span class="math inline">\(\varphi_2(n)\)</span> for <span class="math inline">\(n=1,\dots,7\)</span> by reflecting binary digits about the radix point: <span class="math inline">\(n=1=(1)_2\mapsto 0.1_2=\tfrac12\)</span>; <span class="math inline">\(n=2=(10)_2\mapsto 0.01_2=\tfrac14\)</span>; <span class="math inline">\(n=3=(11)_2\mapsto 0.11_2=\tfrac34\)</span>; <span class="math inline">\(n=4=(100)_2\mapsto 0.001_2=\tfrac18\)</span>; and likewise <span class="math inline">\(\tfrac58,\tfrac38,\tfrac78\)</span> for <span class="math inline">\(n=5,6,7\)</span>. As a set this is <span class="math inline">\(\{\tfrac18,\tfrac28,\tfrac38,\tfrac48,\tfrac58,\tfrac68,\tfrac78\}\)</span>, the seven interior eighths, matching the worked Sobol’ example of <a href="../chapters/part5/22-mlnmr-integration.html#sec-qmc-sobol" class="quarto-xref"><span>Section 22.6</span></a>. Its star discrepancy is <span class="math inline">\(D_7^{*}=\tfrac18\)</span>: the largest gap between the empirical fraction <span class="math inline">\(\frac1N\#\{\varphi_2(n)&lt;u\}\)</span> and <span class="math inline">\(u\)</span> occurs as <span class="math inline">\(u\uparrow k/8\)</span>, where the fraction is <span class="math inline">\(\frac{k-1}{7}\)</span> against the volume <span class="math inline">\(\frac{k}{8}\)</span>, and the maximum of <span class="math inline">\(\big|\frac{k}{8}-\frac{k-1}{7}\big|\)</span> over <span class="math inline">\(k=1,\dots,7\)</span> is <span class="math inline">\(\tfrac18\)</span> at <span class="math inline">\(k=7\)</span>. This is close to <span class="math inline">\(1/N\)</span> and far below the <span class="math inline">\(1/\sqrt7\approx 0.38\)</span> typical of seven independent uniform draws, the discrepancy gap that <a href="#prp-radical-inverse-net" class="quarto-xref">Proposition&nbsp;<span>D.4</span></a> explains and that drives the QMC error advantage of <a href="../chapters/part5/22-mlnmr-integration.html#thm-hypercube-integration" class="quarto-xref">Theorem&nbsp;<span>22.6</span></a>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-sf-notes" class="level2" data-number="D.7">
+<h2 data-number="D.7" class="anchored" data-anchor-id="sec-sf-notes"><span class="header-section-number">D.7</span> Notes and references</h2>
+<p>The moment generating function and the normal MGF <a href="#eq-sf-normal-mgf" class="quarto-xref">Equation&nbsp;<span>D.1</span></a> are developed in Chapter 4 (<a href="../chapters/part1/04-probability.html#def-mgf" class="quarto-xref">Definition&nbsp;<span>4.7</span></a>, <a href="../chapters/part1/04-probability.html#def-mvn" class="quarto-xref">Definition&nbsp;<span>4.13</span></a>, <a href="../chapters/part1/04-probability.html#eq-mvn-mgf" class="quarto-xref">Equation&nbsp;<span>4.13</span></a>); the log-link aggregation corollary <a href="#cor-sf-log-link" class="quarto-xref">Corollary&nbsp;<span>D.1</span></a> restates <a href="../chapters/part5/20-mlnmr-aggregation.html#thm-log-link-mgf" class="quarto-xref">Theorem&nbsp;<span>20.4</span></a> of Chapter 20 (catalogue H.6), whose proof is the same MGF-at-<span class="math inline">\(t=1\)</span> computation. The log-normal mean <span class="math inline">\(\mathbb{E}[e^{W}]=e^{m+v/2}\)</span> is classical. The error function and its relation to <span class="math inline">\(\Phi\)</span> are standard special-function material; the series <a href="#eq-sf-erf-series" class="quarto-xref">Equation&nbsp;<span>D.7</span></a> and the asymptotic expansion <a href="#eq-sf-erfc-asymptotic" class="quarto-xref">Equation&nbsp;<span>D.8</span></a>, with the Mills ratio <span class="math inline">\(1-\Phi(x)\sim\phi(x)/x\)</span>, are in Abramowitz and Stegun, <em>Handbook of Mathematical Functions</em> (Chapter 7), and the integration-by-parts derivation given here is the textbook one.</p>
+<p>Owen’s <span class="math inline">\(T\)</span> function, its tables, and the bivariate normal probability reduction <a href="#eq-sf-owen-general" class="quarto-xref">Equation&nbsp;<span>D.17</span></a> are due to <span class="citation" data-cites="owen1956">Owen (<a href="../references.html#ref-owen1956" role="doc-biblioref">1956</a>)</span>; the function <a href="#eq-sf-owens-t-def" class="quarto-xref">Equation&nbsp;<span>D.9</span></a> and the wedge representation <a href="#eq-sf-owens-t-prob" class="quarto-xref">Equation&nbsp;<span>D.11</span></a> are his. The correlation heat equation <a href="#eq-sf-biv-pde" class="quarto-xref">Equation&nbsp;<span>D.14</span></a> for the bivariate normal density is Plackett’s identity (R. L. Plackett, <em>Biometrika</em> 1954); the differentiate-in-<span class="math inline">\(\rho\)</span> proof of the diagonal identity <a href="#eq-sf-owens-t-identity" class="quarto-xref">Equation&nbsp;<span>D.15</span></a> is the standard route and is given here in full. The expected-squared-probit identity <a href="#eq-sf-expected-squared-probit" class="quarto-xref">Equation&nbsp;<span>D.18</span></a> is the second-moment companion of the probit aggregation result <a href="../chapters/part5/20-mlnmr-aggregation.html#prp-agg-probit-closed-form" class="quarto-xref">Proposition&nbsp;<span>20.1</span></a> of Chapter 20, which is itself the Gaussian probit integral <a href="../chapters/part3/16-limits-of-nma.html#lem-limits-probit-integral" class="quarto-xref">Lemma&nbsp;<span>16.4</span></a> of Chapter 16; the conditioning argument <span class="math inline">\(\Phi(a+bZ)=P(U\le a+bZ\mid Z)\)</span> is the same device used there.</p>
+<p>The probit approximations to the logistic function have a long history in psychometrics and in the logistic-versus-probit literature. The slope-matched constant <span class="math inline">\(\kappa=\sqrt{\pi/8}\)</span> of <a href="#thm-probit-logit-approximation" class="quarto-xref">Theorem&nbsp;<span>D.4</span></a> is the one quoted in <a href="../chapters/part5/20-mlnmr-aggregation.html#thm-logit-no-closed-form" class="quarto-xref">Theorem&nbsp;<span>20.5</span></a>; the maximum-error-optimal constant <span class="math inline">\(\kappa^\star\approx 0.5876\)</span> noted in the remark is from the approximation literature (Page, <em>Journal of Statistical Computation and Simulation</em> 1977). The scale-mixture viewpoint underlying the two-probit construction <a href="#prp-two-probit-logit" class="quarto-xref">Proposition&nbsp;<span>D.3</span></a>, that the logistic distribution is a Gaussian scale mixture and that a two-point quadrature of the mixing law yields a sum of two probits, follows Monahan and Stefanski (in <em>Handbook of the Logistic Distribution</em>, 1992); the coefficients <a href="#eq-sf-two-probit-coeffs" class="quarto-xref">Equation&nbsp;<span>D.23</span></a> are derived here by Taylor matching and verified numerically, and the two-probit aggregate <a href="#eq-sf-two-probit-aggregate" class="quarto-xref">Equation&nbsp;<span>D.24</span></a> reproduces the Chapter 22 worked integral <a href="../chapters/part5/22-mlnmr-integration.html#exm-qmc-logit" class="quarto-xref">Example&nbsp;<span>22.3</span></a> to four decimals.</p>
+<p>The radical inverse <a href="#eq-sf-radical-inverse" class="quarto-xref">Equation&nbsp;<span>D.25</span></a> and the van der Corput sequence are the base case of the low-discrepancy theory of Chapter 22; the exact-equidistribution result <a href="#prp-radical-inverse-net" class="quarto-xref">Proposition&nbsp;<span>D.4</span></a> and its <span class="math inline">\((0,m,1)\)</span>-net reading are elementary and self-contained here, and the general digital-net rank condition <a href="#prp-digital-net-rank" class="quarto-xref">Proposition&nbsp;<span>D.5</span></a> is the base-<span class="math inline">\(2\)</span> case of Niederreiter’s theory of <span class="math inline">\((t,m,s)\)</span>-nets (Niederreiter, <em>Random Number Generation and Quasi-Monte Carlo Methods</em>, 1992, Chapter 4). The Sobol’ construction <a href="#def-sobol-construction" class="quarto-xref">Definition&nbsp;<span>D.4</span></a>, the direction-number recurrence, and the discrepancy rate are from <span class="citation" data-cites="sobol1967">Sobol’ (<a href="../references.html#ref-sobol1967" role="doc-biblioref">1967</a>)</span>, with the modern direction tables of Joe and Kuo (2008); the construction is consistent with <a href="../chapters/part5/22-mlnmr-integration.html#def-sobol-net" class="quarto-xref">Definition&nbsp;<span>22.3</span></a> of Chapter 22, of which it is the generating-matrix formulation. None of the special-function material of this appendix is part of the Coq development, which formalizes the population-adjustment and causal core of the book and not the numerical-integration theory; no machine-checked tags are claimed.</p>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-owen1956" class="csl-entry" role="listitem">
+Owen, Donald B. 1956. <span>“Tables for Computing Bivariate Normal Probabilities.”</span> <em>The Annals of Mathematical Statistics</em> 27 (4): 1075–90.
+</div>
+<div id="ref-sobol1967" class="csl-entry" role="listitem">
+Sobol’, Ilya M. 1967. <span>“On the Distribution of Points in a Cube and the Approximate Evaluation of Integrals.”</span> <em>USSR Computational Mathematics and Mathematical Physics</em> 7 (4): 86–112.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/choxos\.github\.io\/Mathematics-of-ITC\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../appendices/C-distributions.html" class="pagination-link" aria-label="Probability Distributions">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">Probability Distributions</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../appendices/E-reference-implementations.html" class="pagination-link" aria-label="Reference Implementations: multinma, mlumr, and uitc">
+        <span class="nav-page-text"><span class="chapter-number">E</span>&nbsp; <span class="chapter-title">Reference Implementations: multinma, mlumr, and uitc</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

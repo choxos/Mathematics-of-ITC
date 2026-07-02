@@ -1,0 +1,1603 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>Appendix C — Probability Distributions – The Mathematics of Indirect Treatment Comparisons</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../">
+<link href="../appendices/D-special-functions.html" rel="next">
+<link href="../appendices/B-matrix-calculus.html" rel="prev">
+<script src="../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../site_libs/quarto-html/popper.min.js"></script>
+<script src="../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../site_libs/bootstrap/bootstrap-aafe154f14b83768199b70e6209de778.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../appendices/A-notation-glossary.html">Appendices</a></li><li class="breadcrumb-item"><a href="../appendices/C-distributions.html"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">Probability Distributions</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../">The Mathematics of Indirect Treatment Comparisons</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/choxos/Mathematics-of-ITC" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../notation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Notation and Conventions</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part I: Mathematical Foundations</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/01-linear-algebra-i.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Linear Algebra I: Vector Spaces, Linear Maps, and Rank</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/02-linear-algebra-ii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Linear Algebra II: Orthogonality and the Projection Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/03-linear-algebra-iii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Linear Algebra III: Spectral Theory and Quadratic Forms</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/04-probability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Probability and Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/05-inference.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Statistical Inference</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/06-linear-regression.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Linear Regression from First Principles</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/07-glm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Generalized Linear Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part1/08-hierarchical-bayes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Hierarchical Models, Shrinkage, and Bayesian Inference</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Causal Inference and Estimands</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part2/09-potential-outcomes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Potential Outcomes and Identification</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part2/10-adjustment-methods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Adjustment Methods</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part2/11-effect-modification-collapsibility.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Effect Modification, Interaction, and Collapsibility</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part2/12-transportability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Transportability: The Estimand-Based Theory</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Meta-Analysis and Network Meta-Analysis</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part3/13-pairwise-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Pairwise Meta-Analysis</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part3/14-bucher.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Indirect Comparison and Bucher’s Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part3/15-network-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Network Meta-Analysis: Models and Identifiability</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part3/16-limits-of-nma.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">The Limits of Standard Network Meta-Analysis</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Population Adjustment: MAIC and STC</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part4/17-population-adjustment-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Population Adjustment Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part4/18-maic.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">Matching-Adjusted Indirect Comparison</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part4/19-stc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Simulated Treatment Comparison</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part V: Multilevel Network Meta-Regression</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/20-mlnmr-aggregation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression I: The Aggregation Principle</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/21-mlnmr-discrete.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression II: Discrete Outcomes and Approximation Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/22-mlnmr-integration.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression III: Numerical Integration Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/23-mlnmr-estimands.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression IV: Estimands, Identifiability, and Generality</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/24-computation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Bayesian Computation and Diagnostics</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/25-general-likelihoods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">General Likelihoods: Survival and Ordered Categorical Outcomes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part5/26-ml-umr.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Multilevel Unanchored Meta-Regression</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part VI: Bias, Comparator Selection, and Rigor</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part6/27-distance-matching.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Aggregate-Level Covariate-Distance Matching</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part6/28-qba.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Quantitative Bias Analysis for Indirect Comparisons</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part6/29-simulation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Simulation Study Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../chapters/part6/30-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Machine-Checked Foundations: The Coq Formalization</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/A-notation-glossary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Notation Glossary</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/B-matrix-calculus.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Matrix Calculus</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/C-distributions.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">Probability Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/D-special-functions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">D</span>&nbsp; <span class="chapter-title">Special Functions for Numerical Integration</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/E-reference-implementations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">E</span>&nbsp; <span class="chapter-title">Reference Implementations: multinma, mlumr, and uitc</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/F-solutions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">F</span>&nbsp; <span class="chapter-title">Solutions to Selected Exercises</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../appendices/G-reading-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">G</span>&nbsp; <span class="chapter-title">Reading the Coq Proofs</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#sec-dist-howto" id="toc-sec-dist-howto" class="nav-link active" data-scroll-target="#sec-dist-howto"><span class="header-section-number">C.1</span> How to read this appendix</a></li>
+  <li><a href="#sec-dist-conventions" id="toc-sec-dist-conventions" class="nav-link" data-scroll-target="#sec-dist-conventions"><span class="header-section-number">C.2</span> Conventions</a></li>
+  <li><a href="#sec-dist-discrete" id="toc-sec-dist-discrete" class="nav-link" data-scroll-target="#sec-dist-discrete"><span class="header-section-number">C.3</span> Discrete distributions</a></li>
+  <li><a href="#sec-dist-continuous" id="toc-sec-dist-continuous" class="nav-link" data-scroll-target="#sec-dist-continuous"><span class="header-section-number">C.4</span> Continuous univariate distributions</a></li>
+  <li><a href="#sec-dist-mvn" id="toc-sec-dist-mvn" class="nav-link" data-scroll-target="#sec-dist-mvn"><span class="header-section-number">C.5</span> The multivariate normal</a></li>
+  <li><a href="#sec-dist-dirichlet" id="toc-sec-dist-dirichlet" class="nav-link" data-scroll-target="#sec-dist-dirichlet"><span class="header-section-number">C.6</span> The Dirichlet distribution</a></li>
+  <li><a href="#sec-dist-standard-normal" id="toc-sec-dist-standard-normal" class="nav-link" data-scroll-target="#sec-dist-standard-normal"><span class="header-section-number">C.7</span> The standard normal function and density</a></li>
+  <li><a href="#sec-dist-conjugacy" id="toc-sec-dist-conjugacy" class="nav-link" data-scroll-target="#sec-dist-conjugacy"><span class="header-section-number">C.8</span> Conjugate pairs</a></li>
+  <li><a href="#sec-dist-notes" id="toc-sec-dist-notes" class="nav-link" data-scroll-target="#sec-dist-notes"><span class="header-section-number">C.9</span> Notes and references</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../appendices/A-notation-glossary.html">Appendices</a></li><li class="breadcrumb-item"><a href="../appendices/C-distributions.html"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">Probability Distributions</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title">Appendix C — Probability Distributions</h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>This appendix is a reference catalogue of the probability distributions used in the book. For each family we record the support, the probability mass or density function, the mean, the variance, and the moment generating function where it exists. The discrete families (Bernoulli, binomial, Poisson binomial, Poisson) and the normal, multivariate normal, and standard normal are defined and their moments derived in <a href="../chapters/part1/04-probability.html#sec-distributions" class="quarto-xref"><span>Section 4.11</span></a> and <a href="../chapters/part1/04-probability.html#sec-mvn" class="quarto-xref"><span>Section 4.12</span></a> of Chapter 4; this appendix collects those results and adds the further families (exponential, gamma, beta, Weibull, Dirichlet) that appear later as survival baselines in Chapters 25 and 26 and as conjugate priors in Chapter 8. Nothing here is proved that is not proved in the chapters or that does not follow by a one-line calculation; the value of the appendix is a single place to look up a defining formula. For the symbols used throughout, see <a href="../notation.html">Notation</a>.</p>
+<section id="sec-dist-howto" class="level2" data-number="C.1">
+<h2 data-number="C.1" class="anchored" data-anchor-id="sec-dist-howto"><span class="header-section-number">C.1</span> How to read this appendix</h2>
+<p>The fastest way to use this catalogue is to first name the <strong>modeling role</strong> you are in, then look up the family. Every distribution in the book plays one of six roles:</p>
+<ol type="1">
+<li>an <strong>outcome likelihood</strong>, the model for the observed data on one arm of a trial (a binomial for responders, a Poisson for event counts, a normal for a continuous endpoint);</li>
+<li>a <strong>prior</strong>, the distribution placed on an unknown parameter before seeing data (a beta on a response probability, a gamma on a rate, a normal on a treatment effect);</li>
+<li>a <strong>covariate model</strong>, the distribution of baseline patient characteristics (a multivariate normal for correlated covariates);</li>
+<li>a <strong>discrete aggregation device</strong>, used to turn individual-level risks into an aggregate event count (the Poisson binomial and its Poisson approximation in Part V);</li>
+<li>a <strong>survival baseline</strong>, the model for a time-to-event outcome (exponential, Weibull); or</li>
+<li>a <strong>numerical integration device</strong>, used to average an individual likelihood over a covariate distribution (the standard normal and the Gaussian copula in the ML-NMR integration of Chapter 22).</li>
+</ol>
+<p><a href="#tbl-dist-roles" class="quarto-xref">Table&nbsp;<span>C.1</span></a> maps each family to the clinical object it typically models and to the chapters that use it. A reader browsing this appendix should start there, identify the role, and then read only the relevant catalogue entry.</p>
+<div id="tbl-dist-roles" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-dist-roles-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;C.1: Distribution-to-role map. Read this first: name the role (likelihood, prior, covariate model, aggregation device, survival baseline, integration device), then read the matching catalogue entry.
+</figcaption>
+<div aria-describedby="tbl-dist-roles-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Distribution</th>
+<th>Typical health-data object</th>
+<th>Role in this book</th>
+<th>Where it appears</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Bernoulli, binomial</td>
+<td>responders out of randomized patients (binary endpoint)</td>
+<td>outcome likelihood</td>
+<td>Ch. 4, 7, 13; Part V</td>
+</tr>
+<tr class="even">
+<td>Poisson</td>
+<td>event counts, or events per person-time</td>
+<td>outcome likelihood</td>
+<td>Ch. 7; count aggregation <a href="../chapters/part5/21-mlnmr-discrete.html#sec-poisson-aggregate" class="quarto-xref"><span>Section 21.4</span></a></td>
+</tr>
+<tr class="odd">
+<td>Poisson binomial</td>
+<td>aggregate event count from patients with unequal risks</td>
+<td>discrete aggregation device</td>
+<td><a href="../chapters/part5/21-mlnmr-discrete.html#sec-pobin" class="quarto-xref"><span>Section 21.5</span></a> (Ch. 21)</td>
+</tr>
+<tr class="even">
+<td>Multinomial</td>
+<td>counts across more than two response categories</td>
+<td>outcome likelihood</td>
+<td>Ch. 8 conjugacy</td>
+</tr>
+<tr class="odd">
+<td>Normal</td>
+<td>a continuous endpoint; an estimated log-effect; a prior</td>
+<td>likelihood, approximate likelihood, prior</td>
+<td>Ch. 4, 6, 8, 13</td>
+</tr>
+<tr class="even">
+<td>Multivariate normal</td>
+<td>correlated baseline covariates; random effects; copula scores</td>
+<td>covariate model, random-effects prior, integration device</td>
+<td>Ch. 4, 8; <a href="../chapters/part5/22-mlnmr-integration.html#sec-qmc-gaussian" class="quarto-xref"><span>Section 22.9</span></a> (Ch. 22)</td>
+</tr>
+<tr class="odd">
+<td>Beta</td>
+<td>a single response probability</td>
+<td>prior on a probability</td>
+<td>Ch. 8</td>
+</tr>
+<tr class="even">
+<td>Dirichlet</td>
+<td>a vector of category probabilities summing to one</td>
+<td>prior on a probability vector</td>
+<td>Ch. 8; this appendix</td>
+</tr>
+<tr class="odd">
+<td>Gamma</td>
+<td>a positive rate, or a precision</td>
+<td>prior on a rate or precision; survival baseline</td>
+<td>Ch. 8; Ch. 25, 26</td>
+</tr>
+<tr class="even">
+<td>Exponential</td>
+<td>time to event with constant hazard</td>
+<td>survival baseline</td>
+<td>Ch. 25, 26</td>
+</tr>
+<tr class="odd">
+<td>Weibull</td>
+<td>time to event with a rising or falling hazard</td>
+<td>survival baseline</td>
+<td><a href="../chapters/part5/25-general-likelihoods.html#sec-genlik-survival" class="quarto-xref"><span>Section 25.3</span></a> (Ch. 25), 26</td>
+</tr>
+<tr class="even">
+<td>Standard normal <span class="math inline">\(\Phi,\phi\)</span></td>
+<td>probit link; normal scores for QMC integration</td>
+<td>link function, integration device</td>
+<td>Ch. 7; <a href="../chapters/part5/22-mlnmr-integration.html#sec-qmc-pit" class="quarto-xref"><span>Section 22.7</span></a>, <a href="../chapters/part5/22-mlnmr-integration.html#sec-qmc-gaussian" class="quarto-xref"><span>Section 22.9</span></a> (Ch. 22)</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</section>
+<section id="sec-dist-conventions" class="level2" data-number="C.2">
+<h2 data-number="C.2" class="anchored" data-anchor-id="sec-dist-conventions"><span class="header-section-number">C.2</span> Conventions</h2>
+<p>Three plain-language reminders precede the formulas, because the tables below mix objects of different kinds. The <strong>support</strong> of a distribution is the set of values the random variable can actually take, that is, the values where the mass or density is positive; everything outside the support has probability zero (for a binomial the support is <span class="math inline">\(\{0,1,\dots,n\}\)</span>, for a Weibull survival time it is <span class="math inline">\((0,\infty)\)</span>). A <strong>mass function</strong> <span class="math inline">\(P(X=k)\)</span> gives a genuine probability at each point of a discrete support and never exceeds <span class="math inline">\(1\)</span>. A <strong>density</strong> <span class="math inline">\(f(x)\)</span> does not: it is a rate of probability per unit length, and an actual probability is recovered only by integrating <span class="math inline">\(f\)</span> over an interval, so a density can exceed <span class="math inline">\(1\)</span> (a tightly concentrated normal has a peak above <span class="math inline">\(1\)</span>) even though no probability ever does. This is why a density value is not itself a probability.</p>
+<p>The <strong>moment generating function</strong> (MGF) of a random vector <span class="math inline">\(X\)</span> is <span class="math inline">\(M_X(\mathbf{t})=\mathbb{E}[e^{\mathbf{t}^{\top}X}]\)</span>, written <span class="math inline">\(M_X(t)=\mathbb{E}[e^{tX}]\)</span> in the scalar case (<a href="../chapters/part1/04-probability.html#def-mgf" class="quarto-xref">Definition&nbsp;<span>4.7</span></a>). We say the MGF <em>exists</em> when it is finite for all <span class="math inline">\(\mathbf{t}\)</span> in an open neighborhood of the origin; in that case it determines all moments by differentiation at the origin (<a href="../chapters/part1/04-probability.html#thm-mgf-moments" class="quarto-xref">Theorem&nbsp;<span>4.10</span></a>) and determines the law uniquely (<a href="../chapters/part1/04-probability.html#thm-mgf-uniqueness" class="quarto-xref">Theorem&nbsp;<span>4.11</span></a>). Intuitively the MGF is a bookkeeping device: because <span class="math inline">\(\frac{d}{dt}e^{tX}=X e^{tX}\)</span>, each derivative evaluated at <span class="math inline">\(t=0\)</span> pulls down one extra factor of <span class="math inline">\(X\)</span>, so <span class="math inline">\(M_X^{(r)}(0)=\mathbb{E}[X^{r}]\)</span> and the entire sequence of moments is stored in one function. That is the only reason the MGF earns a column in the tables below: given the MGF, the mean and variance are two derivatives away. For some families with a finite MGF the function has no elementary closed form; for the beta and Weibull families this is noted in the catalogue, and for the Dirichlet the joint MGF on the ambient space is degenerate.</p>
+<p><em>(Advanced; skip on a first pass.)</em> “Degenerate on the ambient space” means the following. When the support lies in a hyperplane, as it does for the Dirichlet whose components satisfy <span class="math inline">\(\sum_k x_k=1\)</span>, one coordinate is fixed by the others, namely <span class="math inline">\(x_K=1-\sum_{k&lt;K}x_k\)</span>. The joint MGF on <span class="math inline">\(\mathbb{R}^{K}\)</span> is then really a function of only <span class="math inline">\(K-1\)</span> free arguments and cannot characterize the law in the usual full-rank way, so we describe such a family by its moments instead of by an MGF. This is why the Dirichlet row lists moments rather than an MGF.</p>
+<p>Two special functions recur. The <strong>gamma function</strong> is <span id="eq-dist-gamma-function"><span class="math display">\[
+\Gamma(s)=\int_0^{\infty} u^{s-1}e^{-u}\,du,\qquad s&gt;0,
+\tag{C.1}\]</span></span> which satisfies <span class="math inline">\(\Gamma(s+1)=s\,\Gamma(s)\)</span> and <span class="math inline">\(\Gamma(n)=(n-1)!\)</span> for positive integers <span class="math inline">\(n\)</span>; it is the continuous interpolation of the factorial and appears in the normalizing constants of the gamma, beta, Weibull, and Dirichlet densities. The <strong>beta function</strong> is <span id="eq-dist-beta-function"><span class="math display">\[
+B(a,b)=\int_0^1 u^{a-1}(1-u)^{b-1}\,du=\frac{\Gamma(a)\,\Gamma(b)}{\Gamma(a+b)},\qquad a,b&gt;0,
+\tag{C.2}\]</span></span> and its multivariate form, used by the Dirichlet density, is <span class="math inline">\(B(\boldsymbol{\alpha})=\prod_{k=1}^K\Gamma(\alpha_k)\big/\Gamma\!\big(\sum_{k=1}^K\alpha_k\big)\)</span>; the scalar <span class="math inline">\(B(a,b)\)</span> is the <span class="math inline">\(K=2\)</span> case of the vector <span class="math inline">\(B(\boldsymbol{\alpha})\)</span>, so the two share a symbol on purpose. The numerical evaluation of these functions, together with the error function below, is treated in <a href="../appendices/D-special-functions.html">Appendix D</a>.</p>
+<p>We fix two parametrization conventions that are sources of confusion across the literature. The gamma and exponential families are parametrized by a <strong>rate</strong>, so that <span class="math inline">\(\mathrm{Gamma}(\alpha,\beta)\)</span> has shape <span class="math inline">\(\alpha\)</span>, rate <span class="math inline">\(\beta\)</span>, and mean <span class="math inline">\(\alpha/\beta\)</span>; this matches the convention of <a href="../chapters/part1/08-hierarchical-bayes.html#prp-conjugate-gamma-poisson" class="quarto-xref">Proposition&nbsp;<span>8.1</span></a> in Chapter 8. The Weibull family is parametrized by a shape and a <strong>scale</strong>, related to the proportional-hazards parametrization of Chapter 25 as recorded below. A rate has units of events per unit of the variable, so a larger rate means shorter times; a scale has the units of the variable itself, so a larger scale means longer times. Because closely related survival families are written with a rate, a scale, or a hazard depending on the chapter, <a href="#tbl-dist-param" class="quarto-xref">Table&nbsp;<span>C.2</span></a> gathers the three side by side.</p>
+<div id="tbl-dist-param" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-dist-param-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;C.2: Parametrization cheat sheet. The gamma and exponential use a <strong>rate</strong> (events per unit, larger means shorter times); the Weibull table uses a <strong>scale</strong> (a typical time, larger means longer times); Chapter 25 rewrites the Weibull through its <strong>hazard</strong> with shape <span class="math inline">\(\nu=k\)</span> and coefficient <span class="math inline">\(\lambda(\mathbf{x})=\lambda^{-\nu}\)</span>. All three describe the same families with different symbols. A Bayesian <strong>precision</strong> means the reciprocal of a variance, <span class="math inline">\(1/\sigma^{2}\)</span>; the normal conjugacy of <a href="#sec-dist-conjugacy" class="quarto-xref"><span>Section C.8</span></a> adds precisions rather than variances.
+</figcaption>
+<div aria-describedby="tbl-dist-param-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Family</th>
+<th>Parameters (this book)</th>
+<th>Symbols</th>
+<th>Mean in terms of them</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Exponential</td>
+<td>rate</td>
+<td><span class="math inline">\(\lambda\)</span></td>
+<td><span class="math inline">\(1/\lambda\)</span></td>
+</tr>
+<tr class="even">
+<td>Gamma</td>
+<td>shape, rate</td>
+<td><span class="math inline">\(\alpha,\ \beta\)</span></td>
+<td><span class="math inline">\(\alpha/\beta\)</span></td>
+</tr>
+<tr class="odd">
+<td>Weibull (this appendix)</td>
+<td>shape, scale</td>
+<td><span class="math inline">\(k,\ \lambda\)</span></td>
+<td><span class="math inline">\(\lambda\,\Gamma(1+1/k)\)</span></td>
+</tr>
+<tr class="even">
+<td>Weibull (Chapter 25 hazard form)</td>
+<td>shape, rate-type coefficient</td>
+<td><span class="math inline">\(\nu,\ \lambda(\mathbf{x})\)</span></td>
+<td>via <span class="math inline">\(S(t)=\exp(-\lambda(\mathbf{x})\,t^{\nu})\)</span></td>
+</tr>
+<tr class="odd">
+<td>Normal</td>
+<td>mean, variance</td>
+<td><span class="math inline">\(\mu,\ \sigma^{2}\)</span></td>
+<td><span class="math inline">\(\mu\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+</section>
+<section id="sec-dist-discrete" class="level2" data-number="C.3">
+<h2 data-number="C.3" class="anchored" data-anchor-id="sec-dist-discrete"><span class="header-section-number">C.3</span> Discrete distributions</h2>
+<p>The four discrete families are defined in <a href="../chapters/part1/04-probability.html#def-bernoulli" class="quarto-xref">Definition&nbsp;<span>4.8</span></a>, <a href="../chapters/part1/04-probability.html#def-binomial" class="quarto-xref">Definition&nbsp;<span>4.9</span></a>, <a href="../chapters/part1/04-probability.html#def-poisson-binomial" class="quarto-xref">Definition&nbsp;<span>4.11</span></a>, and <a href="../chapters/part1/04-probability.html#def-poisson" class="quarto-xref">Definition&nbsp;<span>4.10</span></a>. Their moment generating functions are finite for every <span class="math inline">\(t\in\mathbb{R}\)</span>.</p>
+<div id="tbl-dist-discrete" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-dist-discrete-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;C.3: Discrete distributions used in the book. In the Poisson binomial row <span class="math inline">\(S\)</span> ranges over the subsets of <span class="math inline">\(\{1,\dots,n\}\)</span> of size <span class="math inline">\(k\)</span>, and the trial probabilities <span class="math inline">\(p_i\)</span> may differ.
+</figcaption>
+<div aria-describedby="tbl-dist-discrete-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Distribution</th>
+<th>Support</th>
+<th>Mass function <span class="math inline">\(P(X=k)\)</span></th>
+<th><span class="math inline">\(\mathbb{E}[X]\)</span></th>
+<th><span class="math inline">\(\mathrm{Var}(X)\)</span></th>
+<th>MGF <span class="math inline">\(M_X(t)\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\mathrm{Ber}(p)\)</span>, <span class="math inline">\(\;p\in[0,1]\)</span></td>
+<td><span class="math inline">\(\{0,1\}\)</span></td>
+<td><span class="math inline">\(p^{k}(1-p)^{1-k}\)</span></td>
+<td><span class="math inline">\(p\)</span></td>
+<td><span class="math inline">\(p(1-p)\)</span></td>
+<td><span class="math inline">\((1-p)+pe^{t}\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathrm{Bin}(n,p)\)</span></td>
+<td><span class="math inline">\(\{0,1,\dots,n\}\)</span></td>
+<td><span class="math inline">\(\binom{n}{k}p^{k}(1-p)^{n-k}\)</span></td>
+<td><span class="math inline">\(np\)</span></td>
+<td><span class="math inline">\(np(1-p)\)</span></td>
+<td><span class="math inline">\(\big((1-p)+pe^{t}\big)^{n}\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathrm{PoBin}(\mathbf{p})\)</span>, <span class="math inline">\(\;\mathbf{p}\in[0,1]^{n}\)</span></td>
+<td><span class="math inline">\(\{0,1,\dots,n\}\)</span></td>
+<td><span class="math inline">\(\displaystyle\sum_{\lvert S\rvert=k}\ \prod_{i\in S}p_i\prod_{i\notin S}(1-p_i)\)</span></td>
+<td><span class="math inline">\(\displaystyle\sum_{i=1}^{n}p_i\)</span></td>
+<td><span class="math inline">\(\displaystyle\sum_{i=1}^{n}p_i(1-p_i)\)</span></td>
+<td><span class="math inline">\(\displaystyle\prod_{i=1}^{n}\big((1-p_i)+p_ie^{t}\big)\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathrm{Poi}(\lambda)\)</span>, <span class="math inline">\(\;\lambda&gt;0\)</span></td>
+<td><span class="math inline">\(\{0,1,2,\dots\}\)</span></td>
+<td><span class="math inline">\(e^{-\lambda}\lambda^{k}/k!\)</span></td>
+<td><span class="math inline">\(\lambda\)</span></td>
+<td><span class="math inline">\(\lambda\)</span></td>
+<td><span class="math inline">\(\exp\!\big(\lambda(e^{t}-1)\big)\)</span></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Each family models a distinct kind of health data.</p>
+<p><strong>Bernoulli.</strong> A single yes/no outcome with success probability <span class="math inline">\(p\)</span>: one patient, responder (<span class="math inline">\(X=1\)</span>) or non-responder (<span class="math inline">\(X=0\)</span>). It is the atom from which the binary-outcome likelihoods of the book are built.</p>
+<p><strong>Binomial.</strong> The number of successes in <span class="math inline">\(n\)</span> independent, identical yes/no trials, each with the same probability <span class="math inline">\(p\)</span>: the count of responders out of <span class="math inline">\(n\)</span> randomized patients. This is the workhorse likelihood for aggregate binary endpoints in meta-analysis (Chapter 13) and network meta-analysis, where each arm reports “<span class="math inline">\(r\)</span> responders out of <span class="math inline">\(n\)</span>.”</p>
+<p><strong>Poisson binomial.</strong> The number of successes in <span class="math inline">\(n\)</span> independent trials whose success probabilities <span class="math inline">\(p_1,\dots,p_n\)</span> are allowed to <strong>differ</strong>. The mass function looks forbidding but says something simple: to get exactly <span class="math inline">\(k\)</span> successes, sum over every way of choosing which <span class="math inline">\(k\)</span> of the <span class="math inline">\(n\)</span> trials succeed, and for each such choice multiply the success probabilities of the chosen trials by the failure probabilities of the rest. It is the natural law for an aggregate event count when a model assigns each patient a different predicted risk, which is exactly the situation in covariate-adjusted binary outcomes; it drives the discrete aggregation results of <a href="../chapters/part5/21-mlnmr-discrete.html#sec-pobin" class="quarto-xref"><span>Section 21.5</span></a> in Chapter 21.</p>
+<p><strong>Poisson.</strong> The count of events when events arrive independently at a constant average, for example the number of relapses in a fixed follow-up window. In practice the Poisson mean is a <strong>rate times an exposure</strong>: if events occur at rate <span class="math inline">\(\rho\)</span> per person-year and a patient is followed for time <span class="math inline">\(E\)</span>, then the event count is <span class="math inline">\(\mathrm{Poi}(\rho E)\)</span>, so <span class="math inline">\(\lambda=\rho E\)</span>. This is how Poisson models describe events per person-time rather than bare counts.</p>
+<p>The families nest. A Bernoulli variable is <span class="math inline">\(\mathrm{Bin}(1,p)\)</span>; a binomial is the Poisson binomial with all <span class="math inline">\(p_i\)</span> equal to a common <span class="math inline">\(p\)</span>, in which case every entry of the Poisson binomial row reduces to its binomial counterpart. The Poisson is the law of rare events: if <span class="math inline">\(X_n\sim\mathrm{Bin}(n,\lambda/n)\)</span> then <span class="math inline">\(X_n\xrightarrow{d}\mathrm{Poi}(\lambda)\)</span> (<a href="../chapters/part1/04-probability.html#thm-poisson-limit" class="quarto-xref">Theorem&nbsp;<span>4.13</span></a>), so a Poisson is the limit of a binomial with many trials each individually rare; a quantitative total-variation form of this approximation drives the discrete aggregation results of Part V. Sums of independent Poisson variables are Poisson, with rates adding, by the product rule for moment generating functions (<a href="../chapters/part1/04-probability.html#thm-mgf-sum" class="quarto-xref">Theorem&nbsp;<span>4.12</span></a>).</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span>For a fixed mean <span class="math inline">\(\sum_i p_i\)</span>, the Poisson binomial variance <span class="math inline">\(\sum_i p_i(1-p_i)=\sum_i p_i-\sum_i
+p_i^2\)</span> is largest when the <span class="math inline">\(p_i\)</span> are equal, by convexity of <span class="math inline">\(p\mapsto p^2\)</span>. (Convexity means <span class="math inline">\(\sum_i p_i^2\)</span> is <em>smallest</em> when the <span class="math inline">\(p_i\)</span> are all equal, hence the variance <span class="math inline">\(\sum_i p_i-\sum_i p_i^2\)</span> is <em>largest</em> there; pulling the risks apart only lowers the aggregate variance.) Heterogeneous individual risks therefore produce a less dispersed aggregate count than a binomial with the same expected number of events, a fact used when an aggregate event count is modeled under covariate-adjusted risks. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div id="exm-dist-pobin" class="theorem example">
+<p><span class="theorem-title"><strong>Example C.1 (Aggregating three unequal risks)</strong></span> Suppose three patients have predicted event probabilities <span class="math inline">\(p_1=0.1\)</span>, <span class="math inline">\(p_2=0.3\)</span>, <span class="math inline">\(p_3=0.6\)</span>, and we want the distribution of the total number of events <span class="math inline">\(X\sim\mathrm{PoBin}(0.1,0.3,0.6)\)</span>. Reading the Poisson binomial mass function one value of <span class="math inline">\(k\)</span> at a time, <span class="math display">\[
+\begin{aligned}
+P(X=0)&amp;=(0.9)(0.7)(0.4)=0.252,\\
+P(X=1)&amp;=(0.1)(0.7)(0.4)+(0.9)(0.3)(0.4)+(0.9)(0.7)(0.6)=0.514,\\
+P(X=2)&amp;=(0.1)(0.3)(0.4)+(0.1)(0.7)(0.6)+(0.9)(0.3)(0.6)=0.216,\\
+P(X=3)&amp;=(0.1)(0.3)(0.6)=0.018,
+\end{aligned}
+\]</span> which sum to <span class="math inline">\(1\)</span>. The mean is <span class="math inline">\(\mathbb{E}[X]=0.1+0.3+0.6=1.0\)</span> and the variance is <span class="math inline">\(\mathrm{Var}(X)=0.1(0.9)+0.3(0.7)+0.6(0.4)=0.54\)</span>. Compare a binomial with the same mean, namely <span class="math inline">\(\mathrm{Bin}(3,\tfrac13)\)</span>, whose variance is <span class="math inline">\(3\cdot\tfrac13\cdot\tfrac23=\tfrac23\approx0.667\)</span>. The heterogeneous risks give the smaller variance <span class="math inline">\(0.54&lt;0.667\)</span>, exactly the effect of the remark above: when predicted risks differ across patients the aggregate event count is less dispersed than a binomial with the same expected number of events. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>When there are more than two response categories, the binomial generalizes to the <strong>multinomial</strong>, which the appendix uses only as the likelihood conjugate to the Dirichlet of <a href="#sec-dist-dirichlet" class="quarto-xref"><span>Section C.6</span></a>.</p>
+<div id="def-dist-multinomial" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition C.1 (Multinomial distribution)</strong></span> Fix <span class="math inline">\(N\in\{1,2,\dots\}\)</span> and a probability vector <span class="math inline">\(\mathbf{p}=(p_1,\dots,p_K)\)</span> with <span class="math inline">\(p_k\ge 0\)</span> and <span class="math inline">\(\sum_{k=1}^{K}p_k=1\)</span>. The count vector <span class="math inline">\(\mathbf{n}=(n_1,\dots,n_K)\)</span> of the outcomes of <span class="math inline">\(N\)</span> independent trials, each landing in category <span class="math inline">\(k\)</span> with probability <span class="math inline">\(p_k\)</span>, has the <strong>multinomial distribution</strong> <span class="math inline">\(\mathrm{Multinomial}(N,\mathbf{p})\)</span>, with mass function <span id="eq-dist-multinomial"><span class="math display">\[
+P(\mathbf{n})=\binom{N}{n_1,\dots,n_K}\prod_{k=1}^{K}p_k^{\,n_k}
+=\frac{N!}{n_1!\cdots n_K!}\prod_{k=1}^{K}p_k^{\,n_k},
+\qquad \sum_{k=1}^{K}n_k=N,
+\tag{C.3}\]</span></span> on the set of nonnegative integer vectors summing to <span class="math inline">\(N\)</span>.</p>
+</div>
+<p>The multinomial is the count of how many of <span class="math inline">\(N\)</span> patients fall into each of <span class="math inline">\(K\)</span> response categories, for example none, partial, or complete response. It records the joint distribution of category counts, so a single component <span class="math inline">\(n_k\)</span> is <span class="math inline">\(\mathrm{Bin}(N,p_k)\)</span> and at <span class="math inline">\(K=2\)</span> the whole family reduces to <span class="math inline">\(\mathrm{Bin}(N,p_1)\)</span>. Its first two moments are <span class="math display">\[
+\mathbb{E}[n_k]=N p_k,\qquad \mathrm{Var}(n_k)=N p_k(1-p_k),\qquad
+\mathrm{Cov}(n_j,n_k)=-N p_j p_k\ (j\neq k),
+\]</span> the negative covariance reflecting that the counts must sum to <span class="math inline">\(N\)</span>, so a surplus in one category forces a deficit in another. This is the likelihood in the Dirichlet-multinomial conjugate pair of <a href="#tbl-dist-conjugacy" class="quarto-xref">Table&nbsp;<span>C.7</span></a>.</p>
+</section>
+<section id="sec-dist-continuous" class="level2" data-number="C.4">
+<h2 data-number="C.4" class="anchored" data-anchor-id="sec-dist-continuous"><span class="header-section-number">C.4</span> Continuous univariate distributions</h2>
+<p>The normal density and its moments are <a href="../chapters/part1/04-probability.html#def-normal" class="quarto-xref">Definition&nbsp;<span>4.12</span></a>. The remaining four families are first used here; the gamma and exponential appear as the conjugate prior and count-data baseline of Chapter 8 and as survival baselines in Chapters 25 and 26, the Weibull is the power-law-hazard survival model of <a href="../chapters/part5/25-general-likelihoods.html#sec-genlik-survival" class="quarto-xref"><span>Section 25.3</span></a> in Chapter 25, and the beta is the conjugate prior of <a href="../chapters/part1/08-hierarchical-bayes.html#thm-conjugate-beta-binomial" class="quarto-xref">Theorem&nbsp;<span>8.4</span></a>. The gamma function <span class="math inline">\(\Gamma\)</span> and beta function <span class="math inline">\(B\)</span> are those of <a href="#eq-dist-gamma-function" class="quarto-xref">Equation&nbsp;<span>C.1</span></a> and <a href="#eq-dist-beta-function" class="quarto-xref">Equation&nbsp;<span>C.2</span></a>.</p>
+<div id="tbl-dist-continuous" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-dist-continuous-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;C.4: Continuous univariate distributions used in the book. The exponential and gamma moment generating functions are finite only for <span class="math inline">\(t\)</span> below the rate; the others are discussed in the text.
+</figcaption>
+<div aria-describedby="tbl-dist-continuous-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+<col style="width: 16%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Distribution</th>
+<th>Support</th>
+<th>Density <span class="math inline">\(f(x)\)</span></th>
+<th><span class="math inline">\(\mathbb{E}[X]\)</span></th>
+<th><span class="math inline">\(\mathrm{Var}(X)\)</span></th>
+<th>MGF <span class="math inline">\(M_X(t)\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\mathcal{N}(\mu,\sigma^{2})\)</span>, <span class="math inline">\(\;\sigma^{2}&gt;0\)</span></td>
+<td><span class="math inline">\(\mathbb{R}\)</span></td>
+<td><span class="math inline">\(\dfrac{1}{\sqrt{2\pi}\,\sigma}\exp\!\Big(-\dfrac{(x-\mu)^{2}}{2\sigma^{2}}\Big)\)</span></td>
+<td><span class="math inline">\(\mu\)</span></td>
+<td><span class="math inline">\(\sigma^{2}\)</span></td>
+<td><span class="math inline">\(\exp\!\big(\mu t+\tfrac12\sigma^{2}t^{2}\big)\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathrm{Exp}(\lambda)\)</span>, <span class="math inline">\(\;\lambda&gt;0\)</span> (rate)</td>
+<td><span class="math inline">\((0,\infty)\)</span></td>
+<td><span class="math inline">\(\lambda e^{-\lambda x}\)</span></td>
+<td><span class="math inline">\(1/\lambda\)</span></td>
+<td><span class="math inline">\(1/\lambda^{2}\)</span></td>
+<td><span class="math inline">\(\dfrac{\lambda}{\lambda-t}\)</span>, <span class="math inline">\(\;t&lt;\lambda\)</span></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathrm{Gamma}(\alpha,\beta)\)</span>, shape <span class="math inline">\(\alpha&gt;0\)</span>, rate <span class="math inline">\(\beta&gt;0\)</span></td>
+<td><span class="math inline">\((0,\infty)\)</span></td>
+<td><span class="math inline">\(\dfrac{\beta^{\alpha}}{\Gamma(\alpha)}\,x^{\alpha-1}e^{-\beta x}\)</span></td>
+<td><span class="math inline">\(\alpha/\beta\)</span></td>
+<td><span class="math inline">\(\alpha/\beta^{2}\)</span></td>
+<td><span class="math inline">\(\Big(1-\dfrac{t}{\beta}\Big)^{-\alpha}\)</span>, <span class="math inline">\(\;t&lt;\beta\)</span></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\mathrm{Beta}(a,b)\)</span>, <span class="math inline">\(\;a,b&gt;0\)</span></td>
+<td><span class="math inline">\((0,1)\)</span></td>
+<td><span class="math inline">\(\dfrac{1}{B(a,b)}\,x^{a-1}(1-x)^{b-1}\)</span></td>
+<td><span class="math inline">\(\dfrac{a}{a+b}\)</span></td>
+<td><span class="math inline">\(\dfrac{ab}{(a+b)^{2}(a+b+1)}\)</span></td>
+<td><span class="math inline">\({}_1F_1(a;a+b;t)\)</span>, no elementary form</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathrm{Weib}(k,\lambda)\)</span>, shape <span class="math inline">\(k&gt;0\)</span>, scale <span class="math inline">\(\lambda&gt;0\)</span></td>
+<td><span class="math inline">\((0,\infty)\)</span></td>
+<td><span class="math inline">\(\dfrac{k}{\lambda}\Big(\dfrac{x}{\lambda}\Big)^{k-1}\!\exp\!\big(-(x/\lambda)^{k}\big)\)</span></td>
+<td><span class="math inline">\(\lambda\,\Gamma\!\big(1+\tfrac1k\big)\)</span></td>
+<td><span class="math inline">\(\lambda^{2}\big[\Gamma\!\big(1+\tfrac2k\big)-\Gamma\!\big(1+\tfrac1k\big)^{2}\big]\)</span></td>
+<td>no elementary form</td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>Several entries deserve comment. In modeling terms the four non-normal families split cleanly by role: the exponential and Weibull model <strong>time-to-event</strong> outcomes (overall or progression-free survival), the gamma is a <strong>prior on a positive rate or precision</strong>, and the beta is a <strong>prior on a probability</strong>; the normal models a <strong>continuous endpoint</strong> and, on the log scale, an estimated relative effect.</p>
+<p><strong>Exponential and gamma.</strong> The exponential is the gamma of unit shape, <span class="math inline">\(\mathrm{Exp}(\lambda)=
+\mathrm{Gamma}(1,\lambda)\)</span>, as the densities and moment generating functions show. It is the simplest time-to-event model, the one with a <strong>constant hazard</strong>: the instantaneous event rate does not change over time, so the exponential is <strong>memoryless</strong>, meaning a patient who has survived to time <span class="math inline">\(s\)</span> has the same remaining-life distribution as a fresh patient (<span class="math inline">\(P(X&gt;s+u\mid X&gt;s)=P(X&gt;u)\)</span>). Because independent moment generating functions multiply (<a href="../chapters/part1/04-probability.html#thm-mgf-sum" class="quarto-xref">Theorem&nbsp;<span>4.12</span></a>), a sum of <span class="math inline">\(n\)</span> independent <span class="math inline">\(\mathrm{Exp}(\lambda)\)</span> variables has MGF <span class="math inline">\((1-t/\lambda)^{-n}\)</span>, hence is <span class="math inline">\(\mathrm{Gamma}(n,\lambda)\)</span>; more generally gammas with a common rate add in shape. The chi-square law with <span class="math inline">\(\nu\)</span> degrees of freedom is <span class="math inline">\(\mathrm{Gamma}(\nu/2,\,1/2)\)</span>. The gamma is the book’s default prior on a positive quantity such as a Poisson rate (<a href="../chapters/part1/08-hierarchical-bayes.html#prp-conjugate-gamma-poisson" class="quarto-xref">Proposition&nbsp;<span>8.1</span></a>) or a precision; its shape parameter <span class="math inline">\(\alpha\)</span> sets the shape of the density, with <span class="math inline">\(\alpha&lt;1\)</span> giving a density that diverges at the origin and decreases, <span class="math inline">\(\alpha=1\)</span> the exponential, and <span class="math inline">\(\alpha&gt;1\)</span> a unimodal density that starts at zero, rises to a peak, and decays. The MGF <span class="math inline">\((1-t/\beta)^{-\alpha}\)</span> is finite precisely for <span class="math inline">\(t&lt;\beta\)</span> and diverges as <span class="math inline">\(t\uparrow\beta\)</span>, the right tail being too heavy to integrate against <span class="math inline">\(e^{tx}\)</span> beyond that point (for <span class="math inline">\(t\ge\beta\)</span> the defining integral <span class="math inline">\(\int_0^\infty e^{tx}f(x)\,dx\)</span> diverges because <span class="math inline">\(e^{tx}e^{-\beta x}\)</span> no longer decays); all moments are nonetheless finite, with <span class="math inline">\(\mathbb{E}[X^{r}]=\Gamma(\alpha+r)/\big(\beta^{r}\Gamma(\alpha)\big)\)</span> for <span class="math inline">\(r&gt;-\alpha\)</span>.</p>
+<p><strong>Beta.</strong> The single most useful fact for a health researcher is that the beta puts a flexible distribution on a <strong>probability</strong>: because its support is <span class="math inline">\((0,1)\)</span>, it is the natural prior on a response rate, and it is the conjugate prior for the binomial (<a href="../chapters/part1/08-hierarchical-bayes.html#thm-conjugate-beta-binomial" class="quarto-xref">Theorem&nbsp;<span>8.4</span></a>). Its two parameters read as <strong>pseudo-counts</strong>: <span class="math inline">\(a\)</span> behaves like a number of prior successes and <span class="math inline">\(b\)</span> like a number of prior failures, so the prior mean <span class="math inline">\(a/(a+b)\)</span> is the prior success fraction and larger <span class="math inline">\(a+b\)</span> means a more concentrated, more confident prior. As a shape guide: <span class="math inline">\(a=b=1\)</span> is the uniform law on <span class="math inline">\((0,1)\)</span> (no prior information); <span class="math inline">\(a=b&gt;1\)</span> is symmetric and unimodal at <span class="math inline">\(\tfrac12\)</span>; <span class="math inline">\(a&gt;b\)</span> leans toward <span class="math inline">\(1\)</span> and <span class="math inline">\(a&lt;b\)</span> toward <span class="math inline">\(0\)</span>; and <span class="math inline">\(a,b&lt;1\)</span> is U-shaped, piling mass near the two endpoints. The density is bounded with compact support, so the MGF is finite for every <span class="math inline">\(t\)</span>, but it has no elementary closed form. <em>(Advanced; you will not use the beta MGF in practice, since the moments below are elementary and are what the book uses.)</em> The MGF equals the confluent hypergeometric function <span id="eq-dist-beta-mgf"><span class="math display">\[
+M_X(t)={}_1F_1(a;a+b;t)=\sum_{n=0}^{\infty}\frac{(a)_n}{(a+b)_n}\frac{t^{n}}{n!},\qquad
+(c)_n:=c(c+1)\cdots(c+n-1),
+\tag{C.4}\]</span></span> where <span class="math inline">\((c)_n\)</span> is the rising factorial (Pochhammer symbol). Moments are elementary even though the MGF is not: <span class="math inline">\(\mathbb{E}[X^{r}]=B(a+r,b)/B(a,b)=\Gamma(a+r)\Gamma(a+b)\big/\big(\Gamma(a)\Gamma(a+b+r)\big)\)</span> for <span class="math inline">\(r&gt;-a\)</span>, which gives the mean and variance in <a href="#tbl-dist-continuous" class="quarto-xref">Table&nbsp;<span>C.4</span></a>. The case <span class="math inline">\(a=b=1\)</span> is the uniform law on <span class="math inline">\((0,1)\)</span>.</p>
+<p><strong>Weibull.</strong> The survival function is <span class="math inline">\(S(x)=\exp(-(x/\lambda)^{k})\)</span> and the hazard is <span class="math inline">\(h(x)=\frac{k}{\lambda}(x/\lambda)^{k-1}\)</span>, a power law in <span class="math inline">\(x\)</span>. The shape parameter <span class="math inline">\(k\)</span> controls whether risk rises or falls over time, which is exactly what a clinician chooses a survival model to capture: <span class="math inline">\(k&lt;1\)</span> gives a <strong>decreasing</strong> hazard (early high risk that wanes, the “infant mortality” pattern), <span class="math inline">\(k=1\)</span> gives a <strong>constant</strong> hazard (the exponential), and <span class="math inline">\(k&gt;1\)</span> gives an <strong>increasing</strong> hazard (risk that grows with time, the “aging” or wear-out pattern). The <span class="math inline">\(r\)</span>-th moment is <span class="math inline">\(\mathbb{E}[X^{r}]=\lambda^{r}\Gamma(1+r/k)\)</span>, from which the tabulated mean and variance follow. With <span class="math inline">\(k=1\)</span> the hazard is constant and the Weibull is the exponential with rate <span class="math inline">\(1/\lambda\)</span>. The moment generating function has no elementary closed form and, more sharply, is finite on a neighborhood of the origin only when <span class="math inline">\(k\ge 1\)</span>: for <span class="math inline">\(k&lt;1\)</span> the tail <span class="math inline">\(\exp(-(x/\lambda)^{k})\)</span> decays slower than any exponential, so <span class="math inline">\(\mathbb{E}[e^{tX}]=\infty\)</span> for every <span class="math inline">\(t&gt;0\)</span> and the MGF does not exist, though all polynomial moments remain finite. (The reason <span class="math inline">\(k&lt;1\)</span> makes the tail slow is that the exponent <span class="math inline">\((x/\lambda)^{k}\)</span> then grows <em>sub-linearly</em> in <span class="math inline">\(x\)</span>, so <span class="math inline">\(e^{-(x/\lambda)^{k}}\)</span> falls off more slowly than <span class="math inline">\(e^{-cx}\)</span> for any <span class="math inline">\(c&gt;0\)</span>.)</p>
+<div id="exm-dist-weibull" class="theorem example">
+<p><span class="theorem-title"><strong>Example C.2 (How the Weibull shape bends the hazard)</strong></span> Fix the scale <span class="math inline">\(\lambda=1\)</span> and read the hazard <span class="math inline">\(h(x)=k\,x^{k-1}\)</span> at three follow-up times for three shapes. The table gives <span class="math inline">\(h(x)\)</span> at <span class="math inline">\(x=0.25,\ 1,\ 4\)</span>.</p>
+<table class="caption-top table">
+<thead>
+<tr class="header">
+<th>Shape <span class="math inline">\(k\)</span></th>
+<th><span class="math inline">\(h(0.25)\)</span></th>
+<th><span class="math inline">\(h(1)\)</span></th>
+<th><span class="math inline">\(h(4)\)</span></th>
+<th>Hazard over time</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(0.5\)</span></td>
+<td><span class="math inline">\(1.00\)</span></td>
+<td><span class="math inline">\(0.50\)</span></td>
+<td><span class="math inline">\(0.25\)</span></td>
+<td>decreasing (early risk wanes)</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(1\)</span></td>
+<td><span class="math inline">\(1.00\)</span></td>
+<td><span class="math inline">\(1.00\)</span></td>
+<td><span class="math inline">\(1.00\)</span></td>
+<td>constant (exponential, memoryless)</td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(2\)</span></td>
+<td><span class="math inline">\(0.50\)</span></td>
+<td><span class="math inline">\(2.00\)</span></td>
+<td><span class="math inline">\(8.00\)</span></td>
+<td>increasing (risk grows with time)</td>
+</tr>
+</tbody>
+</table>
+<p>With <span class="math inline">\(k=0.5\)</span> the event rate is highest just after baseline and falls; with <span class="math inline">\(k=1\)</span> it never changes; with <span class="math inline">\(k=2\)</span> it climbs steadily. All three curves pass through <span class="math inline">\(h=1\)</span> at <span class="math inline">\(x=\lambda=1\)</span>, so the scale sets the time at which the hazard equals the reference level <span class="math inline">\(1/\lambda\)</span> and the shape sets the tilt. This is the single most important reading of a Weibull survival model: the shape <span class="math inline">\(k\)</span> is chosen to match whether a clinical hazard rises or falls with time. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Hazard parametrization.</strong> Chapter 25 writes the Weibull through its hazard, <span class="math inline">\(h(t\mid\mathbf{x})=\lambda(\mathbf{x})\,\nu\,t^{\nu-1}\)</span>, giving the survival function <span class="math inline">\(S(t\mid\mathbf{x})=\exp(-\lambda(\mathbf{x})\,t^{\nu})\)</span> (see <a href="../chapters/part5/25-general-likelihoods.html#sec-genlik-survival" class="quarto-xref"><span>Section 25.3</span></a>). This is the shape-scale form above with shape <span class="math inline">\(k=\nu\)</span> and scale <span class="math inline">\(\lambda=\lambda(\mathbf{x})^{-1/\nu}\)</span>, equivalently <span class="math inline">\(\lambda(\mathbf{x})=\lambda^{-\nu}\)</span>. The two parametrizations describe the same family; the hazard form places the covariate structure on the rate-type coefficient <span class="math inline">\(\lambda(\mathbf{x})\)</span>, which is convenient for proportional-hazards regression. See <a href="#tbl-dist-param" class="quarto-xref">Table&nbsp;<span>C.2</span></a> for the three survival parametrizations side by side. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-dist-mvn" class="level2" data-number="C.5">
+<h2 data-number="C.5" class="anchored" data-anchor-id="sec-dist-mvn"><span class="header-section-number">C.5</span> The multivariate normal</h2>
+<p>The multivariate normal <span class="math inline">\(\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})\)</span> is defined in <a href="../chapters/part1/04-probability.html#def-mvn" class="quarto-xref">Definition&nbsp;<span>4.13</span></a> through its moment generating function and is developed in full in <a href="../chapters/part1/04-probability.html#sec-mvn" class="quarto-xref"><span>Section 4.12</span></a> of Chapter 4. We restate the core formulas and point to the chapter for proofs. In this book the family plays four roles: it models a vector of correlated <strong>baseline covariates</strong> in a trial population (Chapters 12 and 20); it is the prior for a vector of <strong>random effects</strong> in a hierarchical model (Chapter 8); it is the approximate <strong>sampling distribution</strong> of a vector of estimated log-effects fed into network meta-analysis (Chapters 13 and 15); and, through the Gaussian copula, it is the engine that ties marginal covariate distributions together for the <strong>ML-NMR numerical integration</strong> of Chapter 22 (<a href="../chapters/part5/22-mlnmr-integration.html#sec-qmc-gaussian" class="quarto-xref"><span>Section 22.9</span></a>). Throughout, <span class="math inline">\(\boldsymbol{\Sigma}\succ 0\)</span> means <span class="math inline">\(\boldsymbol{\Sigma}\)</span> is positive definite, which is the condition under which the covariance is invertible and a density exists.</p>
+<div id="tbl-dist-mvn" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-dist-mvn-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;C.5: The multivariate normal <span class="math inline">\(\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})\)</span> with mean <span class="math inline">\(\boldsymbol{\mu}\)</span> and positive semidefinite covariance <span class="math inline">\(\boldsymbol{\Sigma}\)</span>.
+</figcaption>
+<div aria-describedby="tbl-dist-mvn-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 33%">
+<col style="width: 33%">
+<col style="width: 33%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Quantity</th>
+<th>Formula</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Support</td>
+<td><span class="math inline">\(\mathbb{R}^{p}\)</span>; density exists on <span class="math inline">\(\mathbb{R}^{p}\)</span> when <span class="math inline">\(\boldsymbol{\Sigma}\succ 0\)</span></td>
+<td><a href="../chapters/part1/04-probability.html#def-mvn" class="quarto-xref">Definition&nbsp;<span>4.13</span></a></td>
+</tr>
+<tr class="even">
+<td>Density (<span class="math inline">\(\boldsymbol{\Sigma}\succ 0\)</span>)</td>
+<td><span class="math inline">\((2\pi)^{-p/2}\det(\boldsymbol{\Sigma})^{-1/2}\exp\!\big(-\tfrac12(\mathbf{x}-\boldsymbol{\mu})^{\top}\boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu})\big)\)</span></td>
+<td><a href="../chapters/part1/04-probability.html#prp-mvn-density" class="quarto-xref">Proposition&nbsp;<span>4.2</span></a>, <a href="../chapters/part1/04-probability.html#eq-mvn-density" class="quarto-xref">Equation&nbsp;<span>4.14</span></a></td>
+</tr>
+<tr class="odd">
+<td>Mean</td>
+<td><span class="math inline">\(\boldsymbol{\mu}\)</span></td>
+<td><a href="../chapters/part1/04-probability.html#def-mvn" class="quarto-xref">Definition&nbsp;<span>4.13</span></a></td>
+</tr>
+<tr class="even">
+<td>Covariance</td>
+<td><span class="math inline">\(\boldsymbol{\Sigma}\)</span></td>
+<td><a href="../chapters/part1/04-probability.html#def-mvn" class="quarto-xref">Definition&nbsp;<span>4.13</span></a></td>
+</tr>
+<tr class="odd">
+<td>MGF</td>
+<td><span class="math inline">\(\exp\!\big(\mathbf{t}^{\top}\boldsymbol{\mu}+\tfrac12\,\mathbf{t}^{\top}\boldsymbol{\Sigma}\,\mathbf{t}\big)\)</span>, all <span class="math inline">\(\mathbf{t}\in\mathbb{R}^{p}\)</span></td>
+<td><a href="../chapters/part1/04-probability.html#eq-mvn-mgf" class="quarto-xref">Equation&nbsp;<span>4.13</span></a></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>The family is closed under the operations that drive normal-theory inference, proved in Chapter 4.</p>
+<ul>
+<li><strong>Affine maps.</strong> If <span class="math inline">\(\mathbf{X}\sim\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})\)</span> and <span class="math inline">\(\mathbf{Y}=\mathbf{b}+B\mathbf{X}\)</span>, then <span class="math inline">\(\mathbf{Y}\sim\mathcal{N}_q(\mathbf{b}+B\boldsymbol{\mu},\,B\boldsymbol{\Sigma}B^{\top})\)</span> (<a href="../chapters/part1/04-probability.html#thm-mvn-linear" class="quarto-xref">Theorem&nbsp;<span>4.14</span></a>). In particular every subvector is multivariate normal and every linear combination <span class="math inline">\(\mathbf{a}^{\top}\mathbf{X}\)</span> is univariate normal.</li>
+<li><strong>Uncorrelated implies independent.</strong> Jointly normal blocks with zero cross-covariance are independent (<a href="../chapters/part1/04-probability.html#lem-normal-uncorrelated-independent" class="quarto-xref">Lemma&nbsp;<span>4.3</span></a>), a property special to the normal family.</li>
+<li><strong>Conditioning.</strong> With <span class="math inline">\(\boldsymbol{\Sigma}_{22}\succ 0\)</span>, <span class="math display">\[
+\mathbf{X}_1\mid\mathbf{X}_2=\mathbf{x}_2\ \sim\
+\mathcal{N}\!\Big(\boldsymbol{\mu}_1+\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}
+(\mathbf{x}_2-\boldsymbol{\mu}_2),\ \boldsymbol{\Sigma}_{11}-\boldsymbol{\Sigma}_{12}
+\boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\Sigma}_{21}\Big),
+\]</span> the conditional mean affine in <span class="math inline">\(\mathbf{x}_2\)</span> and the conditional covariance, the Schur complement of <span class="math inline">\(\boldsymbol{\Sigma}_{22}\)</span>, free of <span class="math inline">\(\mathbf{x}_2\)</span> (<a href="../chapters/part1/04-probability.html#thm-mvn-conditional" class="quarto-xref">Theorem&nbsp;<span>4.15</span></a>, <a href="../chapters/part1/04-probability.html#eq-mvn-conditional" class="quarto-xref">Equation&nbsp;<span>4.15</span></a>).</li>
+</ul>
+<p>The conditioning formula is best read as a <strong>linear regression of <span class="math inline">\(\mathbf{X}_1\)</span> on <span class="math inline">\(\mathbf{X}_2\)</span></strong>: the conditional mean is the prediction <span class="math inline">\(\boldsymbol{\mu}_1+\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}
+(\mathbf{x}_2-\boldsymbol{\mu}_2)\)</span> with regression-coefficient matrix <span class="math inline">\(\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\)</span>, and the conditional covariance (the term some readers know as the Schur complement, which you may take as a name on a first pass) does not depend on the observed value <span class="math inline">\(\mathbf{x}_2\)</span>, so observing <span class="math inline">\(\mathbf{X}_2\)</span> shifts the center of <span class="math inline">\(\mathbf{X}_1\)</span> but does not change its spread. This is precisely what one needs to impute an unreported baseline covariate from reported ones in a population-adjustment problem.</p>
+<div id="exm-dist-mvn-predict" class="theorem example">
+<p><span class="theorem-title"><strong>Example C.3 (Predicting a missing covariate from an observed one)</strong></span> Let <span class="math inline">\((X_1,X_2)\)</span> be bivariate normal with means <span class="math inline">\(\mu_1=\mu_2=0\)</span>, unit variances, and correlation <span class="math inline">\(\rho=0.6\)</span>, so <span class="math inline">\(\boldsymbol{\Sigma}_{12}=\rho=0.6\)</span> and <span class="math inline">\(\boldsymbol{\Sigma}_{22}=1\)</span>. Suppose <span class="math inline">\(X_1\)</span> (say a baseline covariate not reported by a study) is unknown but the correlated covariate <span class="math inline">\(X_2=2\)</span> is observed. The conditioning formula gives <span class="math display">\[
+X_1\mid X_2=2\ \sim\ \mathcal{N}\big(\rho\cdot 2,\ 1-\rho^{2}\big)=\mathcal{N}(1.2,\ 0.64).
+\]</span> The predicted mean <span class="math inline">\(1.2\)</span> is the regression of <span class="math inline">\(X_1\)</span> on <span class="math inline">\(X_2\)</span> with slope <span class="math inline">\(\rho=0.6\)</span>, and the conditional variance <span class="math inline">\(0.64\)</span> is smaller than the marginal variance <span class="math inline">\(1\)</span>: knowing the correlated covariate sharpens the prediction. The conditional variance <span class="math inline">\(1-\rho^{2}\)</span> would be the same whatever value of <span class="math inline">\(X_2\)</span> we had observed. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>The univariate normal is the case <span class="math inline">\(p=1\)</span>, and the standard normal <span class="math inline">\(\mathcal{N}(0,1)\)</span>, with density <span class="math inline">\(\phi\)</span> and distribution function <span class="math inline">\(\Phi\)</span>, is treated in <a href="#sec-dist-standard-normal" class="quarto-xref"><span>Section C.7</span></a>.</p>
+</section>
+<section id="sec-dist-dirichlet" class="level2" data-number="C.6">
+<h2 data-number="C.6" class="anchored" data-anchor-id="sec-dist-dirichlet"><span class="header-section-number">C.6</span> The Dirichlet distribution</h2>
+<p>The Dirichlet is the distribution of a random probability vector and is the multivariate generalization of the beta. In one line: it is a <strong>prior for a list of probabilities that must add up to one</strong>, such as the probabilities of the response categories none, partial, and complete. It is the natural conjugate prior for the cell probabilities of a categorical or multinomial outcome (<a href="#def-dist-multinomial" class="quarto-xref">Definition&nbsp;<span>C.1</span></a>), generalizing the beta-binomial pair of <a href="../chapters/part1/08-hierarchical-bayes.html#thm-conjugate-beta-binomial" class="quarto-xref">Theorem&nbsp;<span>8.4</span></a>.</p>
+<div id="def-dist-dirichlet" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition C.2 (Dirichlet distribution)</strong></span> Let <span class="math inline">\(\boldsymbol{\alpha}=(\alpha_1,\dots,\alpha_K)\)</span> with each <span class="math inline">\(\alpha_k&gt;0\)</span>, and write <span class="math inline">\(\alpha_0=\sum_{k=1}^{K}\alpha_k\)</span>. A random vector <span class="math inline">\(\mathbf{X}=(X_1,\dots,X_K)\)</span> supported on the open simplex <span class="math inline">\(\Delta^{K-1}=\{\mathbf{x}:x_k&gt;0,\ \sum_{k=1}^{K}x_k=1\}\)</span> has the <strong>Dirichlet distribution</strong> <span class="math inline">\(\mathrm{Dir}(\boldsymbol{\alpha})\)</span> if it has density <span id="eq-dist-dirichlet-density"><span class="math display">\[
+f(\mathbf{x})=\frac{1}{B(\boldsymbol{\alpha})}\prod_{k=1}^{K}x_k^{\alpha_k-1},
+\qquad B(\boldsymbol{\alpha})=\frac{\prod_{k=1}^{K}\Gamma(\alpha_k)}{\Gamma(\alpha_0)},
+\tag{C.5}\]</span></span> with respect to Lebesgue measure on the <span class="math inline">\((K-1)\)</span>-dimensional simplex, taking <span class="math inline">\(x_1,\dots,x_{K-1}\)</span> as free coordinates and <span class="math inline">\(x_K=1-\sum_{k&lt;K}x_k\)</span>.</p>
+</div>
+<p>The <strong>simplex</strong> <span class="math inline">\(\Delta^{K-1}\)</span> is just the set of valid probability vectors: <span class="math inline">\(K\)</span> nonnegative numbers that add to one. <em>(Advanced; skip on a first pass.)</em> The phrase “density with respect to Lebesgue measure on the <span class="math inline">\((K-1)\)</span>-dimensional simplex, taking <span class="math inline">\(x_1,\dots,x_{K-1}\)</span> as free coordinates” means only that we treat <span class="math inline">\(x_1,\dots,x_{K-1}\)</span> as the free variables, with the last coordinate forced to be <span class="math inline">\(x_K=1-\sum_{k&lt;K}x_k\)</span>, and integrate over those <span class="math inline">\(K-1\)</span> free variables. The normalizing constant <span class="math inline">\(B(\boldsymbol{\alpha})\)</span> is the multivariate beta function of <a href="#eq-dist-beta-function" class="quarto-xref">Equation&nbsp;<span>C.2</span></a>, the product-of-gammas generalization of the scalar <span class="math inline">\(B(a,b)\)</span>.</p>
+<p>The simplex constraint <span class="math inline">\(\sum_k X_k=1\)</span> forces the components to be negatively associated and makes the joint moment generating function on <span class="math inline">\(\mathbb{R}^{K}\)</span> degenerate, so the Dirichlet is described by its moments rather than by an MGF (this is the hyperplane degeneracy explained in <a href="#sec-dist-conventions" class="quarto-xref"><span>Section C.2</span></a>). The mixed moments are <span id="eq-dist-dirichlet-moments"><span class="math display">\[
+\mathbb{E}\!\Big[\prod_{k=1}^{K}X_k^{r_k}\Big]
+=\frac{B(\boldsymbol{\alpha}+\mathbf{r})}{B(\boldsymbol{\alpha})}
+=\frac{\Gamma(\alpha_0)}{\Gamma(\alpha_0+\textstyle\sum_k r_k)}\prod_{k=1}^{K}
+\frac{\Gamma(\alpha_k+r_k)}{\Gamma(\alpha_k)},
+\tag{C.6}\]</span></span> from which the first two moments follow.</p>
+<div id="tbl-dist-dirichlet" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-dist-dirichlet-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;C.6: The Dirichlet distribution <span class="math inline">\(\mathrm{Dir}(\boldsymbol{\alpha})\)</span> on the simplex <span class="math inline">\(\Delta^{K-1}\)</span>, with <span class="math inline">\(\alpha_0=\sum_k\alpha_k\)</span>.
+</figcaption>
+<div aria-describedby="tbl-dist-dirichlet-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 50%">
+<col style="width: 50%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Quantity</th>
+<th>Formula</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Support</td>
+<td><span class="math inline">\(\Delta^{K-1}=\{\mathbf{x}:x_k&gt;0,\ \sum_k x_k=1\}\)</span></td>
+</tr>
+<tr class="even">
+<td>Density</td>
+<td><span class="math inline">\(\dfrac{1}{B(\boldsymbol{\alpha})}\prod_{k=1}^{K}x_k^{\alpha_k-1}\)</span></td>
+</tr>
+<tr class="odd">
+<td>Mean</td>
+<td><span class="math inline">\(\mathbb{E}[X_k]=\alpha_k/\alpha_0\)</span></td>
+</tr>
+<tr class="even">
+<td>Variance</td>
+<td><span class="math inline">\(\mathrm{Var}(X_k)=\dfrac{\alpha_k(\alpha_0-\alpha_k)}{\alpha_0^{2}(\alpha_0+1)}\)</span></td>
+</tr>
+<tr class="odd">
+<td>Covariance</td>
+<td><span class="math inline">\(\mathrm{Cov}(X_j,X_k)=\dfrac{-\alpha_j\alpha_k}{\alpha_0^{2}(\alpha_0+1)}\)</span>, <span class="math inline">\(\;j\neq k\)</span></td>
+</tr>
+<tr class="even">
+<td>MGF</td>
+<td>degenerate (support in the hyperplane <span class="math inline">\(\sum_k x_k=1\)</span>); use <a href="#eq-dist-dirichlet-moments" class="quarto-xref">Equation&nbsp;<span>C.6</span></a></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>With <span class="math inline">\(K=2\)</span> and <span class="math inline">\(\boldsymbol{\alpha}=(a,b)\)</span> the first coordinate <span class="math inline">\(X_1\)</span> is <span class="math inline">\(\mathrm{Beta}(a,b)\)</span>, so the beta entries of <a href="#tbl-dist-continuous" class="quarto-xref">Table&nbsp;<span>C.4</span></a> are the <span class="math inline">\(K=2\)</span> case of <a href="#tbl-dist-dirichlet" class="quarto-xref">Table&nbsp;<span>C.6</span></a>. The parameters read as <strong>pseudo-counts</strong>, exactly as for the beta: <span class="math inline">\(\alpha_k\)</span> is a prior count for category <span class="math inline">\(k\)</span>, and the total <span class="math inline">\(\alpha_0=\sum_k\alpha_k\)</span> is a <strong>concentration</strong>. The mean is <span class="math inline">\(\alpha_k/\alpha_0\)</span> regardless of <span class="math inline">\(\alpha_0\)</span>, while the variances and covariances shrink as <span class="math inline">\(\alpha_0\)</span> grows. The picture: a small <span class="math inline">\(\alpha_0\)</span> spreads the random probability vector out toward the corners of the simplex (nearly all mass on one category, but which one varies), while a large <span class="math inline">\(\alpha_0\)</span> clusters it tightly around the mean vector <span class="math inline">\((\alpha_1/\alpha_0,\dots,\alpha_K/\alpha_0)\)</span>. Concentration is thus the multivariate reading of “how confident is the prior,” the same role <span class="math inline">\(a+b\)</span> plays for the beta.</p>
+</section>
+<section id="sec-dist-standard-normal" class="level2" data-number="C.7">
+<h2 data-number="C.7" class="anchored" data-anchor-id="sec-dist-standard-normal"><span class="header-section-number">C.7</span> The standard normal function and density</h2>
+<p>The standard normal <span class="math inline">\(\mathcal{N}(0,1)\)</span> is the case <span class="math inline">\(\mu=0,\ \sigma^{2}=1\)</span> of <a href="../chapters/part1/04-probability.html#def-normal" class="quarto-xref">Definition&nbsp;<span>4.12</span></a>. Its density and distribution function carry the dedicated symbols <span class="math inline">\(\phi\)</span> and <span class="math inline">\(\Phi\)</span>: <span id="eq-dist-phi"><span class="math display">\[
+\phi(z)=\frac{1}{\sqrt{2\pi}}\,e^{-z^{2}/2},\qquad
+\Phi(z)=\int_{-\infty}^{z}\phi(u)\,du,\qquad z\in\mathbb{R}.
+\tag{C.7}\]</span></span> The density <span class="math inline">\(\phi\)</span> is even and satisfies the differential identities <span id="eq-dist-phi-derivs"><span class="math display">\[
+\phi'(z)=-z\,\phi(z),\qquad \phi''(z)=(z^{2}-1)\,\phi(z),\qquad \Phi'(z)=\phi(z),
+\tag{C.8}\]</span></span> and the distribution function satisfies <span class="math inline">\(\Phi(0)=\tfrac12\)</span>, the reflection identity <span class="math inline">\(\Phi(-z)=1-\Phi(z)\)</span>, and the limits <span class="math inline">\(\Phi(z)\to 1\)</span> as <span class="math inline">\(z\to\infty\)</span> and <span class="math inline">\(\Phi(z)\to 0\)</span> as <span class="math inline">\(z\to-\infty\)</span>. The mean and variance are <span class="math inline">\(\mathbb{E}[Z]=0\)</span> and <span class="math inline">\(\mathrm{Var}(Z)=1\)</span>, the moment generating function is <span class="math inline">\(M_Z(t)=e^{t^{2}/2}\)</span>, finite for all <span class="math inline">\(t\)</span>, and the moments are <span id="eq-dist-normal-moments"><span class="math display">\[
+\mathbb{E}[Z^{2m-1}]=0,\qquad \mathbb{E}[Z^{2m}]=\frac{(2m)!}{2^{m}m!}=(2m-1)!!,\qquad m=1,2,\dots,
+\tag{C.9}\]</span></span> read off as the Taylor coefficients of <span class="math inline">\(e^{t^{2}/2}=\sum_{m\ge 0}t^{2m}/(2^{m}m!)\)</span> through <a href="../chapters/part1/04-probability.html#thm-mgf-moments" class="quarto-xref">Theorem&nbsp;<span>4.10</span></a>.</p>
+<p>There is no elementary closed form for <span class="math inline">\(\Phi\)</span>. It is expressed through the <strong>error function</strong> <span class="math inline">\(\mathrm{erf}(x)=\frac{2}{\sqrt{\pi}}\int_0^{x}e^{-u^{2}}\,du\)</span> and its complement <span class="math inline">\(\mathrm{erfc}=1-\mathrm{erf}\)</span> by <span id="eq-dist-Phi-erf"><span class="math display">\[
+\Phi(z)=\tfrac12\Big[1+\mathrm{erf}\!\big(z/\sqrt{2}\big)\Big],\qquad
+1-\Phi(z)=\tfrac12\,\mathrm{erfc}\!\big(z/\sqrt{2}\big),
+\tag{C.10}\]</span></span> whose numerical evaluation is treated in <a href="../appendices/D-special-functions.html">Appendix D</a>. <em>(Advanced; optional on a first pass.)</em> For the upper tail the Mills ratio gives the two-sided bound, valid for <span class="math inline">\(z&gt;0\)</span>, <span id="eq-dist-mills"><span class="math display">\[
+\Big(\frac{1}{z}-\frac{1}{z^{3}}\Big)\phi(z)\ &lt;\ 1-\Phi(z)\ &lt;\ \frac{\phi(z)}{z},
+\tag{C.11}\]</span></span> so that <span class="math inline">\(1-\Phi(z)\sim \phi(z)/z\)</span> as <span class="math inline">\(z\to\infty\)</span>. This bound matters because <span class="math inline">\(1-\Phi(z)\)</span> is the tail probability of a standardized effect, so it controls how fast <span class="math inline">\(p\)</span>-values and normal-approximation tail probabilities for large standardized effects decay; a novice can note the asymptotic <span class="math inline">\(1-\Phi(z)\sim\phi(z)/z\)</span> and move on.</p>
+<p>The function <span class="math inline">\(\Phi\)</span> also feeds two constructions the book uses later. It is the inverse link of the <strong>probit regression model</strong> (Chapter 7), the model in which a binary probability is written <span class="math inline">\(P(Y=1)=\Phi(\eta)\)</span> for a linear predictor <span class="math inline">\(\eta\)</span>. And its inverse <span class="math inline">\(\Phi^{-1}\)</span> is the <strong>normal quantile transform</strong> at the heart of the Gaussian copula <span class="math inline">\(C_\Omega(\mathbf{u})=\Phi_\Omega\big(\Phi^{-1}(u_1),\dots,\Phi^{-1}(u_d)\big)\)</span> used in ML-NMR numerical integration: given a uniform variable <span class="math inline">\(u\in(0,1)\)</span>, the value <span class="math inline">\(\Phi^{-1}(u)\)</span> is the standard-normal score with that lower-tail probability, so <span class="math inline">\(\Phi^{-1}\)</span> turns the uniform points of a quasi-Monte Carlo rule into correlated normal covariate draws over which an individual likelihood is averaged (<a href="../chapters/part5/22-mlnmr-integration.html#sec-qmc-pit" class="quarto-xref"><span>Section 22.7</span></a>, <a href="../chapters/part5/22-mlnmr-integration.html#sec-qmc-gaussian" class="quarto-xref"><span>Section 22.9</span></a>). See <a href="../notation.html">Notation</a> for the copula symbol.</p>
+</section>
+<section id="sec-dist-conjugacy" class="level2" data-number="C.8">
+<h2 data-number="C.8" class="anchored" data-anchor-id="sec-dist-conjugacy"><span class="header-section-number">C.8</span> Conjugate pairs</h2>
+<p>A prior family is <em>conjugate</em> to a likelihood when the posterior stays in the family with updated hyperparameters. Conjugacy is an <strong>algebraic convenience</strong>, not a requirement of Bayesian modeling: it makes the update a closed-form parameter change instead of a numerical integration, but a valid Bayesian analysis may use any proper prior (and the book’s hierarchical models in Chapter 8 and Chapter 24 mostly use non-conjugate priors sampled by Markov chain Monte Carlo). Chapter 8 proves the three pairs of <a href="../chapters/part1/08-hierarchical-bayes.html#sec-conjugacy" class="quarto-xref"><span>Section 8.4</span></a> in full and uses them to build the shrinkage estimator and the Gibbs updates of its samplers. <a href="#tbl-dist-conjugacy" class="quarto-xref">Table&nbsp;<span>C.7</span></a> collects those pairs, together with the Dirichlet-multinomial pair that generalizes the beta-binomial; throughout, the gamma prior uses the shape-rate parametrization, so <span class="math inline">\(\mathrm{Gamma}(a,b)\)</span> has mean <span class="math inline">\(a/b\)</span>.</p>
+<div id="tbl-dist-conjugacy" class="quarto-float quarto-figure quarto-figure-center anchored">
+<figure class="quarto-float quarto-float-tbl figure">
+<figcaption class="quarto-float-caption-top quarto-float-caption quarto-float-tbl" id="tbl-dist-conjugacy-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+Table&nbsp;C.7: Conjugate prior-likelihood pairs. The first four are proved in <a href="../chapters/part1/08-hierarchical-bayes.html#sec-conjugacy" class="quarto-xref"><span>Section 8.4</span></a> of Chapter 8; the Dirichlet-multinomial pair is the standard <span class="math inline">\(K\)</span>-category generalization of the beta-binomial pair, with the beta-binomial recovered at <span class="math inline">\(K=2\)</span>.
+</figcaption>
+<div aria-describedby="tbl-dist-conjugacy-caption-0ceaefa1-69ba-4598-a22c-09a6ac19f8ca">
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Prior</th>
+<th>Likelihood (data model)</th>
+<th>Posterior</th>
+<th>Reference</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(\theta\sim\mathcal{N}(\mu_0,\tau_0^{2})\)</span></td>
+<td><span class="math inline">\(y\mid\theta\sim\mathcal{N}(\theta,\sigma^{2})\)</span>, <span class="math inline">\(\sigma^{2}\)</span> known</td>
+<td><span class="math inline">\(\theta\mid y\sim\mathcal{N}(\mu_1,\tau_1^{2})\)</span>, <span class="math inline">\(\tau_1^{-2}=\tau_0^{-2}+\sigma^{-2}\)</span></td>
+<td><a href="../chapters/part1/08-hierarchical-bayes.html#thm-conjugate-normal" class="quarto-xref">Theorem&nbsp;<span>8.3</span></a></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\boldsymbol{\theta}\sim\mathcal{N}_p(\mathbf{m}_0,\boldsymbol{\Omega}_0)\)</span></td>
+<td><span class="math inline">\(\mathbf{y}\mid\boldsymbol{\theta}\sim\mathcal{N}_p(\boldsymbol{\theta},\boldsymbol{\Sigma})\)</span>, <span class="math inline">\(\boldsymbol{\Sigma}\)</span> known</td>
+<td><span class="math inline">\(\boldsymbol{\theta}\mid\mathbf{y}\sim\mathcal{N}_p(\mathbf{m}_1,\boldsymbol{\Omega}_1)\)</span>, <span class="math inline">\(\boldsymbol{\Omega}_1^{-1}=\boldsymbol{\Omega}_0^{-1}+\boldsymbol{\Sigma}^{-1}\)</span></td>
+<td><a href="../chapters/part1/08-hierarchical-bayes.html#cor-conjugate-normal-mv" class="quarto-xref">Corollary&nbsp;<span>8.1</span></a></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(p\sim\mathrm{Beta}(a,b)\)</span></td>
+<td><span class="math inline">\(y\mid p\sim\mathrm{Bin}(n,p)\)</span></td>
+<td><span class="math inline">\(p\mid y\sim\mathrm{Beta}(a+y,\,b+n-y)\)</span></td>
+<td><a href="../chapters/part1/08-hierarchical-bayes.html#thm-conjugate-beta-binomial" class="quarto-xref">Theorem&nbsp;<span>8.4</span></a></td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(\lambda\sim\mathrm{Gamma}(a,b)\)</span></td>
+<td><span class="math inline">\(y_i\mid\lambda\sim\mathrm{Poi}(\lambda)\)</span> iid</td>
+<td><span class="math inline">\(\lambda\mid\mathbf{y}\sim\mathrm{Gamma}\!\big(a+\sum_i y_i,\ b+n\big)\)</span></td>
+<td><a href="../chapters/part1/08-hierarchical-bayes.html#prp-conjugate-gamma-poisson" class="quarto-xref">Proposition&nbsp;<span>8.1</span></a></td>
+</tr>
+<tr class="odd">
+<td><span class="math inline">\(\mathbf{p}\sim\mathrm{Dir}(\boldsymbol{\alpha})\)</span></td>
+<td><span class="math inline">\(\mathbf{n}\mid\mathbf{p}\sim\mathrm{Multinomial}(N,\mathbf{p})\)</span></td>
+<td><span class="math inline">\(\mathbf{p}\mid\mathbf{n}\sim\mathrm{Dir}(\boldsymbol{\alpha}+\mathbf{n})\)</span></td>
+<td>generalizes <a href="../chapters/part1/08-hierarchical-bayes.html#thm-conjugate-beta-binomial" class="quarto-xref">Theorem&nbsp;<span>8.4</span></a></td>
+</tr>
+</tbody>
+</table>
+</div>
+</figure>
+</div>
+<p>In each row the posterior hyperparameters combine prior information with data additively. For the normal-normal pair <strong>precisions</strong> (the reciprocals of the variances) add, and the posterior mean is the precision-weighted average of prior mean and data (<a href="../chapters/part1/08-hierarchical-bayes.html#eq-conjugate-normal" class="quarto-xref">Equation&nbsp;<span>8.5</span></a>): if the prior says the effect is about <span class="math inline">\(\mu_0\)</span> and the data say about <span class="math inline">\(y\)</span>, the posterior mean sits between them, pulled toward whichever is more precise. For the beta-binomial and Dirichlet-multinomial pairs the prior hyperparameters act as pseudo-counts that are incremented by the observed counts (<a href="../chapters/part1/08-hierarchical-bayes.html#eq-conjugate-beta" class="quarto-xref">Equation&nbsp;<span>8.6</span></a>); and for the gamma-Poisson pair the shape is incremented by the total count and the rate by the number of observations. The posterior mean is in every case a convex combination of the prior mean and the maximum likelihood estimate, the analytic form of shrinkage that Chapter 8 develops.</p>
+<div id="exm-dist-betabinom" class="theorem example">
+<p><span class="theorem-title"><strong>Example C.4 (A beta-binomial update with numbers)</strong></span> Put a uniform prior <span class="math inline">\(\mathrm{Beta}(1,1)\)</span> on a response probability <span class="math inline">\(p\)</span> (the flat prior: every value in <span class="math inline">\((0,1)\)</span> equally likely, prior mean <span class="math inline">\(\tfrac12\)</span>). Observe <span class="math inline">\(y=7\)</span> responders out of <span class="math inline">\(n=10\)</span> patients. By the beta-binomial row of <a href="#tbl-dist-conjugacy" class="quarto-xref">Table&nbsp;<span>C.7</span></a> the posterior is <span class="math display">\[
+p\mid y\ \sim\ \mathrm{Beta}(1+7,\ 1+10-7)=\mathrm{Beta}(8,4),
+\]</span> with posterior mean <span class="math inline">\(8/(8+4)=8/12=2/3\approx0.667\)</span>. The two prior pseudo-counts <span class="math inline">\(a=b=1\)</span> have been incremented by the <span class="math inline">\(7\)</span> observed successes and <span class="math inline">\(3\)</span> observed failures. Contrast the maximum likelihood estimate <span class="math inline">\(\hat p=7/10=0.7\)</span> and the prior mean <span class="math inline">\(0.5\)</span>: the posterior mean <span class="math inline">\(0.667\)</span> lies between them, and is in fact their convex combination <span class="math display">\[
+\frac{a+b}{a+b+n}\cdot\frac12+\frac{n}{a+b+n}\cdot\frac{y}{n}
+=\frac{2}{12}\cdot 0.5+\frac{10}{12}\cdot 0.7=0.667,
+\]</span> weighted toward the data because the flat prior carries only <span class="math inline">\(a+b=2\)</span> pseudo-observations against <span class="math inline">\(n=10\)</span> real ones. This is the shrinkage reading of the closing paragraph, made concrete. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span><strong>Why the inverse-gamma is not cataloged.</strong> The classical conjugate prior for the variance <span class="math inline">\(\sigma^{2}\)</span> of a normal likelihood with known mean is the <strong>inverse-gamma</strong> (a gamma law on the precision <span class="math inline">\(1/\sigma^{2}\)</span>). This book does not use it: for the between-study variance of a hierarchical model the text follows modern practice and places a half-normal or half-<span class="math inline">\(t\)</span> prior on the between-study standard deviation (Chapter 8; <span class="citation" data-cites="dias2018nma">Dias et al. (<a href="../references.html#ref-dias2018nma" role="doc-biblioref">2018</a>)</span>), which behaves better when the variance may be near zero, where an inverse-gamma prior is unstable. The inverse-gamma is therefore mentioned here only so a reader does not search the tables for it. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-dist-notes" class="level2" data-number="C.9">
+<h2 data-number="C.9" class="anchored" data-anchor-id="sec-dist-notes"><span class="header-section-number">C.9</span> Notes and references</h2>
+<p>The catalogue draws on the following sources; each family points back to where it is derived or used.</p>
+<ul>
+<li><strong>Bernoulli, binomial, Poisson binomial, Poisson, normal, and multivariate normal</strong>: mass functions, densities, means, variances, and moment generating functions, with derivations, are in <a href="../chapters/part1/04-probability.html#sec-distributions" class="quarto-xref"><span>Section 4.11</span></a> and <a href="../chapters/part1/04-probability.html#sec-mvn" class="quarto-xref"><span>Section 4.12</span></a> of Chapter 4.</li>
+<li><strong>Moment generating function properties</strong> that justify the MGF columns are <a href="../chapters/part1/04-probability.html#thm-mgf-moments" class="quarto-xref">Theorem&nbsp;<span>4.10</span></a> (moments by differentiation) and <a href="../chapters/part1/04-probability.html#thm-mgf-uniqueness" class="quarto-xref">Theorem&nbsp;<span>4.11</span></a> (the MGF determines the law), the latter relying on the inversion of the characteristic function (<span class="citation" data-cites="billingsley1995">Billingsley (<a href="../references.html#ref-billingsley1995" role="doc-biblioref">1995</a>)</span>, §29 to §30).</li>
+<li><strong>Gamma, beta, exponential, Weibull, Dirichlet, multinomial</strong> and the gamma and beta special functions are standard; a measure-theoretic treatment is <span class="citation" data-cites="billingsley1995">Billingsley (<a href="../references.html#ref-billingsley1995" role="doc-biblioref">1995</a>)</span>, and the special-function evaluations are collected in <a href="../appendices/D-special-functions.html">Appendix D</a>.</li>
+<li><strong>Conjugate pairs and their shrinkage reading</strong> are proved in <a href="../chapters/part1/08-hierarchical-bayes.html#sec-conjugacy" class="quarto-xref"><span>Section 8.4</span></a> of Chapter 8; the half-normal and half-<span class="math inline">\(t\)</span> priors preferred over the inverse-gamma for heterogeneity variances are discussed in Chapter 8 and <span class="citation" data-cites="dias2018nma">Dias et al. (<a href="../references.html#ref-dias2018nma" role="doc-biblioref">2018</a>)</span>.</li>
+<li><strong>Hazard parametrization</strong> of the Weibull and exponential, used for survival baselines, is that of <a href="../chapters/part5/25-general-likelihoods.html#sec-genlik-survival" class="quarto-xref"><span>Section 25.3</span></a> in Chapter 25 and of <span class="citation" data-cites="phillippo2025general">Phillippo et al. (<a href="../references.html#ref-phillippo2025general" role="doc-biblioref">2025</a>)</span>.</li>
+<li><strong>Standard normal in numerical integration</strong>: the probability integral transform and the Gaussian copula that consume <span class="math inline">\(\Phi\)</span> and <span class="math inline">\(\Phi^{-1}\)</span> are <a href="../chapters/part5/22-mlnmr-integration.html#sec-qmc-pit" class="quarto-xref"><span>Section 22.7</span></a> and <a href="../chapters/part5/22-mlnmr-integration.html#sec-qmc-gaussian" class="quarto-xref"><span>Section 22.9</span></a> of Chapter 22.</li>
+</ul>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-billingsley1995" class="csl-entry" role="listitem">
+Billingsley, Patrick. 1995. <em>Probability and Measure</em>. 3rd ed. Wiley.
+</div>
+<div id="ref-dias2018nma" class="csl-entry" role="listitem">
+Dias, Sofia, A. E. Ades, Nicky J. Welton, Jeroen P. Jansen, and Alexander J. Sutton. 2018. <em>Network Meta-Analysis for Decision-Making</em>. Statistics in Practice. Wiley.
+</div>
+<div id="ref-phillippo2025general" class="csl-entry" role="listitem">
+Phillippo, David M., Sofia Dias, A. E. Ades, and Nicky J. Welton. 2025. <span>“Multilevel Network Meta-Regression for General Likelihoods.”</span> <em>Journal of the Royal Statistical Society: Series A</em>, ahead of print. <a href="https://doi.org/10.1093/jrsssa/qnaf169">https://doi.org/10.1093/jrsssa/qnaf169</a>.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/choxos\.github\.io\/Mathematics-of-ITC\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../appendices/B-matrix-calculus.html" class="pagination-link" aria-label="Matrix Calculus">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Matrix Calculus</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../appendices/D-special-functions.html" class="pagination-link" aria-label="Special Functions for Numerical Integration">
+        <span class="nav-page-text"><span class="chapter-number">D</span>&nbsp; <span class="chapter-title">Special Functions for Numerical Integration</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>

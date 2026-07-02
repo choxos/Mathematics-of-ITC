@@ -1,0 +1,1508 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en" xml:lang="en"><head>
+
+<meta charset="utf-8">
+<meta name="generator" content="quarto-1.9.38">
+
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+
+
+<title>9&nbsp; Potential Outcomes and Identification – The Mathematics of Indirect Treatment Comparisons</title>
+<style>
+/* Default styles provided by pandoc.
+** See https://pandoc.org/MANUAL.html#variables-for-html for config info.
+*/
+code{white-space: pre-wrap;}
+span.smallcaps{font-variant: small-caps;}
+div.columns{display: flex; gap: min(4vw, 1.5em);}
+div.column{flex: auto; overflow-x: auto;}
+div.hanging-indent{margin-left: 1.5em; text-indent: -1.5em;}
+ul.task-list{list-style: none;}
+ul.task-list li input[type="checkbox"] {
+  width: 0.8em;
+  margin: 0 0.8em 0.2em -1em; /* quarto-specific, see https://github.com/quarto-dev/quarto-cli/issues/4556 */ 
+  vertical-align: middle;
+}
+/* CSS for citations */
+div.csl-bib-body { }
+div.csl-entry {
+  clear: both;
+}
+.hanging-indent div.csl-entry {
+  margin-left:2em;
+  text-indent:-2em;
+}
+div.csl-left-margin {
+  min-width:2em;
+  float:left;
+}
+div.csl-right-inline {
+  margin-left:2em;
+  padding-left:1em;
+}
+div.csl-indent {
+  margin-left: 2em;
+}</style>
+
+
+<script src="../../site_libs/quarto-nav/quarto-nav.js"></script>
+<script src="../../site_libs/quarto-nav/headroom.min.js"></script>
+<script src="../../site_libs/clipboard/clipboard.min.js"></script>
+<script src="../../site_libs/quarto-search/autocomplete.umd.js"></script>
+<script src="../../site_libs/quarto-search/fuse.min.js"></script>
+<script src="../../site_libs/quarto-search/quarto-search.js"></script>
+<meta name="quarto:offset" content="../../">
+<link href="../../chapters/part2/10-adjustment-methods.html" rel="next">
+<link href="../../chapters/part1/08-hierarchical-bayes.html" rel="prev">
+<script src="../../site_libs/quarto-html/quarto.js" type="module"></script>
+<script src="../../site_libs/quarto-html/tabsets/tabsets.js" type="module"></script>
+<script src="../../site_libs/quarto-html/popper.min.js"></script>
+<script src="../../site_libs/quarto-html/tippy.umd.min.js"></script>
+<script src="../../site_libs/quarto-html/anchor.min.js"></script>
+<link href="../../site_libs/quarto-html/tippy.css" rel="stylesheet">
+<link href="../../site_libs/quarto-html/quarto-syntax-highlighting-15634bcf2e68342d4ad2dfa704d543f6.css" rel="stylesheet" id="quarto-text-highlighting-styles">
+<script src="../../site_libs/bootstrap/bootstrap.min.js"></script>
+<link href="../../site_libs/bootstrap/bootstrap-icons.css" rel="stylesheet">
+<link href="../../site_libs/bootstrap/bootstrap-aafe154f14b83768199b70e6209de778.min.css" rel="stylesheet" append-hash="true" id="quarto-bootstrap" data-mode="light">
+<script id="quarto-search-options" type="application/json">{
+  "location": "sidebar",
+  "copy-button": false,
+  "collapse-after": 3,
+  "panel-placement": "start",
+  "type": "textbox",
+  "limit": 50,
+  "keyboard-shortcut": [
+    "f",
+    "/",
+    "s"
+  ],
+  "show-item-context": false,
+  "language": {
+    "search-no-results-text": "No results",
+    "search-matching-documents-text": "matching documents",
+    "search-copy-link-title": "Copy link to search",
+    "search-hide-matches-text": "Hide additional matches",
+    "search-more-match-text": "more match in this document",
+    "search-more-matches-text": "more matches in this document",
+    "search-clear-button-title": "Clear",
+    "search-text-placeholder": "",
+    "search-detached-cancel-button-title": "Cancel",
+    "search-submit-button-title": "Submit",
+    "search-label": "Search"
+  }
+}</script>
+
+  <script src="https://cdnjs.cloudflare.com/polyfill/v3/polyfill.min.js?features=es6"></script>
+  <script defer="" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-chtml-full.js" type="text/javascript"></script>
+
+<script type="text/javascript">
+const typesetMath = (el) => {
+  if (window.MathJax) {
+    // MathJax Typeset
+    window.MathJax.typeset([el]);
+  } else if (window.katex) {
+    // KaTeX Render
+    var mathElements = el.getElementsByClassName("math");
+    var macros = [];
+    for (var i = 0; i < mathElements.length; i++) {
+      var texText = mathElements[i].firstChild;
+      if (mathElements[i].tagName == "SPAN" && texText && texText.data) {
+        window.katex.render(texText.data, mathElements[i], {
+          displayMode: mathElements[i].classList.contains('display'),
+          throwOnError: false,
+          macros: macros,
+          fleqn: false
+        });
+      }
+    }
+  }
+}
+window.Quarto = {
+  typesetMath
+};
+</script>
+
+</head>
+
+<body class="nav-sidebar floating quarto-light">
+
+<div id="quarto-search-results"></div>
+  <header id="quarto-header" class="headroom fixed-top">
+  <nav class="quarto-secondary-nav">
+    <div class="container-fluid d-flex">
+      <button type="button" class="quarto-btn-toggle btn" data-bs-toggle="collapse" role="button" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">
+        <i class="bi bi-layout-text-sidebar-reverse"></i>
+      </button>
+        <nav class="quarto-page-breadcrumbs" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/part2/09-potential-outcomes.html">Part II: Causal Inference and Estimands</a></li><li class="breadcrumb-item"><a href="../../chapters/part2/09-potential-outcomes.html"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Potential Outcomes and Identification</span></a></li></ol></nav>
+        <a class="flex-grow-1" role="navigation" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item" aria-controls="quarto-sidebar" aria-expanded="false" aria-label="Toggle sidebar navigation" onclick="if (window.quartoToggleHeadroom) { window.quartoToggleHeadroom(); }">      
+        </a>
+      <button type="button" class="btn quarto-search-button" aria-label="Search" onclick="window.quartoOpenSearch();">
+        <i class="bi bi-search"></i>
+      </button>
+    </div>
+  </nav>
+</header>
+<!-- content -->
+<div id="quarto-content" class="quarto-container page-columns page-rows-contents page-layout-article">
+<!-- sidebar -->
+  <nav id="quarto-sidebar" class="sidebar collapse collapse-horizontal quarto-sidebar-collapse-item sidebar-navigation floating overflow-auto">
+    <div class="pt-lg-2 mt-2 text-left sidebar-header">
+    <div class="sidebar-title mb-0 py-0">
+      <a href="../../">The Mathematics of Indirect Treatment Comparisons</a> 
+        <div class="sidebar-tools-main">
+    <a href="https://github.com/choxos/Mathematics-of-ITC" title="Source Code" class="quarto-navigation-tool px-1" aria-label="Source Code"><i class="bi bi-github"></i></a>
+</div>
+    </div>
+      </div>
+        <div class="mt-2 flex-shrink-0 align-items-center">
+        <div class="sidebar-search">
+        <div id="quarto-search" class="" title="Search"></div>
+        </div>
+        </div>
+    <div class="sidebar-menu-container"> 
+    <ul class="list-unstyled mt-1">
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../index.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Preface</span></a>
+  </div>
+</li>
+        <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../notation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">Notation and Conventions</span></a>
+  </div>
+</li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part I: Mathematical Foundations</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-1" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-1" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/01-linear-algebra-i.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">1</span>&nbsp; <span class="chapter-title">Linear Algebra I: Vector Spaces, Linear Maps, and Rank</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/02-linear-algebra-ii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">2</span>&nbsp; <span class="chapter-title">Linear Algebra II: Orthogonality and the Projection Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/03-linear-algebra-iii.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">3</span>&nbsp; <span class="chapter-title">Linear Algebra III: Spectral Theory and Quadratic Forms</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/04-probability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">4</span>&nbsp; <span class="chapter-title">Probability and Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/05-inference.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">5</span>&nbsp; <span class="chapter-title">Statistical Inference</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/06-linear-regression.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">6</span>&nbsp; <span class="chapter-title">Linear Regression from First Principles</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/07-glm.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">7</span>&nbsp; <span class="chapter-title">Generalized Linear Models</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part1/08-hierarchical-bayes.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Hierarchical Models, Shrinkage, and Bayesian Inference</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part II: Causal Inference and Estimands</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-2" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-2" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/09-potential-outcomes.html" class="sidebar-item-text sidebar-link active">
+ <span class="menu-text"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Potential Outcomes and Identification</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/10-adjustment-methods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Adjustment Methods</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/11-effect-modification-collapsibility.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">11</span>&nbsp; <span class="chapter-title">Effect Modification, Interaction, and Collapsibility</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part2/12-transportability.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">12</span>&nbsp; <span class="chapter-title">Transportability: The Estimand-Based Theory</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part III: Meta-Analysis and Network Meta-Analysis</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-3" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-3" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/13-pairwise-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">13</span>&nbsp; <span class="chapter-title">Pairwise Meta-Analysis</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/14-bucher.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">14</span>&nbsp; <span class="chapter-title">Indirect Comparison and Bucher’s Theorem</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/15-network-meta-analysis.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">15</span>&nbsp; <span class="chapter-title">Network Meta-Analysis: Models and Identifiability</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part3/16-limits-of-nma.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">16</span>&nbsp; <span class="chapter-title">The Limits of Standard Network Meta-Analysis</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part IV: Population Adjustment: MAIC and STC</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-4" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-4" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/17-population-adjustment-theory.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">17</span>&nbsp; <span class="chapter-title">Population Adjustment Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/18-maic.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">18</span>&nbsp; <span class="chapter-title">Matching-Adjusted Indirect Comparison</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part4/19-stc.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">19</span>&nbsp; <span class="chapter-title">Simulated Treatment Comparison</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part V: Multilevel Network Meta-Regression</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-5" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-5" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/20-mlnmr-aggregation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">20</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression I: The Aggregation Principle</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/21-mlnmr-discrete.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">21</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression II: Discrete Outcomes and Approximation Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/22-mlnmr-integration.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">22</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression III: Numerical Integration Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/23-mlnmr-estimands.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">23</span>&nbsp; <span class="chapter-title">Multilevel Network Meta-Regression IV: Estimands, Identifiability, and Generality</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/24-computation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">24</span>&nbsp; <span class="chapter-title">Bayesian Computation and Diagnostics</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/25-general-likelihoods.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">25</span>&nbsp; <span class="chapter-title">General Likelihoods: Survival and Ordered Categorical Outcomes</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part5/26-ml-umr.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">26</span>&nbsp; <span class="chapter-title">Multilevel Unanchored Meta-Regression</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true">
+ <span class="menu-text">Part VI: Bias, Comparator Selection, and Rigor</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-6" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-6" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/27-distance-matching.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">27</span>&nbsp; <span class="chapter-title">Aggregate-Level Covariate-Distance Matching</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/28-qba.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">28</span>&nbsp; <span class="chapter-title">Quantitative Bias Analysis for Indirect Comparisons</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/29-simulation.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">29</span>&nbsp; <span class="chapter-title">Simulation Study Theory</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../chapters/part6/30-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">30</span>&nbsp; <span class="chapter-title">Machine-Checked Foundations: The Coq Formalization</span></span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+        <li class="sidebar-item sidebar-item-section">
+      <div class="sidebar-item-container"> 
+            <a class="sidebar-item-text sidebar-link text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true">
+ <span class="menu-text">Appendices</span></a>
+          <a class="sidebar-item-toggle text-start" data-bs-toggle="collapse" data-bs-target="#quarto-sidebar-section-7" role="navigation" aria-expanded="true" aria-label="Toggle section">
+            <i class="bi bi-chevron-right ms-2"></i>
+          </a> 
+      </div>
+      <ul id="quarto-sidebar-section-7" class="collapse list-unstyled sidebar-section depth1 show">  
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/A-notation-glossary.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">A</span>&nbsp; <span class="chapter-title">Notation Glossary</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/B-matrix-calculus.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">B</span>&nbsp; <span class="chapter-title">Matrix Calculus</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/C-distributions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">C</span>&nbsp; <span class="chapter-title">Probability Distributions</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/D-special-functions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">D</span>&nbsp; <span class="chapter-title">Special Functions for Numerical Integration</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/E-reference-implementations.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">E</span>&nbsp; <span class="chapter-title">Reference Implementations: multinma, mlumr, and uitc</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/F-solutions.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">F</span>&nbsp; <span class="chapter-title">Solutions to Selected Exercises</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../appendices/G-reading-coq.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text"><span class="chapter-number">G</span>&nbsp; <span class="chapter-title">Reading the Coq Proofs</span></span></a>
+  </div>
+</li>
+          <li class="sidebar-item">
+  <div class="sidebar-item-container"> 
+  <a href="../../references.html" class="sidebar-item-text sidebar-link">
+ <span class="menu-text">References</span></a>
+  </div>
+</li>
+      </ul>
+  </li>
+    </ul>
+    </div>
+</nav>
+<div id="quarto-sidebar-glass" class="quarto-sidebar-collapse-item" data-bs-toggle="collapse" data-bs-target=".quarto-sidebar-collapse-item"></div>
+<!-- margin-sidebar -->
+    <div id="quarto-margin-sidebar" class="sidebar margin-sidebar">
+        <nav id="TOC" role="doc-toc" class="toc-active">
+    <h2 id="toc-title">Table of contents</h2>
+   
+  <ul>
+  <li><a href="#sec-po-running" id="toc-sec-po-running" class="nav-link active" data-scroll-target="#sec-po-running"><span class="header-section-number">9.1</span> A running clinical example</a></li>
+  <li><a href="#sec-po-rubin" id="toc-sec-po-rubin" class="nav-link" data-scroll-target="#sec-po-rubin"><span class="header-section-number">9.2</span> The Neyman-Rubin model</a></li>
+  <li><a href="#sec-po-sutva" id="toc-sec-po-sutva" class="nav-link" data-scroll-target="#sec-po-sutva"><span class="header-section-number">9.3</span> SUTVA and the consistency identity</a></li>
+  <li><a href="#sec-po-estimands" id="toc-sec-po-estimands" class="nav-link" data-scroll-target="#sec-po-estimands"><span class="header-section-number">9.4</span> Estimands</a></li>
+  <li><a href="#sec-po-assumptions" id="toc-sec-po-assumptions" class="nav-link" data-scroll-target="#sec-po-assumptions"><span class="header-section-number">9.5</span> Identifying assumptions: ignorability and positivity</a></li>
+  <li><a href="#sec-po-identification" id="toc-sec-po-identification" class="nav-link" data-scroll-target="#sec-po-identification"><span class="header-section-number">9.6</span> Identification of the average treatment effect</a></li>
+  <li><a href="#sec-po-selection" id="toc-sec-po-selection" class="nav-link" data-scroll-target="#sec-po-selection"><span class="header-section-number">9.7</span> The naive contrast and selection bias</a></li>
+  <li><a href="#sec-po-example" id="toc-sec-po-example" class="nav-link" data-scroll-target="#sec-po-example"><span class="header-section-number">9.8</span> A worked example: confounding, the g-formula, and selection bias</a></li>
+  <li><a href="#sec-po-bridge" id="toc-sec-po-bridge" class="nav-link" data-scroll-target="#sec-po-bridge"><span class="header-section-number">9.9</span> Why identification is the foundation of indirect comparison</a></li>
+  <li><a href="#sec-po-notes" id="toc-sec-po-notes" class="nav-link" data-scroll-target="#sec-po-notes"><span class="header-section-number">9.10</span> Notes and references</a></li>
+  <li><a href="#sec-po-exercises" id="toc-sec-po-exercises" class="nav-link" data-scroll-target="#sec-po-exercises"><span class="header-section-number">9.11</span> Exercises</a></li>
+  </ul>
+</nav>
+    </div>
+<!-- main -->
+<main class="content" id="quarto-document-content">
+
+<header id="title-block-header" class="quarto-title-block default"><nav class="quarto-page-breadcrumbs quarto-title-breadcrumbs d-none d-lg-block" aria-label="breadcrumb"><ol class="breadcrumb"><li class="breadcrumb-item"><a href="../../chapters/part2/09-potential-outcomes.html">Part II: Causal Inference and Estimands</a></li><li class="breadcrumb-item"><a href="../../chapters/part2/09-potential-outcomes.html"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Potential Outcomes and Identification</span></a></li></ol></nav>
+<div class="quarto-title">
+<h1 class="title"><span class="chapter-number">9</span>&nbsp; <span class="chapter-title">Potential Outcomes and Identification</span></h1>
+</div>
+
+
+
+<div class="quarto-title-meta">
+
+    
+  
+    
+  </div>
+  
+
+
+</header>
+
+
+<p>The statistics of Part I lets us describe a joint distribution of covariates, treatments, and outcomes, and from samples of that distribution it lets us estimate conditional expectations such as <span class="math inline">\(\mathbb{E}[Y\mid T=t,X=x]\)</span> and marginal expectations such as <span class="math inline">\(\mathbb{E}[Y]\)</span> (recall the conditional expectation of <a href="../part1/04-probability.html#def-conditional-expectation" class="quarto-xref">Definition&nbsp;<span>4.4</span></a> and the estimators of Chapter 5). We can predict, classify, and quantify uncertainty. What we cannot yet do is answer a counterfactual question: how would a patient’s outcome have changed had she received treatment <span class="math inline">\(B\)</span> instead of treatment <span class="math inline">\(A\)</span>? The patient who received <span class="math inline">\(A\)</span> supplies her outcome under <span class="math inline">\(A\)</span>, which we observe; her outcome under <span class="math inline">\(B\)</span> is unobserved, and it is unobservable in principle from this patient, because she did not in fact receive <span class="math inline">\(B\)</span> and cannot be assigned to both treatments at once. This unobservability is the <em>fundamental problem of causal inference</em>, and no amount of data from a single patient resolves it.</p>
+<p>Every indirect treatment comparison, however elaborate, is ultimately a statement about such counterfactuals: it claims that treatment <span class="math inline">\(B\)</span> would do better or worse than treatment <span class="math inline">\(C\)</span> in some target population, even though no trial randomized those two treatments head to head. Before we can compare treatments across studies, we must be able to say precisely what a treatment effect <em>is</em> and under what conditions a population can recover it from data. That is the work of this chapter. We develop the Neyman-Rubin potential-outcomes model (a bookkeeping device that gives every patient two outcomes, one per treatment), which separates <em>what we want to know</em>, the counterfactual contrast, from <em>what we observe</em>, the factual outcome under the received treatment. We state the stable-unit-treatment-value assumption (the condition that makes “a patient’s outcome under her own treatment” a well-defined object) and the consistency identity (the algebra that links the observed outcome to the potential ones) that bind the two together. We define the estimands an indirect comparison might target: the average treatment effect, the effect on the treated, the effect on the controls, and the conditional average treatment effect. We then isolate the two assumptions, ignorability (treatment is as good as random within covariate strata) and positivity (every covariate stratum contains both treated and control patients), that turn an unobservable counterfactual mean into an observable functional of the data, and we prove the identification theorem for the average treatment effect by iterated expectation. Finally we prove that the naive treatment-minus-control contrast equals the effect on the treated plus a selection-bias term, which makes precise why adjustment is needed when treatment is not randomized.</p>
+<p>Throughout we use the causal notation of <a href="../../notation.html">Notation</a>: <span class="math inline">\(Y(0)\)</span> and <span class="math inline">\(Y(1)\)</span> are the potential outcomes under control and active treatment, <span class="math inline">\(T\in\{0,1\}\)</span> is the treatment indicator, <span class="math inline">\(X\in\mathcal{X}\)</span> collects baseline covariates, <span class="math inline">\(e(x)=P(T=1\mid X=x)\)</span> is the propensity score, <span class="math inline">\(\mu_t(x)=\mathbb{E}[Y(t)\mid
+X=x]\)</span> is the conditional mean potential outcome, <span class="math inline">\(\tau(x)=\mu_1(x)-\mu_0(x)\)</span> is the conditional average treatment effect, and <span class="math inline">\(\tau=\mathbb{E}[\tau(X)]\)</span> is the average treatment effect. Two symbols we will lean on heavily deserve to be named now, since they are not in the notation chapter: <span class="math inline">\(P_X\)</span> denotes the <em>marginal distribution (law) of the covariates</em> <span class="math inline">\(X\)</span>, and <span class="math inline">\(\mathbb{E}_X[\,\cdot\,]\)</span> denotes an expectation taken <em>over that covariate distribution</em> (so <span class="math inline">\(\mathbb{E}_X[h(X)]=\int h(x)\,dP_X(x)\)</span>). Both are spelled out again where they first do real work. The development follows <span class="citation" data-cites="hernan2020whatif">Hernán and Robins (<a href="../../references.html#ref-hernan2020whatif" role="doc-biblioref">2020</a>)</span> and <span class="citation" data-cites="rosenbaum1983">Rosenbaum and Rubin (<a href="../../references.html#ref-rosenbaum1983" role="doc-biblioref">1983</a>)</span>, and it corresponds to items B.1 through B.5 of the companion proof catalogue.</p>
+<p>Two navigational notes before we begin. First, several results carry a bracketed <code>[machine-checked: ...]</code> tag naming the corresponding lemma in the companion Coq development; those tags are for readers auditing the formalization and can be safely skipped on a first reading. Second, the probability facts we borrow from Part I (the tower property <a href="../part1/04-probability.html#thm-tower-property" class="quarto-xref">Theorem&nbsp;<span>4.4</span></a>, dominated convergence <a href="../part1/04-probability.html#thm-dominated-convergence" class="quarto-xref">Theorem&nbsp;<span>4.2</span></a>, the graphoid axioms <a href="../part1/04-probability.html#thm-graphoid-axioms" class="quarto-xref">Theorem&nbsp;<span>4.5</span></a>) are cited by number as we use them, so you can follow the causal argument without re-deriving the underlying probability.</p>
+<section id="sec-po-running" class="level2" data-number="9.1">
+<h2 data-number="9.1" class="anchored" data-anchor-id="sec-po-running"><span class="header-section-number">9.1</span> A running clinical example</h2>
+<p>We anchor the whole chapter in one small clinical picture and return to it at every turn. Imagine a single center studying a <strong>new drug</strong> (<span class="math inline">\(T=1\)</span>) against <strong>standard care</strong> (<span class="math inline">\(T=0\)</span>) for a chronic disease. The outcome <span class="math inline">\(Y\)</span> is a physical-function score at six months, on a scale where higher is better. Each patient has a <em>baseline prognostic status</em> <span class="math inline">\(X\)</span>, coarsened to two levels: <span class="math inline">\(X=1\)</span> for favorable baseline, <span class="math inline">\(X=0\)</span> for poor baseline.</p>
+<p>Consider two patients. <em>Alice</em> has favorable baseline (<span class="math inline">\(X=1\)</span>). If she takes the new drug she would score <span class="math inline">\(Y(1)=24\)</span>; if she takes standard care she would score <span class="math inline">\(Y(0)=20\)</span>. Her personal benefit from the new drug is <span class="math inline">\(24-20=4\)</span> points. <em>Bob</em> has poor baseline (<span class="math inline">\(X=0\)</span>), with <span class="math inline">\(Y(1)=14\)</span> and <span class="math inline">\(Y(0)=10\)</span>, again a benefit of <span class="math inline">\(4\)</span> points. The catch is structural: Alice can be given only one treatment, so we ever see only one of her two numbers. If she takes the new drug we record <span class="math inline">\(24\)</span> and her <span class="math inline">\(20\)</span> stays hidden forever; if she takes standard care we record <span class="math inline">\(20\)</span> and her <span class="math inline">\(24\)</span> is the counterfactual we can never observe. The same holds for Bob and for every patient.</p>
+<p>These two patients are representatives of the two covariate strata of the fully worked population in <a href="#exm-confounding-gformula" class="quarto-xref">Example&nbsp;<span>9.2</span></a>, whose stratum means are exactly Alice’s and Bob’s numbers. We will use Alice and Bob to make each definition concrete, and near the end we will put real probabilities on this population and watch a naive analysis report a benefit of <span class="math inline">\(9\)</span> when the truth is <span class="math inline">\(4\)</span>. Keep the picture in mind: two hidden numbers per patient, one revealed, and a chapter’s worth of machinery devoted to recovering <em>averages</em> of the hidden ones.</p>
+</section>
+<section id="sec-po-rubin" class="level2" data-number="9.2">
+<h2 data-number="9.2" class="anchored" data-anchor-id="sec-po-rubin"><span class="header-section-number">9.2</span> The Neyman-Rubin model</h2>
+<p>The framework begins by positing, for each unit, not one outcome but two: the outcome that would be realized under each of the two treatments. These are the potential outcomes. They live on the same probability space as the observed data, and they are ordinary random variables; what distinguishes them is that only one of the two is ever revealed for any given unit.</p>
+<p>Before the formal definition, fix the picture the formalism encodes. Think of <span class="math inline">\(\omega\)</span> as <em>one patient</em>, and of the probability space <span class="math inline">\((\Omega,\mathcal{F},P)\)</span> as the mathematical version of the sentence “draw a patient at random from the population.” The set <span class="math inline">\(\Omega\)</span> is the population of patients; <span class="math inline">\(P\)</span> says how likely each kind of patient is to be drawn; a random variable is any number attached to a patient (her covariates, her treatment, her outcome). In this language Alice and Bob are two particular points <span class="math inline">\(\omega\in\Omega\)</span>, and a potential outcome is just a rule that assigns each patient the score she <em>would</em> get under a given treatment.</p>
+<div id="def-potential-outcome" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 9.1 (Potential outcomes)</strong></span> Fix a probability space <span class="math inline">\((\Omega,\mathcal{F},P)\)</span> whose points <span class="math inline">\(\omega\in\Omega\)</span> index the units of a population. A pair of <strong>potential outcomes</strong> is a pair of random variables <span class="math display">\[
+Y(0):\Omega\to\mathbb{R},\qquad Y(1):\Omega\to\mathbb{R},
+\]</span> where <span class="math inline">\(Y(1)(\omega)\)</span> is the outcome unit <span class="math inline">\(\omega\)</span> would experience under active treatment and <span class="math inline">\(Y(0)(\omega)\)</span> the outcome it would experience under control. More generally, for a treatment label <span class="math inline">\(t\in\{0,1\}\)</span> we write <span class="math inline">\(Y(t)\)</span> for the potential outcome under treatment <span class="math inline">\(t\)</span>, so that <span class="math inline">\(Y(t)=t\,Y(1)+(1-t)\,Y(0)\)</span> as a function of the label. Both <span class="math inline">\(Y(0)\)</span> and <span class="math inline">\(Y(1)\)</span> are assumed to be well-defined, measurable, and (unless stated otherwise) integrable, that is, <span class="math inline">\(Y(0),Y(1)\in L^1(P)\)</span>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>[machine-checked: <code>theories/PotentialOutcomes.v</code>, <code>Record potential_outcomes</code>, <code>Definition potential_outcome</code>]</p>
+<p><strong>Reader translation.</strong> Every patient carries two numbers, the outcome she would get under the new drug and the outcome she would get under standard care. For Alice these are <span class="math inline">\(Y(1)(\omega)=24\)</span> and <span class="math inline">\(Y(0)(\omega)=20\)</span>. Only the one matching the treatment she actually receives is ever seen; the other is hidden but no less real. A note on the two kinds of “<span class="math inline">\(t\)</span>”: a <em>lowercase</em> <span class="math inline">\(t\in\{0,1\}\)</span> is a fixed label we choose (as in “the potential outcome <span class="math inline">\(Y(t)\)</span> under treatment <span class="math inline">\(t\)</span>”), whereas the <em>uppercase</em> <span class="math inline">\(T\)</span> we meet next is the random treatment a patient actually receives. Watching this lowercase-versus-uppercase distinction (notation convention 2 of <a href="../../notation.html">Notation</a>) saves a great deal of confusion; the switch is doing real work every time it appears.</p>
+<p>The causal effect of treatment on a <em>single</em> unit is the difference between that unit’s two potential outcomes. We name it because it is the quantity an idealized experiment on one patient, repeated in two parallel worlds, would measure.</p>
+<div id="def-individual-effect" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 9.2 (Individual treatment effect)</strong></span> The <strong>individual treatment effect</strong> (ITE) for unit <span class="math inline">\(\omega\)</span> is <span class="math display">\[
+\tau(\omega)=Y(1)(\omega)-Y(0)(\omega).
+\]</span> It is itself a random variable on <span class="math inline">\(\Omega\)</span>, measurable whenever <span class="math inline">\(Y(0)\)</span> and <span class="math inline">\(Y(1)\)</span> are. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p><strong>Reader translation.</strong> The ITE is one patient’s personal benefit or harm from treatment, the difference between her two hidden numbers. Alice’s ITE is <span class="math inline">\(24-20=4\)</span> and Bob’s is <span class="math inline">\(14-10=4\)</span>. It is the thing we would most like to report to a patient, and, by the very next theorem, exactly the thing no data set can ever deliver.</p>
+<p>The individual effect is exactly what we would like to know and exactly what we can never observe. The reason is structural, not a matter of sample size: for each unit, one of the two potential outcomes is realized and the other is <em>counterfactual</em>, the outcome under the treatment the unit did not receive. The next theorem makes this precise. In plain words it says: <em>two different worlds can produce identical observed data yet have different causal effects, so no analysis of the observed data alone can recover the effect.</em> Formally, two genuinely different populations, differing in their individual effects and even in their average effect, can produce identical observed data, so no procedure that reads only the observed data can recover the individual effect.</p>
+<div id="thm-fundamental-problem" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 9.1 (The fundamental problem of causal inference)</strong></span> Let the <strong>observed outcome</strong> under a treatment assignment <span class="math inline">\(T:\Omega\to\{0,1\}\)</span> be <span class="math inline">\(Y=Y(T)\)</span>, that is, <span class="math inline">\(Y(\omega)=Y(T(\omega))(\omega)\)</span>. There exist two pairs of potential outcomes <span class="math inline">\((Y(0),Y(1))\)</span> and <span class="math inline">\((Y'(0),Y'(1))\)</span> on a common space, and a common assignment <span class="math inline">\(T\)</span>, such that the observed data <span class="math inline">\((T,Y)\)</span> and <span class="math inline">\((T,Y')\)</span> have the same joint distribution, yet the individual treatment effects differ at some unit: <span class="math display">\[
+Y(1)-Y(0)\;\not\equiv\;Y'(1)-Y'(0).
+\]</span> Consequently no function of the observed data <span class="math inline">\((T,Y)\)</span> alone equals the individual treatment effect, and no such function equals the average individual effect either.</p>
+</div>
+<p>[machine-checked: <code>theories/PotentialOutcomes.v</code>, <code>Lemma ITE_unobservable</code>]</p>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>We exhibit two worlds that agree on everything observable and disagree on the effect. Take any nonempty <span class="math inline">\(\Omega\)</span> and let every unit be treated, <span class="math inline">\(T(\omega)=1\)</span> for all <span class="math inline">\(\omega\)</span>. Define <span class="math display">\[
+\text{World A:}\quad Y(1)\equiv 1,\ Y(0)\equiv 0,
+\qquad
+\text{World B:}\quad Y'(1)\equiv 1,\ Y'(0)\equiv 1 .
+\]</span> Because <span class="math inline">\(T\equiv 1\)</span>, in both worlds the observed outcome is the potential outcome under treatment: <span class="math inline">\(Y=Y(1)\equiv 1\)</span> in World A and <span class="math inline">\(Y'=Y'(1)\equiv 1\)</span> in World B. Hence <span class="math inline">\((T,Y)\)</span> and <span class="math inline">\((T,Y')\)</span> are both the constant pair <span class="math inline">\((1,1)\)</span> and have identical joint laws. The individual effects, however, are <span class="math inline">\(Y(1)-Y(0)\equiv 1\)</span> in World A and <span class="math inline">\(Y'(1)-Y'(0)\equiv 0\)</span> in World B, which differ at every unit; the average effects <span class="math inline">\(\mathbb{E}[Y(1)-Y(0)]=1\)</span> and <span class="math inline">\(\mathbb{E}[Y'(1)-Y'(0)]=0\)</span> differ as well.</p>
+<p>Now suppose some measurable functional <span class="math inline">\(\Psi\)</span> of the observed data satisfied <span class="math inline">\(\Psi(T,Y)=Y(1)-Y(0)\)</span> in every world. Applied to the two worlds above, <span class="math inline">\(\Psi\)</span> receives the <em>same</em> argument <span class="math inline">\((1,1)\)</span> in both, so it returns the same value; but the targets <span class="math inline">\(Y(1)-Y(0)\)</span> and <span class="math inline">\(Y'(1)-Y'(0)\)</span> differ. This contradiction shows no such <span class="math inline">\(\Psi\)</span> exists. The identical argument with the constant targets replaced by their expectations rules out a functional returning the average effect. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><strong>Why this matters.</strong> This impossibility is the logical warrant for the entire book. Because <em>no</em> method, however clever, can recover an individual effect from observed data, every estimand we pursue afterward, in regression, in network meta-analysis, and in indirect treatment comparison alike, is a <em>population average</em> rather than a person-level prediction. When a later chapter targets an average effect and not a personalized one, this theorem is the reason. The rest of the present chapter is the disciplined response to it: recover averages when individual effects are hopeless.</p>
+<p>The construction in the proof is deliberately extreme: with everyone treated there are no controls, so the control outcome <span class="math inline">\(Y(0)\)</span> is pure counterfactual and the data carry no information about it. The remainder of the chapter is the disciplined response to this problem. We cannot recover individual effects, but with the right structural assumptions we can recover <em>averages</em>. The first such assumption concerns how the observed outcome is generated from the potential ones.</p>
+</section>
+<section id="sec-po-sutva" class="level2" data-number="9.3">
+<h2 data-number="9.3" class="anchored" data-anchor-id="sec-po-sutva"><span class="header-section-number">9.3</span> SUTVA and the consistency identity</h2>
+<p>Writing <span class="math inline">\(Y=Y(T)\)</span> already smuggles in an assumption. It presumes that the outcome a unit displays under its received treatment is its own potential outcome under that treatment, unaffected by which treatments other units received and unambiguous as to which “version” of the treatment was given. These are the two components of the stable-unit-treatment-value assumption. Before the formal statement: SUTVA is what lets us pretend each patient lives in her own bubble, with one clearly defined “new drug” and one clearly defined “standard care”, so that her observed score is simply whichever of her two potential scores matches the treatment she got.</p>
+<div id="def-sutva" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 9.3 (Stable unit treatment value assumption (SUTVA))</strong></span> Let the population receive an assignment vector <span class="math inline">\(\mathbf{t}=(t_\omega)_{\omega\in\Omega}\in\{0,1\}^\Omega\)</span>, and let <span class="math inline">\(Y_\omega(\mathbf{t})\)</span> denote the outcome unit <span class="math inline">\(\omega\)</span> would experience under the <em>full</em> vector <span class="math inline">\(\mathbf{t}\)</span>. The <strong>stable unit treatment value assumption</strong> consists of two parts.</p>
+<ul>
+<li><strong>(SUTVA-1) No interference.</strong> Each unit’s outcome depends on the assignment vector only through that unit’s own component: for all <span class="math inline">\(\mathbf{t},\mathbf{t}'\)</span> and all <span class="math inline">\(\omega\)</span>, <span class="math display">\[
+t_\omega=t'_\omega\ \Longrightarrow\ Y_\omega(\mathbf{t})=Y_\omega(\mathbf{t}').
+\]</span></li>
+<li><strong>(SUTVA-2) No hidden versions.</strong> There is a single, well-defined version of each treatment level, so that the label <span class="math inline">\(t\in\{0,1\}\)</span> determines the intervention unambiguously.</li>
+</ul>
+<p><span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>[machine-checked: <code>theories/CausalAssumptions.v</code>, <code>Definition SUTVA</code>, <code>Lemma no_interference_unit_level</code>]</p>
+<p><strong>Reader translation.</strong> SUTVA says two things in plain clinical terms. First, <em>no interference</em>: my outcome depends on the treatment <em>I</em> take, not on who else in the study happened to be treated. Second, <em>no hidden versions</em>: “the new drug” names one well-defined intervention, not a grab-bag of different doses or regimens masquerading under one label. Only when both hold does it make sense to write a patient’s observed outcome as her own potential outcome under her own assignment, <span class="math inline">\(Y=Y(T)\)</span>.</p>
+<p>SUTVA is an assumption, not a theorem; it constrains the world, and it can fail. Interference fails in a vaccine trial where one unit’s vaccination lowers another unit’s infection risk through reduced transmission; hidden versions fail when “surgery” silently bundles several distinct procedures of differing efficacy. The failure that most threatens indirect comparison is the second one across studies: in a network of oncology trials, if one trial’s “chemotherapy” arm delivers a higher dose than another’s, the single label “chemotherapy” hides two different interventions, SUTVA-2 fails, and the shared anchor on which the indirect comparison depends is no longer one well-defined treatment. When you later read that two trials must share a <em>common comparator</em>, this is the assumption being invoked. What SUTVA-1 buys, mathematically, is the reduction from a vector-indexed family of outcomes to the two-potential-outcomes setup of <a href="#def-potential-outcome" class="quarto-xref">Definition&nbsp;<span>9.1</span></a>: under no interference there is a function <span class="math inline">\(Y(\cdot)(\cdot):\{0,1\}\times\Omega\to\mathbb{R}\)</span> with <span class="math inline">\(Y_\omega(\mathbf{t})=Y(t_\omega)(\omega)\)</span> for every assignment vector, because <span class="math inline">\(Y_\omega(\mathbf{t})\)</span> depends on <span class="math inline">\(\mathbf{t}\)</span> only through <span class="math inline">\(t_\omega\)</span>. The witness is <span class="math inline">\(Y(t)(\omega):=Y_\omega(\mathbf{t})\)</span> evaluated at any <span class="math inline">\(\mathbf{t}\)</span> with <span class="math inline">\(t_\omega=t\)</span>, for instance the constant vector <span class="math inline">\(\mathbf{t}\equiv t\)</span>; no interference guarantees this does not depend on the choice. We may therefore speak of <span class="math inline">\(Y(0)\)</span> and <span class="math inline">\(Y(1)\)</span> as unit-level random variables, exactly as the catalogue records (corresponds to B.1 in the proof catalogue).</p>
+<p>The bookkeeping is easiest to see in a table. Three patients, each with two potential scores, are assigned a treatment; we observe the score in the assigned column and the other is counterfactual.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+<col style="width: 14%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Patient</th>
+<th>Baseline <span class="math inline">\(X\)</span></th>
+<th>Assigned <span class="math inline">\(T\)</span></th>
+<th><span class="math inline">\(Y(0)\)</span></th>
+<th><span class="math inline">\(Y(1)\)</span></th>
+<th>Observed <span class="math inline">\(Y=Y(T)\)</span></th>
+<th>Hidden (counterfactual)</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Alice</td>
+<td><span class="math inline">\(1\)</span> (favorable)</td>
+<td><span class="math inline">\(1\)</span> (new drug)</td>
+<td><span class="math inline">\(20\)</span></td>
+<td><span class="math inline">\(24\)</span></td>
+<td><span class="math inline">\(24\)</span></td>
+<td><span class="math inline">\(Y(0)=20\)</span></td>
+</tr>
+<tr class="even">
+<td>Bob</td>
+<td><span class="math inline">\(0\)</span> (poor)</td>
+<td><span class="math inline">\(0\)</span> (standard care)</td>
+<td><span class="math inline">\(10\)</span></td>
+<td><span class="math inline">\(14\)</span></td>
+<td><span class="math inline">\(10\)</span></td>
+<td><span class="math inline">\(Y(1)=14\)</span></td>
+</tr>
+<tr class="odd">
+<td>Carol</td>
+<td><span class="math inline">\(1\)</span> (favorable)</td>
+<td><span class="math inline">\(0\)</span> (standard care)</td>
+<td><span class="math inline">\(20\)</span></td>
+<td><span class="math inline">\(24\)</span></td>
+<td><span class="math inline">\(20\)</span></td>
+<td><span class="math inline">\(Y(1)=24\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>Each row shows the fundamental problem in miniature: exactly one number per patient is observed and one is forever hidden. The next result is simply the algebra of the “Observed <span class="math inline">\(Y\)</span>” column.</p>
+<p>With the two potential outcomes in hand and a treatment indicator <span class="math inline">\(T\)</span>, the observed outcome is determined by a case split: a treated unit shows its treated potential outcome, a control unit shows its control potential outcome. The next result records this and its algebraic encoding, which is the workhorse of every identification proof to come.</p>
+<div id="thm-consistency-identity" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 9.2 (Consistency identity)</strong></span> Under SUTVA, with <span class="math inline">\(T\in\{0,1\}\)</span> the treatment indicator and <span class="math inline">\(Y=Y(T)\)</span> the observed outcome, <span id="eq-consistency-identity"><span class="math display">\[
+Y = T\,Y(1) + (1-T)\,Y(0)
+\qquad\text{pointwise on }\Omega.
+\tag{9.1}\]</span></span> Equivalently, <span class="math inline">\(Y=Y(t)\)</span> holds on the event <span class="math inline">\(\{T=t\}\)</span> for each <span class="math inline">\(t\in\{0,1\}\)</span>. Moreover the treatment-masked identities <span id="eq-consistency-masked"><span class="math display">\[
+T\,Y = T\,Y(1),
+\qquad
+(1-T)\,Y = (1-T)\,Y(0)
+\tag{9.2}\]</span></span> hold pointwise.</p>
+</div>
+<p>[machine-checked: <code>theories/PotentialOutcomes.v</code>, <code>Definition consistency</code>, <code>Lemma consistency_equiv</code>, <code>Lemma consistency_expectation</code>]</p>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Fix <span class="math inline">\(\omega\)</span> and split on the value of <span class="math inline">\(T(\omega)\in\{0,1\}\)</span>. If <span class="math inline">\(T(\omega)=1\)</span>, the right-hand side of <a href="#eq-consistency-identity" class="quarto-xref">Equation&nbsp;<span>9.1</span></a> is <span class="math inline">\(1\cdot Y(1)(\omega)+0\cdot Y(0)(\omega)=Y(1)(\omega)\)</span>, which equals <span class="math inline">\(Y(\omega)=Y(T(\omega))(\omega)=Y(1)(\omega)\)</span>; SUTVA-1 makes <span class="math inline">\(Y(1)(\omega)\)</span> depend only on <span class="math inline">\(\omega\)</span>’s own assignment and SUTVA-2 makes it unambiguous, so this potential outcome is well-defined. If <span class="math inline">\(T(\omega)=0\)</span>, the right-hand side is <span class="math inline">\(0\cdot Y(1)(\omega)+1\cdot Y(0)(\omega)=Y(0)(\omega)=Y(\omega)\)</span>. In both cases the two sides agree, proving <a href="#eq-consistency-identity" class="quarto-xref">Equation&nbsp;<span>9.1</span></a>; the statement <span class="math inline">\(Y=Y(t)\)</span> on <span class="math inline">\(\{T=t\}\)</span> is the same case split read one branch at a time.</p>
+<p>For the masked identities, multiply <a href="#eq-consistency-identity" class="quarto-xref">Equation&nbsp;<span>9.1</span></a> by <span class="math inline">\(T\)</span> and use that <span class="math inline">\(T\)</span> takes values in <span class="math inline">\(\{0,1\}\)</span>, so <span class="math inline">\(T^2=T\)</span> and <span class="math inline">\(T(1-T)=0\)</span>: <span class="math display">\[
+T\,Y = T\bigl(T\,Y(1)+(1-T)\,Y(0)\bigr) = T^2\,Y(1) + T(1-T)\,Y(0) = T\,Y(1).
+\]</span> Multiplying instead by <span class="math inline">\(1-T\)</span> and using <span class="math inline">\((1-T)^2=1-T\)</span> and <span class="math inline">\((1-T)T=0\)</span> gives <span class="math inline">\((1-T)Y=(1-T)Y(0)\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><strong>Why this matters.</strong> The consistency identity is the single hinge that connects what we observe to what we want. Every identification formula in this book, and every indirect-comparison estimator built on it, passes through it: it is the one licensed move from an observed <span class="math inline">\(Y\)</span> to a potential outcome <span class="math inline">\(Y(t)\)</span>.</p>
+<p>The identity <a href="#eq-consistency-identity" class="quarto-xref">Equation&nbsp;<span>9.1</span></a> is, in the epidemiological literature, called <em>consistency</em>, a word that unfortunately also names the convergence of an estimator; the two senses are unrelated and we keep them apart by always saying “consistency identity” for the causal one. Its importance is that it lets us trade the observed outcome for a potential outcome <em>inside conditional expectations</em>, on the event where the corresponding treatment was received. This swap is the single bridge across which all identification travels. The masked forms <a href="#eq-consistency-masked" class="quarto-xref">Equation&nbsp;<span>9.2</span></a> may look like a pointless multiplication by <span class="math inline">\(T\)</span>, but the point is to <em>isolate a single arm</em>: <span class="math inline">\(TY=TY(1)\)</span> keeps only the treated units and equates their observed outcome with their treated potential outcome, discarding the controls. That is exactly the algebra behind the inverse-probability-weighting estimator of the next chapter (<a href="10-adjustment-methods.html#thm-ipw-unbiased" class="quarto-xref">Theorem&nbsp;<span>10.3</span></a>), which reconstructs <span class="math inline">\(\mathbb{E}[Y(1)]\)</span> from the treated arm alone; the masked identity is what makes that arm-by-arm reconstruction legitimate.</p>
+<div id="cor-consistency-swap" class="theorem corollary">
+<p><span class="theorem-title"><strong>Corollary 9.1 (Outcome swap under consistency)</strong></span> Under SUTVA, for each <span class="math inline">\(t\in\{0,1\}\)</span> and any covariate <span class="math inline">\(X\)</span>, <span id="eq-consistency-swap"><span class="math display">\[
+\mathbb{E}[Y\mid T=t,X] = \mathbb{E}[Y(t)\mid T=t,X]
+\qquad\text{a.s. on }\{P(T=t\mid X)&gt;0\}.
+\tag{9.3}\]</span></span></p>
+</div>
+<p>[machine-checked: <code>theories/PotentialOutcomes.v</code>, <code>Lemma consistency_treated_mean</code>, <code>Lemma consistency_control_mean</code>]</p>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>By <a href="#thm-consistency-identity" class="quarto-xref">Theorem&nbsp;<span>9.2</span></a>, <span class="math inline">\(Y=Y(t)\)</span> everywhere on the event <span class="math inline">\(\{T=t\}\)</span>. The claim is then an instance of a general fact: a conditional expectation given <span class="math inline">\((T=t,X)\)</span> depends on its integrand only through the integrand’s values on the event <span class="math inline">\(\{T=t\}\)</span>. To see why, recall the defining property of conditional expectation (<a href="../part1/04-probability.html#def-conditional-expectation" class="quarto-xref">Definition&nbsp;<span>4.4</span></a> and <a href="../part1/04-probability.html#eq-cond-exp-defining" class="quarto-xref">Equation&nbsp;<span>4.5</span></a>): <span class="math inline">\(\mathbb{E}[\,\cdot\mid T=t,X]\)</span> is characterized by its integrals against test sets of the form <span class="math inline">\(\{T=t\}\cap B\)</span> with <span class="math inline">\(B\)</span> an <span class="math inline">\(X\)</span>-measurable set. For two integrands <span class="math inline">\(f\)</span> and <span class="math inline">\(g\)</span> that agree on <span class="math inline">\(\{T=t\}\)</span> we have <span class="math inline">\(f\mathbf{1}_{\{T=t\}\cap B}=
+g\mathbf{1}_{\{T=t\}\cap B}\)</span> pointwise, so their defining integrals coincide for every such test set; by the uniqueness clause of <a href="../part1/04-probability.html#def-conditional-expectation" class="quarto-xref">Definition&nbsp;<span>4.4</span></a> the two conditional expectations are therefore a.s. equal. Applying this with <span class="math inline">\(f=Y\)</span> and <span class="math inline">\(g=Y(t)\)</span>, which agree on <span class="math inline">\(\{T=t\}\)</span> by consistency, gives <a href="#eq-consistency-swap" class="quarto-xref">Equation&nbsp;<span>9.3</span></a> wherever the conditioning event has positive probability. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><strong>Reader translation.</strong> The corollary says: among patients with covariates <span class="math inline">\(X\)</span> who <em>actually received</em> treatment <span class="math inline">\(t\)</span>, their observed outcome and their potential outcome under <span class="math inline">\(t\)</span> have the same average. The proviso is the honest limitation: this only speaks about patient types who are sometimes given treatment <span class="math inline">\(t\)</span>. It says nothing about the treated potential outcome of a patient type who is never treated, because there is simply no one to average. The proviso <span class="math inline">\(P(T=t\mid X)&gt;0\)</span> is exactly the positivity condition of <a href="#sec-po-assumptions" class="quarto-xref"><span>Section 9.5</span></a>; without it the conditioning event <span class="math inline">\(\{T=t,X=x\}\)</span> can be null and the left-hand conditional mean is not defined there.</p>
+</section>
+<section id="sec-po-estimands" class="level2" data-number="9.4">
+<h2 data-number="9.4" class="anchored" data-anchor-id="sec-po-estimands"><span class="header-section-number">9.4</span> Estimands</h2>
+<p>We cannot recover individual effects, so we target averages. Which average depends on the question. This section names the standard estimands; the rest of the chapter is about identifying the first of them from data. All are defined directly from the potential outcomes, with no reference yet to how treatment was assigned, so they are properties of the population, not of any estimator.</p>
+<p>One word carries a lot of weight here: <em>which</em> population. The “population” in each average is whichever population the covariates <span class="math inline">\(X\)</span> are drawn from. In a randomized trial it is the enrolled sample; in a cohort study it is the source population; in an indirect treatment comparison it is the decision maker’s <em>target</em> population, which may be neither trial’s. An effect that is correct in one population can be wrong in another, so keeping track of which population an estimand refers to is the single most important habit for the rest of the book.</p>
+<div id="def-ate" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 9.4 (Average treatment effect)</strong></span> The <strong>average treatment effect</strong> (ATE) is the population mean of the individual treatment effect, <span id="eq-ate"><span class="math display">\[
+\tau := \mathbb{E}[Y(1)-Y(0)] = \mathbb{E}[Y(1)] - \mathbb{E}[Y(0)].
+\tag{9.4}\]</span></span> It is the expected change in outcome if the entire population were switched from control to active treatment. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>[machine-checked: <code>theories/PotentialOutcomes.v</code>, <code>Definition ATE</code>, <code>Lemma ATE_split</code>]</p>
+<p><strong>Reader translation.</strong> The ATE answers “if we treated <em>everyone</em> in this population instead of no one, how would the average score change?” In the running example it will turn out to be <span class="math inline">\(4\)</span>: the average patient gains <span class="math inline">\(4\)</span> function points from the new drug.</p>
+<p>The second equality in <a href="#eq-ate" class="quarto-xref">Equation&nbsp;<span>9.4</span></a> is linearity of expectation, the same step that the Coq lemma <code>ATE_split</code> records; it already shows that the ATE is built from the two <em>marginal</em> mean potential outcomes <span class="math inline">\(\mathbb{E}[Y(0)]\)</span> and <span class="math inline">\(\mathbb{E}[Y(1)]\)</span>, each of which we will identify separately. Restricting the average to the units who actually received treatment gives a different estimand, the one most relevant when a regulator asks what a drug did for the patients who took it.</p>
+<div id="def-att" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 9.5 (Average treatment effect on the treated)</strong></span> The <strong>average treatment effect on the treated</strong> (ATT) is <span id="eq-att"><span class="math display">\[
+\tau_{\mathrm{T}} := \mathbb{E}[Y(1)-Y(0)\mid T=1],
+\tag{9.5}\]</span></span> the mean individual effect among units with <span class="math inline">\(T=1\)</span>. The symmetric <strong>average treatment effect on the controls</strong> (ATC) is <span class="math inline">\(\tau_{\mathrm{C}}:=\mathbb{E}[Y(1)-Y(0)\mid T=0]\)</span>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>[machine-checked: <code>theories/PotentialOutcomes.v</code>, <code>Definition ATT</code>, <code>Definition ATC</code>]</p>
+<p><strong>Reader translation.</strong> The ATT restricts the question to the patients who <em>did</em> take the new drug: “for those actually treated, how much did treatment help on average?” The ATC asks the mirror question of those who received standard care. These differ from the ATE whenever the treated and untreated are different kinds of patient, which is the usual situation outside a randomized trial.</p>
+<div id="def-cate" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 9.6 (Conditional average treatment effect)</strong></span> For covariates <span class="math inline">\(X\)</span>, the <strong>conditional average treatment effect</strong> (CATE) is the function <span id="eq-cate"><span class="math display">\[
+\tau(x) := \mathbb{E}[Y(1)-Y(0)\mid X=x] = \mu_1(x)-\mu_0(x),
+\qquad \mu_t(x)=\mathbb{E}[Y(t)\mid X=x],
+\tag{9.6}\]</span></span> the mean effect within the covariate stratum <span class="math inline">\(X=x\)</span>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p><strong>Reader translation.</strong> The CATE is the effect <em>within a stratum of patients</em>: the average benefit among favorable-baseline patients, and separately among poor-baseline patients. In the running example both strata have CATE <span class="math inline">\(4\)</span>, so the effect happens to be constant; in general it varies with <span class="math inline">\(x\)</span>, and that variation, called effect modification, is what makes an effect fail to carry from one population to another. The CATE is therefore the building block of every cross-population argument later in the book.</p>
+<p>The CATE refines the ATE by covariates, and the ATE is its average: by the tower property (<a href="../part1/04-probability.html#thm-tower-property" class="quarto-xref">Theorem&nbsp;<span>4.4</span></a>), <span id="eq-ate-is-mean-cate"><span class="math display">\[
+\tau = \mathbb{E}[Y(1)-Y(0)] = \mathbb{E}\bigl[\,\mathbb{E}[Y(1)-Y(0)\mid X]\,\bigr] = \mathbb{E}[\tau(X)],
+\tag{9.7}\]</span></span> which is the relation recorded in <a href="../../notation.html">Notation</a>. This averaging is benign here because we are on the identity (mean-difference) scale, where the average of a constant stratum effect is that constant. <em>You do not need this yet, but a signpost for later:</em> on a nonlinear scale such as the odds ratio, a constant stratum effect need not average to itself, a phenomenon called non-collapsibility. We flag it only so the reader is not surprised in <a href="../part1/07-glm.html#def-non-collapsibility" class="quarto-xref">Definition&nbsp;<span>7.7</span></a> and <a href="11-effect-modification-collapsibility.html#def-collapsibility" class="quarto-xref">Definition&nbsp;<span>11.6</span></a>, where it is developed properly; on the identity scale of this chapter <a href="#eq-ate-is-mean-cate" class="quarto-xref">Equation&nbsp;<span>9.7</span></a> holds with no caveat.</p>
+<p>It helps to see the four estimands side by side, together with where each surfaces in indirect comparison.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Estimand</th>
+<th>Symbol</th>
+<th>Question it answers</th>
+<th>Role in ITC</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Average treatment effect</td>
+<td><span class="math inline">\(\tau\)</span></td>
+<td>Effect if the whole target population switched control to treatment</td>
+<td>The marginal, population-average target most population-adjustment methods aim at</td>
+</tr>
+<tr class="even">
+<td>Effect on the treated</td>
+<td><span class="math inline">\(\tau_{\mathrm{T}}\)</span></td>
+<td>Effect among patients who actually received treatment</td>
+<td>The estimand when the question is specifically about the treated subgroup</td>
+</tr>
+<tr class="odd">
+<td>Effect on the controls</td>
+<td><span class="math inline">\(\tau_{\mathrm{C}}\)</span></td>
+<td>Effect among patients who received control</td>
+<td>The mirror image; appears in some transport arguments</td>
+</tr>
+<tr class="even">
+<td>Conditional effect</td>
+<td><span class="math inline">\(\tau(x)\)</span></td>
+<td>Effect within covariate stratum <span class="math inline">\(X=x\)</span></td>
+<td>The building block that carries effect modification across populations</td>
+</tr>
+</tbody>
+</table>
+<p>For orientation: most population-adjustment methods in this book, MAIC and STC in Part IV and ML-NMR in Part V, target a <em>marginal</em> treatment effect (an ATE-type estimand) in a specified target population, on a stated effect scale. The CATE is the object that makes such transport possible, because it is what changes across populations when effect modifiers are distributed differently. The three population-level averages are tied together by the proportion treated.</p>
+<div id="prp-ate-att-atc" class="theorem proposition">
+<p><span class="theorem-title"><strong>Proposition 9.1 (Decomposition of the ATE over treatment groups)</strong></span> Let <span class="math inline">\(p=P(T=1)\)</span>. Then <span id="eq-ate-decomp"><span class="math display">\[
+\tau = p\,\tau_{\mathrm{T}} + (1-p)\,\tau_{\mathrm{C}}.
+\tag{9.8}\]</span></span></p>
+</div>
+<p>[machine-checked: <code>theories/PotentialOutcomes.v</code>, <code>Lemma ATE_decomposition</code>]</p>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Apply the law of total expectation (<a href="../part1/04-probability.html#cor-total-expectation" class="quarto-xref">Corollary&nbsp;<span>4.1</span></a>) to the integrable variable <span class="math inline">\(Y(1)-Y(0)\)</span>, using the partition <span class="math inline">\(\{T=1\}\cup\{T=0\}\)</span> of <span class="math inline">\(\Omega\)</span>: <span class="math display">\[
+\tau=\mathbb{E}[Y(1)-Y(0)]
+= P(T=1)\,\mathbb{E}[Y(1)-Y(0)\mid T=1] + P(T=0)\,\mathbb{E}[Y(1)-Y(0)\mid T=0],
+\]</span> which is <span class="math inline">\(p\,\tau_{\mathrm{T}}+(1-p)\,\tau_{\mathrm{C}}\)</span> by <a href="#eq-att" class="quarto-xref">Equation&nbsp;<span>9.5</span></a> and the definition of <span class="math inline">\(\tau_{\mathrm{C}}\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><strong>Why this matters.</strong> The decomposition says the population effect is a weighted blend of the effect in the treated and the effect in the controls. It holds with <em>no</em> assumptions whatsoever; in particular the ATE, ATT, and ATC need not coincide. They coincide precisely when the individual effect is mean-independent of treatment assignment, which is the situation a randomized experiment engineers and which the ignorability assumption of the next section formalizes.</p>
+</section>
+<section id="sec-po-assumptions" class="level2" data-number="9.5">
+<h2 data-number="9.5" class="anchored" data-anchor-id="sec-po-assumptions"><span class="header-section-number">9.5</span> Identifying assumptions: ignorability and positivity</h2>
+<p>The estimands of <a href="#sec-po-estimands" class="quarto-xref"><span>Section 9.4</span></a> are defined from potential outcomes, but data report only <span class="math inline">\((X,T,Y)\)</span>. <em>Identification</em> is the act of writing an estimand as a functional of the observed-data distribution alone, so that it could in principle be computed if we had infinitely much data. Two glosses are worth pinning down, because a beginner can slip on both. A <em>functional</em> here means a map whose input is a whole probability distribution and whose output is a number; identification asks whether the estimand is <em>pinned down</em> by the distribution of the observable triple <span class="math inline">\((X,T,Y)\)</span>. This is a different question from <em>estimation</em>, which asks how to compute a good approximation from a finite sample. Identification is the infinite-data question; every estimator in later chapters presupposes that the answer to the identification question is yes. Without further assumptions the ATE is <em>not</em> identified: <a href="#thm-fundamental-problem" class="quarto-xref">Theorem&nbsp;<span>9.1</span></a> already produced two populations with the same observed-data law and different ATEs. Two assumptions close the gap. The first asserts that, within strata of the measured covariates, treatment is assigned as if at random, independently of the potential outcomes. It comes in three strengths, and it is worth saying up front <em>why there are three</em>: the identification proof below needs only the weakest (mean ignorability); randomization delivers the strongest (strong ignorability) for free; and the balancing-score theory of the next chapter needs the strongest. Keeping the three apart lets us assume exactly as much as each result requires.</p>
+<div id="def-ignorability" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 9.7 (Ignorability (strong, weak, mean))</strong></span> Let <span class="math inline">\(X\)</span> be baseline covariates. Three nested forms of <strong>ignorability</strong>, also called <em>no unmeasured confounding</em> or <em>conditional exchangeability</em>, are:</p>
+<ul>
+<li><strong>Strong ignorability:</strong> <span class="math inline">\(\bigl(Y(0),Y(1)\bigr)\perp T \mid X\)</span>, the joint law of the two potential outcomes is conditionally independent of treatment given <span class="math inline">\(X\)</span>.</li>
+<li><strong>Weak ignorability for <span class="math inline">\(Y(t)\)</span>:</strong> <span class="math inline">\(Y(t)\perp T\mid X\)</span> for the single label <span class="math inline">\(t\)</span> in question.</li>
+<li><strong>Mean ignorability for <span class="math inline">\(Y(t)\)</span>:</strong> <span class="math inline">\(\mathbb{E}[Y(t)\mid T,X]=\mathbb{E}[Y(t)\mid X]\)</span> a.s.</li>
+</ul>
+<p>Conditional independence is meant in the sense of <a href="../part1/04-probability.html#def-conditional-independence" class="quarto-xref">Definition&nbsp;<span>4.6</span></a>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>[machine-checked: <code>theories/CausalAssumptions.v</code>, <code>Definition strong_unconfoundedness</code>, <code>Definition weak_unconfoundedness</code>, <code>Lemma strong_implies_weak_unconf</code>]</p>
+<p><strong>Reader translation.</strong> In clinical words, ignorability says: <em>once we know a patient’s covariates <span class="math inline">\(X\)</span>, knowing which treatment she was given tells us nothing about what her outcome would have been under either treatment.</em> Within a stratum of <span class="math inline">\(X\)</span>, the treated and untreated are exchangeable, as if a coin decided their treatment. This is what randomization guarantees by design; in an observational study it is a hope, namely that <span class="math inline">\(X\)</span> contains every characteristic that influenced both the treatment decision and the outcome. The three forms differ in <em>how much</em> exchangeability they demand, summarized here:</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Form</th>
+<th>Statement</th>
+<th>Plain meaning</th>
+<th>What it buys</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Strong</td>
+<td><span class="math inline">\(\bigl(Y(0),Y(1)\bigr)\perp T\mid X\)</span></td>
+<td>Within a stratum, treatment is as-if-random with respect to <em>both</em> potential outcomes jointly</td>
+<td>Identifies both arms; underwrites the balancing-score and propensity theory of Chapter 10</td>
+</tr>
+<tr class="even">
+<td>Weak (for <span class="math inline">\(Y(t)\)</span>)</td>
+<td><span class="math inline">\(Y(t)\perp T\mid X\)</span></td>
+<td>Same, but only for the single arm <span class="math inline">\(t\)</span></td>
+<td>Identifies the mean potential outcome <span class="math inline">\(\mathbb{E}[Y(t)]\)</span> for that one arm</td>
+</tr>
+<tr class="odd">
+<td>Mean (for <span class="math inline">\(Y(t)\)</span>)</td>
+<td><span class="math inline">\(\mathbb{E}[Y(t)\mid T,X]=\mathbb{E}[Y(t)\mid X]\)</span></td>
+<td>Within a stratum, the <em>average</em> <span class="math inline">\(Y(t)\)</span> is the same among treated and untreated</td>
+<td>The minimum needed to identify the ATE</td>
+</tr>
+</tbody>
+</table>
+<p>These three are genuinely different in strength, and the difference matters for which estimand can be identified. The following lemma orders them.</p>
+<div id="lem-ignorability-hierarchy" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 9.1 (Hierarchy of ignorability)</strong></span> Strong ignorability implies weak ignorability for both <span class="math inline">\(t=0\)</span> and <span class="math inline">\(t=1\)</span>; weak ignorability for <span class="math inline">\(Y(t)\)</span> implies mean ignorability for <span class="math inline">\(Y(t)\)</span>, provided <span class="math inline">\(Y(t)\in L^1\)</span>.</p>
+</div>
+<p><em>Reader’s note: the proof below is the most technical in the chapter. Its message is simply that the three forms sit in a chain, strong <span class="math inline">\(\Rightarrow\)</span> weak <span class="math inline">\(\Rightarrow\)</span> mean. A reader meeting this material for the first time may take the chain on faith and skip to the “What to remember” paragraph after it; the machinery is here for completeness and for the Coq counterpart.</em></p>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span><em>Strong implies weak.</em> By symmetry (graphoid axiom G1 of <a href="../part1/04-probability.html#thm-graphoid-axioms" class="quarto-xref">Theorem&nbsp;<span>4.5</span></a>, which says <span class="math inline">\(A\perp B\mid Z\iff B\perp A\mid Z\)</span>) strong ignorability is <span class="math inline">\(T\perp\bigl(Y(0),Y(1)\bigr)\mid X\)</span>. The decomposition axiom (G2 of <a href="../part1/04-probability.html#thm-graphoid-axioms" class="quarto-xref">Theorem&nbsp;<span>4.5</span></a>, which says that if <span class="math inline">\(T\)</span> is independent of a <em>pair</em> given <span class="math inline">\(X\)</span> then it is independent of each <em>member</em> given <span class="math inline">\(X\)</span>) states that <span class="math inline">\(T\perp(U,W)\mid X\)</span> implies <span class="math inline">\(T\perp U\mid X\)</span>; applying it with <span class="math inline">\(U=Y(t)\)</span> and <span class="math inline">\(W=Y(1-t)\)</span> yields <span class="math inline">\(T\perp Y(t)\mid X\)</span>, that is, weak ignorability for <span class="math inline">\(Y(t)\)</span>, for each <span class="math inline">\(t\)</span>.</p>
+<p><em>Weak implies mean.</em> Fix <span class="math inline">\(t\)</span> and write <span class="math inline">\(V=Y(t)\)</span>. Conditional independence <span class="math inline">\(V\perp T\mid X\)</span> in the sense of <a href="../part1/04-probability.html#eq-cond-indep" class="quarto-xref">Equation&nbsp;<span>4.9</span></a> is equivalent to <span class="math inline">\(\mathbb{E}[f(V)\mid T,X]=\mathbb{E}[f(V)\mid X]\)</span> a.s. for every bounded measurable <span class="math inline">\(f\)</span>. We must extend this from bounded <span class="math inline">\(f\)</span> to the (possibly unbounded) identity function, and this is where <span class="math inline">\(V\in L^1\)</span> enters. The idea is standard: approximate <span class="math inline">\(V\)</span> by bounded functions of <span class="math inline">\(V\)</span>, apply the identity for each, and pass to the limit. For <span class="math inline">\(m\ge 1\)</span> let <span class="math inline">\(f_m(v)=\max(-m,\min(m,v))\)</span> be the truncation of <span class="math inline">\(v\)</span> to the interval <span class="math inline">\([-m,m]\)</span>; each <span class="math inline">\(f_m\)</span> is bounded and measurable, so <span class="math display">\[
+\mathbb{E}[f_m(V)\mid T,X]=\mathbb{E}[f_m(V)\mid X]\quad\text{a.s.}
+\]</span> As <span class="math inline">\(m\to\infty\)</span> the truncation is undone: <span class="math inline">\(f_m(V)\to V\)</span> pointwise (once <span class="math inline">\(m\)</span> exceeds <span class="math inline">\(|V(\omega)|\)</span> the value is untouched), and <span class="math inline">\(|f_m(V)|\le|V|\in L^1\)</span> provides a single integrable envelope for all <span class="math inline">\(m\)</span>. By the conditional form of dominated convergence (the conditional-expectation analogue of <a href="../part1/04-probability.html#thm-dominated-convergence" class="quarto-xref">Theorem&nbsp;<span>4.2</span></a>, obtained by applying that theorem inside each conditional expectation) the left side converges a.s. to <span class="math inline">\(\mathbb{E}[V\mid T,X]\)</span> and the right side to <span class="math inline">\(\mathbb{E}[V\mid X]\)</span>. Hence <span class="math inline">\(\mathbb{E}[Y(t)\mid T,X]=\mathbb{E}[Y(t)\mid X]\)</span> a.s., which is mean ignorability. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>The converse implications fail: mean ignorability constrains only first moments and says nothing about the rest of the conditional law, while weak ignorability for one label says nothing about the other. A concrete illustration of the first gap: within a stratum <span class="math inline">\(X=x\)</span>, suppose the treated potential outcome <span class="math inline">\(Y(1)\)</span> is distributed as follows.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Group</th>
+<th><span class="math inline">\(Y(1)\)</span> takes values</th>
+<th><span class="math inline">\(\mathbb{E}[Y(1)\mid T,X=x]\)</span></th>
+<th><span class="math inline">\(\mathrm{Var}(Y(1)\mid T,X=x)\)</span></th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td>Treated (<span class="math inline">\(T=1\)</span>)</td>
+<td><span class="math inline">\(9\)</span> or <span class="math inline">\(11\)</span>, each with probability <span class="math inline">\(\tfrac12\)</span></td>
+<td><span class="math inline">\(10\)</span></td>
+<td><span class="math inline">\(1\)</span></td>
+</tr>
+<tr class="even">
+<td>Untreated (<span class="math inline">\(T=0\)</span>)</td>
+<td><span class="math inline">\(5\)</span> or <span class="math inline">\(15\)</span>, each with probability <span class="math inline">\(\tfrac12\)</span></td>
+<td><span class="math inline">\(10\)</span></td>
+<td><span class="math inline">\(25\)</span></td>
+</tr>
+</tbody>
+</table>
+<p>The two conditional means are both <span class="math inline">\(10\)</span>, so <em>mean</em> ignorability for <span class="math inline">\(Y(1)\)</span> holds; but the two conditional distributions differ (variances <span class="math inline">\(1\)</span> versus <span class="math inline">\(25\)</span>), so <span class="math inline">\(Y(1)\perp T\mid X\)</span> <em>fails</em>. Mean ignorability is strictly weaker, and, as the identification proof will show, strictly enough. (<a href="#exr-po-mean-vs-weak" class="quarto-xref">Exercise&nbsp;<span>9.6</span></a> asks you to turn this picture into a fully specified joint law and to check that the ATE is still identified.)</p>
+<p><strong>What to remember.</strong> The practical distillation of the hierarchy is this. A randomized trial aims to make treatment independent of the potential outcomes, delivering <em>strong</em> ignorability for free. An observational analysis must instead <em>condition on enough covariates</em> to make treated and untreated patients comparable, and it can only hope for ignorability, never verify it. The ATE identification proof needs only the weakest form, <em>mean</em> ignorability of each arm; we nonetheless usually <em>state</em> the strong form, for two reasons. First, it is the natural output of randomization, so assuming it costs nothing there. Second, the balancing-score and propensity-score theory of the next chapter genuinely needs the full joint independence, not merely equal conditional means. So the extra strength is not wasted even though this one theorem does not use it. Finally, ignorability is <em>untestable</em> from the observed data, because it constrains the joint law of <span class="math inline">\(T\)</span> with the partly unobserved potential outcomes. A concrete example makes the danger vivid: in rheumatoid arthritis or oncology, disease severity often drives both which treatment a clinician chooses and how the patient fares. If severity is recorded, we can condition on it; if it is unmeasured, no amount of modeling of the <em>recorded</em> covariates repairs the confounding, and no diagnostic run on the data can reveal the omission. In a randomized trial ignorability holds by design, with <span class="math inline">\(T\)</span> assigned independently of everything, including unmeasured characteristics; in an observational study it demands that <span class="math inline">\(X\)</span> contain every confounder.</p>
+<p>The second assumption guarantees that every covariate stratum actually contains both treated and control units, so that the conditional means we will average are defined everywhere. The intuition is simple and worth stating before the inequalities: <em>we cannot learn the treated outcome for a type of patient who is never treated, nor the control outcome for a type who is never a control.</em> If, say, no frail patient ever receives the new drug, the data contain no treated outcomes for frail patients, and the active-arm mean for that stratum, hence the population ATE, cannot be recovered without extrapolation.</p>
+<div id="def-positivity" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 9.8 (Positivity (overlap))</strong></span> With propensity score <span class="math inline">\(e(x)=P(T=1\mid X=x)\)</span>, <strong>positivity</strong> (or <strong>overlap</strong>) holds for treatment <span class="math inline">\(t\)</span> if <span id="eq-positivity"><span class="math display">\[
+P(T=t\mid X=x)&gt;0 \qquad\text{for } P_X\text{-almost every } x\in\mathcal{X},
+\tag{9.9}\]</span></span> where <span class="math inline">\(P_X\)</span> denotes the marginal distribution (law) of the covariates <span class="math inline">\(X\)</span>, so that “<span class="math inline">\(P_X\)</span>-almost every <span class="math inline">\(x\)</span>” means “for all <span class="math inline">\(x\)</span> except possibly a set of covariate values that occurs with probability zero.” Equivalently, weak positivity for both treatments is <span class="math inline">\(0&lt;e(x)&lt;1\)</span> a.s. <strong>Strict positivity</strong> strengthens this to a uniform bound: there is <span class="math inline">\(\varepsilon\in(0,\tfrac12)\)</span> with <span id="eq-strict-positivity"><span class="math display">\[
+\varepsilon\le e(x)\le 1-\varepsilon\qquad\text{for } P_X\text{-almost every } x.
+\tag{9.10}\]</span></span> The reason for the stronger, uniform version is estimation stability: estimators that divide by <span class="math inline">\(e(X)\)</span> or <span class="math inline">\(1-e(X)\)</span> (the weighting methods of the next chapter) have variance that blows up as the propensity nears <span class="math inline">\(0\)</span> or <span class="math inline">\(1\)</span>, so a bound bounded away from the endpoints is what keeps them well-behaved. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>[machine-checked: <code>theories/CausalAssumptions.v</code>, <code>Definition weak_positivity</code>, <code>Definition strong_positivity</code>, <code>Lemma strong_implies_weak</code>]</p>
+<p><strong>Reader translation.</strong> Positivity says every kind of patient could, with some chance, have gone either way: each covariate stratum contains both treated and control patients. Weak positivity asks only that the chance be nonzero; strict positivity asks that it be <em>bounded away</em> from zero and one. In the indirect-comparison setting this same condition reappears as <em>covariate overlap between studies</em>. Picture a trial of drug <span class="math inline">\(B\)</span> that enrolled only elderly patients and a trial of drug <span class="math inline">\(C\)</span> that enrolled only young patients: there is no covariate region where both drugs are represented, so no reweighting can turn one trial’s population into the other’s, and the comparison of <span class="math inline">\(B\)</span> and <span class="math inline">\(C\)</span> rests entirely on extrapolation.</p>
+<p>Strict positivity implies weak positivity: if <span class="math inline">\(\varepsilon\le e(x)\le 1-\varepsilon\)</span> with <span class="math inline">\(0&lt;\varepsilon&lt;\tfrac12\)</span> then <span class="math inline">\(0&lt;\varepsilon\le e(x)\)</span> and <span class="math inline">\(e(x)\le 1-\varepsilon&lt;1\)</span>, so <span class="math inline">\(0&lt;e(x)&lt;1\)</span>. Weak positivity is what identification needs, because <a href="#cor-consistency-swap" class="quarto-xref">Corollary&nbsp;<span>9.1</span></a> and the iterated-expectation argument require <span class="math inline">\(P(T=t\mid X)&gt;0\)</span> almost everywhere; strict positivity is what <em>stable estimation</em> needs, for the variance reason just given. That failure of overlap is the formal reason matching-adjusted indirect comparison breaks down when trial populations barely overlap, taken up in Part IV, and it is the bridge to the transportability conditions of <a href="12-transportability.html#def-transportability" class="quarto-xref">Definition&nbsp;<span>12.3</span></a>. Together, ignorability and positivity are <span class="citation" data-cites="rosenbaum1983">Rosenbaum and Rubin (<a href="../../references.html#ref-rosenbaum1983" role="doc-biblioref">1983</a>)</span>’s <strong>strong ignorability</strong> (corresponds to B.3 and B.4 in the proof catalogue).</p>
+</section>
+<section id="sec-po-identification" class="level2" data-number="9.6">
+<h2 data-number="9.6" class="anchored" data-anchor-id="sec-po-identification"><span class="header-section-number">9.6</span> Identification of the average treatment effect</h2>
+<p>We can now turn the unobservable ATE into an observable functional of the data. First, one piece of notation that is the conceptual hinge of the entire argument. We have two “conditional mean outcome” objects, and they look almost identical but mean very different things.</p>
+<div id="def-observed-regression" class="theorem definition">
+<p><span class="theorem-title"><strong>Definition 9.9 (Observed outcome regression)</strong></span> The <strong>observed outcome regression</strong> is <span class="math display">\[
+\mu_t^{\mathrm{obs}}(x) := \mathbb{E}[Y\mid T=t,X=x],
+\]</span> the average <em>observed</em> outcome among units with covariates <span class="math inline">\(x\)</span> who <em>received</em> treatment <span class="math inline">\(t\)</span>. It is to be contrasted with the <strong>potential mean</strong> <span class="math inline">\(\mu_t(x)=\mathbb{E}[Y(t)\mid X=x]\)</span> of <a href="#def-cate" class="quarto-xref">Definition&nbsp;<span>9.6</span></a>, the average outcome those units <em>would</em> have under <span class="math inline">\(t\)</span>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p><strong>Reader translation.</strong> <span class="math inline">\(\mu_t^{\mathrm{obs}}(x)\)</span> is a plain regression you can actually fit from data: group patients by their covariates <span class="math inline">\(x\)</span> and their received treatment <span class="math inline">\(t\)</span>, and average the outcomes you see. <span class="math inline">\(\mu_t(x)\)</span> is the causal object we want but cannot see directly: the average outcome those patients <em>would</em> have under <span class="math inline">\(t\)</span>, treated and untreated alike. Identification is precisely the claim that, under ignorability and positivity, these two coincide, <span class="math inline">\(\mu_t(x)=\mu_t^{\mathrm{obs}}(x)\)</span>, so that a fittable regression equals an unfittable counterfactual mean. Alongside it we use <span class="math inline">\(\mathbb{E}_X[\,\cdot\,]\)</span> for an expectation over the covariate distribution <span class="math inline">\(P_X\)</span>: in <span class="math inline">\(\mathbb{E}_X\bigl[\mu_t^{\mathrm{obs}}(X)\bigr]\)</span> the <em>outer</em> <span class="math inline">\(\mathbb{E}_X\)</span> averages the stratum-specific regression over the covariate distribution of the <em>target population</em>, not over the treated group and not over the control group. This outer averaging is the exact point where the choice of target population enters, and it is the bridge to population adjustment.</p>
+<p>The engine of identification is a single chain of three equalities, applied to each potential-outcome mean: peel off the covariate by the tower property, swap the treatment-assignment conditioning by ignorability, swap the potential outcome for the observed one by consistency. We isolate the per-arm result first.</p>
+<div id="lem-mean-potential-identification" class="theorem lemma">
+<p><span class="theorem-title"><strong>Lemma 9.2 (Identification of a mean potential outcome)</strong></span> Assume SUTVA (so the consistency identity <a href="#eq-consistency-identity" class="quarto-xref">Equation&nbsp;<span>9.1</span></a> holds), mean ignorability for <span class="math inline">\(Y(t)\)</span>, and positivity for treatment <span class="math inline">\(t\)</span>. Then <span id="eq-gformula"><span class="math display">\[
+\mathbb{E}[Y(t)] = \mathbb{E}_X\bigl[\,\mathbb{E}[Y\mid T=t,X]\,\bigr].
+\tag{9.11}\]</span></span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>We chain three identities; each equality is labeled by the fact that licenses it.</p>
+<p><em>Step 1 (tower property).</em> By <a href="../part1/04-probability.html#thm-tower-property" class="quarto-xref">Theorem&nbsp;<span>4.4</span></a>, equivalently <a href="../part1/04-probability.html#cor-total-expectation" class="quarto-xref">Corollary&nbsp;<span>4.1</span></a>, applied to <span class="math inline">\(Y(t)\in L^1\)</span> and the <span class="math inline">\(\sigma\)</span>-algebra generated by <span class="math inline">\(X\)</span>, <span class="math display">\[
+\mathbb{E}[Y(t)] = \mathbb{E}_X\bigl[\,\mathbb{E}[Y(t)\mid X]\,\bigr].
+\]</span></p>
+<p><em>Step 2 (ignorability).</em> By mean ignorability for <span class="math inline">\(Y(t)\)</span>, <span class="math inline">\(\mathbb{E}[Y(t)\mid T,X]=\mathbb{E}[Y(t)\mid X]\)</span>; evaluating on the event <span class="math inline">\(\{T=t\}\)</span>, which by positivity has positive probability for <span class="math inline">\(P_X\)</span>-almost every <span class="math inline">\(x\)</span>, gives <span class="math inline">\(\mathbb{E}[Y(t)\mid X]=\mathbb{E}[Y(t)\mid T=t,X]\)</span> a.s., so <span class="math display">\[
+\mathbb{E}[Y(t)] = \mathbb{E}_X\bigl[\,\mathbb{E}[Y(t)\mid T=t,X]\,\bigr].
+\]</span></p>
+<p><em>Step 3 (consistency).</em> By the outcome swap of <a href="#cor-consistency-swap" class="quarto-xref">Corollary&nbsp;<span>9.1</span></a>, <span class="math inline">\(\mathbb{E}[Y(t)\mid T=t,X]=\mathbb{E}[Y\mid T=t,X]\)</span> on the positivity event, and substituting yields <a href="10-adjustment-methods.html#eq-gformula" class="quarto-xref">Equation&nbsp;<span>10.5</span></a>. Every conditional mean on the right-hand side is a functional of the observed-data law of <span class="math inline">\((X,T,Y)\)</span>, so <span class="math inline">\(\mathbb{E}[Y(t)]\)</span> is identified. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>Subtracting the two arms gives the central identification theorem of the chapter, the result on which standardization, inverse-probability weighting, and the entire machinery of Part IV ultimately rest.</p>
+<div id="thm-ate-identification" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 9.3 (Identification of the ATE (adjustment formula))</strong></span> Assume SUTVA, mean ignorability for both <span class="math inline">\(t=0\)</span> and <span class="math inline">\(t=1\)</span> (in particular, strong ignorability suffices), and positivity for both treatments. Then the average treatment effect is identified by the <strong>adjustment formula</strong> (also called the <strong>g-formula</strong> or <strong>standardization formula</strong>) <span id="eq-ate-identification"><span class="math display">\[
+\tau = \mathbb{E}_X\bigl[\,\mathbb{E}[Y\mid T=1,X] - \mathbb{E}[Y\mid T=0,X]\,\bigr].
+\tag{9.12}\]</span></span> In the notation of <a href="#def-observed-regression" class="quarto-xref">Definition&nbsp;<span>9.9</span></a>, this is <span class="math inline">\(\tau=\mathbb{E}_X[\mu_1^{\mathrm{obs}}(X)-\mu_0^{\mathrm{obs}}(X)]\)</span>.</p>
+</div>
+<p>[machine-checked: <code>theories/CausalAssumptions.v</code>, <code>Theorem ATE_identification</code>]</p>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Apply <a href="#lem-mean-potential-identification" class="quarto-xref">Lemma&nbsp;<span>9.2</span></a> once with <span class="math inline">\(t=1\)</span> and once with <span class="math inline">\(t=0\)</span>, which is legitimate because the hypotheses hold for both labels, to obtain <span class="math inline">\(\mathbb{E}[Y(1)]=\mathbb{E}_X[\mu_1^{\mathrm{obs}}(X)]\)</span> and <span class="math inline">\(\mathbb{E}[Y(0)]=\mathbb{E}_X[\mu_0^{\mathrm{obs}}(X)]\)</span>. By <a href="#def-ate" class="quarto-xref">Definition&nbsp;<span>9.4</span></a> and linearity of expectation (<a href="../part1/04-probability.html#thm-tower-property" class="quarto-xref">Theorem&nbsp;<span>4.4</span></a> gives the outer expectation, linearity gives the subtraction), <span class="math display">\[
+\tau=\mathbb{E}[Y(1)]-\mathbb{E}[Y(0)]
+=\mathbb{E}_X[\mu_1^{\mathrm{obs}}(X)]-\mathbb{E}_X[\mu_0^{\mathrm{obs}}(X)]
+=\mathbb{E}_X\bigl[\mu_1^{\mathrm{obs}}(X)-\mu_0^{\mathrm{obs}}(X)\bigr],
+\]</span> which is <a href="#eq-ate-identification" class="quarto-xref">Equation&nbsp;<span>9.12</span></a>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><strong>Why this matters.</strong> The adjustment formula is the population target that every estimator in Part II and every population-adjustment method later (G-computation, inverse-probability weighting, MAIC, STC, ML-NMR) is built to estimate. Read it as a recipe: within each covariate stratum, take the difference of the observed treated and control means; then average those stratum differences using the <em>target population’s</em> covariate distribution. When you later meet a “standardized” or “population-adjusted” indirect comparison, this equation is what it is approximating. Because a numerical grip helps before the general theory settles, we preview the running population immediately.</p>
+<div id="exm-gformula-preview" class="theorem example">
+<p><span class="theorem-title"><strong>Example 9.1 (The adjustment formula at a glance)</strong></span> Take the two-stratum population of <a href="#exm-confounding-gformula" class="quarto-xref">Example&nbsp;<span>9.2</span></a> (developed in full below): <span class="math inline">\(X\in\{0,1\}\)</span> with <span class="math inline">\(P(X=0)=P(X=1)=\tfrac12\)</span>, observed regressions <span class="math inline">\(\mu_0^{\mathrm{obs}}(0)=10\)</span>, <span class="math inline">\(\mu_1^{\mathrm{obs}}(0)=14\)</span>, <span class="math inline">\(\mu_0^{\mathrm{obs}}(1)=20\)</span>, <span class="math inline">\(\mu_1^{\mathrm{obs}}(1)=24\)</span>, and treatment three times more likely in the favorable stratum. The adjustment formula <a href="#eq-ate-identification" class="quarto-xref">Equation&nbsp;<span>9.12</span></a> averages the <em>stratum</em> differences over the <em>population</em> covariate split <span class="math inline">\(\tfrac12,\tfrac12\)</span>: <span class="math display">\[
+\tau=\tfrac12(14-10)+\tfrac12(24-20)=\tfrac12\cdot4+\tfrac12\cdot4=4 .
+\]</span> The naive treatment-minus-control contrast, which instead averages over each arm’s <em>own</em> (imbalanced) covariate mix, will come out to <span class="math inline">\(9\)</span>. The gap between <span class="math inline">\(4\)</span> and <span class="math inline">\(9\)</span> is the selection bias the next section isolates; the full arithmetic, including the within-arm mixes, is in <a href="#exm-confounding-gformula" class="quarto-xref">Example&nbsp;<span>9.2</span></a>. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>The adjustment formula is the <em>population</em> statement; it tells an analyst with infinite data exactly how to combine observable conditional means into the ATE. It also dictates the estimators of the next chapter, of which two are central. <em>G-computation</em> models the inner regression <span class="math inline">\(\mu_t^{\mathrm{obs}}(x)\)</span> and averages it over the empirical covariate distribution; it is identified by exactly this theorem and developed as <a href="10-adjustment-methods.html#thm-g-computation-unbiased" class="quarto-xref">Theorem&nbsp;<span>10.4</span></a>. <em>Inverse-probability weighting</em> instead models the propensity score and reweights, recovering the same target through <a href="10-adjustment-methods.html#thm-ipw-unbiased" class="quarto-xref">Theorem&nbsp;<span>10.3</span></a>, since the masked identity <a href="#eq-consistency-masked" class="quarto-xref">Equation&nbsp;<span>9.2</span></a> gives <span class="math inline">\(\mathbb{E}[TY/e(X)]=\mathbb{E}[Y(1)]\)</span>, another route to <span class="math inline">\(\mathbb{E}[Y(1)]=\mathbb{E}_X[\mu_1^{\mathrm{obs}}(X)]\)</span>. You will meet these two first in the next chapter, and afterward their combination, the doubly robust estimator <a href="10-adjustment-methods.html#thm-aipw-double-robust" class="quarto-xref">Theorem&nbsp;<span>10.5</span></a>, together with the dimension-reducing balancing-score theory (<a href="10-adjustment-methods.html#def-balancing-score" class="quarto-xref">Definition&nbsp;<span>10.1</span></a>, <a href="10-adjustment-methods.html#thm-rosenbaum-rubin" class="quarto-xref">Theorem&nbsp;<span>10.1</span></a>, <a href="10-adjustment-methods.html#thm-ps-sufficiency" class="quarto-xref">Theorem&nbsp;<span>10.2</span></a>) that lets the scalar <span class="math inline">\(e(X)\)</span> stand in for the full covariate vector <span class="math inline">\(X\)</span>. What the present theorem supplies is the identification all of them implement.</p>
+<div class="proof remark">
+<p><span class="proof-title"><em>Remark</em>. </span>It is worth dwelling on a subtlety the proof exposes. It used only <em>mean</em> ignorability for each arm, the weakest form in <a href="#def-ignorability" class="quarto-xref">Definition&nbsp;<span>9.7</span></a>, together with positivity and SUTVA. Yet the assumption we usually <em>state</em> is <em>strong</em> ignorability. Why assume more than we use? Two reasons, and they are not merely stylistic. First, strong ignorability is the natural output of randomization: a trial that assigns treatment by a coin flip makes <span class="math inline">\(T\)</span> independent of the entire joint law of <span class="math inline">\((Y(0),Y(1))\)</span>, not just of its conditional means, so in a trial the strong form is available at no extra cost. Second, the balancing-score and propensity-score theory of the next chapter genuinely requires the full conditional independence, not equal conditional means alone; the result that conditioning on the scalar <span class="math inline">\(e(X)\)</span> can replace conditioning on <span class="math inline">\(X\)</span> (<a href="10-adjustment-methods.html#thm-rosenbaum-rubin" class="quarto-xref">Theorem&nbsp;<span>10.1</span></a>) fails under mean ignorability. So the stronger assumption is doing real work elsewhere in the book, even though this single identification theorem does not need it. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+</section>
+<section id="sec-po-selection" class="level2" data-number="9.7">
+<h2 data-number="9.7" class="anchored" data-anchor-id="sec-po-selection"><span class="header-section-number">9.7</span> The naive contrast and selection bias</h2>
+<p>Why not simply compare the average outcome among the treated with the average among the controls? That naive contrast is what an unadjusted analysis reports, and it is in general <em>not</em> the ATE. Here is the picture before the algebra: in the running example, clinicians give the new drug preferentially to favorable-baseline patients, so the treated arm is stacked with high scorers and the control arm with low scorers. Even if the drug did nothing, the treated would out-score the controls simply because they were healthier to begin with. That built-in head start is selection bias, and the next theorem locates it exactly: the naive contrast equals the effect on the treated plus a term measuring how treated and control groups would have differed even under no treatment.</p>
+<div id="thm-naive-selection-bias" class="theorem">
+<p><span class="theorem-title"><strong>Theorem 9.4 (The naive contrast equals ATT plus selection bias)</strong></span> Under SUTVA, define the <strong>naive contrast</strong> <span class="math inline">\(\Delta_{\mathrm{naive}}=\mathbb{E}[Y\mid T=1]-\mathbb{E}[Y\mid T=0]\)</span>. Then <span id="eq-naive-decomposition"><span class="math display">\[
+\Delta_{\mathrm{naive}}
+= \underbrace{\tau_{\mathrm{T}}}_{\text{ATT}}
++ \underbrace{\bigl(\mathbb{E}[Y(0)\mid T=1]-\mathbb{E}[Y(0)\mid T=0]\bigr)}_{\text{selection bias}} .
+\tag{9.13}\]</span></span></p>
+</div>
+<p>[machine-checked: <code>theories/PotentialOutcomes.v</code>, <code>Lemma selection_bias_decomposition</code>]</p>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>By the consistency identity <a href="#thm-consistency-identity" class="quarto-xref">Theorem&nbsp;<span>9.2</span></a>, <span class="math inline">\(Y=Y(1)\)</span> on <span class="math inline">\(\{T=1\}\)</span> and <span class="math inline">\(Y=Y(0)\)</span> on <span class="math inline">\(\{T=0\}\)</span>, so the observed group means are potential-outcome means: <span class="math display">\[
+\mathbb{E}[Y\mid T=1]=\mathbb{E}[Y(1)\mid T=1],
+\qquad
+\mathbb{E}[Y\mid T=0]=\mathbb{E}[Y(0)\mid T=0].
+\]</span> Therefore <span class="math display">\[
+\Delta_{\mathrm{naive}}=\mathbb{E}[Y(1)\mid T=1]-\mathbb{E}[Y(0)\mid T=0].
+\]</span> Add and subtract the counterfactual control mean among the treated, <span class="math inline">\(\mathbb{E}[Y(0)\mid T=1]\)</span>. We choose precisely this quantity because it is the one bridge between the two observed means: it shares the conditioning event <span class="math inline">\(\{T=1\}\)</span> with the first term (so the pair combines into an effect <em>among the treated</em>) and it shares the potential outcome <span class="math inline">\(Y(0)\)</span> with the second term (so that pair compares the <em>same</em> counterfactual across the two groups). Concretely, <span class="math display">\[
+\Delta_{\mathrm{naive}}
+=\bigl(\mathbb{E}[Y(1)\mid T=1]-\mathbb{E}[Y(0)\mid T=1]\bigr)
++\bigl(\mathbb{E}[Y(0)\mid T=1]-\mathbb{E}[Y(0)\mid T=0]\bigr).
+\]</span> The first bracket is <span class="math inline">\(\mathbb{E}[Y(1)-Y(0)\mid T=1]=\tau_{\mathrm{T}}\)</span> by linearity of conditional expectation and <a href="#eq-att" class="quarto-xref">Equation&nbsp;<span>9.5</span></a>; the second is the selection-bias term. This is <a href="#eq-naive-decomposition" class="quarto-xref">Equation&nbsp;<span>9.13</span></a>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p><strong>Why this matters.</strong> This decomposition is the precise reason an indirect comparison cannot simply pool raw arm means across trials. The selection-bias term compares the <em>untreated</em> potential outcome <span class="math inline">\(Y(0)\)</span> between the group that took treatment and the group that did not; it is nonzero exactly when the two groups would have differed even absent treatment, which is precisely confounding. It is an identity, not an approximation: it holds under SUTVA alone, with no ignorability. Population adjustment exists to remove this term. The next corollary shows it vanishes under the strongest form of ignorability, <em>marginal</em> independence, which is what a randomized trial provides, and that this is what makes the naive contrast valid there.</p>
+<div id="cor-naive-unbiased-rct" class="theorem corollary">
+<p><span class="theorem-title"><strong>Corollary 9.2 (When the naive contrast is the ATE)</strong></span> Suppose SUTVA holds and treatment is <em>marginally</em> ignorable, <span class="math inline">\(\bigl(Y(0),Y(1)\bigr)\perp T\)</span> (no conditioning on <span class="math inline">\(X\)</span>), as in a marginally randomized experiment. Then the selection-bias term in <a href="#eq-naive-decomposition" class="quarto-xref">Equation&nbsp;<span>9.13</span></a> is zero and <span class="math display">\[
+\Delta_{\mathrm{naive}}=\tau_{\mathrm{T}}=\tau.
+\]</span></p>
+</div>
+<div class="proof">
+<p><span class="proof-title"><em>Proof</em>. </span>Marginal independence gives <span class="math inline">\(\mathbb{E}[Y(0)\mid T=1]=\mathbb{E}[Y(0)]=\mathbb{E}[Y(0)\mid T=0]\)</span>, so the selection-bias term in <a href="#eq-naive-decomposition" class="quarto-xref">Equation&nbsp;<span>9.13</span></a> is <span class="math inline">\(0\)</span> and <span class="math inline">\(\Delta_{\mathrm{naive}}=\tau_{\mathrm{T}}\)</span>. Independence also gives <span class="math inline">\(\mathbb{E}[Y(1)-Y(0)\mid T=1]=\mathbb{E}[Y(1)-Y(0)]\)</span>, so <span class="math inline">\(\tau_{\mathrm{T}}=\tau\)</span>. <span class="math inline">\(\square\)</span></p>
+</div>
+<p>Here “marginally randomized experiment” means the simplest randomized design: treatment is decided by one coin flip for every patient, the <em>same</em> flip probability for all, with no conditioning on covariates. This is the plain randomized controlled trial a health researcher already knows; the word “marginally” only signals that the coin ignores <span class="math inline">\(X\)</span> entirely, which is why the independence in the corollary holds without any conditioning. (A <em>stratified</em> trial, which flips a differently biased coin within each stratum of <span class="math inline">\(X\)</span>, delivers only the <em>conditional</em> independence of <a href="#def-ignorability" class="quarto-xref">Definition&nbsp;<span>9.7</span></a>, and there one must still adjust.) When ignorability holds only <em>conditionally</em> on <span class="math inline">\(X\)</span>, as in an observational study or in two trials with different case mixes, the selection-bias term is generally nonzero and the naive contrast is biased; the remedy is to condition on <span class="math inline">\(X\)</span> and average, which is exactly the adjustment formula <a href="#eq-ate-identification" class="quarto-xref">Equation&nbsp;<span>9.12</span></a>. This is the formal reason indirect comparisons cannot simply pool raw arm means across studies, and it motivates every population-adjustment method in Parts IV and V.</p>
+</section>
+<section id="sec-po-example" class="level2" data-number="9.8">
+<h2 data-number="9.8" class="anchored" data-anchor-id="sec-po-example"><span class="header-section-number">9.8</span> A worked example: confounding, the g-formula, and selection bias</h2>
+<p>We now put concrete numbers to the whole machinery in a single population, verifying the adjustment formula and the selection-bias decomposition by hand. This is the population Alice and Bob live in: the two covariate strata are their favorable (<span class="math inline">\(X=1\)</span>) and poor (<span class="math inline">\(X=0\)</span>) baselines, and the stratum means are exactly their potential scores. The example is deliberately built on the identity scale with a <em>constant</em> conditional effect, so that the only thing separating the naive contrast from the ATE is confounding, not the non-collapsibility studied in <a href="../part1/07-glm.html#exm-noncollapsible-or" class="quarto-xref">Example&nbsp;<span>7.5</span></a>; that lets us see selection bias in isolation.</p>
+<div id="exm-confounding-gformula" class="theorem example">
+<p><span class="theorem-title"><strong>Example 9.2 (Standardization undoes confounding in a two-stratum population)</strong></span> Let <span class="math inline">\(X\in\{0,1\}\)</span> be a binary prognostic covariate with <span class="math inline">\(P(X=0)=P(X=1)=\tfrac12\)</span>. Treatment is confounded by <span class="math inline">\(X\)</span> through the propensity score <span class="math display">\[
+e(0)=P(T=1\mid X=0)=0.25,\qquad e(1)=P(T=1\mid X=1)=0.75,
+\]</span> so that the favorable-baseline stratum <span class="math inline">\(X=1\)</span> is three times as likely to be treated (clinicians steer the new drug toward the patients who were already doing better). Assume SUTVA, strong ignorability, and positivity (both <span class="math inline">\(e\)</span> values lie strictly in <span class="math inline">\((0,1)\)</span>). The conditional mean potential outcomes are <span class="math display">\[
+\mu_0(0)=10,\quad \mu_1(0)=14,\qquad \mu_0(1)=20,\quad \mu_1(1)=24,
+\]</span> so the conditional average treatment effect is constant, <span class="math inline">\(\tau(0)=\tau(1)=4\)</span>. Under ignorability the observable regressions equal these conditional means, <span class="math inline">\(\mu_t^{\mathrm{obs}}(x)=\mu_t(x)\)</span>.</p>
+<p><strong>True ATE by the adjustment formula (<a href="#eq-ate-identification" class="quarto-xref">Equation&nbsp;<span>9.12</span></a>).</strong> Averaging the constant stratum effect, <span class="math display">\[
+\tau=\mathbb{E}_X[\mu_1(X)-\mu_0(X)] = \tfrac12(14-10)+\tfrac12(24-20) = \tfrac12\cdot 4+\tfrac12\cdot 4 = 4.
+\]</span> Equivalently <span class="math inline">\(\mathbb{E}[Y(1)]=\tfrac12(14)+\tfrac12(24)=19\)</span> and <span class="math inline">\(\mathbb{E}[Y(0)]=\tfrac12(10)+\tfrac12(20)=15\)</span>, giving <span class="math inline">\(\tau=19-15=4\)</span>.</p>
+<p><strong>The naive contrast.</strong> Treatment selection skews the covariate mix within each arm. The joint cell probabilities are <span class="math inline">\(P(X=x,T=t)=P(X=x)\,e(x)^{t}(1-e(x))^{1-t}\)</span>: <span class="math display">\[
+\begin{aligned}
+&amp;P(X{=}0,T{=}1)=\tfrac12(0.25)=0.125,\quad P(X{=}1,T{=}1)=\tfrac12(0.75)=0.375,\\
+&amp;P(X{=}0,T{=}0)=\tfrac12(0.75)=0.375,\quad P(X{=}1,T{=}0)=\tfrac12(0.25)=0.125.
+\end{aligned}
+\]</span> Hence <span class="math inline">\(P(T=1)=P(T=0)=0.5\)</span>, and the within-arm covariate distributions are <span class="math display">\[
+P(X=1\mid T=1)=\frac{0.375}{0.5}=0.75,\qquad P(X=1\mid T=0)=\frac{0.125}{0.5}=0.25.
+\]</span> The treated arm is covariate-shifted toward the high-risk stratum, the control arm toward the low-risk stratum. Using consistency, <span class="math inline">\(\mathbb{E}[Y\mid T=1]=\mathbb{E}[Y(1)\mid T=1]\)</span> and <span class="math inline">\(\mathbb{E}[Y\mid T=0]=\mathbb{E}[Y(0)\mid T=0]\)</span>: <span class="math display">\[
+\begin{aligned}
+\mathbb{E}[Y\mid T=1]&amp;=0.25(14)+0.75(24)=3.5+18=21.5,\\
+\mathbb{E}[Y\mid T=0]&amp;=0.75(10)+0.25(20)=7.5+5=12.5,
+\end{aligned}
+\]</span> so the naive contrast is <span class="math display">\[
+\Delta_{\mathrm{naive}}=21.5-12.5=9.0.
+\]</span> The unadjusted analysis overstates the effect by more than a factor of two, reporting <span class="math inline">\(9\)</span> against the truth of <span class="math inline">\(4\)</span>.</p>
+<p><strong>Selection-bias decomposition (<a href="#eq-naive-decomposition" class="quarto-xref">Equation&nbsp;<span>9.13</span></a>).</strong> Because the conditional effect is the constant <span class="math inline">\(4\)</span>, the effect on the treated is <span class="math inline">\(\tau_{\mathrm{T}}=\mathbb{E}[\tau(X)\mid T=1]=4\)</span>. The counterfactual control mean among the treated and the factual control mean among the controls are <span class="math display">\[
+\begin{aligned}
+\mathbb{E}[Y(0)\mid T=1]&amp;=0.25(10)+0.75(20)=2.5+15=17.5,\\
+\mathbb{E}[Y(0)\mid T=0]&amp;=0.75(10)+0.25(20)=7.5+5=12.5,
+\end{aligned}
+\]</span> so the selection bias is <span class="math inline">\(17.5-12.5=5.0\)</span>. The decomposition checks out: <span class="math display">\[
+\Delta_{\mathrm{naive}}=\tau_{\mathrm{T}}+\text{selection bias}=4+5=9.0 .
+\]</span> The entire discrepancy between the naive contrast and the ATE is the <span class="math inline">\(5.0\)</span> of selection bias, created because the treated would have had worse untreated outcomes (mean <span class="math inline">\(17.5\)</span>) than the controls did (mean <span class="math inline">\(12.5\)</span>), purely through the covariate imbalance the propensity score induces.</p>
+<p><strong>Standardization recovers the truth.</strong> The adjustment formula reweights the stratum-specific contrasts by the <em>population</em> covariate distribution rather than the arm-specific one: <span class="math display">\[
+\tau=\mathbb{E}_X\bigl[\mu_1^{\mathrm{obs}}(X)-\mu_0^{\mathrm{obs}}(X)\bigr]
+=\tfrac12(14-10)+\tfrac12(24-20)=4 ,
+\]</span> matching the true ATE and removing the bias entirely. <span class="math inline">\(\blacktriangleleft\)</span></p>
+</div>
+<p>The example exhibits the chapter in miniature. The same observed data <span class="math inline">\((X,T,Y)\)</span> produce a biased number (<span class="math inline">\(9\)</span>) when contrasted naively and the correct number (<span class="math inline">\(4\)</span>) when standardized, and the gap is exactly the selection-bias term the decomposition isolates. Notice that ATE, ATT, and CATE all equal <span class="math inline">\(4\)</span> here, because the effect is constant on the collapsible identity scale; had we measured the effect as an odds ratio the marginal and conditional effects would have parted ways even with no confounding, which is the separate phenomenon of <a href="../part1/07-glm.html#def-non-collapsibility" class="quarto-xref">Definition&nbsp;<span>7.7</span></a> and the subject of <a href="11-effect-modification-collapsibility.html#def-collapsibility" class="quarto-xref">Definition&nbsp;<span>11.6</span></a> in the next chapter. It is worth separating two things this example might otherwise blur. The covariate <span class="math inline">\(X\)</span> here is a <em>prognostic variable</em> (it predicts the outcome) that is <em>also a confounder</em> (it steers treatment), and that is why the within-study effect is biased. In an indirect comparison the usual villain is different: it is an <em>effect modifier</em>, a covariate that changes the size of the treatment effect across its levels, distributed differently in two study populations. A baseline imbalance that involves only prognosis, with no effect modification, biases the naive within-study contrast (as here) but need not obstruct the cross-study transport of a <em>conditional</em> effect on a suitable scale. The distinction between prognostic variables, confounders, and effect modifiers is the theme of Chapter 11 (<a href="11-effect-modification-collapsibility.html#def-prognostic-variable" class="quarto-xref">Definition&nbsp;<span>11.5</span></a>, <a href="11-effect-modification-collapsibility.html#def-effect-modifier" class="quarto-xref">Definition&nbsp;<span>11.3</span></a>); keep it in view, because the whole logic of population adjustment turns on it.</p>
+</section>
+<section id="sec-po-bridge" class="level2" data-number="9.9">
+<h2 data-number="9.9" class="anchored" data-anchor-id="sec-po-bridge"><span class="header-section-number">9.9</span> Why identification is the foundation of indirect comparison</h2>
+<p>Everything so far concerned a <em>single</em> population. This closing section connects that single-population identification to the multi-study problem the book exists to solve, in three steps: what carries over within a study, what is needed to move across studies, and what therefore becomes central in later chapters.</p>
+<p><strong>Within a study, identification is settled.</strong> One population has one covariate law <span class="math inline">\(P_X\)</span>, one propensity score <span class="math inline">\(e(x)\)</span>, one pair of observed regressions <span class="math inline">\(\mu_t^{\mathrm{obs}}(x)\)</span>. The adjustment formula <a href="#eq-ate-identification" class="quarto-xref">Equation&nbsp;<span>9.12</span></a> identifies the ATE in that population, and the selection-bias decomposition <a href="#eq-naive-decomposition" class="quarto-xref">Equation&nbsp;<span>9.13</span></a> explains what goes wrong if we ignore the covariates. A randomized trial of <span class="math inline">\(A\)</span> versus <span class="math inline">\(B\)</span> identifies the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(B\)</span> effect in the trial’s own population; a trial of <span class="math inline">\(A\)</span> versus <span class="math inline">\(C\)</span> identifies the <span class="math inline">\(A\)</span>-versus-<span class="math inline">\(C\)</span> effect in <em>its</em> own population. Nothing in this chapter compares <span class="math inline">\(B\)</span> with <span class="math inline">\(C\)</span>.</p>
+<p><strong>Across studies, indirect comparison is the same logic applied between populations.</strong> To compare <span class="math inline">\(B\)</span> with <span class="math inline">\(C\)</span> we exploit a shared anchor: the common treatment <span class="math inline">\(A\)</span>. The structure is small enough to tabulate.</p>
+<table class="caption-top table">
+<colgroup>
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+<col style="width: 25%">
+</colgroup>
+<thead>
+<tr class="header">
+<th>Study</th>
+<th>Arms</th>
+<th>Within-study effect it identifies</th>
+<th>Role</th>
+</tr>
+</thead>
+<tbody>
+<tr class="odd">
+<td><span class="math inline">\(AB\)</span></td>
+<td><span class="math inline">\(A\)</span> vs <span class="math inline">\(B\)</span></td>
+<td><span class="math inline">\(d_{AB}\)</span>, the effect of <span class="math inline">\(B\)</span> vs <span class="math inline">\(A\)</span> in study <span class="math inline">\(AB\)</span>’s population</td>
+<td>supplies the <span class="math inline">\(A\)</span>-vs-<span class="math inline">\(B\)</span> contrast</td>
+</tr>
+<tr class="even">
+<td><span class="math inline">\(AC\)</span></td>
+<td><span class="math inline">\(A\)</span> vs <span class="math inline">\(C\)</span></td>
+<td><span class="math inline">\(d_{AC}\)</span>, the effect of <span class="math inline">\(C\)</span> vs <span class="math inline">\(A\)</span> in study <span class="math inline">\(AC\)</span>’s population</td>
+<td>supplies the <span class="math inline">\(A\)</span>-vs-<span class="math inline">\(C\)</span> contrast</td>
+</tr>
+<tr class="odd">
+<td>target</td>
+<td><span class="math inline">\(B\)</span> vs <span class="math inline">\(C\)</span></td>
+<td><span class="math inline">\(d_{BC}=d_{AB}-d_{AC}\)</span>, valid only if both refer to a <em>common</em> population</td>
+<td>the quantity we actually want</td>
+</tr>
+</tbody>
+</table>
+<p>The subtraction <span class="math inline">\(d_{BC}=d_{AB}-d_{AC}\)</span> is the indirect (Bucher) comparison of Chapter 14. It is honest only when the two within-study effects live in, or can be transported to, a <em>common</em> population; otherwise we are subtracting effects defined in two different worlds. Transport across populations is governed by the very two assumptions of this chapter, now read <em>between</em> studies rather than within one. Positivity becomes covariate <em>overlap</em>: the studies’ covariate ranges must intersect, or no reweighting can bridge them (the elderly-only versus young-only picture of <a href="#sec-po-assumptions" class="quarto-xref"><span>Section 9.5</span></a> is exactly this failure). Ignorability becomes the requirement that the covariates explaining between-study differences are <em>measured and adjusted for</em>, formalized as the transportability conditions of <a href="12-transportability.html#def-transportability" class="quarto-xref">Definition&nbsp;<span>12.3</span></a> and as the absence of the ecological bias of <a href="../part3/16-limits-of-nma.html#def-ecological-bias" class="quarto-xref">Definition&nbsp;<span>16.2</span></a>.</p>
+<p><strong>What therefore becomes central later.</strong> Three things that were benign or invisible in one population move to the foreground across populations. First, the <em>estimand</em>: population-adjustment methods target a marginal effect in a <em>stated target population</em>, so naming that population is now unavoidable. Second, <em>effect modification</em>: a covariate whose distribution differs between studies and that modifies the effect will make a within-study effect fail to transport, which is why the CATE, not just the ATE, is the object that must be carried across. Third, the <em>effect scale</em>: benign here on the identity scale, it becomes decisive once nonlinear links and the non-collapsibility of <a href="11-effect-modification-collapsibility.html#def-collapsibility" class="quarto-xref">Definition&nbsp;<span>11.6</span></a> enter, because then even a correctly transported conditional effect need not average to the marginal effect a decision maker wants. The next chapter develops the estimators that implement the adjustment formula within a study; Chapters 11 and 12 extend identification to effect modification and transport; and Parts III to V build these into the Bucher comparison, network meta-analysis, MAIC, STC, and ML-NMR that indirect comparison actually requires.</p>
+</section>
+<section id="sec-po-notes" class="level2" data-number="9.10">
+<h2 data-number="9.10" class="anchored" data-anchor-id="sec-po-notes"><span class="header-section-number">9.10</span> Notes and references</h2>
+<p>The potential-outcomes model is due to <span class="citation" data-cites="hernan2020whatif">Hernán and Robins (<a href="../../references.html#ref-hernan2020whatif" role="doc-biblioref">2020</a>)</span>’s lineage of Neyman, in the 1923 randomization analysis of agricultural experiments, and Rubin, who in 1974 extended it to observational studies and named the counterfactual framework; Holland’s 1986 article crystallized the “fundamental problem of causal inference” used in <a href="#thm-fundamental-problem" class="quarto-xref">Theorem&nbsp;<span>9.1</span></a>. Our treatment follows <span class="citation" data-cites="hernan2020whatif">Hernán and Robins (<a href="../../references.html#ref-hernan2020whatif" role="doc-biblioref">2020</a>)</span> throughout, with the strong-ignorability formulation and the central role of the propensity score from <span class="citation" data-cites="rosenbaum1983">Rosenbaum and Rubin (<a href="../../references.html#ref-rosenbaum1983" role="doc-biblioref">1983</a>)</span>. The adjustment formula <a href="#eq-ate-identification" class="quarto-xref">Equation&nbsp;<span>9.12</span></a> is the simplest instance of Robins’s g-formula (<span class="citation" data-cites="robins1986">Robins (<a href="../../references.html#ref-robins1986" role="doc-biblioref">1986</a>)</span>); the letter “g” stands for <em>generalized</em>, since the same construction generalizes to sequences of treatments given over time, where it becomes the g-computation algorithm. This chapter corresponds to items B.1 through B.5 of the companion proof catalogue: potential outcomes and SUTVA (B.1, <a href="#def-potential-outcome" class="quarto-xref">Definition&nbsp;<span>9.1</span></a>, <a href="#def-sutva" class="quarto-xref">Definition&nbsp;<span>9.3</span></a>), the consistency identity (B.2, <a href="#thm-consistency-identity" class="quarto-xref">Theorem&nbsp;<span>9.2</span></a>), ignorability in its three forms (B.3, <a href="#def-ignorability" class="quarto-xref">Definition&nbsp;<span>9.7</span></a>), positivity (B.4, <a href="#def-positivity" class="quarto-xref">Definition&nbsp;<span>9.8</span></a>), and the identification of the ATE (B.5, <a href="#thm-ate-identification" class="quarto-xref">Theorem&nbsp;<span>9.3</span></a>). The estimators that the adjustment formula underwrites, namely inverse-probability weighting, G-computation, and the doubly robust augmented estimator, are catalogue items B.6 through B.12 and are developed in the next chapter as <a href="10-adjustment-methods.html#thm-ipw-unbiased" class="quarto-xref">Theorem&nbsp;<span>10.3</span></a>, <a href="10-adjustment-methods.html#thm-g-computation-unbiased" class="quarto-xref">Theorem&nbsp;<span>10.4</span></a>, <a href="10-adjustment-methods.html#thm-aipw-double-robust" class="quarto-xref">Theorem&nbsp;<span>10.5</span></a>, and <a href="10-adjustment-methods.html#thm-eif-bound" class="quarto-xref">Theorem&nbsp;<span>10.6</span></a>, together with the balancing-score and propensity-score theory <a href="10-adjustment-methods.html#def-balancing-score" class="quarto-xref">Definition&nbsp;<span>10.1</span></a>, <a href="10-adjustment-methods.html#thm-rosenbaum-rubin" class="quarto-xref">Theorem&nbsp;<span>10.1</span></a>, and <a href="10-adjustment-methods.html#thm-ps-sufficiency" class="quarto-xref">Theorem&nbsp;<span>10.2</span></a>.</p>
+<p>Several results carry machine-checked tags pointing to the companion Coq development; a reader auditing the formalization can follow them via Appendix G, and every other reader may ignore them. The fundamental problem is <code>ITE_unobservable</code> in <code>theories/PotentialOutcomes.v</code>; the consistency identity and its masked and swapped forms are <code>Definition consistency</code>, <code>Lemma consistency_equiv</code>, <code>Lemma consistency_expectation</code>, <code>Lemma consistency_treated_mean</code>, and <code>Lemma consistency_control_mean</code> in the same file; the estimands and their decomposition are <code>Definition ATE</code>, <code>Definition ATT</code>, <code>Definition ATC</code>, <code>Lemma ATE_split</code>, and <code>Lemma ATE_decomposition</code>; and the selection-bias decomposition is <code>Lemma selection_bias_decomposition</code>. The assumptions and the ATE identification live in <code>theories/CausalAssumptions.v</code>: SUTVA and the no-interference reduction are <code>Definition SUTVA</code> and <code>Lemma no_interference_unit_level</code>; ignorability is <code>Definition weak_unconfoundedness</code> and <code>Definition strong_unconfoundedness</code> with the ordering <code>Lemma strong_implies_weak_unconf</code>; positivity is <code>Definition weak_positivity</code> and <code>Definition strong_positivity</code> with <code>Lemma strong_implies_weak</code>; and the identification theorem is <code>Theorem ATE_identification</code>. The Coq development states the probabilistic content (the tower property, the locality of conditional expectation, and the conditional-independence consequences) as named hypotheses on abstract expectation operators, exactly as the pen-and-paper proofs here invoke <a href="../part1/04-probability.html#thm-tower-property" class="quarto-xref">Theorem&nbsp;<span>4.4</span></a>, <a href="../part1/04-probability.html#cor-total-expectation" class="quarto-xref">Corollary&nbsp;<span>4.1</span></a>, <a href="../part1/04-probability.html#thm-graphoid-axioms" class="quarto-xref">Theorem&nbsp;<span>4.5</span></a>, and <a href="../part1/04-probability.html#def-conditional-independence" class="quarto-xref">Definition&nbsp;<span>4.6</span></a> from Chapter 4; the proofs in this chapter supply the measure-theoretic justifications the Coq statements take as inputs.</p>
+<p>The attributions to Neyman (1923, translated 1990), Rubin (1974), and Holland (1986) rely on sources not yet in the bibliography; they are listed with full bibliographic data in the work log for the orchestrator to merge. The worked example <a href="#exm-confounding-gformula" class="quarto-xref">Example&nbsp;<span>9.2</span></a> is original to this text.</p>
+</section>
+<section id="sec-po-exercises" class="level2" data-number="9.11">
+<h2 data-number="9.11" class="anchored" data-anchor-id="sec-po-exercises"><span class="header-section-number">9.11</span> Exercises</h2>
+<p>A starred exercise (<span class="math inline">\(\star\)</span>) has a full worked solution in Appendix F; the unstarred ones are for practice. The first two are gentle warm-ups; the later ones build to short proofs.</p>
+<div id="exr-po-warmup-ite" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 9.1 (Warm-up: reading potential outcomes)</strong></span> <strong>(Warm-up.)</strong> Recall Alice from <a href="#sec-po-running" class="quarto-xref"><span>Section 9.1</span></a>: her potential function scores are <span class="math inline">\(Y(1)=24\)</span> under the new drug and <span class="math inline">\(Y(0)=20\)</span> under standard care. (a) State her individual treatment effect <span class="math inline">\(\tau(\omega)\)</span>. (b) If Alice is assigned the new drug, write down her observed outcome <span class="math inline">\(Y\)</span> and her counterfactual (hidden) outcome, and do the same if she is assigned standard care. (c) In one sentence, explain why, no matter which treatment she receives, we can never compute her ITE from her data alone, citing <a href="#thm-fundamental-problem" class="quarto-xref">Theorem&nbsp;<span>9.1</span></a>.</p>
+</div>
+<div id="exr-po-interpret-estimand" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 9.2 (Interpretation: which estimand answers the question?)</strong></span> <strong>(Interpretation.)</strong> For each question below, name which of the ATE, ATT, ATC, or CATE it asks for, and say (one clause) which population the average is over. (a) “Across all eligible patients, how much would average function improve if everyone switched from standard care to the new drug?” (b) “Among the patients who actually received the new drug, how much did it help on average?” (c) “For favorable-baseline patients specifically, what is the average benefit?” (d) A regulator asks what the drug did for the people who took it. Which estimand, and why does the answer differ from (a) when treatment was not randomized?</p>
+</div>
+<div id="exr-po-recompute" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 9.3 (Recomputing the worked example)</strong></span> <strong>(Computation.)</strong> Repeat <a href="#exm-confounding-gformula" class="quarto-xref">Example&nbsp;<span>9.2</span></a> with the propensities changed to <span class="math inline">\(e(0)=0.1\)</span> and <span class="math inline">\(e(1)=0.9\)</span>, keeping the covariate law and all four conditional means <span class="math inline">\(\mu_t(x)\)</span> unchanged. (a) Recompute the within-arm covariate distributions <span class="math inline">\(P(X=1\mid T=1)\)</span> and <span class="math inline">\(P(X=1\mid T=0)\)</span>. (b) Recompute the naive contrast <span class="math inline">\(\Delta_{\mathrm{naive}}\)</span>. (c) Verify the selection-bias decomposition <a href="#eq-naive-decomposition" class="quarto-xref">Equation&nbsp;<span>9.13</span></a> numerically, and confirm that the standardized contrast <a href="#eq-ate-identification" class="quarto-xref">Equation&nbsp;<span>9.12</span></a> still equals <span class="math inline">\(4\)</span>. (d) Explain in one sentence why sharper confounding (more extreme propensities) enlarges the bias while leaving the ATE untouched.</p>
+</div>
+<div id="exr-po-masked-identity" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 9.4 (The masked-outcome identities)</strong></span> <strong>(Computation and proof.)</strong> Using only <span class="math inline">\(T\in\{0,1\}\)</span> and the consistency identity <a href="#eq-consistency-identity" class="quarto-xref">Equation&nbsp;<span>9.1</span></a>, prove the two masked identities <a href="#eq-consistency-masked" class="quarto-xref">Equation&nbsp;<span>9.2</span></a>, <span class="math inline">\(TY=TY(1)\)</span> and <span class="math inline">\((1-T)Y=(1-T)Y(0)\)</span>, and deduce that <span class="math inline">\(\mathbb{E}[TY]=\mathbb{E}[TY(1)]\)</span> and <span class="math inline">\(\mathbb{E}[(1-T)Y]=\mathbb{E}[(1-T)Y(0)]\)</span> for any population. Explain why these identities require no ignorability assumption.</p>
+</div>
+<div id="exr-po-att-atc" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 9.5 (ATE, ATT, and ATC in the worked example)</strong></span> <strong>(Computation.)</strong> In the population of <a href="#exm-confounding-gformula" class="quarto-xref">Example&nbsp;<span>9.2</span></a>, compute the ATT <span class="math inline">\(\tau_{\mathrm{T}}\)</span> and the ATC <span class="math inline">\(\tau_{\mathrm{C}}\)</span> directly from their definitions, and verify the decomposition <span class="math inline">\(\tau=p\,\tau_{\mathrm{T}}+(1-p)\,\tau_{\mathrm{C}}\)</span> of <a href="#prp-ate-att-atc" class="quarto-xref">Proposition&nbsp;<span>9.1</span></a> with <span class="math inline">\(p=P(T=1)\)</span>. Then modify a single conditional mean so that the CATE is no longer constant, and show that ATT and ATC now differ while the decomposition still holds.</p>
+</div>
+<div id="exr-po-mean-vs-weak" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 9.6 (Mean ignorability is strictly weaker)</strong></span> <strong>(Proof.)</strong> Construct a joint law for <span class="math inline">\((Y(1),T,X)\)</span> in which mean ignorability <span class="math inline">\(\mathbb{E}[Y(1)\mid T,X]=\mathbb{E}[Y(1)\mid X]\)</span> holds but weak ignorability <span class="math inline">\(Y(1)\perp T\mid X\)</span> fails. (Hint: use the two-row template of <a href="#sec-po-assumptions" class="quarto-xref"><span>Section 9.5</span></a>; fix a single stratum <span class="math inline">\(X=x\)</span> and give <span class="math inline">\(Y(1)\)</span> the same conditional mean but different conditional variances across <span class="math inline">\(T=0\)</span> and <span class="math inline">\(T=1\)</span>, for instance the values <span class="math inline">\(\{9,11\}\)</span> among the treated and <span class="math inline">\(\{5,15\}\)</span> among the untreated.) Prove carefully that the conditional means are equal (so mean ignorability holds) yet the conditional laws differ (so weak ignorability fails). Confirm that the identification of <span class="math inline">\(\mathbb{E}[Y(1)]\)</span> in <a href="#lem-mean-potential-identification" class="quarto-xref">Lemma&nbsp;<span>9.2</span></a> still goes through, illustrating that the proof uses only the first moment.</p>
+</div>
+<div id="exr-po-positivity-failure" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 9.7 (Positivity failure breaks identification (<span class="math inline">\(\star\)</span>))</strong></span> <strong>(Proof.)</strong> Let <span class="math inline">\(X\in\{0,1\}\)</span> with <span class="math inline">\(P(X=1)=\tfrac12\)</span>, and suppose treatment is deterministic in one stratum: <span class="math inline">\(e(0)=P(T=1\mid X=0)=0\)</span> while <span class="math inline">\(e(1)=0.5\)</span>. Keep SUTVA and strong ignorability. As a preliminary, draw the <span class="math inline">\(2\times 2\)</span> table of the four cells <span class="math inline">\(\{X=x,T=t\}\)</span> and mark which cell is <em>empty</em> (has probability zero); this empty cell is the whole source of the failure. Then: (a) Show that <span class="math inline">\(\mathbb{E}[Y\mid T=1,X=0]\)</span> is undefined, so the right-hand side of the adjustment formula <a href="#eq-ate-identification" class="quarto-xref">Equation&nbsp;<span>9.12</span></a> cannot be evaluated. (b) Exhibit two values of <span class="math inline">\(\mu_1(0)=\mathbb{E}[Y(1)\mid X=0]\)</span>, consistent with the same observed-data law, that yield different ATEs, thereby proving the ATE is not identified when positivity fails. (c) Relate this to the covariate-overlap requirement for indirect comparisons discussed in <a href="#sec-po-bridge" class="quarto-xref"><span>Section 9.9</span></a>. <em>(Solution in Appendix F.)</em></p>
+</div>
+<div id="exr-po-selection-bias-proof" class="theorem exercise">
+<p><span class="theorem-title"><strong>Exercise 9.8 (A symmetric selection-bias decomposition (<span class="math inline">\(\star\)</span>))</strong></span> <strong>(Challenge.)</strong> Prove the control-side analogue of <a href="#thm-naive-selection-bias" class="quarto-xref">Theorem&nbsp;<span>9.4</span></a>: <span class="math display">\[
+\Delta_{\mathrm{naive}}=\tau_{\mathrm{C}}+\bigl(\mathbb{E}[Y(1)\mid T=1]-\mathbb{E}[Y(1)\mid T=0]\bigr),
+\]</span> by adding and subtracting <span class="math inline">\(\mathbb{E}[Y(1)\mid T=0]\)</span> instead of <span class="math inline">\(\mathbb{E}[Y(0)\mid T=1]\)</span> in the proof. Then average the two decompositions (the ATT-side of <a href="#eq-naive-decomposition" class="quarto-xref">Equation&nbsp;<span>9.13</span></a> and this ATC-side) to express <span class="math inline">\(\Delta_{\mathrm{naive}}\)</span> as a half-and-half combination, and interpret the resulting symmetric bias term. Show that under marginal ignorability both bias terms vanish, recovering <a href="#cor-naive-unbiased-rct" class="quarto-xref">Corollary&nbsp;<span>9.2</span></a>. <em>(Solution in Appendix F.)</em></p>
+</div>
+
+
+<div id="refs" class="references csl-bib-body hanging-indent" role="list" style="display: none">
+<div id="ref-hernan2020whatif" class="csl-entry" role="listitem">
+Hernán, Miguel A., and James M. Robins. 2020. <em>Causal Inference: What If</em>. Chapman &amp; Hall/CRC.
+</div>
+<div id="ref-robins1986" class="csl-entry" role="listitem">
+Robins, James. 1986. <span>“A New Approach to Causal Inference in Mortality Studies with a Sustained Exposure Period.”</span> <em>Mathematical Modelling</em> 7 (9-12): 1393–512.
+</div>
+<div id="ref-rosenbaum1983" class="csl-entry" role="listitem">
+Rosenbaum, Paul R., and Donald B. Rubin. 1983. <span>“The Central Role of the Propensity Score in Observational Studies for Causal Effects.”</span> <em>Biometrika</em> 70 (1): 41–55.
+</div>
+</div>
+</section>
+
+</main> <!-- /main -->
+<script id="quarto-html-after-body" type="application/javascript">
+  window.document.addEventListener("DOMContentLoaded", function (event) {
+    const icon = "";
+    const anchorJS = new window.AnchorJS();
+    anchorJS.options = {
+      placement: 'right',
+      icon: icon
+    };
+    anchorJS.add('.anchored');
+    const isCodeAnnotation = (el) => {
+      for (const clz of el.classList) {
+        if (clz.startsWith('code-annotation-')) {                     
+          return true;
+        }
+      }
+      return false;
+    }
+    const onCopySuccess = function(e) {
+      // button target
+      const button = e.trigger;
+      // don't keep focus
+      button.blur();
+      // flash "checked"
+      button.classList.add('code-copy-button-checked');
+      var currentTitle = button.getAttribute("title");
+      button.setAttribute("title", "Copied!");
+      let tooltip;
+      if (window.bootstrap) {
+        button.setAttribute("data-bs-toggle", "tooltip");
+        button.setAttribute("data-bs-placement", "left");
+        button.setAttribute("data-bs-title", "Copied!");
+        tooltip = new bootstrap.Tooltip(button, 
+          { trigger: "manual", 
+            customClass: "code-copy-button-tooltip",
+            offset: [0, -8]});
+        tooltip.show();    
+      }
+      setTimeout(function() {
+        if (tooltip) {
+          tooltip.hide();
+          button.removeAttribute("data-bs-title");
+          button.removeAttribute("data-bs-toggle");
+          button.removeAttribute("data-bs-placement");
+        }
+        button.setAttribute("title", currentTitle);
+        button.classList.remove('code-copy-button-checked');
+      }, 1000);
+      // clear code selection
+      e.clearSelection();
+    }
+    const getTextToCopy = function(trigger) {
+      const outerScaffold = trigger.parentElement.cloneNode(true);
+      const codeEl = outerScaffold.querySelector('code');
+      for (const childEl of codeEl.children) {
+        if (isCodeAnnotation(childEl)) {
+          childEl.remove();
+        }
+      }
+      return codeEl.innerText;
+    }
+    const clipboard = new window.ClipboardJS('.code-copy-button:not([data-in-quarto-modal])', {
+      text: getTextToCopy
+    });
+    clipboard.on('success', onCopySuccess);
+    if (window.document.getElementById('quarto-embedded-source-code-modal')) {
+      const clipboardModal = new window.ClipboardJS('.code-copy-button[data-in-quarto-modal]', {
+        text: getTextToCopy,
+        container: window.document.getElementById('quarto-embedded-source-code-modal')
+      });
+      clipboardModal.on('success', onCopySuccess);
+    }
+      var localhostRegex = new RegExp(/^(?:http|https):\/\/localhost\:?[0-9]*\//);
+      var mailtoRegex = new RegExp(/^mailto:/);
+        var filterRegex = new RegExp("https:\/\/choxos\.github\.io\/Mathematics-of-ITC\/");
+      var isInternal = (href) => {
+          return filterRegex.test(href) || localhostRegex.test(href) || mailtoRegex.test(href);
+      }
+      // Inspect non-navigation links and adorn them if external
+     var links = window.document.querySelectorAll('a[href]:not(.nav-link):not(.navbar-brand):not(.toc-action):not(.sidebar-link):not(.sidebar-item-toggle):not(.pagination-link):not(.no-external):not([aria-hidden]):not(.dropdown-item):not(.quarto-navigation-tool):not(.about-link)');
+      for (var i=0; i<links.length; i++) {
+        const link = links[i];
+        if (!isInternal(link.href)) {
+          // undo the damage that might have been done by quarto-nav.js in the case of
+          // links that we want to consider external
+          if (link.dataset.originalHref !== undefined) {
+            link.href = link.dataset.originalHref;
+          }
+        }
+      }
+    function tippyHover(el, contentFn, onTriggerFn, onUntriggerFn) {
+      const config = {
+        allowHTML: true,
+        maxWidth: 500,
+        delay: 100,
+        arrow: false,
+        appendTo: function(el) {
+            return el.parentElement;
+        },
+        interactive: true,
+        interactiveBorder: 10,
+        theme: 'quarto',
+        placement: 'bottom-start',
+      };
+      if (contentFn) {
+        config.content = contentFn;
+      }
+      if (onTriggerFn) {
+        config.onTrigger = onTriggerFn;
+      }
+      if (onUntriggerFn) {
+        config.onUntrigger = onUntriggerFn;
+      }
+      window.tippy(el, config); 
+    }
+    const noterefs = window.document.querySelectorAll('a[role="doc-noteref"]');
+    for (var i=0; i<noterefs.length; i++) {
+      const ref = noterefs[i];
+      tippyHover(ref, function() {
+        // use id or data attribute instead here
+        let href = ref.getAttribute('data-footnote-href') || ref.getAttribute('href');
+        try { href = new URL(href).hash; } catch {}
+        const id = href.replace(/^#\/?/, "");
+        const note = window.document.getElementById(id);
+        if (note) {
+          return note.innerHTML;
+        } else {
+          return "";
+        }
+      });
+    }
+    const xrefs = window.document.querySelectorAll('a.quarto-xref');
+    const processXRef = (id, note) => {
+      // Strip column container classes
+      const stripColumnClz = (el) => {
+        el.classList.remove("page-full", "page-columns");
+        if (el.children) {
+          for (const child of el.children) {
+            stripColumnClz(child);
+          }
+        }
+      }
+      stripColumnClz(note)
+      if (id === null || id.startsWith('sec-')) {
+        // Special case sections, only their first couple elements
+        const container = document.createElement("div");
+        if (note.children && note.children.length > 2) {
+          container.appendChild(note.children[0].cloneNode(true));
+          for (let i = 1; i < note.children.length; i++) {
+            const child = note.children[i];
+            if (child.tagName === "P" && child.innerText === "") {
+              continue;
+            } else {
+              container.appendChild(child.cloneNode(true));
+              break;
+            }
+          }
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(container);
+          }
+          return container.innerHTML
+        } else {
+          if (window.Quarto?.typesetMath) {
+            window.Quarto.typesetMath(note);
+          }
+          return note.innerHTML;
+        }
+      } else {
+        // Remove any anchor links if they are present
+        const anchorLink = note.querySelector('a.anchorjs-link');
+        if (anchorLink) {
+          anchorLink.remove();
+        }
+        if (window.Quarto?.typesetMath) {
+          window.Quarto.typesetMath(note);
+        }
+        if (note.classList.contains("callout")) {
+          return note.outerHTML;
+        } else {
+          return note.innerHTML;
+        }
+      }
+    }
+    for (var i=0; i<xrefs.length; i++) {
+      const xref = xrefs[i];
+      tippyHover(xref, undefined, function(instance) {
+        instance.disable();
+        let url = xref.getAttribute('href');
+        let hash = undefined; 
+        if (url.startsWith('#')) {
+          hash = url;
+        } else {
+          try { hash = new URL(url).hash; } catch {}
+        }
+        if (hash) {
+          const id = hash.replace(/^#\/?/, "");
+          const note = window.document.getElementById(id);
+          if (note !== null) {
+            try {
+              const html = processXRef(id, note.cloneNode(true));
+              instance.setContent(html);
+            } finally {
+              instance.enable();
+              instance.show();
+            }
+          } else {
+            // See if we can fetch this
+            fetch(url.split('#')[0])
+            .then(res => res.text())
+            .then(html => {
+              const parser = new DOMParser();
+              const htmlDoc = parser.parseFromString(html, "text/html");
+              const note = htmlDoc.getElementById(id);
+              if (note !== null) {
+                const html = processXRef(id, note);
+                instance.setContent(html);
+              } 
+            }).finally(() => {
+              instance.enable();
+              instance.show();
+            });
+          }
+        } else {
+          // See if we can fetch a full url (with no hash to target)
+          // This is a special case and we should probably do some content thinning / targeting
+          fetch(url)
+          .then(res => res.text())
+          .then(html => {
+            const parser = new DOMParser();
+            const htmlDoc = parser.parseFromString(html, "text/html");
+            const note = htmlDoc.querySelector('main.content');
+            if (note !== null) {
+              // This should only happen for chapter cross references
+              // (since there is no id in the URL)
+              // remove the first header
+              if (note.children.length > 0 && note.children[0].tagName === "HEADER") {
+                note.children[0].remove();
+              }
+              const html = processXRef(null, note);
+              instance.setContent(html);
+            } 
+          }).finally(() => {
+            instance.enable();
+            instance.show();
+          });
+        }
+      }, function(instance) {
+      });
+    }
+        let selectedAnnoteEl;
+        const selectorForAnnotation = ( cell, annotation) => {
+          let cellAttr = 'data-code-cell="' + cell + '"';
+          let lineAttr = 'data-code-annotation="' +  annotation + '"';
+          const selector = 'span[' + cellAttr + '][' + lineAttr + ']';
+          return selector;
+        }
+        const selectCodeLines = (annoteEl) => {
+          const doc = window.document;
+          const targetCell = annoteEl.getAttribute("data-target-cell");
+          const targetAnnotation = annoteEl.getAttribute("data-target-annotation");
+          const annoteSpan = window.document.querySelector(selectorForAnnotation(targetCell, targetAnnotation));
+          const lines = annoteSpan.getAttribute("data-code-lines").split(",");
+          const lineIds = lines.map((line) => {
+            return targetCell + "-" + line;
+          })
+          let top = null;
+          let height = null;
+          let parent = null;
+          if (lineIds.length > 0) {
+              //compute the position of the single el (top and bottom and make a div)
+              const el = window.document.getElementById(lineIds[0]);
+              top = el.offsetTop;
+              height = el.offsetHeight;
+              parent = el.parentElement.parentElement;
+            if (lineIds.length > 1) {
+              const lastEl = window.document.getElementById(lineIds[lineIds.length - 1]);
+              const bottom = lastEl.offsetTop + lastEl.offsetHeight;
+              height = bottom - top;
+            }
+            if (top !== null && height !== null && parent !== null) {
+              // cook up a div (if necessary) and position it 
+              let div = window.document.getElementById("code-annotation-line-highlight");
+              if (div === null) {
+                div = window.document.createElement("div");
+                div.setAttribute("id", "code-annotation-line-highlight");
+                div.style.position = 'absolute';
+                parent.appendChild(div);
+              }
+              div.style.top = top - 2 + "px";
+              div.style.height = height + 4 + "px";
+              div.style.left = 0;
+              let gutterDiv = window.document.getElementById("code-annotation-line-highlight-gutter");
+              if (gutterDiv === null) {
+                gutterDiv = window.document.createElement("div");
+                gutterDiv.setAttribute("id", "code-annotation-line-highlight-gutter");
+                gutterDiv.style.position = 'absolute';
+                const codeCell = window.document.getElementById(targetCell);
+                const gutter = codeCell.querySelector('.code-annotation-gutter');
+                gutter.appendChild(gutterDiv);
+              }
+              gutterDiv.style.top = top - 2 + "px";
+              gutterDiv.style.height = height + 4 + "px";
+            }
+            selectedAnnoteEl = annoteEl;
+          }
+        };
+        const unselectCodeLines = () => {
+          const elementsIds = ["code-annotation-line-highlight", "code-annotation-line-highlight-gutter"];
+          elementsIds.forEach((elId) => {
+            const div = window.document.getElementById(elId);
+            if (div) {
+              div.remove();
+            }
+          });
+          selectedAnnoteEl = undefined;
+        };
+          // Handle positioning of the toggle
+      window.addEventListener(
+        "resize",
+        throttle(() => {
+          elRect = undefined;
+          if (selectedAnnoteEl) {
+            selectCodeLines(selectedAnnoteEl);
+          }
+        }, 10)
+      );
+      function throttle(fn, ms) {
+      let throttle = false;
+      let timer;
+        return (...args) => {
+          if(!throttle) { // first call gets through
+              fn.apply(this, args);
+              throttle = true;
+          } else { // all the others get throttled
+              if(timer) clearTimeout(timer); // cancel #2
+              timer = setTimeout(() => {
+                fn.apply(this, args);
+                timer = throttle = false;
+              }, ms);
+          }
+        };
+      }
+        // Attach click handler to the DT
+        const annoteDls = window.document.querySelectorAll('dt[data-target-cell]');
+        for (const annoteDlNode of annoteDls) {
+          annoteDlNode.addEventListener('click', (event) => {
+            const clickedEl = event.target;
+            if (clickedEl !== selectedAnnoteEl) {
+              unselectCodeLines();
+              const activeEl = window.document.querySelector('dt[data-target-cell].code-annotation-active');
+              if (activeEl) {
+                activeEl.classList.remove('code-annotation-active');
+              }
+              selectCodeLines(clickedEl);
+              clickedEl.classList.add('code-annotation-active');
+            } else {
+              // Unselect the line
+              unselectCodeLines();
+              clickedEl.classList.remove('code-annotation-active');
+            }
+          });
+        }
+    const findCites = (el) => {
+      const parentEl = el.parentElement;
+      if (parentEl) {
+        const cites = parentEl.dataset.cites;
+        if (cites) {
+          return {
+            el,
+            cites: cites.split(' ')
+          };
+        } else {
+          return findCites(el.parentElement)
+        }
+      } else {
+        return undefined;
+      }
+    };
+    var bibliorefs = window.document.querySelectorAll('a[role="doc-biblioref"]');
+    for (var i=0; i<bibliorefs.length; i++) {
+      const ref = bibliorefs[i];
+      const citeInfo = findCites(ref);
+      if (citeInfo) {
+        tippyHover(citeInfo.el, function() {
+          var popup = window.document.createElement('div');
+          citeInfo.cites.forEach(function(cite) {
+            var citeDiv = window.document.createElement('div');
+            citeDiv.classList.add('hanging-indent');
+            citeDiv.classList.add('csl-entry');
+            var biblioDiv = window.document.getElementById('ref-' + cite);
+            if (biblioDiv) {
+              citeDiv.innerHTML = biblioDiv.innerHTML;
+            }
+            popup.appendChild(citeDiv);
+          });
+          return popup.innerHTML;
+        });
+      }
+    }
+  });
+  </script>
+<nav class="page-navigation">
+  <div class="nav-page nav-page-previous">
+      <a href="../../chapters/part1/08-hierarchical-bayes.html" class="pagination-link" aria-label="Hierarchical Models, Shrinkage, and Bayesian Inference">
+        <i class="bi bi-arrow-left-short"></i> <span class="nav-page-text"><span class="chapter-number">8</span>&nbsp; <span class="chapter-title">Hierarchical Models, Shrinkage, and Bayesian Inference</span></span>
+      </a>          
+  </div>
+  <div class="nav-page nav-page-next">
+      <a href="../../chapters/part2/10-adjustment-methods.html" class="pagination-link" aria-label="Adjustment Methods">
+        <span class="nav-page-text"><span class="chapter-number">10</span>&nbsp; <span class="chapter-title">Adjustment Methods</span></span> <i class="bi bi-arrow-right-short"></i>
+      </a>
+  </div>
+</nav>
+</div> <!-- /content -->
+
+
+
+
+</body></html>
