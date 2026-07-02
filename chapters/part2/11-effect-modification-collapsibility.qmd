@@ -1,0 +1,1339 @@
+---
+title: "Effect Modification, Interaction, and Collapsibility"
+---
+
+## Why a constant effect can still move {#sec-emcoll-intro}
+
+Two randomized trials study the same active drug against the same placebo. They report the relative
+effect on the same outcome, fit the same model, and yet their headline numbers disagree. There are
+exactly two pure reasons this can happen, and they are completely different in kind.
+
+The first reason is **effect modification**. The drug genuinely helps younger patients more than older
+ones, the two trials enrolled different age mixes, and so the population-averaged effect differs because
+the populations differ. Here the per-patient story is heterogeneous, and the disagreement is a faithful
+reflection of that heterogeneity. Adjusting for age would reconcile the trials.
+
+The second reason is **non-collapsibility**. The drug helps every patient by exactly the same amount on
+the scale the model uses, with no heterogeneity whatsoever, and yet the population-averaged effect still
+differs between the trials because the reporting scale does not *commute with averaging*. To say a scale
+does not commute with averaging is to say that the order of two operations matters: averaging the patient
+risks first and then converting to an odds ratio gives a different number than converting each patient to
+an odds ratio first and then averaging. Here the per-patient story is perfectly homogeneous, and the
+disagreement is an arithmetic artifact of the chosen effect measure. No covariate adjustment can remove it, because there is nothing in the data generating
+mechanism to adjust away; the gap is built into the odds ratio and the hazard ratio themselves.
+
+These two phenomena are routinely confused, partly because both are sometimes called "heterogeneity" and
+partly because both make a marginal number depend on the covariate distribution. This chapter separates
+them with full proofs. It is the conceptual hinge of Part II: every later method, Bucher's indirect
+comparison (@thm-bucher-unbiased), the transportability calculus of Chapter 12, matching and
+simulated comparison, rests on knowing precisely which covariates must be balanced, on which scale, and
+which apparent discrepancies are not about balance at all.
+
+The plan is as follows. @sec-emcoll-cond-marg defines the two population estimands that the rest of the
+chapter contrasts: the conditional effect and the marginal effect. @sec-emcoll-em-interaction defines an
+effect modifier, separates it from the looser notion of a statistical interaction, and proves that effect
+modification is scale dependent. @sec-emcoll-pv defines a prognostic variable and proves, with a
+machine-checked counterexample, that effect modifiers and prognostic variables are logically distinct;
+this is the algebraic engine behind the anchored-versus-unanchored divide. @sec-emcoll-collapse defines
+collapsibility and direct collapsibility, proves the risk difference directly collapsible, and proves the
+odds ratio and the hazard ratio non-collapsible, with closed-form examples. @sec-emcoll-synthesis ties
+the two axes together, and @sec-emcoll-worked carries out one fully numerical example in which every
+number is reproducible by hand. Before all of this, @sec-emcoll-running fixes one small trial and a table
+of effect-measure scales, and we return to that trial at every transition.
+
+Throughout we adopt the potential-outcome framework of @def-potential-outcome under @def-sutva, so that
+the observed outcome obeys the consistency identity @thm-consistency-identity. Write
+$\mu_t(x)=\mathbb E[Y(t)\mid X=x]$ for the stratum-specific mean potential outcome under treatment $t$, as
+in [Notation](/notation.qmd). In words, $\mu_0(x)$ is the average outcome (for a binary outcome, the
+*risk*) we would see under control among patients whose covariate value is $x$, and $\mu_1(x)$ is the same
+under treatment; these two functions carry everything the population knows about the treatment. When
+several populations are in play we write $\mu_t^{\mathcal P}(x)$ to name the population; inside a single
+fixed population we drop the superscript and write $\mu_t(x)$. Inside a single randomized trial the
+no-confounding identity
+$$
+\mathbb E[Y(t)] = \mathbb E_X[\mu_t(X)]
+$$ {#eq-emcoll-nocon}
+holds by @def-ignorability and @def-positivity; it is the within-trial g-formula of
+@thm-ate-identification and @thm-g-computation-unbiased. This is a restatement of the g-formula, not a new
+assumption: because randomization makes treatment independent of the potential outcomes, the population
+mean under treatment $t$ is obtained by averaging the stratum means $\mu_t(x)$ over the covariate
+distribution. We invoke @eq-emcoll-nocon freely. The single most important thing to keep in mind is that
+everything in this chapter happens *inside* a randomized experiment, where treatment is assigned by coin
+flip and no confounding is possible. Every discrepancy we exhibit below is therefore not bias: it is not
+something a better-designed study or a cleverer adjustment could remove.
+
+::: {.remark}
+## Reader's map: five ideas, kept apart
+A novice can hold this whole chapter together with two questions and one warning.
+
+Two questions to ask of any covariate and any effect measure.
+
+1. *Effect modification.* Does the treatment work differently in different patients, measured on the scale
+   you plan to report? If the per-stratum contrast changes across patients, the covariate is an **effect
+   modifier** on that scale.
+2. *Collapsibility.* If you imagine the treatment working *equally* in everyone, does the
+   population-average effect still equal that common value after you average over the patient mix? If yes
+   the measure is **collapsible**; if no it is **non-collapsible**.
+
+These are separate checks. The first is about real variation across patients; the second is about the
+arithmetic of the effect measure itself.
+
+One warning. Non-collapsibility is *not* bias. It happens inside a perfect randomized trial, with no
+confounding to adjust away; the boxed remark in @sec-emcoll-collapse states this precisely.
+
+The five terms the chapter keeps apart:
+
+| term | plain-language question it answers |
+|---|---|
+| effect modification | Does the treatment effect vary across patients, on your reporting scale? |
+| statistical interaction | Does a fitted model need a treatment-by-covariate product term, on its scale? |
+| prognostic variable | Does the covariate predict the outcome within an arm, ignoring treatment? |
+| collapsibility | If the effect is the same in everyone, does the average effect equal it? |
+| non-collapsibility | The failure of that: the average effect differs even with no variation. |
+
+Four pairs never to conflate: effect modification is not the same as having a prognostic variable; a
+statistical interaction is not automatically a causal effect modifier; non-collapsibility is not
+confounding; and a marginal odds ratio is not the average of the stratum odds ratios. Each is proved
+below. $\blacktriangleleft$
+:::
+
+### A running example and the effect-measure scales {#sec-emcoll-running}
+
+*Why this matters (ITC).* Every indirect comparison reports its answer on some scale: a risk difference,
+a risk ratio, an odds ratio, or a hazard ratio. The word **scale** in this chapter means the mathematical
+form of that effect measure, not the units of the outcome. A **link** $g$ (@def-link-function) is the
+strictly increasing function that turns a mean outcome into the number the model treats as additive, and
+the effect on scale $g$ is a difference on the $g$-transformed outcomes. The four measures a health
+researcher meets correspond to four links.
+
+| effect measure | link $g$ | contrast on the $g$-scale | outcome range of the mean $\mu$ |
+|---|---|---|---|
+| risk difference | identity, $g(\mu)=\mu$ | subtract the risks | any real number |
+| risk ratio | log, $g(\mu)=\log\mu$ | difference of log risks $=\log$ risk ratio | positive, $\mu\in(0,\infty)$ |
+| odds ratio | logit, $g(\mu)=\log\tfrac{\mu}{1-\mu}$ | difference of logits $=\log$ odds ratio | probability, $\mu\in(0,1)$ |
+| hazard ratio | log-hazard | difference of log hazards $=\log$ hazard ratio | positive rate, over time |
+
+Reading the table left to right, choosing an effect measure *is* choosing a link, and the effect on scale
+$g$ is always a plain subtraction once the outcomes have been pushed through $g$. Keep this table nearby:
+the whole chapter is about how the choice of $g$ changes the answers. We fix one small trial now and
+return to it at every transition.
+
+::: {#exm-emcoll-teaser}
+## The running trial
+A randomized trial compares an active treatment ($t=1$) against control ($t=0$) on a binary outcome, say
+one-year relapse. Patients split evenly, $P(X=1)=\tfrac12$, by a binary prognostic covariate $X$: read
+$X=0$ as a lower-risk stratum and $X=1$ as a higher-risk stratum. The stratum risks are
+$$
+\mu_0(0)=0.1,\quad \mu_1(0)=0.4,\qquad \mu_0(1)=0.4,\quad \mu_1(1)=0.8 .
+$$
+So in the lower-risk stratum control relapse is $10\%$ and treated $40\%$; in the higher-risk stratum
+control is $40\%$ and treated $80\%$.
+
+Look at the treatment effect *within each stratum* on the odds-ratio scale. In stratum $0$ the odds ratio
+is $\dfrac{0.4/0.6}{0.1/0.9}=6$; in stratum $1$ it is $\dfrac{0.8/0.2}{0.4/0.6}=6$. The odds ratio is *the
+same* $6$ in both strata, so on the odds-ratio scale the treatment behaves identically in the two patient
+types: no effect modification.
+
+Now average the risks over the two strata, as a trial reports a single headline number:
+$\mathbb E[\mu_0]=\tfrac12(0.1+0.4)=0.25$ and $\mathbb E[\mu_1]=\tfrac12(0.4+0.8)=0.60$. The odds ratio *of
+these averaged risks* is $\dfrac{0.60/0.40}{0.25/0.75}=4.5$, not $6$.
+
+The same treatment, with a perfectly constant per-patient odds ratio of $6$, produces a population odds
+ratio of $4.5$. Convert each stratum first and you get $6$; average first and you get $4.5$. That $6$
+versus $4.5$ is the whole chapter in one line, and we return to it at every step; the full computation is
+@exm-emcoll-worked. $\blacktriangleleft$
+:::
+
+## Conditional and marginal effects {#sec-emcoll-cond-marg}
+
+*Why this matters (ITC).* Bucher's indirect comparison, network meta-analysis, MAIC, and STC each
+estimate one of two different numbers: the average of the per-patient effects, or the effect on the
+average patient. This section defines both. Confusing them is the root of most disagreements between an
+individual-level model and a trial's headline result.
+
+The rest of the chapter contrasts two ways to turn the stratum means $\mu_a(x),\mu_b(x)$ into a single
+effect. They differ only in the order of two operations, *transform* (apply the link $g$) and *average*
+(over the covariate $X$).
+
+| step | *transform, then average* (conditional) | *average, then transform* (marginal) |
+|---|---|---|
+| 1 | convert each stratum's risks to the $g$-scale | average the arm risks over patients |
+| 2 | average the stratum contrasts over patients | convert the two averaged risks to the $g$-scale |
+| result | $\Delta^{\mathrm{Cond},g}_{ab}$ (defined below) | $\Delta^{\mathrm{Marg},g}_{ab}$ (defined below) |
+
+When $g$ is the identity these two orders always agree; when $g$ bends (the log, the logit, the
+log-hazard) they generally do not. This is the same commutative-square idea as in @exm-emcoll-teaser, and
+everything below is a consequence of that one asymmetry. With the picture in mind, here are the two
+estimands.
+
+Fix two treatments, a control $a$ and an active treatment $b$ (for binary problems we also write
+$0$ and $1$). Fix a population $\mathcal P$ with covariate density $f_{\mathcal P}$ on $\mathcal X$, and a
+strictly increasing, twice differentiable **link** $g$ (@def-link-function) on the range of the mean
+outcome, for example the identity for a mean difference, $\log$ for a risk or rate ratio, the logit for
+an odds ratio. The conditional mean functions $\mu_a^{\mathcal P}(x)$ and $\mu_b^{\mathcal P}(x)$ carry
+all the information about the population; everything else is a contrast built from them. Two contrasts are
+natural, and they are not the same.
+
+::: {#def-conditional-effect}
+## Conditional effect
+The **conditional effect** of $b$ versus $a$ on scale $g$ at covariate value $x$ in population
+$\mathcal P$ is the stratum-specific contrast
+$$
+\tau^{g}_{ab}(x) \;=\; g\bigl(\mu_b^{\mathcal P}(x)\bigr) - g\bigl(\mu_a^{\mathcal P}(x)\bigr).
+$$ {#eq-emcoll-cate}
+Its average over the population is the **population-average conditional effect**
+$$
+\Delta^{\mathrm{Cond},g}_{ab}(\mathcal P) \;=\; \mathbb E_{X\sim f_{\mathcal P}}\bigl[\tau^{g}_{ab}(X)\bigr]
+   \;=\; \int \bigl[g(\mu_b(x)) - g(\mu_a(x))\bigr]\, f_{\mathcal P}(x)\,dx .
+$$ {#eq-emcoll-delta-cond}
+For binary treatments with $g$ fixed we abbreviate $\tau^{g}_{01}(x)=\psi_g(x)$, matching the notation of
+@def-non-collapsibility. $\blacktriangleleft$^[Throughout, the symbol $\blacktriangleleft$ marks the end of
+a definition, example, or remark, and $\square$ marks the end of a proof; both are only visual bookends.]
+:::
+
+*Reader translation.* $\tau^g_{ab}(x)$ is the treatment effect for *one kind of patient*, those with
+covariate value $x$, expressed on your reporting scale $g$. Averaging it over the patients,
+$\Delta^{\mathrm{Cond},g}_{ab}$, answers the question: what is the typical per-patient effect? For the
+running trial @exm-emcoll-teaser on the odds-ratio scale, $\tau^{\mathrm{logit}}_{01}(x)=\log 6$ in both
+strata, so the average is $\log 6$: the conditional odds ratio is $6$.
+
+::: {#def-marginal-effect}
+## Marginal effect
+The **marginal effect** of $b$ versus $a$ on scale $g$ (equivalently, the marginal effect on the
+effect-measure scale $h=g$) in population $\mathcal P$ is the contrast of the transformed population-mean
+outcomes,
+$$
+\Delta^{\mathrm{Marg},g}_{ab}(\mathcal P)
+   \;=\; g\bigl(\mathbb E_{f_{\mathcal P}}[\mu_b(X)]\bigr) - g\bigl(\mathbb E_{f_{\mathcal P}}[\mu_a(X)]\bigr).
+$$ {#eq-emcoll-delta-marg}
+For binary treatments we write $\psi_g^{\mathrm M}$ for $\Delta^{\mathrm{Marg},g}_{01}(\mathcal P)$, again
+matching @def-non-collapsibility. $\blacktriangleleft$
+:::
+
+*Reader translation.* $\Delta^{\mathrm{Marg},g}_{ab}$ first averages the outcomes as if the whole
+population took $a$, then as if it took $b$, and only then forms the contrast on scale $g$. It answers the
+population question a health technology assessment usually asks: if everyone switched from $a$ to $b$, how
+far would the population-average outcome move on scale $g$? For the running trial on the odds-ratio scale
+this is $\log 4.5$, not $\log 6$. The two definitions in one table:
+
+| notation | plain meaning |
+|---|---|
+| $\mu_0(x)$ | expected outcome (risk) under control for patients with covariate value $x$ |
+| $\mu_1(x)$ | expected outcome (risk) under treatment for those patients |
+| $\tau^g_{01}(x)$ | treatment effect within that stratum, on scale $g$ |
+| $\Delta^{\mathrm{Cond},g}$ | average of the stratum effects: transform, then average |
+| $\Delta^{\mathrm{Marg},g}$ | effect of the averaged outcomes: average, then transform |
+
+The distinction is the order of two operations. The conditional effect transforms first, by $g$, then
+averages over $X$; the marginal effect averages first, on the outcome scale, then transforms. The two
+quantities answer different scientific questions. The marginal effect asks: if the whole population
+received $b$ rather than $a$, by how much would the population-mean outcome move, measured on scale $g$?
+The population-average conditional effect asks: what is the average of the per-stratum effects, each
+measured on scale $g$? Health technology assessment usually wants the former; reasoning about an
+individual patient usually wants the latter. The catalogue records both as the two target estimands
+(corresponds to E.0 and E.12 in the proof catalogue).
+
+A note on notation, since two conventions run in parallel from here on. For binary treatments the
+conditional contrast $\tau^g_{01}(x)$ is also written $\psi_g(x)$, and the marginal contrast
+$\Delta^{\mathrm{Marg},g}_{01}(\mathcal P)$ is also written $\psi_g^{\mathrm M}$, matching
+@def-non-collapsibility; we use the $\psi$ letters in the collapsibility discussion of @sec-emcoll-collapse
+and the $\tau,\Delta$ letters when the treatment pair $(a,b)$ is general. They name the same objects; only
+the notation changes with context.
+
+The next lemma is the whole reason the chapter exists. It quantifies exactly when the two estimands
+agree. It rests on one inequality, which is worth recalling first.
+
+::: {.remark}
+## Jensen's inequality, in one line
+For a convex link $g$ and any random mean $Z$, transforming the average never exceeds averaging the
+transform:
+$$
+g\bigl(\mathbb E[Z]\bigr)\;\le\;\mathbb E\bigl[g(Z)\bigr],
+$$
+with strict inequality when $g$ is *strictly* convex and $Z$ is non-degenerate (genuinely varies). For a
+concave $g$ the inequality reverses. This is @thm-jensen. The logit and the log are the nonlinear links
+that concern us, and the difference between the two sides is exactly the gap the next lemma names.
+$\blacktriangleleft$
+:::
+
+::: {#lem-emcoll-gap}
+## The marginal-conditional gap
+Fix a population $\mathcal P$ and a link $g$. Then
+$$
+\Delta^{\mathrm{Marg},g}_{ab}(\mathcal P) - \Delta^{\mathrm{Cond},g}_{ab}(\mathcal P)
+   \;=\; J_g(\mu_b) - J_g(\mu_a),
+   \qquad J_g(\mu_t) \;:=\; g\bigl(\mathbb E_{f_{\mathcal P}}[\mu_t(X)]\bigr) - \mathbb E_{f_{\mathcal P}}\bigl[g(\mu_t(X))\bigr].
+$$ {#eq-emcoll-gap}
+If $g$ is affine (that is, linear plus a constant), $g(u)=cu+d$ with $c\neq0$, then $J_g\equiv 0$ and the two effects coincide for every
+population and every pair of mean functions. If $g$ is strictly convex (respectively strictly concave) and
+$\mu_t(X)$ is non-degenerate, then $J_g(\mu_t)<0$ (respectively $>0$) strictly.
+:::
+
+The quantity $J_g(\mu_t)$ is the **Jensen gap** (or nonlinearity gap) of the mean $\mu_t(X)$ under $g$: the
+amount by which transforming the average differs from averaging the transform.
+
+::: {.proof}
+Write out the two estimands. By @eq-emcoll-delta-marg and @eq-emcoll-delta-cond,
+$$
+\Delta^{\mathrm{Marg},g}_{ab}=g(\mathbb E[\mu_b])-g(\mathbb E[\mu_a]),
+\qquad
+\Delta^{\mathrm{Cond},g}_{ab}=\mathbb E[g(\mu_b)]-\mathbb E[g(\mu_a)],
+$$
+where in the second equality we used linearity of expectation to split
+$\mathbb E[g(\mu_b)-g(\mu_a)]=\mathbb E[g(\mu_b)]-\mathbb E[g(\mu_a)]$, and every expectation is over
+$X\sim f_{\mathcal P}$. Subtract the second from the first and regroup by treatment:
+$$
+\Delta^{\mathrm{Marg},g}_{ab} - \Delta^{\mathrm{Cond},g}_{ab}
+ = \underbrace{\Bigl[g(\mathbb E[\mu_b]) - \mathbb E[g(\mu_b)]\Bigr]}_{J_g(\mu_b)}
+ - \underbrace{\Bigl[g(\mathbb E[\mu_a]) - \mathbb E[g(\mu_a)]\Bigr]}_{J_g(\mu_a)}
+ = J_g(\mu_b) - J_g(\mu_a),
+$$
+which is @eq-emcoll-gap. If $g(u)=cu+d$ is affine then $g(\mathbb E[\mu_t])=c\,\mathbb E[\mu_t]+d
+=\mathbb E[c\mu_t+d]=\mathbb E[g(\mu_t)]$, so each $J_g(\mu_t)=0$ and the gap vanishes identically. If $g$ is
+strictly convex and $\mu_t(X)$ is non-degenerate, the strict form of Jensen's inequality (@thm-jensen)
+gives $g(\mathbb E[\mu_t(X)]) < \mathbb E[g(\mu_t(X))]$, that is $J_g(\mu_t)<0$; the concave case is identical
+with the inequality reversed. $\square$
+:::
+
+Two consequences are worth stating immediately. First, on the identity scale the marginal and the
+population-average conditional effect are *always* equal, for every population and every pair of mean
+functions, because $J_{\mathrm{id}}\equiv 0$. The mean difference therefore never produces the second
+kind of discrepancy described in @sec-emcoll-intro. Second, the gap @eq-emcoll-gap is generally nonzero
+on a nonlinear scale even when the two treatments share the same conditional mean function up to a
+constant; the two terms $J_g(\mu_a)$ and $J_g(\mu_b)$ need not cancel because they apply the same
+nonlinear $g$ to two different mean functions. This non-cancellation is non-collapsibility, made precise
+in @sec-emcoll-collapse.
+
+*Why this matters.* The gap @eq-emcoll-gap is the exact reason two correct trials, or two correct
+systematic reviews, can report different marginal effects on a nonlinear scale even when every patient
+responds identically. For the running trial @exm-emcoll-teaser on the logit scale the marginal effect is
+$\log 4.5$ and the conditional effect is $\log 6$, so the gap is
+$$
+J_{\mathrm{logit}}(\mu_1)-J_{\mathrm{logit}}(\mu_0)
+=\Delta^{\mathrm{Marg},\mathrm{logit}}_{01}-\Delta^{\mathrm{Cond},\mathrm{logit}}_{01}
+=\log 4.5-\log 6=-0.288 :
+$$
+transforming after averaging shaved the log odds ratio down by $0.288$. On the identity scale the same
+computation gives $0$, which is why the risk difference never shows this effect. Bucher, NMA, MAIC, and
+STC all inherit this gap the moment they report an odds ratio or a hazard ratio; @sec-emcoll-collapse
+makes it precise and @exm-emcoll-worked carries the numbers through to an indirect comparison.
+
+## Effect modification and statistical interaction {#sec-emcoll-em-interaction}
+
+*Why this matters (ITC).* Anchored indirect comparisons (Bucher, NMA) are unbiased only when the trials
+are balanced on the *effect modifiers* of the reported scale (@thm-bucher-unbiased). This section says
+exactly what an effect modifier is, why it is not the same as a regression interaction term, and why the
+answer depends on the scale you report.
+
+We now define an effect modifier and contrast it with the looser, model-bound notion of an interaction.
+
+::: {#def-effect-modifier}
+## Effect modifier
+A covariate $X$ is an **effect modifier** of treatment $b$ versus treatment $a$ on scale $g$ in population
+$\mathcal P$ if the conditional effect @eq-emcoll-cate depends non-trivially on $x$, that is, if there
+exist $x,x'$ in the support of $f_{\mathcal P}$ with
+$$
+\tau^{g}_{ab}(x) \;\neq\; \tau^{g}_{ab}(x').
+$$ {#eq-emcoll-em}
+Otherwise $\tau^{g}_{ab}(\cdot)$ is constant on the support and $X$ is **not** an effect modifier on scale
+$g$ for the pair $(a,b)$ in $\mathcal P$. $\blacktriangleleft$
+:::
+
+*Reader translation.* $X$ is an effect modifier when the treatment genuinely helps (or harms) one kind of
+patient more than another, measured on scale $g$. In the running trial @exm-emcoll-teaser the drug adds
+$0.3$ to the risk in the low-risk stratum and $0.4$ in the high-risk stratum, so on the risk-difference
+scale $X$ *is* an effect modifier; but the odds ratio is $6$ in both strata, so on the odds-ratio scale it
+is *not*. Same drug, same patients, opposite verdicts, because the scale differs.
+
+The definition is parameterized by three things, each of which can change the answer (corresponds to E.1
+in the proof catalogue). It depends on the **treatment pair** $(a,b)$: a covariate can modify the effect
+of $b$ versus $a$ but not of $c$ versus $a$. It depends on the **scale** $g$: the central
+@prp-emcoll-scale below shows a covariate that modifies the effect on one scale and not on another. And
+it depends on the **population** $\mathcal P$, through the conditional mean functions, since
+$\mu_t^{\mathcal P}$ is itself population specific. Informal usage that says "$X$ is an effect modifier"
+without naming all three is incomplete, and the omission is the source of much confusion in applied
+indirect comparison.
+
+::: {#exm-emcoll-pop-dependent}
+## Effect-modifier status depends on the population
+Keep the stratum means of the running trial, $\mu_0(0)=0.1,\mu_1(0)=0.4,\mu_0(1)=0.4,\mu_1(1)=0.8$, and
+change only *which patients are enrolled*. In a broad trial $\mathcal P$ that enrolls both strata, $X$
+takes both values, the risk-difference contrast is $0.3$ at $x=0$ and $0.4$ at $x=1$, and these differ, so
+$X$ is an effect modifier on the identity scale. In a narrow trial $\mathcal P'$ that enrolls only
+lower-risk patients ($X\equiv 0$), the covariate does not vary at all, so @def-effect-modifier is vacuous:
+with no $x\neq x'$ in the support, $X$ cannot be an effect modifier in $\mathcal P'$. The mean functions
+are identical; only the support of $X$ changed, and with it the verdict. This is why "$X$ is an effect
+modifier" is a statement about a population, not about a drug alone. $\blacktriangleleft$
+:::
+
+In a regression model the notion is operationalized by an interaction term. Consider the conditional mean
+model, linear on the $g$-scale, that the network meta-regression of @dias2018nma uses,
+$$
+g\bigl(\mu_t(x)\bigr) \;=\; \alpha + \boldsymbol\beta_1^\top x + \bigl(\gamma + \boldsymbol\beta_2^\top x\bigr)\,t,
+\qquad t\in\{0,1\}.
+$$ {#eq-emcoll-model}
+Here $\boldsymbol\beta_1$ are the prognostic main effects, $\gamma$ is the treatment main effect, and
+$\boldsymbol\beta_2$ are the treatment-by-covariate interactions, the parameter labeled
+$\boldsymbol\beta_{2,k}$ in [Notation](/notation.qmd). The next lemma makes the link between the estimand
+notion (effect modification) and the parametric notion (a nonzero interaction coefficient) exact.
+
+::: {#lem-emcoll-interaction}
+## Effect modification equals a nonzero interaction on the model scale
+Under the model @eq-emcoll-model, the conditional effect on scale $g$ is
+$$
+\tau^{g}_{01}(x) \;=\; \gamma + \boldsymbol\beta_2^\top x .
+$$
+Consequently, the covariate component $X_j$ is an effect modifier on scale $g$ if and only if its
+interaction coefficient is nonzero, $\beta_{2,j}\neq 0$, and $X_j$ has nondegenerate support. If
+$\boldsymbol\beta_2=\mathbf 0$, no component is an effect modifier on scale $g$ and the conditional effect
+is the constant $\gamma$.
+:::
+
+::: {.proof}
+Set $t=1$ in @eq-emcoll-model: $g(\mu_1(x)) = \alpha + \boldsymbol\beta_1^\top x + \gamma +
+\boldsymbol\beta_2^\top x$. Set $t=0$: the treatment terms drop and $g(\mu_0(x)) = \alpha +
+\boldsymbol\beta_1^\top x$. Here $\boldsymbol\beta_2^\top x=\sum_j\beta_{2,j}x_j$ is the dot product, the
+sum of the interaction coefficients times the covariate values. Subtract the second from the first. The
+intercept $\alpha$ sits in both and cancels; the prognostic term $\boldsymbol\beta_1^\top x$ sits in both
+and cancels; what survives is exactly the treatment terms,
+$$
+\tau^{g}_{01}(x)=\bigl[\alpha+\boldsymbol\beta_1^\top x+\gamma+\boldsymbol\beta_2^\top x\bigr]
+-\bigl[\alpha+\boldsymbol\beta_1^\top x\bigr]=\gamma+\boldsymbol\beta_2^\top x .
+$$
+Now hold every covariate but $X_j$ fixed and vary $X_j$: the contrast $\gamma+\boldsymbol\beta_2^\top x$
+moves with $X_j$ if and only if its coefficient $\beta_{2,j}$ is nonzero (and $X_j$ genuinely varies). So
+@eq-emcoll-em holds for $X_j$ exactly when $\beta_{2,j}\neq 0$. If $\boldsymbol\beta_2=\mathbf 0$ the
+contrast is the constant $\gamma$, so @eq-emcoll-em fails for every component and there is no effect
+modification. $\square$
+:::
+
+*Why this matters.* In the network meta-regression @eq-emcoll-model that NMA and ML-NMR fit, effect
+modification is not a vague notion: it is exactly a nonzero interaction coefficient $\beta_{2,j}$ on the
+model's scale. When such a model is correctly specified you can read effect-modifier status straight off
+the fitted coefficients, which is what makes the interaction term the workhorse of population adjustment.
+
+This equivalence tempts one to treat "effect modifier" and "statistical interaction" as synonyms. They
+are not, and the difference matters. We record the model-bound notion as a definition for contrast.
+
+::: {#def-statistical-interaction}
+## Statistical interaction
+A **statistical interaction** between treatment $T$ and covariate $X_j$ on scale $g$, relative to a
+specified model, is a departure of the model from additivity on the $g$-scale in $T$ and $X_j$; in the
+parameterization @eq-emcoll-model it is the statement $\beta_{2,j}\neq 0$. $\blacktriangleleft$
+:::
+
+Three differences separate the two notions; see @hernan2020whatif, Chapters 4 and 5, for the
+epidemiological development.
+
+First, **symmetry**. A statistical interaction is symmetric in its two arguments: the product term
+$\beta_{2,j}\,t\,x_j$ treats treatment and covariate interchangeably, and one may equally say "the effect
+of $X_j$ is modified by $T$." Effect modification is asymmetric by construction: it singles out the
+treatment $T$ as the manipulated cause whose effect is being studied, and asks how that effect varies
+across levels of the second variable. The arithmetic is the same; the causal reading is not.
+
+Second, **scale dependence with a model**. A statistical interaction is a property of a chosen model on a
+chosen scale; it can be created or destroyed by re-expressing the same conditional means through a
+different link. Effect modification is likewise scale dependent (@prp-emcoll-scale), but it is a property
+of the conditional means themselves, not of a fitted parameterization, so it is well defined even when no
+parametric model has been written down.
+
+Third, **manipulability and surrogates**. The product term in @eq-emcoll-model can be nonzero for a
+covariate that is a mere marker, correlated with the true modifier but with no causal role; conversely a
+genuine biological interaction can be masked in a marginal analysis. Effect modification, defined through
+potential-outcome means, is agnostic about the mechanism: it asserts only that the contrast varies across
+strata, whether because $X$ acts causally or because it is a surrogate for something that does. For the
+indirect-comparison mathematics of this book the estimand notion in @def-effect-modifier is the operative
+one, and we use "effect modifier" in that sense throughout. The equivalence @lem-emcoll-interaction lets
+us read effect modification off a correctly specified model when one is available.
+
+In applied terms, suppose you fit a treatment-by-covariate interaction and its coefficient is not zero.
+Should you call it effect modification? On the model's scale, and if the covariate has real variation and
+the coefficient is estimated with reasonable precision, yes: @lem-emcoll-interaction makes the two
+equivalent. Be cautious in three cases. When the covariate is a surrogate for the true modifier, the
+interaction is real but the mechanism is not the covariate you named. When the model's scale is not the
+scale you will report, a nonzero interaction on the logit scale need not be one on the risk-difference
+scale, by the next proposition. And when the interaction is a small, noisy estimate, statistical
+significance is not the same as a modeling decision. The estimand notion in @def-effect-modifier is the
+one this book uses; the regression interaction is how you detect it when a correct model is available.
+
+### Effect modification is scale dependent {#sec-emcoll-scale}
+
+The single most consequential fact about effect modification is that it cannot be discussed without
+naming a scale. A covariate can be an effect modifier on the logit scale and not on the identity scale,
+and the choice of scale for an analysis is therefore a substantive modeling decision, not a convention.
+
+::: {#prp-emcoll-scale}
+## Scale dependence of effect-modifier status
+There exist a binary covariate $X\in\{0,1\}$ and binary potential outcomes $Y(0),Y(1)\in\{0,1\}$ such
+that $X$ is **not** an effect modifier on the identity (risk-difference) scale but **is** an effect
+modifier on the logit (odds-ratio) scale.
+:::
+
+::: {.proof}
+Imagine a lower-risk stratum $x=0$ and a higher-risk stratum $x=1$, with a drug that adds a constant
+$0.1$ of absolute risk in each. Take the stratum risks
+$$
+\mu_0(0)=0.1,\quad \mu_1(0)=0.2,\qquad \mu_0(1)=0.5,\quad \mu_1(1)=0.6 .
+$$
+On the identity scale the conditional effects are
+$$
+\tau^{\mathrm{id}}_{01}(0)=0.2-0.1=0.1,\qquad \tau^{\mathrm{id}}_{01}(1)=0.6-0.5=0.1,
+$$
+equal in the two strata, so by @def-effect-modifier $X$ is not an effect modifier on the identity scale.
+On the logit scale,
+$$
+\tau^{\mathrm{logit}}_{01}(0)=\operatorname{logit}(0.2)-\operatorname{logit}(0.1)
+=\log\frac{0.2/0.8}{0.1/0.9}=\log\frac{0.25}{0.1111\ldots}=\log 2.25=0.8109\ldots,
+$$
+$$
+\tau^{\mathrm{logit}}_{01}(1)=\operatorname{logit}(0.6)-\operatorname{logit}(0.5)
+=\log\frac{0.6/0.4}{0.5/0.5}=\log 1.5=0.4055\ldots .
+$$
+These differ, so by @def-effect-modifier $X$ is an effect modifier on the logit scale. $\square$
+:::
+
+The proposition (corresponds to E.10 in the proof catalogue) has an immediate methodological corollary:
+the assumption "$X$ is not an effect modifier", which underwrites every anchored indirect comparison
+through the shared-effect-modifier assumption of @thm-sema-insufficient, is meaningful only relative to a
+named scale. An analyst who balances covariates on the risk-difference scale and reports an odds ratio,
+or vice versa, has not balanced the quantity that governs the reported estimand. The reason the two
+scales cannot be reconciled by a constant is exactly non-collapsibility, which we prove next; the present
+example is its shadow at the level of effect modification.
+
+*Reader translation.* A health researcher might ask: if age modifies the risk difference but not the odds
+ratio, is it "wrong" to call age an effect modifier? It is not wrong, but it is incomplete.
+Effect-modifier status has no scale-free meaning (@prp-emcoll-scale), so the honest statement always names
+the scale, as in "age modifies the risk difference but not the odds ratio here." An analyst who balances
+covariates on one scale and reports an effect on another has not balanced the quantity that governs the
+reported number.
+
+## Prognostic variables, and why they differ from effect modifiers {#sec-emcoll-pv}
+
+*Why this matters (ITC).* Here is the single most important practical rule this chapter proves: **anchored
+indirect comparisons need to balance only effect modifiers, while unanchored ones must balance all
+prognostic variables.** The reason is that a covariate can influence each treatment arm yet leave the
+between-arm contrast untouched; such a *purely prognostic* covariate cancels when two arms are compared
+against a shared comparator, but not when an absolute arm mean is transported on its own. This section
+proves that effect modifiers and prognostic variables are genuinely different, and isolates the
+cancellation. In the transportability literature the first rule is the **shared effect modifier
+assumption (SEMA)** and the second the **shared prognostic factor assumption (SPFA)**; both names, listed
+in [Notation](/notation.qmd), return in Chapter 12.
+
+Effect modification concerns the *contrast* $\tau^g_{ab}$. A different and weaker condition concerns each
+arm separately.
+
+::: {#def-prognostic-variable}
+## Prognostic variable
+A covariate $X$ is a **prognostic variable** for treatment $t$ in population $\mathcal P$ if the
+conditional mean $\mu_t^{\mathcal P}(x)$ depends non-trivially on $x$, that is, if there exist
+$x,x'$ in the support with $\mu_t^{\mathcal P}(x)\neq \mu_t^{\mathcal P}(x')$. A covariate is **prognostic
+but not an effect modifier** for the pair $(a,b)$ on scale $g$ if both $\mu_a$ and $\mu_b$ depend on $x$
+while the contrast $\tau^g_{ab}$ does not. $\blacktriangleleft$
+:::
+
+*Reader translation.* $X$ is a prognostic variable for an arm if it predicts the outcome *within* that
+arm, treatment aside: sicker patients do worse whether or not they are treated. Baseline severity, age,
+and biomarker level are typical prognostic variables. A prognostic variable becomes an effect modifier
+only if it changes the *contrast* between arms, not merely the level of each arm. In the running trial the
+higher-risk stratum has worse outcomes in both arms, so $X$ is prognostic for both; it also changes the
+risk-difference contrast, so on that scale it is additionally an effect modifier; on the odds-ratio scale
+it is prognostic but not an effect modifier.
+
+This is the catalogue's E.2. The two concepts partition into a four-cell table, for the treatment pair
+$(a,b)$ on a fixed scale $g$ in a fixed population. Read "not prognostic" strictly: it means the covariate
+predicts the outcome in *neither* arm.
+
+| | prognostic for both $a$ and $b$ | prognostic for neither arm |
+|---|---|---|
+| **effect modifier on $g$** | both arms vary and so does the contrast. Running trial, identity scale: $\mu_a=(0.1,0.4)$, $\mu_b=(0.4,0.8)$, contrasts $0.3$ then $0.4$ | impossible: a varying contrast forces at least one arm to vary |
+| **not an effect modifier on $g$** | both arms vary but the contrast is constant (purely prognostic): $\mu_a=(0.3,0.7)$, $\mu_b=(0.5,0.9)$, contrast $0.2$ in both | neither arm varies: $\mu_a\equiv 0.4$, $\mu_b\equiv 0.6$, contrast $0.2$ |
+
+Each cell lists $(\text{value at }x=0,\ \text{value at }x=1)$ for the two arms. The lower-left cell,
+**purely prognostic**, is the one that powers anchored comparison: each arm depends on the covariate, but
+in the same way on the $g$-scale, so the contrast is free of it. The upper-right cell is empty, which is
+the content of the following proposition; it is the one forced implication between the two concepts.
+
+One subtlety before the proofs. The two columns above, "prognostic for both" and "prognostic for neither
+arm," do not exhaust the possibilities: a covariate can be prognostic for exactly *one* arm. Those
+one-arm cases are exactly where an effect modifier can be "not prognostic for a *specified* treatment,"
+which is Part 2 of @thm-emcoll-em-pv-distinct below. There is no contradiction with the "impossible" cell:
+an effect modifier must be prognostic for *at least one* arm (that is @prp-emcoll-em-implies-pv), but it
+need not be prognostic for *both*, and in particular need not be prognostic for the one arm you happen to
+name.
+
+::: {#prp-emcoll-em-implies-pv}
+## An effect modifier is prognostic for at least one treatment
+If $X$ is an effect modifier of $b$ versus $a$ on scale $g$, then $X$ is a prognostic variable for $a$ or
+for $b$ (or both).
+:::
+
+::: {.proof}
+Contrapositive. Suppose $X$ is prognostic for neither $a$ nor $b$: then $\mu_a(x)=\mu_a(x')$ and
+$\mu_b(x)=\mu_b(x')$ for all $x,x'$ in the support. Apply the link $g$ to all four values. Because
+$\mu_a(x)=\mu_a(x')$ we get $g(\mu_a(x))=g(\mu_a(x'))$, and because $\mu_b(x)=\mu_b(x')$ we get
+$g(\mu_b(x))=g(\mu_b(x'))$. Subtracting the two control values from the two treated values,
+$$
+\tau^g_{ab}(x)=g(\mu_b(x))-g(\mu_a(x))=g(\mu_b(x'))-g(\mu_a(x'))=\tau^g_{ab}(x'),
+$$
+so the contrast is constant and $X$ is not an effect modifier. Contrapositively, an effect modifier must
+be prognostic for $a$ or for $b$. $\square$
+:::
+
+The reverse implications all fail, and this is the crucial separation. A prognostic variable need not be
+an effect modifier (the purely prognostic case), and an effect modifier need not be prognostic for a
+*given* treatment (it may be prognostic only for the other arm). The first failure is the deeper one,
+because it is what distinguishes anchored from unanchored adjustment, and it is verified in the Coq
+development.
+
+::: {#thm-emcoll-em-pv-distinct}
+## Effect modifiers and prognostic variables are logically distinct
+Both of the following hold.
+
+1. There exist mean functions $\mu_a,\mu_b$ and a covariate $X$ such that $X$ is prognostic for both $a$
+   and $b$ yet is **not** an effect modifier of $b$ versus $a$ on the identity scale. Hence "prognostic
+   variable" does not imply "effect modifier."
+2. There exist mean functions $\mu_a,\mu_b$ and a covariate $X$ such that $X$ is an effect modifier of $b$
+   versus $a$ yet is **not** prognostic for $a$. Hence "effect modifier" does not imply "prognostic for a
+   specified treatment."
+
+[machine-checked: `theories/EffectModifiers.v`, `Theorem not_EM_does_not_imply_not_PV`]
+:::
+
+::: {.proof}
+**Part 1.** Take $X\in\{0,1\}$ with both values in the support, and set the identity-scale means equal
+across arms, $\mu_a(0)=\mu_b(0)=0.3$ and $\mu_a(1)=\mu_b(1)=0.7$. Each arm depends on $x$ (rising from
+$0.3$ to $0.7$), so $X$ is prognostic for both $a$ and $b$. The contrast is
+$\tau^{\mathrm{id}}_{ab}(x)=\mu_b(x)-\mu_a(x)=0$ for every $x$, constant, so $X$ is not an effect modifier.
+This is exactly the purely prognostic configuration: the two arms move together and their difference is
+free of $x$. (The Coq file proves the same fact with the two arms written as
+$\mu_a(x,w)=\mu_b(x,w)=\mathbf 1\{w\}$ over a binary unmeasured covariate $w$: `counterexample_not_EM`
+shows the contrast is identically zero and `counterexample_not_PV_fails` shows each arm genuinely depends
+on $w$, and together they give `not_EM_does_not_imply_not_PV`.)
+
+**Part 2.** Let $X\in\{0,1\}$, set $\mu_a(x)=0.4$ constant in $x$, and $\mu_b(0)=0.4$, $\mu_b(1)=0.7$. Then
+$X$ is not prognostic for $a$, since $\mu_a$ is constant. The identity-scale contrast is
+$\tau^{\mathrm{id}}_{ab}(0)=0$ and $\tau^{\mathrm{id}}_{ab}(1)=0.3$, which differ, so $X$ is an effect
+modifier of $b$ versus $a$. Thus a covariate can modify the contrast while being prognostic only for the
+active arm, never for the control arm. $\square$
+:::
+
+Part 1 is the workhorse. It says the purely prognostic configuration genuinely exists: covariates whose
+influence on each arm is real but whose influence on the link-scale contrast is nil. The next lemma turns
+this into the cancellation that anchored comparisons exploit.
+
+Picture the simplest anchored network. Trial 1 compares $b$ against a common comparator $C$, trial 2
+compares $a$ against the same $C$, and the indirect estimate of $b$ versus $a$ subtracts the two
+contrasts, $(b\text{ versus }C)-(a\text{ versus }C)$. Anything that sits identically in both contrasts, in
+particular a purely prognostic covariate that shifts every arm the same way on the $g$-scale, is removed
+by that subtraction. The lemma proves this at the level of the conditional contrast.
+
+::: {#lem-emcoll-anchored-cancellation}
+## Anchored cancellation of purely prognostic variables
+Suppose the covariate vector splits as $(X,W)$, with $X$ measured and $W$ possibly unmeasured, and suppose
+$W$ is not an effect modifier of $b$ versus $a$ on the model scale $g$ given $X$, meaning
+$$
+g\bigl(\mu_b(x,w)\bigr) - g\bigl(\mu_a(x,w)\bigr) \;=\; g\bigl(\mu_b(x,w')\bigr) - g\bigl(\mu_a(x,w')\bigr)
+\qquad\text{for all } x,w,w'.
+$$ {#eq-emcoll-notEM}
+Then the conditional contrast $\tau^g_{ab}(x,w)$ does not depend on $w$, and for any two populations
+$\mathcal P_1,\mathcal P_2$ with the same marginal law of $X$ but different conditional laws of $W$ given
+$X$, the population-average conditional contrast is the same:
+$$
+\Delta^{\mathrm{Cond},g}_{ab}(\mathcal P_1) \;=\; \Delta^{\mathrm{Cond},g}_{ab}(\mathcal P_2).
+$$
+
+[machine-checked: `theories/EffectModifiers.v`, `Theorem anchored_PV_cancellation`]
+:::
+
+::: {.proof}
+By @eq-emcoll-notEM the map $w\mapsto \tau^g_{ab}(x,w)$ is constant for each fixed $x$; write its common
+value as $\bar\tau^g_{ab}(x)$. Any population $\mathcal P$ has a joint covariate density that factors as
+$f(x,w)=f(w\mid x)\,f_X(x)$, the conditional density of $W$ given $X$ times the marginal density of $X$.
+Then
+$$
+\Delta^{\mathrm{Cond},g}_{ab}(\mathcal P)
+ = \int\!\!\int \tau^g_{ab}(x,w)\, f(w\mid x)\,dw\, f_X(x)\,dx
+ = \int \bar\tau^g_{ab}(x)\Bigl(\int f(w\mid x)\,dw\Bigr) f_X(x)\,dx .
+$$
+The inner integral $\int f(w\mid x)\,dw = 1$, because $f(w\mid x)$ is a conditional probability density and
+integrates to one over $w$ for each fixed $x$. Hence
+$$
+\Delta^{\mathrm{Cond},g}_{ab}(\mathcal P) = \int \bar\tau^g_{ab}(x)\, f_X(x)\,dx,
+$$
+which depends on $\mathcal P$ only through the marginal law $f_X$ of $X$, not through the conditional law
+$f(w\mid x)$ of $W$. Two populations with the same $f_X$ therefore give the same value, however
+differently $W$ is distributed given $X$. The Coq theorem `anchored_PV_cancellation` proves the pointwise
+step, that the contrast is independent of $w$ under the not-an-effect-modifier hypothesis. $\square$
+:::
+
+The lemma is the formal basis of the slogan "prognostic variables cancel in anchored comparisons but not
+in unanchored ones," and it explains the asymmetry in covariate requirements between the two designs. In
+an anchored comparison the estimator combines two contrasts that each share the comparator $C$, and any
+covariate that is purely prognostic on the model scale, even an unmeasured one, drops out of each
+contrast by @lem-emcoll-anchored-cancellation; only effect modifiers, whose distribution genuinely alters
+the contrast, must be balanced. In an unanchored comparison the estimator works with the absolute arm
+means $\mu_t$ directly, with no comparator to subtract, so @thm-emcoll-em-pv-distinct part 1 bites: a
+purely prognostic $W$ that is imbalanced between source and target changes $\mu_t$ and is not cancelled.
+This is why @thm-bucher-unbiased requires balancing only effect modifiers, while the unanchored case of
+Chapter 12 requires balancing all imbalanced prognostic variables as well. The precise
+estimand-level consequences are developed there; here we have isolated the algebraic mechanism and tied
+it to the machine-checked counterexample. In the language of the section opener,
+@lem-emcoll-anchored-cancellation is the mathematical content of the shared effect modifier assumption
+(SEMA): balance the effect modifiers and the anchored contrast transports. The shared prognostic factor
+assumption (SPFA) is the stronger requirement the unanchored case needs, developed in Chapter 12.
+
+## Collapsibility, direct collapsibility, and non-collapsibility {#sec-emcoll-collapse}
+
+*Why this matters (ITC).* Whether your reported effect measure is even *transportable in principle* across
+trials with different patient mixes depends on whether it is collapsible. The risk difference and risk
+ratio are collapsible; the odds ratio and hazard ratio are not, which is why marginal odds ratios and
+hazard ratios are treated throughout this book as population-specific quantities that cannot simply be
+pooled.
+
+We turn to the second axis. @sec-emcoll-em-interaction was about whether the conditional effect varies
+across strata. Collapsibility is about whether, when the conditional effect does *not* vary, the marginal
+effect equals it. Chapter 7 (@def-non-collapsibility) defined collapsibility of an effect measure under a
+constant conditional effect. We now refine that definition to separate two strengths, because the risk
+ratio and the risk difference behave differently even though both are collapsible in the Chapter 7 sense.
+
+::: {#def-collapsibility}
+## Collapsibility and direct collapsibility
+Let an effect measure be defined by a strictly increasing link $g$, with conditional and marginal effects
+$\psi_g(x)=g(\mu_1(x))-g(\mu_0(x))$ and $\psi_g^{\mathrm M}=g(\mathbb E_X[\mu_1(X)])-g(\mathbb
+E_X[\mu_0(X)])$ as in @def-conditional-effect and @def-marginal-effect. The measure is:
+
+- **collapsible over $X$** if, whenever $\psi_g(\cdot)\equiv\psi_g$ is constant in $x$, the marginal
+  effect equals that common value, $\psi_g^{\mathrm M}=\psi_g$, for every distribution of $X$ and every
+  pair of stratum means consistent with it; it is **non-collapsible** otherwise. This is the notion of
+  @def-non-collapsibility.
+- **directly collapsible over $X$** if the marginal effect is always a weighting-respecting average of the
+  conditional effects, namely
+  $$
+  \psi_g^{\mathrm M} \;=\; \mathbb E_X\bigl[\psi_g(X)\bigr] \;=\; \Delta^{\mathrm{Cond},g}_{01}(\mathcal P),
+  $$ {#eq-emcoll-direct}
+  for every distribution of $X$ and every pair of stratum means, *whether or not* the conditional effect
+  is constant.
+
+Direct collapsibility is the statement that the marginal-conditional gap @eq-emcoll-gap vanishes
+identically; collapsibility is the weaker statement that it vanishes when the conditional effect is
+constant. $\blacktriangleleft$
+:::
+
+*Reader translation.* Two nested questions. **Collapsibility** asks: *if the effect is the same constant in
+every stratum, does that constant survive averaging over the patient mix?* **Direct collapsibility** asks
+more: *even when the effect varies across strata, is the marginal effect exactly the patient-mix-weighted
+average of those stratum effects?* Directly collapsible is the stronger, friendlier property, because the
+marginal number is then always the honest average of the per-patient numbers. Merely collapsible
+guarantees only that a *constant* effect is reported faithfully; if the effect varies, the marginal number
+can drift away from the average. The risk difference is directly collapsible; the risk ratio is
+collapsible but not directly; the odds ratio and hazard ratio are neither.
+
+Direct collapsibility implies collapsibility: if $\psi_g^{\mathrm M}=\mathbb E_X[\psi_g(X)]$ always, then
+in particular when $\psi_g(X)\equiv\psi_g$ is constant the average is $\psi_g$, giving
+$\psi_g^{\mathrm M}=\psi_g$. The converse fails, and the risk ratio is the witness. The terminology and the
+distinction follow @chandler2026transport, who make direct collapsibility the pivotal property for
+transporting a marginal effect across populations.
+
+::: {#prp-emcoll-rd-direct}
+## The risk difference is directly collapsible
+On the identity scale, $g(\mu)=\mu$, the effect measure is directly collapsible over every covariate $X$.
+In particular the risk difference is collapsible, and the marginal risk difference equals the
+population-average conditional risk difference for every distribution of $X$, even when the conditional
+risk difference is itself an effect modifier.
+:::
+
+::: {.proof}
+With $g$ the identity, @eq-emcoll-gap gives $J_{\mathrm{id}}(\mu_t)=\mathbb E_X[\mu_t(X)]-\mathbb
+E_X[\mu_t(X)]=0$, so by @lem-emcoll-gap
+$$
+\psi_{\mathrm{id}}^{\mathrm M} = \mathbb E_X[\mu_1(X)] - \mathbb E_X[\mu_0(X)]
+= \mathbb E_X\bigl[\mu_1(X)-\mu_0(X)\bigr] = \mathbb E_X[\psi_{\mathrm{id}}(X)],
+$$
+which is @eq-emcoll-direct. Direct collapsibility holds with no constancy assumption, hence the
+parenthetical remark about effect modification. $\square$
+:::
+
+*Why this matters.* On the risk-difference scale the population effect is always the genuine average of
+the per-patient effects, so a trial's headline risk difference is a faithful summary even when the drug
+helps some patients more than others. This is the cleanest possible behavior, and it is why absolute-scale
+reasoning is so robust in anchored comparisons.
+
+This is the strongest possible good behavior: on the identity scale the marginal effect is the genuine
+population average of the per-stratum effects, so the two questions of @sec-emcoll-cond-marg have the same
+answer, and a varying conditional effect is faithfully summarized by its average. Chapter 7
+(@def-non-collapsibility) established the collapsibility half of this for the risk difference and the risk
+ratio; @prp-emcoll-rd-direct sharpens it to direct collapsibility for the risk difference. The risk ratio
+is collapsible but not directly collapsible, which is the next proposition and the reason the two
+strengths are worth distinguishing.
+
+::: {#prp-emcoll-rr}
+## The risk ratio is collapsible but not directly collapsible
+On the log scale, $g(\mu)=\log\mu$ (the risk ratio): (i) the measure is collapsible over every $X$; (ii)
+it is not directly collapsible, that is, there is a covariate $X$ and stratum means for which
+$\psi_{\log}^{\mathrm M}\neq\mathbb E_X[\psi_{\log}(X)]$.
+:::
+
+::: {.proof}
+**(i) Collapsibility.** Suppose the conditional log risk ratio is constant,
+$\psi_{\log}(x)=\log\mu_1(x)-\log\mu_0(x)\equiv\rho$, equivalently $\mu_1(x)=e^\rho\mu_0(x)$ for all $x$.
+Taking expectations over $X$, $\mathbb E_X[\mu_1(X)]=e^\rho\,\mathbb E_X[\mu_0(X)]$, so
+$$
+\psi_{\log}^{\mathrm M}=\log\frac{\mathbb E_X[\mu_1(X)]}{\mathbb E_X[\mu_0(X)]}=\log e^\rho=\rho
+=\psi_{\log},
+$$
+for every distribution of $X$; the measure is collapsible.
+
+**(ii) Not directly collapsible.** Take $X\in\{0,1\}$ with $P(X=0)=P(X=1)=\tfrac12$ and stratum means
+$\mu_0(0)=0.1,\ \mu_1(0)=0.4,\ \mu_0(1)=0.4,\ \mu_1(1)=0.8$. The conditional log risk ratios are
+$\psi_{\log}(0)=\log(0.4/0.1)=\log 4$ and $\psi_{\log}(1)=\log(0.8/0.4)=\log 2$, with average
+$\mathbb E_X[\psi_{\log}(X)]=\tfrac12(\log 4+\log 2)=\tfrac12\log 8=\log 2\sqrt2=1.0397\ldots$. The
+marginal risks are $\mathbb E[\mu_0]=\tfrac12(0.1+0.4)=0.25$ and $\mathbb
+E[\mu_1]=\tfrac12(0.4+0.8)=0.60$, so $\psi_{\log}^{\mathrm M}=\log(0.60/0.25)=\log 2.4=0.8755\ldots$. Since
+$0.8755\ldots\neq1.0397\ldots$, @eq-emcoll-direct fails and the risk ratio is not directly collapsible.
+$\square$
+:::
+
+*Reader translation.* Why is the risk ratio collapsible but not *directly* collapsible? Collapsibility
+only has to handle a *constant* log risk ratio, and a constant $\rho$ with $\mu_1(x)=e^\rho\mu_0(x)$ scales
+both averaged risks by the same $e^\rho$, so the constant survives (part i). Direct collapsibility must
+handle a *varying* log risk ratio, and there the log of a ratio of averages is not the average of the logs
+of the ratios: the strata with larger control risk $\mu_0(x)$ pull more weight into the marginal ratio
+than they carry in the plain average of the log ratios, so the two disagree (part ii). Collapsibility asks
+"does the constant survive averaging?"; direct collapsibility asks "does a varying effect average
+correctly?" The risk ratio passes the first test and fails the second.
+
+The gap in part (ii) appears only because the conditional risk ratio varies across strata; whenever it is
+constant, part (i) guarantees agreement. This is precisely the difference between the two strengths: a
+collapsible measure summarizes a *constant* conditional effect correctly, while a directly collapsible
+measure summarizes a *varying* one correctly too. The risk difference manages both; the risk ratio only
+the former. For an anchored indirect comparison reporting a log risk ratio under the shared-effect-modifier
+assumption, collapsibility suffices and the comparison transports (@thm-collapsible-transport,
+@thm-scale-alignment); the failure of direct collapsibility becomes relevant only when the conditional
+effect is allowed to vary, which is the effect-modification axis again.
+
+### The odds ratio and the hazard ratio are non-collapsible {#sec-emcoll-noncollapse}
+
+The odds ratio and the hazard ratio fail even collapsibility. They can differ between the conditional and
+the marginal scale with no effect modification at all, purely because their links are nonlinear and the
+gap @eq-emcoll-gap does not cancel between the two arms. This is the catalogue's B.13, and it is the
+formal reason the rest of the book treats marginal odds ratios and hazard ratios as population-specific
+quantities.
+
+We first prove a clean general statement for the odds ratio, with strict attenuation toward the null,
+using a change-of-measure argument; then the hazard ratio, in closed form, with the additional feature
+that its marginal version varies with time.
+
+::: {.remark}
+## The odds-ratio phenomenon before the proof
+The running trial @exm-emcoll-teaser already shows it. The conditional odds ratio is exactly $6$ in both
+strata, so there is no effect modification on the odds-ratio scale and nothing to adjust for. Yet the odds
+ratio of the population-averaged risks is
+$$
+\frac{0.60/0.40}{0.25/0.75}=4.5 \; < \; 6 .
+$$
+A perfectly homogeneous per-patient odds ratio of $6$ became a marginal odds ratio of $4.5$, pulled toward
+the null value $1$, purely by averaging. The theorem below shows this attenuation is *universal* (it always
+happens when the baseline risk varies) and *unidirectional* (always toward $1$); the change-of-measure
+proof is the machinery, but $6\to 4.5$ is the fact. $\blacktriangleleft$
+:::
+
+::: {#thm-noncollapsibility-or-hr}
+## Non-collapsibility of the odds ratio and the hazard ratio
+Work under the no-confounding identity @eq-emcoll-nocon, so that no confounding is present.
+
+**(a) Odds ratio.** Let $X$ be a covariate, let $\mu_t(X)\in(0,1)$ be the stratum risks, and suppose the
+conditional odds ratio is constant across strata,
+$$
+\omega \;=\; \frac{\mu_1(x)/(1-\mu_1(x))}{\mu_0(x)/(1-\mu_0(x))}\qquad\text{for all } x,
+$$
+so that $X$ is **not** an effect modifier on the logit scale. If $\omega\neq 1$ and the baseline odds
+$W:=\mu_0(X)/(1-\mu_0(X))$ are non-degenerate, then the marginal odds ratio
+$$
+\omega^{\mathrm M} \;=\; \frac{\mathbb E[\mu_1(X)]/(1-\mathbb E[\mu_1(X)])}{\mathbb E[\mu_0(X)]/(1-\mathbb E[\mu_0(X)])}
+$$
+satisfies $1<\omega^{\mathrm M}<\omega$ when $\omega>1$, and $\omega<\omega^{\mathrm M}<1$ when
+$\omega<1$. In particular $\omega^{\mathrm M}\neq\omega$: the odds ratio is non-collapsible, and the
+marginal odds ratio is strictly attenuated toward the null value $1$.
+
+**(b) Hazard ratio.** For time-to-event outcomes with a covariate $X$ and constant conditional hazard
+ratio $r=h_1(x)/h_0(x)$ across strata (no effect modification on the log-hazard scale), the marginal
+hazard ratio, formed from the population-averaged survival functions $\bar
+S_t(u)=\mathbb E_X[\exp(-\int_0^u h_t(X)\,ds)]$, is in general not equal to $r$ and varies with the time
+$u$. Hence the hazard ratio is non-collapsible.
+:::
+
+*Why this matters (ITC).* @thm-noncollapsibility-or-hr(a) is the reason you cannot pool marginal odds
+ratios across trials with different baseline risks, even when every trial is a flawless randomized
+experiment and the conditional odds ratio is identical in all of them. Two trials with the same drug and
+the same per-patient odds ratio will report different marginal odds ratios if they enrolled different risk
+mixes. For hazard ratios, part (b) is why almost every oncology health technology assessment, which
+reports a single Cox hazard ratio, is summarizing a quantity that in truth drifts with follow-up time. The
+consequence, not the proof, is the point; @exm-emcoll-worked Step 3 carries it into an indirect
+comparison.
+
+::: {.proof}
+**(a) Odds ratio.**
+
+*Step 1 (setup: reduce to the baseline odds).* Because the conditional odds ratio is the constant
+$\omega$, the treated odds equal $\omega$ times the control odds in every stratum:
+$\dfrac{\mu_1(x)}{1-\mu_1(x)} = \omega\,\dfrac{\mu_0(x)}{1-\mu_0(x)}$. Write the control odds as the random
+variable $W=\mu_0(X)/(1-\mu_0(X))\ge 0$, non-degenerate by hypothesis. Then the stratum risks are
+$$
+\mu_0(X)=\frac{W}{1+W},\qquad \mu_1(X)=\frac{\omega W}{1+\omega W},
+$$
+since solving the constant-odds-ratio relation for the treated risk gives exactly the second expression.
+For any $a>0$ define
+$$
+A(a) \;=\; \frac{\mathbb E\!\left[\dfrac{aW}{1+aW}\right]}{\mathbb E\!\left[\dfrac{1}{1+aW}\right]} .
+$$
+Using $1-\dfrac{aW}{1+aW}=\dfrac{1}{1+aW}$, the marginal control and treated odds are
+$$
+\frac{\mathbb E[\mu_0]}{1-\mathbb E[\mu_0]}=\frac{\mathbb E[W/(1+W)]}{\mathbb E[1/(1+W)]}=A(1),
+\qquad
+\frac{\mathbb E[\mu_1]}{1-\mathbb E[\mu_1]}=\frac{\mathbb E[\omega W/(1+\omega W)]}{\mathbb E[1/(1+\omega W)]}=A(\omega),
+$$
+so that the marginal odds ratio is $\omega^{\mathrm M}=A(\omega)/A(1)$. *What we showed:* the whole problem
+is now about the single function $A$.
+
+*Step 2 (reweighting: a plain average with tilted weights).* The idea is to rewrite $A(a)$ as an ordinary
+average of $W$, but with the patients reweighted. Give each patient a positive weight proportional to
+$1/(1+aW)$ and renormalize so the weights sum to one; call the resulting reweighted distribution $Q_a$.
+Formally, $Q_a$ is the *tilted probability measure* whose density relative to the original law $P$ of $X$,
+its *Radon-Nikodym derivative*, is
+$$
+\frac{dQ_a}{dP}=\frac{1/(1+aW)}{\mathbb E[1/(1+aW)]};
+$$
+the weights are positive and integrate to one, so $Q_a$ is a genuine probability distribution. Writing
+$Q:=Q_1$ for the control tilt and keeping $Q_\omega$ for the treated tilt, a direct computation gives
+$A(1)=\mathbb E_Q[W]$ and $A(\omega)=\omega\,\mathbb E_{Q_\omega}[W]$, because
+$$
+\mathbb E_Q[W]=\frac{\mathbb E[W/(1+W)]}{\mathbb E[1/(1+W)]}=A(1),\qquad
+\mathbb E_{Q_\omega}[W]=\frac{\mathbb E[W/(1+\omega W)]}{\mathbb E[1/(1+\omega W)]}=\frac{A(\omega)}{\omega}.
+$$
+Therefore
+$$
+\omega^{\mathrm M}=\frac{A(\omega)}{A(1)}=\omega\,\frac{\mathbb E_{Q_\omega}[W]}{\mathbb E_Q[W]} .
+$$ {#eq-emcoll-omega-tilt}
+*What we showed:* the marginal odds ratio is the conditional odds ratio $\omega$ times a ratio of two
+reweighted averages of the baseline odds. If the two reweightings gave the same average, $\omega^{\mathrm
+M}$ would equal $\omega$; non-collapsibility is precisely that they do not.
+
+*Step 3 (compare the two reweighted means through a covariance).* Compare $\mathbb E_{Q_\omega}[W]$ with
+$\mathbb E_Q[W]$ by writing one tilt as a reweighting of the other. The likelihood ratio (the ratio of the
+two weight functions) is, up to the positive constant $c=\mathbb E[1/(1+W)]/\mathbb E[1/(1+\omega W)]$,
+$$
+\ell(W)=\frac{dQ_\omega}{dQ}=c\,\frac{1+W}{1+\omega W},
+\qquad \ell'(W)=c\,\frac{(1+\omega W)-\omega(1+W)}{(1+\omega W)^2}=c\,\frac{1-\omega}{(1+\omega W)^2}.
+$$
+For $\omega>1$ this derivative is strictly negative, so $\ell$ is a strictly *decreasing* function of $W$,
+and by construction $\mathbb E_Q[\ell(W)]=1$. Using the definition of covariance,
+$\operatorname{Cov}_Q(U,V)=\mathbb E_Q[UV]-\mathbb E_Q[U]\,\mathbb E_Q[V]$, with $U=W$, $V=\ell(W)$, and
+$\mathbb E_Q[\ell(W)]=1$,
+$$
+\mathbb E_{Q_\omega}[W]-\mathbb E_Q[W]=\mathbb E_Q[W\,\ell(W)]-\mathbb E_Q[W]\,\mathbb E_Q[\ell(W)]
+=\operatorname{Cov}_Q\bigl(W,\ell(W)\bigr).
+$$
+Now $W$ is increasing in itself while $\ell(W)$ is decreasing in $W$, and two oppositely monotone functions
+of the same random variable have non-positive covariance. Concretely, for an independent copy $W'$ of $W$
+under $Q$,
+$$
+\operatorname{Cov}_Q(W,\ell(W))=\tfrac12\,\mathbb E_Q\bigl[(W-W')(\ell(W)-\ell(W'))\bigr]\le 0,
+$$
+because whenever $W>W'$ we have $\ell(W)<\ell(W')$ and vice versa, so each product
+$(W-W')(\ell(W)-\ell(W'))\le 0$; the inequality is strict because $W$ is non-degenerate, so the product is
+strictly negative on an event of positive probability. Hence $\mathbb E_{Q_\omega}[W]<\mathbb E_Q[W]$.
+*What we showed:* the treated reweighting shifts the average baseline odds strictly down, so by
+@eq-emcoll-omega-tilt, $\omega^{\mathrm M}<\omega$.
+
+*Step 4 (the lower bound and the sign).* For $\omega>1$, the constant-odds-ratio relation gives
+$\mu_1(x)=\omega W/(1+\omega W)>W/(1+W)=\mu_0(x)$ in every stratum, so $\mathbb E[\mu_1]>\mathbb E[\mu_0]$;
+the marginal treated odds then exceed the marginal control odds and $\omega^{\mathrm M}=A(\omega)/A(1)>1$.
+Combining with Step 3, $1<\omega^{\mathrm M}<\omega$. The case $\omega<1$ is identical with $\ell$ strictly
+increasing and every inequality reversed, giving $\omega<\omega^{\mathrm M}<1$.
+
+**(b) Hazard ratio.** We exhibit a closed-form two-stratum example; a single counterexample proves both
+non-collapsibility and time-variation. Let $X\in\{0,1\}$ with $P(X=0)=P(X=1)=\tfrac12$; read $x=0$ as a
+lower-risk subgroup and $x=1$ as a higher-risk subgroup, for instance early versus advanced disease.
+Outcomes are exponential with constant stratum hazards $h_0(0)=1$, $h_0(1)=4$ under control, and a constant
+conditional hazard ratio $r=\tfrac12$, so the treated hazards are $h_1(0)=\tfrac12$, $h_1(1)=2$. The
+conditional hazard ratio is $\tfrac12$ in both strata, so $X$ is not an effect modifier on the log-hazard
+scale. For an exponential stratum with hazard $h$ the survival function is $e^{-hu}$, so averaging over the
+two strata gives the population survival functions
+$$
+\bar S_0(u)=\tfrac12 e^{-u}+\tfrac12 e^{-4u},\qquad \bar S_1(u)=\tfrac12 e^{-u/2}+\tfrac12 e^{-2u} .
+$$
+The *marginal hazard* is defined, as always, as minus the derivative of the log survival,
+$\bar h_t(u)=-\frac{d}{du}\log\bar S_t(u)=-\bar S_t'(u)/\bar S_t(u)$; the minus sign is there because
+survival decreases, so the derivative of its logarithm is negative and the hazard is a positive rate.
+(Equivalently, the hazard is the instantaneous event rate among those still at risk, and for a mixture of
+exponentials it is a *survival-weighted* average of the stratum hazards, not a fixed average.)
+Differentiating,
+$$
+\bar h_0(u)=\frac{e^{-u}+4e^{-4u}}{e^{-u}+e^{-4u}},\qquad
+\bar h_1(u)=\frac{\tfrac12 e^{-u/2}+2 e^{-2u}}{e^{-u/2}+e^{-2u}} .
+$$
+The marginal hazard ratio is $\overline{\mathrm{HR}}(u)=\bar h_1(u)/\bar h_0(u)$. At $u\to 0$ both averaged
+hazards reduce to the equal-weight averages, $\bar h_0(0)=\tfrac12(1+4)=2.5$ and $\bar
+h_1(0)=\tfrac12(\tfrac12+2)=1.25$, so $\overline{\mathrm{HR}}(0)=0.5=r$. But at $u=1$, using $e^{-1}=0.36788$,
+$e^{-4}=0.018316$, $e^{-1/2}=0.60653$, $e^{-2}=0.13534$,
+$$
+\bar h_0(1)=\frac{0.36788+4(0.018316)}{0.36788+0.018316}=\frac{0.44114}{0.38620}=1.1423,\qquad
+\bar h_1(1)=\frac{\tfrac12(0.60653)+2(0.13534)}{0.60653+0.13534}=\frac{0.57394}{0.74187}=0.77364,
+$$
+so $\overline{\mathrm{HR}}(1)=0.77364/1.1423=0.6773\neq 0.5=r$. The marginal hazard ratio therefore
+differs from the constant conditional hazard ratio and depends on the time $u$, both of which establish
+non-collapsibility of the hazard ratio.
+
+Why does the marginal hazard ratio move over time when nothing about any patient changed? Because the two
+arms deplete their high-hazard stratum at different rates. Early on ($u\to 0$) nobody has had the event
+yet, both arms are still the equal-weight mixtures, and $\overline{\mathrm{HR}}(0)=r$. As time passes the
+high-hazard stratum $x=1$ dies out faster, and it dies out fastest in the arm with the higher hazards, so
+the survivors in the two arms come to have *different* stratum mixes and the marginal hazard ratio drifts
+away from $r$. This selection-of-the-frail is not confounding: it is a mechanical consequence of averaging
+survival curves, and it happens in a perfect randomized trial. $\square$
+:::
+
+::: {#cor-emcoll-or-attenuation}
+## Attenuation of the marginal odds ratio toward the null
+Under the hypotheses of @thm-noncollapsibility-or-hr(a), the marginal log odds ratio is strictly smaller
+in magnitude than the conditional log odds ratio: $0<|\log\omega^{\mathrm M}|<|\log\omega|$ with the same
+sign. The conditional and marginal odds ratios agree, $\omega^{\mathrm M}=\omega$, if and only if the
+baseline odds $W$ are degenerate (a single stratum), in which case there is no prognostic variation to
+average over.
+:::
+
+::: {.proof}
+The strict inequalities $1<\omega^{\mathrm M}<\omega$ (for $\omega>1$) and $\omega<\omega^{\mathrm M}<1$
+(for $\omega<1$) translate under the strictly increasing $\log$ into $0<\log\omega^{\mathrm M}<\log\omega$
+and $\log\omega<\log\omega^{\mathrm M}<0$ respectively, which is the magnitude-and-sign statement. If $W$ is
+degenerate at a single value $w_0$ (that is, the baseline odds are identical for every patient, so there is
+effectively one stratum of baseline risk), then $X$ has one stratum and the covariance in the proof of
+@thm-noncollapsibility-or-hr is zero, giving $\mathbb E_{Q_\omega}[W]=\mathbb E_Q[W]=w_0$ and
+$\omega^{\mathrm M}=\omega$ by @eq-emcoll-omega-tilt. Conversely, if $W$ is non-degenerate the covariance
+is strictly negative and $\omega^{\mathrm M}<\omega$ strictly, so equality forces degeneracy. $\square$
+:::
+
+The agreement-iff-degenerate clause is the precise sense in which non-collapsibility of the odds ratio is
+driven by prognostic heterogeneity in the baseline risk, not by effect modification: in
+@thm-noncollapsibility-or-hr the conditional effect is held *constant*, so there is no effect modification
+whatsoever, and yet the moment the baseline risk varies across strata, the marginal and conditional odds
+ratios part company. The example @exm-noncollapsible-or of Chapter 7 is one numerical instance of this
+theorem; the present result shows the phenomenon is universal and unidirectional, and gives the
+change-of-measure mechanism behind it.
+
+::: {.remark}
+## Non-collapsibility is not confounding
+It is essential to read @thm-noncollapsibility-or-hr correctly: the gap between the marginal and the
+conditional odds ratio is *not* bias, and adjusting for $X$ does not remove it, because there is nothing
+to remove. The theorem is proved under the no-confounding identity @eq-emcoll-nocon, the very identity
+that holds in a randomized trial where $X$ is a pure prognostic factor balanced across arms by design. No
+backdoor path, no omitted common cause, no selection. The conditional odds ratio and the marginal odds
+ratio are simply two different functionals of the same confounding-free data generating mechanism, and
+they disagree because the logit does not commute with averaging. By @lem-emcoll-gap the gap is exactly the
+Jensen defect @eq-emcoll-gap, $J_{\mathrm{logit}}(\mu_1)-J_{\mathrm{logit}}(\mu_0)$, which is generically
+nonzero for the strictly convex-then-concave logit, and which the risk difference escapes because its link
+is affine. Confounding is a statement about *which* expectation identifies the causal effect;
+non-collapsibility is a statement about how a *correctly identified* effect changes when you transform
+before or after averaging. The two are independent, and conflating them is a standard error. The catalogue
+records this under B.13. $\blacktriangleleft$
+:::
+
+We summarize the collapsibility axis in a table; "collapsible" and "directly collapsible" are in the sense
+of @def-collapsibility. The effect-modification axis is separate and is governed by @prp-emcoll-scale:
+whenever a measure is non-collapsible, whether a covariate is an effect modifier on its scale can differ
+from the answer on the identity scale. The table below is only about collapsibility.
+
+| effect measure | link $g$ | collapsible | directly collapsible |
+|---|---|---|---|
+| risk difference | identity | yes | yes |
+| risk ratio | $\log$ | yes | no |
+| odds ratio | logit | no | no |
+| hazard ratio | log-hazard | no | no (also time-varying) |
+
+## Synthesis: two scale-dependent axes {#sec-emcoll-synthesis}
+
+*Why this matters (ITC).* An analyst planning an indirect comparison makes two independent decisions:
+which scale to report (this fixes whether the marginal estimand is transportable at all), and which
+covariates are effect modifiers on that scale (this fixes what must be balanced). This section shows the
+two decisions are genuinely independent, so neither can substitute for the other.
+
+Effect modification and collapsibility are two independent reasons a stratified and a pooled analysis can
+disagree, and both are scale dependent, but they are not the same axis. It is worth stating the logical
+relationship cleanly, because the applied literature often collapses the two.
+
+Effect modification (@def-effect-modifier) is a property of how the conditional effect $\tau^g_{ab}(x)$
+varies *across strata of a covariate*. Non-collapsibility (@def-collapsibility) is a property of how the
+effect measure behaves *under averaging within a population*, when the conditional effect does not vary at
+all. The worked example below realizes all four combinations on one data set. The following proposition
+records that the two axes are genuinely orthogonal.
+
+::: {#prp-emcoll-orthogonal}
+## Effect modification and non-collapsibility are independent
+Each of the four combinations occurs.
+
+1. No effect modification and collapsible: a covariate with constant conditional risk difference, on the
+   risk-difference scale.
+2. Effect modification and collapsible: a covariate with non-constant conditional risk difference, on the
+   risk-difference scale, where the marginal effect is still the exact average of the conditional effects
+   by @prp-emcoll-rd-direct.
+3. No effect modification and non-collapsible: a covariate with constant conditional odds ratio and
+   non-degenerate baseline risk, on the odds-ratio scale, where marginal and conditional disagree by
+   @thm-noncollapsibility-or-hr.
+4. Effect modification and non-collapsible: a covariate with non-constant conditional odds ratio, on the
+   odds-ratio scale.
+:::
+
+::: {.proof}
+Combination 1 is any covariate whose conditional risk difference is constant, for instance the
+identity-scale reading of the risks in @prp-emcoll-scale, where the risk difference is $0.1$ in both
+strata; collapsibility holds by @prp-emcoll-rd-direct. Combination 2 is the worked example
+@exm-emcoll-worked below, whose conditional risk differences $0.3$ and $0.4$ differ yet whose marginal
+risk difference equals their average. Combination 3 is the worked example read on the odds-ratio scale,
+where the conditional odds ratio is constant at $6$ and the marginal odds ratio is
+$\dfrac{0.60/0.40}{0.25/0.75}=4.5$ (the arithmetic is in @exm-emcoll-worked Step 2), by
+@thm-noncollapsibility-or-hr. Combination 4 is the logit-scale reading of @prp-emcoll-scale, whose
+conditional odds ratios $2.25$ and $1.5$ differ. All four are realized. $\square$
+:::
+
+The practical upshot is a discipline for indirect comparison. An analyst must decide two things
+separately: on which scale to model and report (which fixes whether the measure is collapsible and hence
+whether the marginal estimand is even transportable in principle), and which covariates are effect
+modifiers on that scale (which fixes what must be balanced). Confusing the two leads to the classic
+errors: balancing effect modifiers on one scale while reporting a non-collapsible measure on another, or
+attributing a non-collapsibility gap to unmeasured confounding and "adjusting" it away. Chapter 12 turns
+this discipline into the transportability theorems @thm-scale-alignment and @thm-collapsible-transport,
+and Chapter 16 shows the failure mode @thm-failure-of-bucher and the ecological bias @def-ecological-bias
+that result when the two axes are mishandled.
+
+## A fully worked example {#sec-emcoll-worked}
+
+We now carry out one example end to end, with every number reproducible by hand. It exhibits effect
+modification and non-collapsibility simultaneously, on different scales, and then shows the downstream
+consequence for an indirect comparison. This completes the running trial of @exm-emcoll-teaser: the same
+four numbers, now carried through every scale and into an indirect comparison. Recall $\mu_0(x)$ is the
+control risk and $\mu_1(x)$ the treated risk among patients with covariate value $x$.
+
+::: {#exm-emcoll-worked}
+## Effect modification and non-collapsibility in one trial
+A randomized trial compares an active treatment ($t=1$) against control ($t=0$) on a binary outcome, in a
+population stratified by a binary prognostic covariate $X\in\{0,1\}$ with $P(X=1)=\tfrac12$. The
+stratum-specific risks are
+$$
+\mu_0(0)=0.1,\quad \mu_1(0)=0.4,\qquad \mu_0(1)=0.4,\quad \mu_1(1)=0.8 .
+$$
+
+**Step 1: effect-modifier status, three scales.** The conditional contrasts are
+
+- risk difference: $\tau^{\mathrm{id}}(0)=0.4-0.1=0.3$ and $\tau^{\mathrm{id}}(1)=0.8-0.4=0.4$. These
+  differ, so $X$ *is* an effect modifier on the risk-difference scale.
+- risk ratio: $\mathrm{RR}(0)=0.4/0.1=4$ and $\mathrm{RR}(1)=0.8/0.4=2$. These differ, so $X$ *is* an
+  effect modifier on the risk-ratio scale.
+- odds ratio: in stratum $0$, $\dfrac{0.4/0.6}{0.1/0.9}=\dfrac{2/3}{1/9}=6$; in stratum $1$,
+  $\dfrac{0.8/0.2}{0.4/0.6}=\dfrac{4}{2/3}=6$. These are equal, so $X$ is *not* an effect modifier on the
+  odds-ratio scale; the conditional odds ratio is the constant $\omega=6$.
+
+So the same covariate modifies the effect on two scales and not on the third. This is @prp-emcoll-scale
+made concrete, and it already shows that "is $X$ an effect modifier?" has no scale-free answer.
+
+**Step 2: the marginal effects.** The marginal risks are the equal-weight stratum averages,
+$$
+\mathbb E[\mu_0]=\tfrac12(0.1+0.4)=0.25,\qquad \mathbb E[\mu_1]=\tfrac12(0.4+0.8)=0.60 .
+$$
+On the three scales:
+
+- marginal risk difference: $0.60-0.25=0.35$. The average of the conditional risk differences is
+  $\tfrac12(0.3+0.4)=0.35$. They agree exactly: the risk difference is directly collapsible
+  (@prp-emcoll-rd-direct), even though $X$ is an effect modifier on this scale. This is combination 2 of
+  @prp-emcoll-orthogonal.
+- marginal odds ratio: $\dfrac{0.60/0.40}{0.25/0.75}=\dfrac{1.5}{1/3}=4.5$. The conditional odds ratio is
+  $\omega=6$. They disagree: $\omega^{\mathrm M}=4.5\neq 6$, with $1<4.5<6$, exactly the strict
+  attenuation of @thm-noncollapsibility-or-hr and @cor-emcoll-or-attenuation. There is no effect
+  modification on this scale, and yet the marginal and conditional measures differ. This is combination 3
+  of @prp-emcoll-orthogonal.
+
+The two findings sit side by side: on the risk-difference scale the covariate is an effect modifier but
+the measure collapses perfectly; on the odds-ratio scale the covariate is not an effect modifier but the
+measure fails to collapse. Effect modification and non-collapsibility are different phenomena, demonstrated
+on one data set.
+
+**Step 3: consequence for an indirect comparison.** Suppose a second trial, sharing the same conditional
+mean functions (conditional constancy of relative effects, @def-constancy-relative-effects), enrolled a
+different covariate mix, $P(X=1)=0.8$. Its marginal risks are
+$$
+\mathbb E'[\mu_0]=0.1(0.2)+0.4(0.8)=0.34,\qquad \mathbb E'[\mu_1]=0.4(0.2)+0.8(0.8)=0.72 .
+$$
+On the risk-difference scale its marginal effect is $0.72-0.34=0.38=0.3(0.2)+0.4(0.8)$, the population
+average of the same conditional risk differences. Because $X$ is an effect modifier on this scale, the
+marginal effect moved from $0.35$ to $0.38$ purely through the change in covariate distribution; a naive
+unadjusted comparison of the two trials would be biased by $0.03$ on the risk-difference scale. This is
+the failure-of-Bucher mechanism @thm-failure-of-bucher, and the cure is to reweight both trials to a
+common target distribution.
+
+On the odds-ratio scale the second trial's marginal odds ratio is
+$$
+\frac{0.72/0.28}{0.34/0.66}=\frac{18/7}{17/33}=\frac{18\cdot 33}{7\cdot 17}=\frac{594}{119}=4.992 ,
+$$
+compared with $4.5$ in the first trial, even though the conditional odds ratio is the constant $6$ in both
+and $X$ is not an effect modifier on this scale. Here the marginal estimand moved from $4.5$ to $4.992$
+not because of effect modification but because of non-collapsibility: the marginal odds ratio depends on
+the baseline-risk distribution, which the covariate mix changed. No covariate balancing on the logit
+scale can equalize these two marginal odds ratios while preserving the trials' own populations, because
+the discrepancy is not about an imbalanced effect modifier; it is the structural population-dependence of
+a non-collapsible marginal effect. This is exactly the caveat that makes a marginal odds ratio
+non-transportable across populations even under the shared-effect-modifier assumption
+(@thm-sema-insufficient), and it is why Chapter 12 distinguishes conditional from marginal estimands so
+carefully. $\blacktriangleleft$
+:::
+
+The example is small enough to verify with a calculator and rich enough to contain the entire chapter:
+scale-dependent effect modification (Step 1), the contrast between a directly collapsible and a
+non-collapsible measure (Step 2), and the two distinct ways a marginal effect can fail to transport
+across populations (Step 3). If the reader internalizes one numerical fact from this chapter, let it be
+that $0.35$ is the honest average of $0.3$ and $0.4$, while $4.5$ is not equal to $6$ even though nothing
+varied.
+
+## Notes and references {#sec-emcoll-notes}
+
+The separation of effect modification from statistical interaction follows @hernan2020whatif, Chapters 4
+and 5, whose treatment emphasizes the asymmetry of effect modification and the scale dependence of
+additive versus multiplicative interaction; the symmetry of the product term and the surrogate-modifier
+phenomenon are theirs. The scale-conditional definitions of effect modifier and prognostic variable, and
+the four-cell table, are the formulation of @phillippo2019thesis and the catalogue results E.1 and E.2;
+the regression operationalization @eq-emcoll-model is the network meta-regression model of @dias2018nma,
+Chapter 8, in the notation of [Notation](/notation.qmd). The conditional and marginal estimands of
+@def-conditional-effect and @def-marginal-effect, and the marginal-conditional gap @lem-emcoll-gap, are
+the estimand-scale framework of @chandler2026transport, who name the two estimands and make the
+collapsibility gap the organizing idea; these correspond to E.0 and E.12 in the proof catalogue.
+
+Collapsibility and non-collapsibility were defined in Chapter 7 (@def-non-collapsibility), where the risk
+difference and risk ratio were shown collapsible and the odds ratio non-collapsible with the numerical
+instance @exm-noncollapsible-or. The refinement to *direct* collapsibility (@def-collapsibility), and the
+observation that the risk ratio is collapsible but not directly collapsible (@prp-emcoll-rr), follow
+@chandler2026transport; direct collapsibility is the property their transportability theorems require, and
+it is sharper than the constant-effect collapsibility of the classical literature. The general
+non-collapsibility and strict attenuation of the odds ratio, @thm-noncollapsibility-or-hr(a) and
+@cor-emcoll-or-attenuation, are the catalogue's B.13; the monotone-attenuation phenomenon is classical in
+categorical data analysis and the change-of-measure proof given here packages the convexity argument of
+@lem-emcoll-gap into a covariance inequality. The non-collapsibility and time-variation of the marginal
+hazard ratio, @thm-noncollapsibility-or-hr(b), is the survival-analysis counterpart; the closed-form
+two-stratum frailty computation is standard, and the same mechanism reappears in the survival chapters of
+this book where the marginal hazard ratio of a conditionally proportional-hazards model is shown to drift
+with time.
+
+The machine-checked content is in `theories/EffectModifiers.v` of the companion Coq development.
+@thm-emcoll-em-pv-distinct (part 1) is `Theorem not_EM_does_not_imply_not_PV`, with the supporting lemmas
+`counterexample_not_EM` and `counterexample_not_PV_fails`; it formalizes that a purely prognostic variable
+need not be an effect modifier, the algebraic heart of the anchored-versus-unanchored distinction.
+@lem-emcoll-anchored-cancellation is `Theorem anchored_PV_cancellation`, the pointwise statement that a
+non-effect-modifier cancels in the link-scale contrast. The Coq file deliberately does not formalize the
+scale-specific population-adjustment consistency theorems, which depend on estimand scale, overlap, and
+model correctness beyond the algebraic abstraction; those live in the paper proofs of Part E and in
+Chapter 12 of this book.
+
+Two bibliographic additions are proposed in the chapter work log for the orchestrator: the original
+collapsibility analysis of Greenland, Robins, and Pearl (1999), to which the term non-collapsibility and
+the odds-ratio attenuation are usually attributed, and the early demonstration by Gail and colleagues
+(1984) that omitting a balanced prognostic covariate biases a nonlinear-model treatment coefficient. The
+present chapter cites the keys available in `references.bib`.
+
+## Exercises {#sec-emcoll-exercises}
+
+The exercises progress from interpretation and warm-ups to computation and proof. A starred exercise,
+marked $\star$, has a full worked solution in Appendix F.
+
+::: {#exr-emcoll-interpret}
+**(Interpretation.)** A colleague reports that two well-conducted randomized trials of the same drug, on
+the same outcome, gave different odds ratios, and concludes that one of them must be biased. Give the two
+distinct innocent explanations this chapter provides (@sec-emcoll-intro), and say for each whether
+adjusting for a covariate would reconcile the trials. Which explanation can occur even if both trials
+enrolled patients identical on every measured and unmeasured covariate?
+:::
+
+::: {#exr-emcoll-order-ops}
+**(Warm-up.)** For the running trial @exm-emcoll-teaser, with
+$\mu_0(0)=0.1,\mu_1(0)=0.4,\mu_0(1)=0.4,\mu_1(1)=0.8$ and $P(X=1)=\tfrac12$: (a) compute the odds ratio
+within each stratum and confirm both equal $6$ (transform, then average); (b) compute the
+population-average risks $\mathbb E[\mu_0],\mathbb E[\mu_1]$ and then their odds ratio (average, then
+transform), confirming $4.5$; (c) do the same on the identity scale and confirm the two orders agree at
+$0.35$. Say in one sentence which scale is collapsible and why.
+:::
+
+::: {#exr-emcoll-classify}
+**(Classification.)** For each of the four two-stratum tables below (equal stratum sizes,
+$P(X=1)=\tfrac12$), state (i) whether $X$ is an effect modifier on the risk-difference scale, (ii) whether
+$X$ is an effect modifier on the odds-ratio scale, and (iii) if the conditional odds ratio is constant
+across strata, whether the marginal odds ratio equals it (and if the conditional odds ratio varies, say
+so).
+
+| table | $\mu_0(0),\ \mu_1(0)$ | $\mu_0(1),\ \mu_1(1)$ |
+|---|---|---|
+| A | $0.2,\ 0.3$ | $0.2,\ 0.3$ |
+| B | $0.1,\ 0.2$ | $0.5,\ 0.6$ |
+| C | $0.1,\ 0.4$ | $0.4,\ 0.8$ |
+| D | $0.2,\ 0.5$ | $0.5,\ 0.8$ |
+
+Which table is the running example, and which tables show non-collapsibility of the odds ratio with no
+effect modification on the odds-ratio scale?
+:::
+
+::: {#exr-emcoll-scale-flip}
+**Constructing a scale flip.** Find stratum risks $\mu_0(0),\mu_1(0),\mu_0(1),\mu_1(1)\in(0,1)$, different
+from those in @prp-emcoll-scale, such that the covariate is an effect modifier on the risk-difference
+scale but *not* on the odds-ratio scale. Verify your construction by computing both conditional contrasts
+in both strata. Explain why your example is combination 2, not combination 4, of @prp-emcoll-orthogonal.
+:::
+
+::: {#exr-emcoll-rr-direct}
+**When is the risk ratio directly collapsible?** Prove that on the log scale, if the conditional risk
+ratio is constant in $x$, then the marginal log risk ratio equals the (then constant) conditional log risk
+ratio, recovering collapsibility. Then show by a two-stratum example that if the conditional risk ratio
+varies, the marginal log risk ratio is *not* the population average of the conditional log risk ratios,
+and determine whether it is larger or smaller than that average for your example. Relate the direction to
+the convexity of $\log$.
+:::
+
+::: {#exr-emcoll-or-attenuation}
+**($\star$) General monotone attenuation of the odds ratio.** Reprove @thm-noncollapsibility-or-hr(a) for
+an arbitrary, possibly continuous, distribution of the baseline odds $W$ by the monotonicity route. (The
+theorem's own proof already covers this case through the covariance inequality; here you establish the same
+conclusion more directly, which is often easier to remember.) Specifically, with
+$A(a)=\mathbb E[aW/(1+aW)]/\mathbb E[1/(1+aW)]$ and $\omega^{\mathrm
+M}=A(\omega)/A(1)$, show that (a) $a\mapsto A(a)$ is strictly increasing, so $\omega^{\mathrm M}>1$ for
+$\omega>1$; and (b) $a\mapsto A(a)/a$ is strictly decreasing, so $\omega^{\mathrm M}<\omega$ for
+$\omega>1$. For (b), use the change-of-measure identity @eq-emcoll-omega-tilt and the covariance
+inequality for oppositely monotone functions. Deduce the agreement-iff-degenerate clause of
+@cor-emcoll-or-attenuation.
+:::
+
+::: {#exr-emcoll-hr-limits}
+**Endpoints of the marginal hazard ratio.** In @thm-noncollapsibility-or-hr(b), prove that
+$\overline{\mathrm{HR}}(u)\to r$ as both $u\to 0$ and $u\to\infty$, and that
+$\overline{\mathrm{HR}}(u)\neq r$ for $u\in(0,\infty)$ unless the baseline hazards are equal across strata.
+Interpret the $u\to\infty$ limit as a frailty-selection effect: the survivors in both arms come to be
+dominated by the lowest-hazard stratum. Sketch $\overline{\mathrm{HR}}(u)$ for the given numbers and
+identify the time at which it departs furthest from $r$.
+:::
+
+::: {#exr-emcoll-anchored-unanchored}
+**($\star$) Why unanchored adjustment needs prognostic variables.** Consider treatments $A$ and $C$ with a
+measured covariate $X$ and an unmeasured covariate $W$, and conditional means $\mu_A(x,w)$, $\mu_C(x,w)$ on
+the identity scale. (a) Suppose $W$ is purely prognostic, $\mu_A(x,w)-\mu_C(x,w)$ free of $w$. Using
+@lem-emcoll-anchored-cancellation, show that the anchored contrast $\Delta^{\mathrm{Cond,id}}_{AC}$ is
+unchanged when the conditional law of $W$ given $X$ differs between a source and a target population, so
+$W$ need not be balanced. (b) Now consider the unanchored target $\mathbb E_{f_*}[\mu_A(X,W)]$ alone. Give
+explicit $\mu_A$ and two conditional laws of $W$ given $X$, agreeing in $f_X$, for which this absolute mean
+differs between source and target. Conclude that an imbalanced purely prognostic variable biases the
+unanchored estimand even though it cancels in the anchored one, and connect this to
+@thm-emcoll-em-pv-distinct part 1.
+:::
+
+::: {#exr-emcoll-saturated}
+**Interaction in a saturated model.** Write the saturated logistic model for binary $X$ and $T$,
+$\operatorname{logit}\mu_t(x)=\beta_0+\beta_1 x+\beta_2 t+\beta_3 (xt)$. Express the four stratum risks of
+@exm-emcoll-worked through $\beta_0,\dots,\beta_3$, solve for the coefficients, and verify that
+$\beta_3=0$ corresponds exactly to the absence of effect modification on the logit scale
+(@lem-emcoll-interaction). Then compute, from the same fitted model, the marginal odds ratio $4.5$ by
+averaging the fitted risks, and confirm that no value of $(\beta_0,\beta_1,\beta_2,\beta_3)$ makes the
+marginal odds ratio equal the conditional odds ratio $e^{\beta_2}$ unless $\beta_1=0$. Interpret
+$\beta_1=0$ as the degeneracy clause of @cor-emcoll-or-attenuation.
+:::

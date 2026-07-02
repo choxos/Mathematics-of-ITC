@@ -1,0 +1,1103 @@
+---
+title: "Machine-Checked Foundations: The Coq Formalization"
+---
+
+## Introduction {#sec-coq-intro}
+
+Every theorem in the preceding twenty-nine chapters has been proved in the ordinary mathematical sense:
+a chain of deductions, written for a competent reader, that the author believes is correct and that a
+referee can in principle check. This is the verification regime of all of mathematics, and it works
+because of a social apparatus of peer review, replication, and the slow accumulation of trust. It is also
+fallible. Long algebraic derivations like the multilevel network meta-regression aggregation identity
+(@thm-aggregation), case analyses with many branches like the scale-specific population-adjustment
+theorems of Chapter 17, and arguments that turn on a single sign or a single cancellation like Bucher's
+subtraction (@thm-bucher-unbiased) are exactly the places where a human proof can hide an error that
+survives review.
+
+This chapter documents a second, independent verification track for part of the book: a companion
+formalization, the **ITC_Coq development**, in which a subset of the results is written in the language of
+the Coq (Rocq) proof assistant and checked, deduction by deduction, by a computer. A statement that
+compiles in Coq has been verified, relative to a small and explicit logical foundation, to follow from
+its stated hypotheses. No referee is trusted; no step is elided; the machine refuses to accept a proof
+with a gap. The development covers the algebraic and discrete-probabilistic core of population adjustment:
+the potential-outcomes calculus of Chapter 9, the propensity-score and inverse-probability-weighting
+theory of Chapter 10 (@thm-ipw-unbiased, @thm-aipw-double-robust), the Rosenbaum-Rubin balancing
+theorems, Bucher's identity (@thm-bucher-unbiased), the effect-modifier versus prognostic-variable
+distinction of Chapter 11 (@def-effect-modifier, @def-prognostic-variable), the matching-adjusted
+indirect comparison effective-sample-size bound (@thm-maic-ess-bound), and the collapsibility of the mean
+difference that underlies simulated treatment comparison (@def-collapsibility).
+
+The chapter is **documentary**. It does not reprove the mathematics; Chapters 9 through 19 do that. Its
+job is to describe accurately what the formalization contains, to be precise about what a proof assistant
+does and does not certify, and to give the reader a map from the book's tagged theorems to the Coq lemmas
+that machine-check them. Two pieces of vocabulary are introduced as permanent reference items: the
+**proof-status tiers** (@def-coq-proof-status), which classify how completely each catalogued result is
+formalized, and the **active axioms** (@def-active-axioms), the three classical-logic principles that the
+development inherits from its mathematics library and on which every machine-checked theorem ultimately
+rests. Every claim below about what is or is not formally proved has been checked against the source files
+of the development, including a direct query of the Coq kernel for the axioms each central theorem uses;
+that query is reproduced in the worked example of @sec-coq-worked.
+
+## Why this matters for a health researcher {#sec-coq-why}
+
+This chapter is technical, so it is worth stating at the outset, in plain terms, why a reader who will
+never open a proof assistant should care, and anchoring the whole discussion in one small comparison that
+we return to at every step.
+
+**A running example: an indirect comparison for an assessment body.** Suppose a health technology
+assessment (HTA) body must compare two drugs, $A$ and $B$, for a binary bad outcome such as disease
+relapse, and no head-to-head trial exists. Two trials share a common comparator $C$ (standard care):
+Trial 1 compares $A$ against $C$, and Trial 2 compares $B$ against $C$. On the log-odds-ratio scale
+Trial 1 reports $\hat d_{AC} = -0.80$ and Trial 2 reports $\hat d_{BC} = -0.50$ (a negative value means
+lower odds of relapse, hence a better drug). Trial 2 supplies individual patient data (IPD); Trial 1 is
+published only as aggregate summaries, and its patients are older and sicker, so before comparing we
+reweight Trial 2's patients to match Trial 1's covariate profile, a matching-adjusted indirect comparison
+(MAIC). To keep the arithmetic in view, take Trial 2 to have four patients whose matching weights come out
+$(2,1,1,0)$; the fourth patient, whose covariate profile lies outside Trial 1's range, receives weight
+zero. This example reappears in the Bucher comparison of @sec-coq-twin and the worked example of
+@sec-coq-worked.
+
+Three numbers now carry the decision, and each is a result the companion Coq development machine-checks.
+
+- **The indirect contrast** $d_{AB} = \hat d_{AC} - \hat d_{BC} = -0.80 - (-0.50) = -0.30$, Bucher's
+subtraction (@thm-bucher-unbiased): $A$ lowers the log-odds of relapse by $0.30$ relative to $B$, an odds
+ratio of $e^{-0.30} \approx 0.74$.
+- **The effective sample size** of the reweighted Trial 2, $\mathrm{ESS} \le n$ (@thm-maic-ess-bound):
+the four patients carry the information of at most four, and with weights $(2,1,1,0)$ only
+$\mathrm{ESS} = 4^2/6 = 8/3 \approx 2.67$; the matched evidence is worth under three patients.
+- **Double robustness** of an augmented estimator (@thm-aipw-double-robust): a treatment-effect estimate
+stays valid if either the weighting model or the outcome model is correct.
+
+Here is the point of formalization, made concrete on these numbers. A proof assistant *can* rule out a
+class of mistakes.
+
+- A **sign slip.** Writing $\hat d_{BC} - \hat d_{AC} = +0.30$ instead of $-0.30$ reports an odds ratio
+of $1.35$ and flips the recommendation from "$A$ is better" to "$B$ is better." Bucher's subtraction is a
+single line of algebra, and one flipped sign changes the clinical conclusion. The Coq theorem
+`bucher_unbiased` fixes the orientation once and for all.
+- A **vacuous safeguard.** If the ESS bound were stated with a hypothesis that secretly already contained
+the conclusion, it would compile as "true" and mean nothing; the development's discipline
+(@sec-coq-guarantees, illustrated in @exm-coq-vacuous) is built to prevent exactly this.
+
+Equally, a proof assistant *cannot* rule out the judgments that matter most to a clinician: whether Trial
+1 and Trial 2 populations are exchangeable, whether the covariates that drive relapse were measured,
+whether the log-odds scale is the intended one, or whether the analysis code that produced
+$\hat d_{AC} = -0.80$ was run correctly. Those are scientific and statistical questions; no proof
+assistant touches them.
+
+So the honest headline for a health researcher is this. **You do not need to run Coq.** You need to know
+that someone can, that the load-bearing algebra behind the ESS bound, Bucher's subtraction, and double
+robustness has been checked deduction by deduction by a machine rather than trusted to the author's care,
+and that the probabilistic steps the machine does not check are named in the open (@sec-coq-boundary), so
+you can see precisely where trust still rests on a paper proof. Three phrases recur in that claim, and
+they are worth pinning down in plain language now.
+
+- **Machine-checked**: a computer has verified every deductive step of the proof, not spot-checked it,
+relative to the axioms named in @sec-coq-axioms.
+- **Zero admits**: no proof in the development was skipped or left as a hole to be filled later; every
+stated theorem is proved to completion.
+- **Zero (project) axioms**: the development introduces no assumptions of its own; it borrows only the
+three generic logical axioms that all of classical mathematics already uses, and adds nothing about
+treatments, trials, or effects.
+
+None of the three says the mathematics is *clinically* true, or that a method is appropriate for a given
+dataset; they say the stated mathematics is airtight. Keeping that distinction sharp is the recurring
+theme of the chapter.
+
+**Why formalize at all, rather than just be careful?** Peer review catches most errors, but not all, and
+the errors it misses cluster exactly where this book is hardest: long algebraic identities, many-branch
+case analyses, and arguments that turn on a single sign or a single cancellation. It is not hard to
+imagine a population-adjustment identity published with a mislabeled contrast or a quietly missing
+positivity condition, used in an assessment, and corrected only years later. For the fragment it covers,
+the machine removes that possibility: a slip of that kind cannot compile. That is a different and stronger
+kind of assurance than "the author and two referees believe it," and it is available for precisely the
+parts where human proof is least reliable.
+
+## A Coq vocabulary, and a one-line proof {#sec-coq-vocabulary}
+
+The rest of the chapter uses the working vocabulary of proof assistants. None of it is deep, but a reader
+meeting it for the first time deserves plain definitions before the words start doing work. The glossary
+below is informal on purpose; the precise versions appear where each term is used.
+
+| Term | Plain meaning |
+|---|---|
+| Proof assistant | A program in which you write a proof in a formal language it can check completely. Coq, renamed the **Rocq Prover** in 2025, is the one used here. |
+| Type; term | A *type* is a category an object can belong to (the reals `R`, the natural numbers, "proofs that $1+1=2$"); a *term* is a specific object of a type. The notation `t : P` reads "`t` is a term of type `P`." |
+| Proposition, `Prop` | A mathematical statement *is* a type: the type of its proofs. The statement is true exactly when that type has at least one term. `Prop` is the universe of such statement-types, as opposed to `bool`, the two-valued type of `true` and `false` used for decidable computation. |
+| Dependent type | A type that may depend on a value, such as "vectors of length $n$," a family indexed by the number $n$. "Dependently typed" just means types this expressive are allowed. |
+| Inductive definition | The way data and propositions are built from constructors by recursion (the naturals as zero and successor; equality as its single reflexivity proof). "Calculus of Inductive Constructions" is the name of Coq's logic; its details are not needed here. |
+| `Theorem`, `Lemma` | Keywords introducing a named claim to prove. They are interchangeable; `Lemma` conventionally marks a smaller helper. |
+| Goal; hypothesis | While a proof is built, the *goal* is what remains to show and the *hypotheses* are what may be used. A finished proof reduces the goal to nothing. |
+| Tactic; proof script; Ltac | A *tactic* is one command that transforms the goal (introduce an assumption, apply a known result, do algebra); a *proof script* is a sequence of tactics; *Ltac* is the small language for writing new tactics (the development defines two, `by_contra` and `classical_case`). |
+| `Qed`; `Admitted`; `admit.` | `Qed` ends a proof and triggers the kernel to check the term the tactics built; if it passes, the theorem is recorded. `Admitted` ends a proof by accepting it *unproved* (a hole); `admit.` is the tactic that leaves one hole. This development contains neither. |
+| Axiom | A statement declared true without proof. `Print Assumptions t` lists every axiom the proof of `t` ultimately depends on. |
+| Named premise | An ordinary hypothesis of one theorem, standing for a fact proved on paper elsewhere. Unlike an axiom it is local to the theorem that names it (contrast @sec-coq-axioms with @sec-coq-boundary). |
+| Kernel | The small, fixed part of Coq that performs the final check; nothing else can make a false theorem accepted. |
+| mathcomp, ssreflect, mathcomp-analysis | The external formal libraries the development builds on: Mathematical Components and its `ssreflect` proof language, and their analysis layer supplying reals, measure, and probability. |
+| `.vo` file | The compiled, kernel-checked output for one source file; its existence certifies that file's theorems type-check. |
+
+To make "goal," "tactic," and "`Qed`" concrete, here is a complete Coq proof of the arithmetic fact
+$1+1=2$, with the machine's goal state shown as a comment after each step.
+
+```coq
+Lemma one_plus_one : 1 + 1 = 2.
+Proof.
+  (* goal: 1 + 1 = 2 *)
+  simpl.        (* compute the sum; goal becomes 2 = 2 *)
+  reflexivity.  (* anything equals itself; goal closed *)
+Qed.            (* kernel checks the finished term; lemma recorded *)
+```
+
+Read it as: the claim is stated, two tactics reduce the goal to nothing, and `Qed` hands the finished
+proof term to the kernel. Every proof in the development, however long, has this shape; only the number
+and ingenuity of the tactics differ.
+
+It helps to picture where trust lives. Everything *above* the kernel may be arbitrarily complicated, and
+none of it is trusted; the kernel is the one component that must be correct, and the axioms and libraries
+*below* it are what the guarantee is stated relative to.
+
+```text
+   your tactics / automation / notation        (untrusted: may be buggy)
+                     |
+                     v  produce
+              a proof term
+                     |
+                     v  is checked by
+   ============== THE KERNEL ==============    <- trust boundary
+   |  a few thousand lines; if it accepts, |
+   |  the theorem follows from what is below|
+   ========================================
+                     |
+        rests on     v
+   three logical axioms                         named premises
+   (excluded middle, extensionality,            (paper-proved probability
+   choice)  +  mathcomp-analysis                facts, one theorem
+   (reals, measure, probability)                at a time)
+```
+
+The three logical axioms and the library sit *under* the kernel and are shared by all of classical
+mathematics (@sec-coq-axioms); the named premises sit to the *side*, one theorem at a time, and are the
+probability facts this project proves on paper rather than in Coq (@sec-coq-boundary). Keeping those two
+kinds of assumption visibly separate is the single distinction a first-time reader should carry forward:
+an **axiom** is a generic logical principle the whole library rests on, whereas a **named premise** is a
+specific mathematical fact one theorem borrows.
+
+Two libraries deserve a word, since a reader weighing trust will want their pedigree. The `ssreflect`
+proof language and the Mathematical Components (mathcomp) library grew out of the fully machine-checked
+proofs of the four-color theorem and the Feit-Thompson odd-order theorem, two of the largest
+formalization efforts ever completed; their analysis layer, mathcomp-analysis, is the widely used,
+separately maintained foundation on which this development's real numbers and probability rest. And
+`Print Assumptions t`, the command used repeatedly below as a certificate, reports the *transitive
+closure* of the axioms the proof of `t` actually uses: not the ordinary inference rules of the logic
+(those are built into the kernel and are not axioms), but every declared axiom reached through the entire
+chain of lemmas. An empty list is possible and would signal a fully constructive proof; the lists reported
+for this development's central theorems contain exactly three lines.
+
+## A book theorem and its machine-checked twin {#sec-coq-twin}
+
+With the vocabulary in hand, the quickest way to see what formalization does, and does not, do is to set
+one theorem beside its Coq counterpart. We use Bucher's subtraction from the running example, the identity
+behind the indirect contrast $d_{AB} = d_{AC} - d_{BC}$.
+
+| Aspect | Book statement (@thm-bucher-unbiased) | Coq statement (`bucher_unbiased`) |
+|---|---|---|
+| Claim | if two direct estimators are unbiased for the $AC$ and $BC$ contrasts, and the $AB$ contrast is their difference, then the subtracted estimator is unbiased for $AB$ | the same claim, stated for an abstract operator |
+| The expectation | $\mathbb{E}$, built in Chapter 4 from integration | an abstract operator `E : (Omega -> R) -> R`, given only the property the proof uses (linearity) as a hypothesis |
+| Hypotheses | $\mathbb{E}[\hat d_{AC}] = d_{AC}$; $\mathbb{E}[\hat d_{BC}] = d_{BC}$; $d_{AB} = d_{AC} - d_{BC}$ | three explicit premises (verbatim below) |
+| Conclusion | $\mathbb{E}[\hat d_{AC} - \hat d_{BC}] = d_{AB}$ | `E (fun omega => d_AC_hat omega - d_BC_hat omega) = d_AB` |
+| What the machine checks | (nothing on paper) | that the conclusion follows from the three hypotheses using only linearity of `E` |
+| What stays scientific judgment | that the two trials estimate contrasts in exchangeable populations, that $C$ means the same thing in both, that the log-odds scale is intended | identical, and outside Coq's reach |
+
+The Coq statement itself, read token by token, is
+
+```coq
+Theorem bucher_unbiased (d_AB d_AC d_BC : R) :
+  E d_AC_hat = d_AC -> E d_BC_hat = d_BC -> d_AB = d_AC - d_BC ->
+  E (fun omega => d_AC_hat omega - d_BC_hat omega) = d_AB.
+```
+
+where each piece reads as follows.
+
+- `Theorem bucher_unbiased` names the claim.
+- `(d_AB d_AC d_BC : R)` introduces three real numbers, the true contrasts.
+- each `->` separates one hypothesis from what follows it; there are three hypotheses, then the
+conclusion, exactly the rows of the table.
+- `E d_AC_hat = d_AC` is the first hypothesis: the operator `E` applied to the random estimator
+`d_AC_hat` returns the true value `d_AC`, that is, Trial 1 is unbiased.
+- `fun omega => d_AC_hat omega - d_BC_hat omega` is the anonymous function sending an outcome `omega` to
+the subtracted estimate; `E` of it is its expectation.
+- the line after the final `->` is the goal the proof must reach.
+
+**Why this matters.** Read together, the table and the statement make "machine-checked" concrete. The
+machine has verified the *orientation and algebra* of the subtraction, so the sign error that would flip
+the running example's recommendation cannot occur for this result; it has verified *nothing* about whether
+the two trials are comparable, which is the scientific premise the researcher must still defend. That
+division of labor, algebra certified and science reserved, is the pattern of the entire development, and
+every later section is an instance of it.
+
+::: {#exm-coq-bucher-numeric}
+## Bucher's subtraction with numbers
+In the running example $\hat d_{AC} = -0.80$ and $\hat d_{BC} = -0.50$ on the log-odds-ratio scale, so the
+theorem gives $d_{AB} = d_{AC} - d_{BC} = -0.80 - (-0.50) = -0.30$: drug $A$ lowers the log-odds of relapse
+relative to drug $B$, an indirect odds ratio of $e^{-0.30} \approx 0.74$. The reversed subtraction
+$d_{BC} - d_{AC} = +0.30$ would report an odds ratio of $e^{0.30} \approx 1.35$ and recommend $B$; the two
+conclusions differ by exactly the sign the theorem pins down. What the kernel certifies is that
+$\hat d_{AC} - \hat d_{BC}$, and not its negation, is unbiased for $d_{AB}$; the value $-0.30$ is then
+plain arithmetic. $\blacktriangleleft$
+:::
+
+## What a proof assistant guarantees, and what it does not {#sec-coq-guarantees}
+
+Coq, renamed the Rocq Prover in 2025, is a dependently typed proof assistant built on a constructive type
+theory, the Calculus of Inductive Constructions. In the plain terms of @sec-coq-vocabulary: its types may
+depend on values (that is what "dependently typed" means), and "constructive" means it proves that
+something exists only by exhibiting a specific witness, until the classical axioms of @sec-coq-axioms are
+invoked. Its operating principle is the **Curry-Howard correspondence**: a mathematical proposition is
+encoded as a type, a proof of that proposition is a term of that type, and *verifying a proof is
+type-checking a term*. The one-line proof of @sec-coq-vocabulary is a concrete instance: the proposition
+$1+1=2$ is a type, and the term the two tactics build is a proof, a member of that type. The component
+that performs this
+type-checking is the **kernel**, a small program (a few thousand lines) that is the entire trusted
+computing base. Tactics, automation, notation, and the interactive interface may be arbitrarily
+complicated and even buggy; none of them can make the system accept a false theorem, because whatever
+proof term they produce must pass the kernel before the theorem is recorded. This is the strong soundness
+guarantee of the LCF tradition (named for Milner's Logic for Computable Functions prover, the system whose
+design introduced this small-trusted-kernel pattern): the trustworthiness of a megabyte of proof script
+reduces to the trustworthiness of the kilobyte-scale kernel.
+
+The ITC_Coq development is built on **mathcomp-analysis**, the Mathematical Components extension for
+classical analysis, which supplies formalized real numbers, measure theory, Lebesgue integration,
+probability measures, and transition kernels. The development imports these structures rather than
+rebuilding them, so its real-analytic content stands on a large, widely used, separately maintained
+library.
+
+It is essential to state precisely what a successful compilation does and does not certify.
+
+::: {.remark}
+**What the kernel guarantees.** If `Theorem t : P` compiles, then there is a term whose type is the
+encoding of `P`, accepted by the kernel, using only the inference rules of the type theory together with
+the axioms listed by `Print Assumptions` (@def-active-axioms). In ordinary language: *the statement `P`
+follows logically from its hypotheses and from the named axioms.* The guarantee is unconditional in the
+sense that it does not depend on trusting the author, the tactics, or the comments; it is conditional only
+on the soundness of the kernel and the consistency of the axioms. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**What the kernel does not guarantee.** Four gaps remain, and honesty about formalization requires naming
+them.
+
+1. *Statement faithfulness.* The kernel checks that the proof proves the stated theorem; it cannot check
+that the stated theorem is the one the mathematician meant. A formalization of the wrong proposition, or
+of a proposition with an unintended hypothesis that makes it vacuous, type-checks just as readily as the
+intended one. Guarding against this is a human task: reading the Coq statement and confirming it says what
+the book says. The development addresses it by making every modeling hypothesis an explicit, visible
+premise (@sec-coq-boundary) rather than a hidden global assumption, and by avoiding `True`-valued
+placeholder definitions that would render downstream theorems vacuous.
+
+2. *Model adequacy.* A theorem about a mathematical model of a clinical trial is a theorem about the
+model, not about the trial. That potential outcomes, exchangeability, and positivity capture the relevant
+features of a real comparison is a scientific judgment outside the reach of any proof assistant.
+
+3. *Truth of hypotheses.* A conditional theorem `H -> C` says nothing about whether `H` holds. When `H` is
+a probabilistic fact admitted as a named premise (the tower property, say), the machine certifies the
+implication, not the premise.
+
+4. *Completeness.* The development formalizes a chosen subset of the book. Silence about a result is not a
+claim of any kind; @sec-coq-scope lists exactly what is in and what is out. $\blacktriangleleft$
+:::
+
+Of the four gaps, statement faithfulness is the one a skeptical methodologist should learn to watch for,
+so it deserves a concrete illustration rather than a warning in the abstract.
+
+::: {#exm-coq-vacuous}
+## A theorem that is true but empty
+Imagine formalizing "MAIC is consistent" as the implication `assumption -> (estimator = truth)`, but
+defining the premise as `Definition assumption : Prop := (estimator = truth)`, that is, letting the
+hypothesis simply *be* the conclusion. The implication `(estimator = truth) -> (estimator = truth)` is
+trivially provable, compiles without complaint, and earns a proud-looking `Qed`, yet it says nothing: it
+has assumed exactly what it claims. A subtler version defines the premise as `True`, so every downstream
+theorem `True -> C` reduces to `C` asserted for free. Both type-check; both are worthless. The kernel
+cannot catch either, because each *is* a valid proof of the sentence as written; only a human reading the
+premise can see that the sentence is empty. This is why the development refuses `True`-valued assumption
+definitions and writes every modeling hypothesis as a visible, contentful premise (@sec-coq-boundary), and
+why a skeptical reader's first move on any formalization should be to read the hypotheses, not the proof.
+$\blacktriangleleft$
+:::
+
+These limits are not peculiar to this project; they apply to all formalized mathematics. Stating them is
+what lets the positive claims of the chapter be read precisely.
+
+## The proof-status vocabulary {#sec-coq-status}
+
+The last of the four gaps in @sec-coq-guarantees, completeness, leaves a question open: of the results
+that *are* formalized, how much of each does the machine actually carry? The proof-status tiers are the
+chapter's structured response to that gap. The companion development distinguishes several degrees of
+formalization, because not every result in a book of this size is formalized to the same depth. The proof
+catalogue that accompanies the Coq tree assigns each catalogued result one of five status tiers. We adopt that vocabulary as a permanent
+reference, since it is used throughout this chapter and in the cross-reference table of @sec-coq-map.
+
+::: {#def-coq-proof-status}
+## Proof-status tiers
+Each result discussed in relation to the companion formalization carries exactly one of the following
+five status labels.
+
+- **F (fully proved).** A complete proof from foundations, machine-checked in Coq or derived in the
+proof catalogue using only standard library machinery, self-contained and depending on no project-specific
+unproved assertion.
+- **P (partial).** The result is stated and its substantive content proved under sufficient conditions,
+but some step is supplied as an explicit named hypothesis standing for a standard fact (catalogued with
+its justification), or cites a standard external theorem rather than deriving it. The machine-checked
+content is the algebra and logic around that hypothesis.
+- **S (summarized).** The result is stated and its role explained, but the full proof is referenced
+rather than derived; it is not formalized.
+- **O (out of scope).** Applied or empirical content (case studies, software-specific implementation
+detail) that is intentionally not formalized.
+- **E (extension).** Material beyond the 2019 thesis that frames the work; stated with proof where
+applicable but not part of the formalized core.
+
+Within the Coq tree itself every compiled statement is, in the kernel's sense, fully proved: there are no
+admitted proofs. The tier distinction records how much of a *book* result a given Coq statement captures.
+A theorem proved in Coq with a probabilistic premise supplied as a named hypothesis is tier **F** as a
+Coq object (it compiles with no gap) and tier **P** as a formalization of the book theorem (the premise
+is named, not derived). The table of @sec-coq-map makes this two-level reading explicit for each entry.
+$\blacktriangleleft$
+:::
+
+**Reader translation.** In one breath: **F** means the machine carries the whole result; **P** means the
+machine carries the algebra while one clearly named probability fact is proved on paper; **S** means only
+the statement and its role are recorded, the sharp proof living on paper; **O** and **E** mark material
+deliberately outside the formalized core. In compact form:
+
+| Tier | Plain meaning | Example in this development |
+|---|---|---|
+| F | fully machine-checked, no project premise | the ESS bound `ESS_upper_bound` |
+| P | algebra machine-checked; one probability fact named as a premise | IPW unbiasedness `mu1_IPW_unbiased` |
+| S | stated and situated; full proof referenced, not formalized | the MAIC-STC equivalence |
+| O | applied or software detail, intentionally not formalized | case-study specifics |
+| E | extension beyond the framing thesis; proved where applicable, not in the core | later transportability material |
+
+The subtle point, and the one worth slowing down for, is that a single Coq theorem carries *two* readings.
+As a Coq object it is always fully proved: it compiled, so its own goal follows from its own hypotheses
+with no gap. As a *formalization of the book theorem* it may be only partial, because one of those
+hypotheses stands in for a book step that was proved on paper, not in Coq. The template below records both
+readings at once and is worth keeping in mind for the whole chapter.
+
+| Result | What Coq proves | Still supplied outside Coq | Practical reading |
+|---|---|---|---|
+| ESS bound | the arithmetic inequality $\mathrm{ESS} \le n$ | whether $\mathrm{ESS}$ is the right diagnostic at all | a strong algebraic check |
+| IPW unbiasedness | the estimator algebra, given the premise | the tower-property identification step | a conditional check |
+
+A health researcher should read a tier the way one reads a confidence interval: as information about *how
+much has been established*, never as a verdict on whether the method suits a particular dataset.
+
+## The active axioms {#sec-coq-axioms}
+
+A constructive type theory proves a great deal without any axioms, but classical mathematics, and in
+particular measure-theoretic probability, needs a small classical extension: the law of the excluded
+middle, the ability to prove sets and functions equal from their pointwise behavior, and a form of the
+axiom of choice for selecting representatives and constructing conditional objects. The development does
+not declare these itself; it inherits them from mathcomp-analysis, whose `boolp` ("Boolean propositions")
+module declares exactly three axioms from which the rest of classical reasoning is derived.
+
+::: {#def-active-axioms}
+## The active classical axioms
+Every machine-checked theorem in the companion development rests, beyond the rules of the type theory, on
+exactly the following three axioms imported from the `boolp` module of mathcomp-analysis. The statements
+are as the Coq kernel reports them.
+
+1. **Propositional extensionality.** Logically equivalent propositions are equal:
+`propositional_extensionality : forall P Q : Prop, (P <-> Q) -> P = Q`.
+This licenses treating an event as the set of outcomes satisfying it, so that
+$\{x : P(x)\} = \{x : Q(x)\}$ whenever $P \iff Q$.
+
+2. **Dependent functional extensionality.** Functions that agree at every argument are equal:
+`functional_extensionality_dep : forall (A : Type) (B : A -> Type) (f g : forall x, B x), (forall x, f x = g x) -> f = g`.
+This licenses proving two random variables, densities, or conditional expectations equal by comparing
+their values pointwise; it is the workhorse behind almost every integrand rewrite in the tree.
+
+3. **Constructive indefinite description (choice).** From a proof that a satisfying element exists, one
+may extract such an element:
+`constructive_indefinite_description : forall (A : Type) (P : A -> Prop), (exists x, P x) -> {x : A | P x}`.
+This is the type-theoretic axiom of choice on which mathcomp's classical infrastructure is built; it
+underlies the existence of conditional expectations and the selection of representatives.
+
+The law of the excluded middle is *not* a separate axiom: it is a theorem, derived from these three by
+**Diaconescu's argument** (the short classical construction that, given any proposition $P$, builds two
+subsets of a two-element set whose membership is entangled with $P$, uses the choice axiom to select an
+element from each, and uses extensionality to compare the selections; the comparison decides $P$ either
+way), and exported by `boolp` as `EM` and by the development's `Axioms.v` as
+`excluded_middle`. Consequently a proof that uses classical case analysis adds no axiom beyond the three
+above. There are **no project-specific axioms** and **no active admissions**: the development declares no
+`Axiom` of its own and contains no `Admitted` proof or `admit` tactic. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**What each axiom buys, in the language of estimands.** The three principles are generic, but each has a
+familiar shadow in this book's mathematics, which makes them less forbidding.
+
+- *Propositional extensionality* lets an event be identified with the set of outcomes satisfying it: two
+events described by logically equivalent conditions are the *same* set to integrate over, so one may
+rewrite "relapsed, and on $A$ or on $B$" into any logical equivalent without changing the probability.
+- *Functional extensionality* lets two functions be declared equal once they agree at every input: two
+predicted-outcome surfaces, say two fitted $\mathbb{E}[Y\mid X=x]$ functions, are the *same* object as
+soon as they match at every covariate profile $x$. This is the workhorse that turns a pointwise rewrite of
+an integrand into an equation between whole estimands.
+- *Constructive indefinite description* (choice) lets one name and compute with an object known only to
+exist: from "a conditional expectation exists" one may select a version and use it, the same silent
+selection an analyst makes in picking a measurable $\mathbb{E}[Y\mid X]$.
+
+And the distinction a first-time reader most needs: these three are **logical axioms**, principles of
+classical mathematics itself, sitting under the kernel and shared by every theorem. They are not the same
+as the **named premises** of @sec-coq-boundary, which are specific *probability* facts (the tower
+property, Jensen's inequality) that individual theorems borrow. Conflating the two would make the
+formalization look circular; keeping them apart is what makes the trust claim honest. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why these three are uncontroversial.** The trio is the standard foundation of classical mathematics as
+practiced. Propositional and functional extensionality are conservative over, and validated by, set models
+of type theory; the choice principle is the same one used silently in every analysis textbook that picks a
+sequence realizing a limit or a measurable selection. They are jointly consistent with Coq's type theory,
+a fact relied upon by the entire mathcomp-analysis ecosystem. Crucially, they are *generic* mathematical
+axioms, not assumptions about treatment effects: nothing causal, nothing about trials, and nothing that
+could quietly make a population-adjustment theorem come out the way one hoped. Every domain assumption in
+the development is instead a visible premise (@sec-coq-boundary). The contrast matters for trust: a reader
+who accepts ordinary classical analysis has already accepted everything the formalization assumes about
+logic. $\blacktriangleleft$
+:::
+
+That the closure of the central theorems is exactly these three axioms, and nothing more, is not an
+article of faith: the Coq kernel will print the axioms a given theorem depends on, and @sec-coq-worked
+reproduces that output for six headline results.
+
+## The structure of the theories directory {#sec-coq-structure}
+
+The development is fifteen Coq source files in `theories/`, listed in `_CoqProject` in dependency order
+and grouped into five phases. We walk through them in that order, naming the load-bearing definitions and
+lemmas of each.
+
+A design choice recurs in every file and is worth understanding once. Many theorems are stated over an
+**abstract expectation operator** written `E : (Omega -> R) -> R`, a function that takes a random quantity
+(itself a function from outcomes `Omega` to reals) and returns a number. It plays the role of the book's
+expectation $\mathbb{E}$ from the [Notation](/notation.qmd), but it is deliberately *not* the same object:
+$\mathbb{E}$ is built in Chapter 4 out of integration, whereas `E` is left abstract and handed only the
+properties a given proof actually uses, chiefly linearity, as named hypotheses. Far from weakening the
+results, this isolates the *algebraic* part of an argument, which Coq then certifies completely, from the
+*measure-theoretic* part, which enters as a visible premise and is proved on paper. The gap is meant to be
+closed by later instantiating `E` with mathcomp-analysis's Lebesgue integral; leaving it abstract for now
+keeps the checked content honest about exactly which step has been mechanized and which has not. The
+pattern was pioneered in `Bucher.v` and reused throughout. Note that `E` is a Coq identifier standing in
+for the book symbol $\mathbb{E}$; the gap between them is the point, not a typographical accident.
+
+*How to read this section.* What follows is an inventory, not a narrative to be memorized. A reader who
+will never open Coq should take three things from it: which ITC ideas have machine support at all, which
+are proved outright from nothing, and which lean on a named premise. The table gives that at a glance, one
+row per file; the prose after it names the individual lemmas for a reader who wants to open the source,
+and can be skimmed on a first pass.
+
+| File | What it protects, for ITC | Key result(s) | Status |
+|---|---|---|---|
+| `Axioms.v` | classical-logic plumbing shared by everything | `excluded_middle`, `fun_ext` | infrastructure |
+| `BasicTypes.v` | what a treatment, outcome, covariate *are* | `treatment_01`, measurability facts | infrastructure |
+| `PotentialOutcomes.v` | the estimands (ATE, ATT) and the naive comparison's bias | `ATE_split`, `selection_bias_decomposition` | F |
+| `CausalAssumptions.v` | when a treatment effect is identified (SUTVA, positivity, ignorability) | `ATE_identification`, `ATE_IPW_identification` | P |
+| `ConditionalIndep.v` | conditional independence and the graphoid laws | `cond_indep_equiv`, `transfer_independence` | F (discrete) |
+| `BalancingScore.v` | why adjusting on a *score* can replace adjusting on all covariates | `balancing_score_sufficiency`, `propensity_is_coarsest` | F (discrete) |
+| `PropensityScore.v` | the propensity score balances (Rosenbaum-Rubin 1, 3) | `propensity_score_is_balancing` | F (discrete) |
+| `IPWEstimator.v` | inverse-probability weighting is unbiased; the ESS variance bound | `ATE_IPW_unbiased`, `ESS_variance_bound` | P |
+| `OutcomeRegression.v` | G-computation is unbiased | `ATE_as_averaged_CATE`, `OR_bias_formula` | P |
+| `DoublyRobust.v` | AIPW stays valid if *one* nuisance model is right | `AIPW1_pointwise`, `double_robustness` | F core, named residuals |
+| `MAIC.v` | the $\mathrm{ESS} \le n$ bound behind MAIC uncertainty | `ESS_upper_bound` | F |
+| `STC.v` | why the mean difference is collapsible (STC's plug-in) | `STC_collapse_linear` | F (linear direction) |
+| `Comparison.v` | MAIC-versus-STC profiles; variance inflation $\ge 1$ | `MAIC_variance_inflation_ge1` | F profiles, S equivalence |
+| `Bucher.v` | the indirect subtraction $d_{AB}=d_{AC}-d_{BC}$ | `bucher_unbiased`, `bucher_variance` | F (abstract `E`) |
+| `EffectModifiers.v` | effect modifier versus prognostic variable | `not_EM_does_not_imply_not_PV` | F |
+
+The five phases below correspond to the horizontal bands of this table: foundations, then the
+balancing-score core, then the estimators, then the indirect-comparison methods, then the
+indirect-comparison algebra.
+
+### Phase 1: foundations {#sec-coq-foundations}
+
+*For ITC, this phase fixes the vocabulary before any method appears: what treatments, outcomes, and causal
+estimands are, and when a treatment effect is even identifiable from data.*
+
+**`Axioms.v`** centralizes the classical-logic helpers over the three `boolp` axioms: `excluded_middle`,
+`proof_by_contradiction`, `double_negation`, the classical De Morgan equivalences (`not_and_or`,
+`not_or_and`), and the non-dependent functional-extensionality wrapper `fun_ext` used pervasively for
+integrand rewriting. It also defines the tactics `by_contra` and `classical_case`. It declares no axioms
+of its own.
+
+**`BasicTypes.v`** fixes the foundational types: binary treatment as `bool` with the embedding
+`bool_to_R` into the reals, proved to take values in $\{0,1\}$ (`treatment_01`) with the complement
+identity `treatment_complement`; abstract probability spaces; outcome, treatment, and covariate
+random-variable types; and basic measurability facts (`measurable_composition`, `measurable_const`).
+
+**`PotentialOutcomes.v`** builds the Rubin causal model on an abstract expectation. It defines the
+potential outcomes $Y(0), Y(1)$, the individual treatment effect `ITE`, and the estimands `ATE`, `ATT`,
+`ATC`, and `naive_comparison`. The proved results include `ATE_split` ($\mathrm{ATE} = \mathbb{E}[Y(1)] -
+\mathbb{E}[Y(0)]$ from linearity), `ATE_decomposition` (the law of total expectation over the treatment
+partition, with `E_total` named), the consistency-conversion identities (`consistency_expectation`,
+`consistency_treated_mean`), and Holland's `selection_bias_decomposition`, which exhibits the naive
+comparison as $\mathrm{ATT}$ plus an exactly identified selection-bias term. The fundamental problem of
+causal inference appears as `ITE_unobservable`: a concrete two-world counterexample over
+$\Omega = \texttt{bool}$ with identical observed data but different individual effects, proving that the
+ITE is not a function of the observables.
+
+**`CausalAssumptions.v`** formalizes the identifying assumptions. SUTVA is made substantive: outcomes a
+priori depend on the whole treatment vector, `no_interference` is the stability condition, and
+`no_interference_unit_level` *proves* that under no interference a unit-level outcome function exists,
+licensing the two-potential-outcomes setup. Positivity (`weak_positivity`, `strong_positivity`),
+unconfoundedness, and strong ignorability are defined, with `strong_implies_weak_unconf` proved. The two
+identification theorems, `ATE_identification` (the g-formula) and `ATE_IPW_identification`, are proved
+with the per-arm probabilistic content supplied as named premises and the consistency conversion
+machine-checked pointwise.
+
+### Phase 2: conditional independence and balancing scores {#sec-coq-core}
+
+*This phase proves the propensity-score theory that licenses adjusting for a summary of the covariates
+instead of all of them, the backbone of every weighting method in Part II; it is also the part discharged
+outright, with no probabilistic premise, over a finite discrete model.*
+
+**`ConditionalIndep.v`** is the technical heart of the tree, and every statement in it is proved. At
+kernel level it defines conditional expectation against a probability kernel, `cond_exp`, and proves
+`cond_exp_linear` (from `integralD`, `integralZl`) and `cond_exp_const` (from `integral_cst` and the
+kernel normalization). Conditional independence is defined as rectangle factorization of the joint kernel
+(`cond_indep`), with `cond_indep_equiv` proving the equivalence to the indicator-expectation form in both
+directions; the extension to all bounded measurable test functions is a monotone-class argument documented
+as out of scope and neither assumed nor used. The graphoid properties are then proved over a **discrete
+model**, a finite joint probability mass function in cross-multiplied, division-free form:
+`cond_indep_weak_union` and `cond_indep_contraction`, with no positivity assumptions, zero-mass
+conditioning events handled by marginal monotonicity. The engine of the propensity-score theory is
+`transfer_independence`, proved from a within-fiber pointwise identity (`transfer_pointwise`) summed over
+the fiber.
+
+**`BalancingScore.v`** defines `is_balancing_score` and proves Rosenbaum-Rubin Theorem 2,
+`balancing_score_sufficiency`: unconfoundedness given $X$ together with the balancing property of a score
+$b$ implies unconfoundedness given $b(X)$, by direct instantiation of the transfer lemma. It also proves
+`identity_is_balancing` and `propensity_is_coarsest`, the statement that every balancing score refines the
+propensity score.
+
+**`PropensityScore.v`** proves the kernel-level facts `propensity_score_range` ($0 \le e(x) \le 1$) and
+`propensity_as_conditional_expectation` ($e(x) = \mathbb{E}[T \mid X = x]$), and then the discrete
+Rosenbaum-Rubin theorems with complete proofs and no axioms: `propensity_score_is_balancing` (Theorem 1,
+the propensity score is a balancing score, valid even at zero-mass covariate points because of the
+mathcomp-analysis library convention that a real division by zero returns zero, safe here for the reason
+given in @sec-coq-boundary: the theorem is written in a cross-multiplied form where such a point makes both
+sides zero rather than dividing by it) and `propensity_score_sufficiency_discrete` (Theorem 3, by composing
+Theorem 1 with the transfer lemma).
+
+### Phase 3: estimators {#sec-coq-estimators}
+
+*Here are the three estimators a researcher actually computes, inverse-probability weighting,
+G-computation, and their doubly robust combination, each shown unbiased. Their algebra is machine-checked;
+the identification steps enter as the named premises of @sec-coq-boundary.*
+
+**`IPWEstimator.v`** defines the inverse-probability-weighting estimators `mu1_IPW`, `mu0_IPW`, `ATE_IPW`,
+their Hajek normalizers, and the variance objects. It proves `mu1_IPW_unbiased`, `mu0_IPW_unbiased`, and
+`ATE_IPW_unbiased` with the consistency conversion machine-checked and the tower-property premise named;
+`var_mu1_IPW_ge0` and `ESS_variance_bound` (the population effective-sample-size fraction is at most one)
+from the L2 Jensen hypothesis `E_jensen_sqr`, the formal counterpart of @thm-jensen; and
+`IPW_bias_formula`, the misspecification bias in difference-of-inverses form, by pure linearity.
+
+**`OutcomeRegression.v`** defines the G-computation estimators `mu1_OR`, `mu0_OR`, `ATE_OR` and proves
+`ATE_as_averaged_CATE` (by linearity alone), the per-arm unbiasedness theorems under named identification
+premises, and `OR_bias_formula`.
+
+**`DoublyRobust.v`** defines the augmented estimators `mu1_AIPW`, `mu0_AIPW`, `ATE_AIPW`. Its core is the
+pointwise cancellation identity `AIPW1_pointwise` (with control mirror `AIPW0_pointwise`), proved by case
+analysis with total division and no positivity. Double robustness is then genuine: `AIPW_consistent_correct_PS`
+and `AIPW_consistent_correct_OR` each conclude consistency from one named mean-zero-residual premise,
+`double_robustness` is the honest case split over the disjunction, and `ATE_AIPW_double_robust` assembles
+both arms via `ATE_split`. These are the formal counterparts of @thm-aipw-double-robust.
+
+### Phase 4: indirect-comparison methods {#sec-coq-methods}
+
+*This phase reaches the population-adjustment methods themselves, and the results the running example uses:
+the MAIC effective-sample-size bound, the collapsibility that makes STC's plug-in valid, and the
+MAIC-versus-STC contrast.*
+
+**`MAIC.v`** defines the entropy-balanced weight `maic_weight_fn x := expR (linpred x)`, proved positive
+(`maic_weight_pos`), and the effective sample size `ESS`. Its mathematical content is the
+effective-sample-size bound, proved from scratch: the termwise arithmetic-geometric-mean inequality
+`two_mul_le_sqr`, assembled by induction into `cauchy_schwarz_ones`, specialized to the weight vector as
+`cauchy_schwarz_n_weights`, and divided through to give `ESS_upper_bound` ($\mathrm{ESS} \le n$). This is
+the machine-checked counterpart of @thm-maic-ess-bound and the worked example of @sec-coq-worked. The four
+MAIC assumptions are abstract named propositions, deliberately not defined as `True`; the consistency
+argument itself is the paper proof of Chapter 18.
+
+**`STC.v`** defines the marginal simulated-treatment-comparison estimator over a target-population
+expectation `E2` and proves `STC_collapse_linear`: for a linear outcome model $\mu(t,x) = \alpha + \beta x
++ \gamma\mathbf{1}\{t\}$, the marginal contrast equals $\gamma$, using only linearity and the constant
+rule. This is the machine-checked core of why the mean difference is collapsible (@def-collapsibility,
+@def-non-collapsibility): the proof uses *exactly* the linearity that a nonlinear link destroys. The
+consistency theorem `STC_consistent` holds under named identification premises.
+
+**`Comparison.v`** records the MAIC-versus-STC method profiles as decidable records and proves the
+profile-level facts `assumption_difference`, `MAIC_robust_to_outcome_model`, and `STC_robust_to_poor_overlap`
+by computation; `methods_agree_when_correct`, that the two estimates coincide when both identification
+hypotheses hold; and `MAIC_variance_inflation_ge1`, the quantitative statement that the variance inflation
+factor $n/\mathrm{ESS}$ is at least one whenever $0 < \mathrm{ESS} \le n$.
+
+### Phase 5: indirect-comparison algebra {#sec-coq-bucher}
+
+*The final phase certifies the pure algebra of indirect comparison: Bucher's subtraction from the running
+example, and the effect-modifier versus prognostic-variable distinction that decides when anchored
+adjustment is even needed.*
+
+**`Bucher.v`** proves `transitivity_subtract`, `bucher_identity` (the exact-estimate form),
+`bucher_unbiased` (the expectation form over an abstract linear `E`, the counterpart of
+@thm-bucher-unbiased), and `bucher_variance` (additivity of variances under zero covariance). This file
+established the abstract-operator pattern reused by the rest of the tree.
+
+**`EffectModifiers.v`** formalizes the effect-modifier versus prognostic-variable distinction
+(@def-effect-modifier, @def-prognostic-variable). It defines `not_EM` (the conditional contrast does not
+depend on the covariate) and `not_PV_for_A`/`not_PV_for_C`, proves `anchored_PV_cancellation` (if a
+covariate is not an effect modifier, the conditional contrast is constant in it, so anchored adjustment is
+unaffected by its distribution), and exhibits the separation `not_EM_does_not_imply_not_PV` by the
+concrete counterexample $\mu_A(x,w) = \mu_C(x,w) = \mathbf{1}\{w\}$ over $X_{\mathrm{unmeasured}} =
+\texttt{bool}$: the contrast is identically zero (so `not_EM` holds) while each surface depends on $w$ (so
+`not_PV_for_A` fails). The inequality $1 \ne 0$ is discharged by `Num.Theory.ltr01`.
+
+::: {#exm-coq-em-separation}
+## Effect modifier versus prognostic variable, with numbers
+Take the unmeasured covariate $w \in \{0,1\}$ and outcome surfaces $\mu_A(w) = \mu_C(w) = \mathbf{1}\{w=1\}$,
+so each surface equals $0$ when $w=0$ and $1$ when $w=1$. The conditional contrast is
+$\mu_A(w) - \mu_C(w) = 0$ for both $w=0$ and $w=1$: the contrast does not depend on $w$, so $w$ is *not* an
+effect modifier (`not_EM` holds). Yet each surface itself moves from $0$ to $1$ as $w$ goes $0 \to 1$, so
+$w$ *is* prognostic (`not_PV_for_A` fails). One covariate, two roles. This is the separation the Coq lemma
+`not_EM_does_not_imply_not_PV` certifies, and it is why anchored indirect comparison may ignore the
+distribution of a pure prognostic variable while unanchored comparison cannot; the single inequality the
+proof needs, $1 \ne 0$, is the one discharged by `Num.Theory.ltr01`. $\blacktriangleleft$
+:::
+
+## The named-hypothesis boundary and the discrete model {#sec-coq-boundary}
+
+The design decision that makes a gap-free development possible is the treatment of probabilistic content.
+Rather than postulate measure-theoretic facts as global axioms, the development admits them as **named
+section hypotheses** displayed in each theorem's own statement, so that what is assumed is always visible
+and never hidden.
+
+For a health researcher this visibility is the useful part: instead of a method that works "under standard
+assumptions," one sees, printed in the theorem, exactly where exchangeability, positivity, a tower-property
+step, or a mean-zero-residual condition enters, and therefore exactly which judgment is carrying the
+weight. The cost of the design deserves stating as plainly as the benefit. A theorem that names its
+probabilistic premises is, *as a formalization of the book result*, weaker than one that derives them: the
+machine certifies the algebra around the premise, not the premise itself. What is bought is a gap-free,
+fully visible account of which steps are mechanized; what is deferred is the machine-checking of the
+probability facts, which stay paper-proved in the chapters cited. The table below is therefore also a map
+of where trust still rests on human proof.
+
+The recurring hypotheses, each standing for a standard probability fact whose paper proof lives in the
+catalogue, are summarized below.
+
+| Named hypothesis | Stands for | Catalogue |
+|---|---|---|
+| `E_linearity`, `E2_const` | linearity of expectation; expectation of a constant | A.4 |
+| `E_total` | law of total expectation over the treatment partition | A.5 |
+| `E_T1_congr`, `E_T0_congr` | locality of conditional expectation | A.5 |
+| `E_jensen_sqr` | the L2 Jensen inequality $(\mathbb{E}f)^2 \le \mathbb{E}(f^2)$ | A.6 |
+| `Hipw1`, `Hipw0` | tower-property consequence of unconfoundedness and positivity | B.7 |
+| `Hid1`, `Hid0` | per-arm g-formula identification | B.6 |
+| `H_PS0`, `H_OR0` | mean-zero weighted residual when one nuisance model is correct | B.9 |
+| `Hstc_A`, `Hstc_C` | marginal STC identification per arm | G.6 |
+
+The right-hand column cites the **proof catalogue** that ships with the development, in the `proofs/`
+directory of the ITC_Coq repository. Its files are lettered by Part, `A` through `O`, and each result is
+numbered within its Part, so `A.4` is the fourth result of Part A (basic probability) and `B.7` the
+seventh of Part B (identification); the catalogue holds the pen-and-paper proof of each named premise. This
+is the same identifier scheme used in the cross-reference table of @sec-coq-map.
+
+This is the source of the two-level reading of @def-coq-proof-status: a theorem such as
+`mu1_IPW_unbiased` is a fully proved Coq object, but as a formalization of @thm-ipw-unbiased it is tier
+**P**, because the tower-property step is named (`Hipw1`) rather than derived inside Coq.
+
+There is one important class of results where the probabilistic content is *not* deferred but discharged
+outright: the Rosenbaum-Rubin theorems and the graphoid properties. These are proved over a finite
+discrete model, a joint probability mass function over finite types, with conditional independence written
+in cross-multiplied form such as
+$$
+q_{XYZ}(x,y,z)\, q_Z(z) \;=\; q_{XZ}(x,z)\, q_{YZ}(y,z).
+$$ {#eq-coq-dci}
+In this form the proofs need no positivity assumptions: a zero conditioning mass annihilates both sides by
+marginal monotonicity (every marginal is dominated by the conditioning mass).
+
+The reason is elementary and worth spelling out, since it is the whole point of the cross-multiplication.
+Written as a division, conditional independence would read
+$q_{XYZ}/q_Z = (q_{XZ}/q_Z)(q_{YZ}/q_Z)$, which is meaningless at a stratum $z$ where the conditioning
+mass $q_Z(z)$ is zero. Written as the product identity @eq-coq-dci, that same stratum forces every factor
+on both sides to be zero (a marginal can never exceed the total mass it is a marginal of; this domination
+is the "marginal monotonicity" invoked), so the line reads $0 = 0$ and holds with nothing to prove. The
+cross-multiplication converts a potential division by zero into a trivially true equation, which is exactly
+why no positivity assumption is needed.
+
+::: {#exm-coq-zero-stratum}
+## An empty covariate cell
+Take a covariate stratum $z$ that no trial patient occupies, so $q_Z(z) = 0$: an age-by-comorbidity cell
+that happens to be empty. Then $q_{XZ}(x,z) = 0$ for every $x$, $q_{YZ}(y,z) = 0$ for every $y$, and
+$q_{XYZ}(x,y,z) = 0$, so @eq-coq-dci reads $0 \cdot 0 = 0 \cdot 0$ and the propensity-score balancing
+theorem holds at this cell automatically. This is exactly the behavior one wants: an empty stratum should
+neither break the theorem nor have to be excluded by a positivity assumption. The divided form would
+instead stumble on $0/0$ at precisely this cell, which is why the continuous version, lacking the
+cross-multiplication trick, must currently assume positivity or defer the step. $\blacktriangleleft$
+:::
+
+The transfer lemma
+`transfer_independence`, Theorem 1 (`propensity_score_is_balancing`), Theorem 3
+(`propensity_score_sufficiency_discrete`), and the graphoid laws `cond_indep_weak_union` and
+`cond_indep_contraction` are therefore tier **F** with no named probabilistic premise at all. Lifting
+these discrete proofs to the continuous kernel model awaits a conditional-expectation and disintegration
+library (a *disintegration* is the measure-theoretic operation that slices a joint distribution into a
+family of conditional distributions, one for each value of the conditioning variable; it is what makes
+$\mathbb{E}[Y\mid X=x]$ rigorous when $X$ is continuous) that mathcomp-analysis does not yet provide; the
+kernel-level statements in the tree are shaped to receive that lift, taking the disintegration
+compatibility as an explicit hypothesis in the interim.
+
+## From book theorem to Coq lemma: the cross-reference map {#sec-coq-map}
+
+The table below maps the book's tagged theorems and definitions to the Coq objects that machine-check
+them, with the Coq file, the exact Coq name, and the proof-status reading (@def-coq-proof-status). The
+"Coq status" column distinguishes results proved outright in Coq from those proved modulo a named premise
+and those whose Coq counterpart captures a complement or an abstract form of the book statement. Every
+name in the table has been confirmed against the source files.
+
+For quick recall, the book results named in the table are: @thm-bucher-unbiased, the unbiasedness of the
+indirect subtraction; @thm-ipw-unbiased, the unbiasedness of inverse-probability weighting;
+@thm-aipw-double-robust, double robustness; @thm-maic-ess-bound, the bound $\mathrm{ESS} \le n$;
+@def-collapsibility and @def-non-collapsibility, the collapsibility (or not) of a marginal contrast;
+@def-effect-modifier and @def-prognostic-variable, the two roles a covariate can play; and
+@thm-aggregation, the ML-NMR aggregation identity.
+
+How to read the "Coq status" column: **F** means proved outright in Coq from the three active axioms only;
+**P** means the algebra is proved in Coq but one clearly identified probability fact is supplied as a named
+premise; **complement F** means the Coq proof covers a complementary or special case (for instance the
+collapsible linear direction, not the nonlinear counterexample); **S** means the Coq statement is an
+abstract version and the sharp result is paper-only; **none / n.a.** means not formalized. A status of
+**F** does not mean the clinical claim is settled, only that the stated mathematics is machine-checked; a
+status of **P** does not mean the theorem is weak, only that one identified step is proved on paper. Read
+the column as *how much of the result the machine carries*, never as *how good the method is*.
+
+| Book result | Coq file | Coq name | Coq status |
+|---|---|---|---|
+| @thm-bucher-unbiased | `Bucher.v` | `bucher_unbiased` | F (algebra over abstract linear `E`; transitivity and unbiasedness explicit) |
+| @thm-ipw-unbiased | `IPWEstimator.v` | `mu1_IPW_unbiased`, `ATE_IPW_unbiased` | P (consistency conversion checked; tower premise named, B.7) |
+| @thm-aipw-double-robust | `DoublyRobust.v` | `double_robustness`, `ATE_AIPW_double_robust` | F cancellation (`AIPW1_pointwise`) + genuine case split; residual premises named (B.9) |
+| @thm-maic-ess-bound | `MAIC.v` | `ESS_upper_bound` | F (no premise beyond the active axioms) |
+| @thm-maic-exponential-weights | `MAIC.v` | `maic_weight_fn`, `maic_weight_pos` | P (weight form and positivity formalized; KKT and duality are paper-only, F.3) |
+| @thm-stc-noncollapsibility-counterexample | `STC.v` | `STC_collapse_linear` | complement F (the collapsible linear direction is proved; the nonlinear counterexample is paper-only) |
+| @thm-maic-stc-equivalence | `Comparison.v` | `methods_agree_when_correct` | S (abstract "agree when both correct"; the linear-model equivalence is paper-only) |
+| @def-effect-modifier, @def-prognostic-variable | `EffectModifiers.v` | `not_EM`, `not_PV_for_A`, `not_EM_does_not_imply_not_PV` | F (definitions and separation counterexample) |
+| @def-collapsibility, @def-non-collapsibility | `STC.v` | `STC_collapse_linear` | F (linear-model collapsibility) |
+| @def-transportability, @thm-sema-insufficient | none | n/a | not formalized (paper-only; Chapter 12) |
+| @thm-aggregation, @thm-aggregation-bias | none | n/a | not formalized (ML-NMR is paper-only; Chapter 20) |
+| @def-sandwich-variance | none | n/a | not formalized (Chapter 5) |
+| @thm-cramer-rao, @thm-mle-asymptotic-normality | none | n/a | not formalized (Chapter 5) |
+
+The g-formula and selection-bias results of Chapter 9, and the Rosenbaum-Rubin balancing theorems, are
+machine-checked as `ATE_identification`, `selection_bias_decomposition`, `balancing_score_sufficiency`,
+`propensity_score_is_balancing`, and `propensity_score_sufficiency_discrete`; they are discussed in
+@sec-coq-structure but omitted from the table because their book counterparts are referenced in prose
+rather than by a tag this chapter owns.
+
+## A worked example: tracing the ESS bound to the kernel {#sec-coq-worked}
+
+To make the abstract guarantee concrete, we follow a single book theorem all the way into the machine:
+the effective-sample-size bound $\mathrm{ESS} \le n$ of @thm-maic-ess-bound. It is an ideal specimen
+because it depends on no probabilistic premise, only on classical logic and arithmetic, so its
+machine-checked closure is the cleanest possible illustration of @def-active-axioms.
+
+Recall from Chapter 18 the definition of the effective sample size of a nonnegative weight vector
+$\mathbf{w} = (w_1,\dots,w_n)$,
+$$
+\mathrm{ESS} \;=\; \frac{\big(\sum_{i=1}^n w_i\big)^2}{\sum_{i=1}^n w_i^2},
+$$ {#eq-coq-ess}
+and the claim $\mathrm{ESS} \le n$, with equality iff the weights are equal (this is F.8 in the proof
+catalogue). In `MAIC.v` the quantities and the theorem read as follows, verbatim.
+
+```coq
+Definition ESS : R :=
+  if (0 < sum_w2)%R then (sum_w)^+2 / sum_w2 else 0.
+
+Theorem ESS_upper_bound :
+  0 < sum_w2 -> ESS <= n%:R.
+```
+
+The proof is built bottom-up from three lemmas. The base case is the termwise
+arithmetic-geometric-mean inequality, itself a one-line consequence of $0 \le (x-y)^2$:
+
+```coq
+Lemma two_mul_le_sqr (x y : R) : x * y *+ 2 <= x ^+ 2 + y ^+ 2.
+```
+
+This is summed, by induction on the number of terms, into a Cauchy-Schwarz inequality against the
+all-ones vector:
+
+```coq
+Lemma cauchy_schwarz_ones (m : nat) (f : 'I_m -> R) :
+  (\sum_(i < m) f i) ^+ 2 <= m%:R * \sum_(i < m) (f i) ^+ 2.
+```
+
+In the inductive step, the cross term $2 S a$ produced by expanding $(S + a)^2$ is bounded summand by
+summand using `two_mul_le_sqr`, and the pieces reassemble into the $(m+1)$-term bound. Specializing the
+test function to the weights gives $(\sum_i w_i)^2 \le n \sum_i w_i^2$ (`cauchy_schwarz_n_weights`), and
+dividing by the positive quantity $\sum_i w_i^2$ gives exactly $\mathrm{ESS} \le n$. No nonnegativity of
+the weights is even required for the inequality; positivity enters only to license the division.
+
+Now the decisive step, the one a paper proof cannot perform: ask the kernel which axioms the finished
+theorem actually uses. Loading the compiled development and issuing `Print Assumptions ESS_upper_bound`
+produces
+
+```text
+Axioms:
+boolp.propositional_extensionality : forall P Q : Prop, P <-> Q -> P = Q
+boolp.functional_extensionality_dep :
+  forall (A : Type) (B : A -> Type) (f g : forall x : A, B x),
+  (forall x : A, f x = g x) -> f = g
+boolp.constructive_indefinite_description :
+  forall (A : Type) (P : A -> Prop), (exists x : A, P x) -> {x : A | P x}
+```
+
+exactly the three axioms of @def-active-axioms and nothing else: no project axiom, no admitted lemma, no
+hidden assumption. The same query on `cauchy_schwarz_ones`, `bucher_unbiased`,
+`not_EM_does_not_imply_not_PV`, `propensity_score_is_balancing`, and `double_robustness` returns the
+identical three-line list. This is the verification, run against the compiled tree, that backs every
+"machine-checked" claim in this book.
+
+::: {#exm-coq-ess-numeric}
+## The certified inequality by hand
+To close the loop with a hand computation, take $n = 4$. Uniform weights $\mathbf{w} = (1,1,1,1)$ give
+$\sum_i w_i = 4$ and $\sum_i w_i^2 = 4$, so $\mathrm{ESS} = 16/4 = 4 = n$: the bound is attained exactly,
+as the equality case predicts. The imbalanced weights $\mathbf{w} = (2,1,1,0)$ give $\sum_i w_i = 4$ and
+$\sum_i w_i^2 = 4 + 1 + 1 = 6$, so $\mathrm{ESS} = 16/6 = 8/3 \approx 2.667 < 4$, and the variance
+inflation factor is $n/\mathrm{ESS} = 4/(8/3) = 3/2$, consistent with `MAIC_variance_inflation_ge1`. Every
+arithmetic step here is an instance of the inequality the kernel certified. $\blacktriangleleft$
+:::
+
+For the running example this is the difference between counting patients and counting *information*. Trial
+2's four patients, after matching to Trial 1, carry an effective sample size of $8/3 \approx 2.67$, and the
+fourth patient, with weight zero, contributes nothing at all: her covariate profile lay outside Trial 1's
+range, so matching could not place her in the target population. Uneven weights are the signature of poor
+overlap between the two trials; poor overlap means less effective information, which means a larger
+variance inflation factor $n/\mathrm{ESS} = 3/2$, which means a wider interval on the transported effect and
+a less stable population adjustment. The bound $\mathrm{ESS} \le n$ is thus no technicality: it is the
+certified statement that reweighting can only *spend* information, never create it, so an assessment body
+reading a MAIC can treat the reported ESS as a hard ceiling on how much the matched evidence is worth. The
+machine has verified the ceiling; whether the matching was appropriate in the first place remains, as
+always, a scientific judgment.
+
+::: {.remark}
+**What the example does and does not show.** The kernel has certified that $\mathrm{ESS} \le n$ follows
+from arithmetic and the three axioms; it has *not* certified that $\mathrm{ESS}$ as defined in
+@eq-coq-ess is the right diagnostic for weighted estimation, nor that the entropy weights of
+@thm-maic-exponential-weights, whose derivation is paper-only, are the weights one should use. The
+mathematics of *why* this quantity governs variance is Chapter 18; the machine guarantees only the
+inequality, which is precisely the load-bearing algebra. $\blacktriangleleft$
+:::
+
+## Building and checking the development {#sec-coq-build}
+
+The development is self-contained and reproducible. The build is driven by `coq_makefile` from the file
+list in `_CoqProject`, which also declares the logical mapping `-R theories ITC`, so that the modules are
+addressed as `ITC.Bucher`, `ITC.MAIC`, and so on. The toolchain requirements, as declared in
+`_CoqProject` and the project `README`, are Coq (Rocq) 9.1 or later, mathcomp-ssreflect 2.0 or later,
+mathcomp-algebra, mathcomp-analysis 1.9 or later, and Hierarchy Builder 1.6 or later; the development was
+checked with the Rocq Prover 9.1.0.
+
+To compile and check the whole tree, from the repository root:
+
+```sh
+make
+```
+
+The top-level `Makefile` regenerates `Makefile.coq` from `_CoqProject` if needed and then compiles all
+fifteen `.v` files; a clean rebuild is `make clean && make`. A successful run produces a `.vo` (compiled,
+kernel-checked) object for each source file and exits without error, which is itself the certificate that
+every theorem in the tree type-checks. A health researcher is not expected to read the Coq scripts or even
+to run this build; the value of quoting the commands is that they exist and are cheap. The assurance does
+not depend on the reader executing them, only on their being executable by anyone who wishes to, which is
+what makes the result independent of trust in the author.
+
+The inventory claims of this chapter can be reproduced directly. That there are no admitted proofs and no
+project axioms is confirmed by
+
+```sh
+grep -nE "Admitted|^Axiom|admit\." theories/*.v   # no output
+```
+
+which returns nothing across the fifteen files. Reading the search pattern: `Admitted` is Coq's keyword
+for a proof abandoned and accepted unproved, `Axiom` declares a new unproved assumption, and `admit.` is
+the tactic that leaves a single hole in an otherwise finished proof; the command looks for any of the three
+in every `.v` file. Its empty output is the evidence that the tree contains no abandoned proof and no
+project-specific axiom, the two ways a formalization could quietly accept something on trust. The axiom closure of any individual theorem is confirmed,
+as in @sec-coq-worked, by a short script that requires the relevant module and calls `Print Assumptions`
+on the theorem of interest; for the central results this reports exactly the three `boolp` axioms of
+@def-active-axioms. The canonical inventory, the named-hypothesis catalogue, and these verification
+commands are recorded in `theories/AXIOMS.md` within the development.
+
+## What is and is not machine-checked {#sec-coq-scope}
+
+We close with an explicit accounting, so that the silence noted in @sec-coq-guarantees is filled in.
+
+**Machine-checked, depending only on the three active axioms:** the classical-logic foundations; the real
+causal estimands and their algebra (ATE split and decomposition, Holland's selection-bias decomposition,
+the consistency conversions); the fundamental problem of causal inference by concrete counterexample; the
+SUTVA representation lemma; conditional-expectation linearity and the constant rule at kernel level; the
+factorization-versus-indicator-expectation equivalence; the graphoid weak-union and contraction laws over
+the discrete model with no positivity; the transfer lemma; Rosenbaum-Rubin Theorems 1, 2, and 3 over the
+discrete model; kernel-level propensity-score range and its conditional-expectation characterization; the
+IPW, G-computation, and AIPW estimator algebra, the AIPW cancellation identity, and double robustness as a
+genuine case split; Bucher's identity in expectation and variance form; the anchored cancellation and the
+effect-modifier versus prognostic-variable separation; Cauchy-Schwarz and the $\mathrm{ESS} \le n$ bound;
+and the linear-model collapsibility of the marginal contrast.
+
+**Machine-checked modulo named probabilistic premises** (tier P): IPW, G-computation, and AIPW
+unbiasedness and identification, where the tower property, the law of total expectation,
+conditional-expectation locality, L2 Jensen, and the mean-zero-residual facts enter as the explicit
+hypotheses catalogued in @sec-coq-boundary. The paper proofs of these premises are in Parts A and B of the
+catalogue and in Chapters 4, 9, and 10.
+
+**Paper proof only** (tiers S, O, E), not formalized: the probability and inference foundations beyond
+the algebra above (Chapters 1 through 5, including @thm-cramer-rao, @thm-mle-asymptotic-normality, and
+@def-sandwich-variance); standard and network meta-analysis (Chapters 13 through 16); the scale-specific
+anchored and unanchored population-adjustment theorems and the transportability framework (Chapters 12 and
+17, including @thm-sema-insufficient, @def-transportability, @def-sema, @thm-unanchored-paic-consistency);
+the MAIC consistency and entropy-balancing derivation (Chapter 18), of which only the weight form,
+positivity, and the ESS bound are formalized; the STC plug-in bias and the MAIC-STC equivalence
+(@thm-maic-stc-equivalence, Chapter 19); the entire multilevel network meta-regression development,
+including the aggregation theory (@thm-aggregation, @thm-aggregation-bias), the Poisson-binomial
+approximations, the quasi-Monte-Carlo theory (@thm-koksma-hlawka), and the copula material
+(@def-gaussian-copula) of Chapters 20 through 25; the multilevel unanchored extension (@def-spfa,
+@thm-pseudo-ipd-reconstruction, Chapter 26); the distance-matching algebra of Chapter 27; the
+quantitative-bias-analysis machinery of Chapter 28; and the simulation theory of Chapter 29. These are
+proved in full in the chapters cited; their absence from the Coq tree reflects the current reach of the
+underlying analysis library and the project's choice to formalize the algebraic and discrete core first,
+not any doubt about the results.
+
+The two tracks are complementary. The machine checks the parts that are pure algebra and discrete
+probability, where a hidden slip is most likely and least visible; the paper proofs carry the
+measure-theoretic and asymptotic arguments that the library does not yet support. A reader who wants the
+strongest available assurance for, say, double robustness or the ESS bound can compile the development and
+read the kernel's verdict; a reader who wants the full sweep of the theory reads the book.
+
+## Notes and references {#sec-coq-notes}
+
+The companion formalization is the **ITC_Coq development** (the repository
+`https://github.com/choxos/ITC_Coq`), whose `theories/` directory contains the fifteen Coq source files
+described here, with `theories/AXIOMS.md` the canonical assumption inventory and the manuscript chapter
+`manuscript/16_coq.md` a file-by-file walk-through on which this chapter is based. The development is
+released under the GPL-3 license. All lemma names, the axiom closure reported in @sec-coq-worked, and the
+inventory of @sec-coq-axioms were confirmed against that source by compiling the tree with the Rocq
+Prover 9.1.0 and issuing `Print Assumptions` on the central theorems.
+
+The Coq, now Rocq, proof assistant implements the Calculus of Inductive Constructions; the LCF-style
+architecture, in which soundness reduces to a small trusted kernel, is the design that makes the
+guarantee of @sec-coq-guarantees meaningful. The classical foundations are inherited from the
+mathcomp-analysis library, whose `boolp` module declares the three axioms of @def-active-axioms;
+Diaconescu's theorem, that excluded middle follows from propositional extensionality together with a
+choice principle, is why excluded middle is a derived lemma rather than a fourth axiom. The
+arithmetic-geometric-mean and Cauchy-Schwarz inequalities of @sec-coq-worked are classical; the
+effective-sample-size formula and its bound appear as Eq. (6.1) of @phillippo2019thesis and as F.8 in the
+proof catalogue.
+
+The mathematics formalized here is, in its original sources, due to the authors cited in the relevant
+chapters: the potential-outcomes calculus and the g-formula to the causal-inference literature surveyed
+in @hernan2020whatif; the propensity score and the balancing theorems to @rosenbaum1983; inverse
+probability weighting and augmented, doubly robust estimation to @robins1994 and @bangrobins2005; the
+indirect comparison to @bucher1997; matching-adjusted indirect comparison to @signorovitch2010maic; and
+simulated treatment comparison to @caro2010stc. The placement of all of this within the
+population-adjustment framework follows @phillippo2019thesis. The proof-status vocabulary of
+@def-coq-proof-status is the status legend of the proof catalogue that accompanies the development.
+
+There is no machine-checked counterpart for the documentary content of this chapter itself; it is, by
+nature, a description of the other chapters' formal counterparts. The results it points to are tagged in
+their home chapters, and the cross-reference table of @sec-coq-map is the consolidated index. This chapter
+corresponds to the walk-through of `theories/` in the proof catalogue and to manuscript Chapter 16 of the
+ITC_Coq development.
+
+## Exercises {#sec-coq-exercises}
+
+A `$\star$` marks an exercise with a full solution in Appendix F. The set is ordered from plain
+interpretation to formal synthesis: the first three need no Coq at all, the middle ones ask you to read
+Coq statements, and the starred pair calls for genuine conceptual synthesis.
+
+::: {#exr-coq-why-care}
+**(Warm-up, interpretation) What machine-checking does and does not tell you.** In one short paragraph,
+explain to a colleague who has never heard of Coq what the sentence "the bound $\mathrm{ESS} \le n$ is
+machine-checked" does and does not tell them about a MAIC analysis they are reviewing. Name one kind of
+mistake the machine-checking rules out and one kind it cannot.
+:::
+
+::: {#exr-coq-vocab-match}
+**(Warm-up) The vocabulary.** Match each term to its plain meaning. Terms: kernel; tactic; `Qed`; named
+premise; axiom. Meanings: (i) a single command that transforms the goal; (ii) the small trusted checker
+that must be correct; (iii) the keyword that ends a proof and triggers checking; (iv) a hypothesis standing
+for a fact proved on paper elsewhere; (v) a statement accepted as true without proof.
+:::
+
+::: {#exr-coq-ipw-plain}
+**(Interpretation) Reading a tier-P result in words.** In plain English, state what `mu1_IPW_unbiased`
+claims about the inverse-probability-weighting estimator. Then, using @sec-coq-boundary, name the single
+named premise it relies on and say which book assumption from Chapter 10 that premise stands for. Explain
+in one sentence why this makes it tier **P** rather than tier **F** as a formalization of
+@thm-ipw-unbiased.
+:::
+
+::: {#exr-coq-ess-compute}
+**(Computation) Computing the bound by hand.** For $n = 5$, compute $\mathrm{ESS}$ from @eq-coq-ess for the weight
+vectors $\mathbf{w} = (1,1,1,1,1)$, $\mathbf{w} = (2,2,1,1,0)$, and $\mathbf{w} = (4,1,0,0,0)$. Verify in
+each case that $\mathrm{ESS} \le 5$, identify which vector attains the bound and why, and report the
+variance inflation factor $n/\mathrm{ESS}$ for the third vector. Confirm that the ordering of the three
+effective sample sizes matches the intuition that more uneven weights carry less information.
+:::
+
+::: {#exr-coq-read-statement}
+**(Interpretation) Reading a Coq statement.** The theorem `bucher_unbiased` has the Coq statement
+
+```coq
+Theorem bucher_unbiased (d_AB d_AC d_BC : R) :
+  E d_AC_hat = d_AC -> E d_BC_hat = d_BC -> d_AB = d_AC - d_BC ->
+  E (fun omega => d_AC_hat omega - d_BC_hat omega) = d_AB.
+```
+
+Identify the three hypotheses and the conclusion, say in words which book assumption each hypothesis
+encodes (compare @thm-bucher-unbiased), and explain why the only structural property of the operator `E`
+used in the proof is linearity. State what would have to change in the hypotheses to express Bucher's
+*variance* result instead.
+:::
+
+::: {#exr-coq-status-tier}
+**(Interpretation) Assigning a tier.** Using @def-coq-proof-status, assign a proof-status tier to each of the following as
+a *formalization of the corresponding book theorem*, and justify each in one sentence: (a)
+`ESS_upper_bound`; (b) `mu1_IPW_unbiased`; (c) `STC_collapse_linear` as a formalization of
+@thm-stc-noncollapsibility-counterexample; (d) the ML-NMR aggregation identity @thm-aggregation. Explain
+why (a) and (b) can both be "fully proved Coq objects" yet receive different tiers as formalizations.
+:::
+
+::: {#exr-coq-print-assumptions}
+**(Reasoning) Predicting the kernel's verdict.** Without running it, predict the output of
+`Print Assumptions STC_collapse_linear`, and justify your prediction from the fact that the proof uses
+only `E2_linearity`, `E2_const`, and `fun_ext`. Then explain why excluded middle, although used freely
+elsewhere in the development, never appears in such an output as a separate axiom. (Hint: @def-active-axioms
+and Diaconescu's theorem.)
+:::
+
+::: {#exr-coq-discrete-vs-named}
+**($\star$) (Challenge) Why the discrete model needs no premise.** Contrast `propensity_score_is_balancing`, which is tier
+**F** with no probabilistic premise, against `mu1_IPW_unbiased`, which is tier **P** with the named premise
+`Hipw1`. Explain, referring to @sec-coq-boundary, why the cross-multiplied discrete formulation
+@eq-coq-dci lets the balancing theorem be proved outright (including at zero-mass covariate points)
+whereas the continuous IPW identity must currently defer its tower-property step to a named hypothesis.
+Describe what mathematical library development would be required to discharge `Hipw1` inside Coq, and state
+which book results (by chapter) supply the paper proof of the premise in the meantime.
+:::
+
+::: {#exr-coq-faithfulness}
+**($\star$) (Challenge) Statement faithfulness and the placeholder trap.** Building on @exm-coq-vacuous: @sec-coq-guarantees warns that a proof
+assistant cannot certify that a stated theorem is the intended one. Suppose a developer had defined the
+four MAIC assumptions as `Definition conditional_constancy : Prop := True` instead of as abstract named
+propositions. Show that a "consistency theorem" of the form `conditional_constancy -> (estimator = truth)`
+would then be provable with no real content, and explain precisely which guarantee of @sec-coq-guarantees
+this violates. Relate this to the development's stated policy, recorded in `MAIC.v` and `STC.v`, of
+refusing `True`-valued assumption definitions, and argue why making every modeling assumption a visible
+premise (@sec-coq-boundary) is the structural defense against this failure mode.
+:::

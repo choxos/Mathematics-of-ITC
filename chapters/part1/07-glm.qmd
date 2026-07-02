@@ -1,0 +1,1587 @@
+---
+title: "Generalized Linear Models"
+---
+
+## Introduction {#sec-glm-intro}
+
+The linear model of Chapter 6 assumes a response that is continuous, unbounded, and normally distributed
+around a mean that moves on the same scale as the data. Almost none of the outcomes that drive an
+indirect treatment comparison (ITC, [Notation](/notation.qmd)) satisfy these assumptions. A clinical trial reports
+how many of $n$ randomized patients responded: the outcome is a count of successes out of a fixed
+total, bounded between $0$ and $n$, with a variance that shrinks to zero as the success probability
+approaches either endpoint. A safety analysis reports the number of adverse events in a fixed
+person-time of follow-up: a nonnegative integer whose variance grows with its mean. A survival analysis
+reports event times and censoring. For each of these the normal linear model is not merely inefficient;
+it is structurally wrong. Fitting a straight line to a probability produces fitted values outside
+$[0,1]$, and assuming constant variance contradicts the arithmetic of a binomial or a Poisson count.
+
+Generalized linear models (GLMs) repair this in a single, unified stroke. They keep the central idea of
+the linear model, a linear predictor $\eta_i = \mathbf{x}_i^\top\boldsymbol\beta$ that carries all the
+covariate information, but they separate it cleanly from two other choices: the probability law of the
+response, and the scale on which the mean is linear. The probability law is taken from a single rich
+family, the exponential dispersion family, which contains the normal, Bernoulli, binomial, Poisson, and
+gamma distributions as special cases and ties each one's variance to its mean through a fixed variance
+function. The scale is fixed by a *link function* $g$ that maps the mean $\mu_i$ to the linear predictor,
+$g(\mu_i) = \eta_i$. Choosing the normal law and the identity link $g(\mu)=\mu$ returns exactly the
+linear model of Chapter 6. Choosing the Bernoulli law and the logit link returns logistic regression and
+the odds ratio. Choosing the Poisson law and the log link returns Poisson regression and the rate ratio.
+
+This chapter matters for indirect comparison for three reasons, each of which is developed in a later
+part of the book and seeded here. First, network meta-analysis (Chapters 13 to 15) and multilevel
+network meta-regression (Chapters 20 to 23) write the linear predictor of every trial arm as a GLM and
+combine evidence on the *link scale*, almost always the log-odds or log-rate scale; the algebra of this
+chapter is the algebra those methods run. Second, the maximum likelihood machinery developed here, the
+score equations, Fisher scoring, and iteratively reweighted least squares, is the numerical engine
+underneath every fitted outcome model in the book, and its large-sample distribution theory (which we
+import from Chapter 5) is what turns a point estimate into a confidence interval. Third, and most
+consequential for what follows, the nonlinearity of the link creates a phenomenon with no analogue in
+the linear model: the *non-collapsibility* of the odds ratio and the hazard ratio. A treatment effect
+that is identical in every stratum of a covariate can differ from the effect computed on the marginal,
+population-averaged risks, even with no confounding whatsoever. This single fact forces the distinction
+between conditional and marginal estimands that organizes Chapters 11, 17, and 19, and we prove it here
+with an explicit two-stratum example whose every number the reader can check by hand.
+
+The development is self-contained and proves everything. It rests on the probability of Chapter 4 (the
+exponential family members, the moment and cumulant generating functions of @def-mgf and
+@thm-mgf-moments, Jensen's inequality @thm-jensen), the inference of Chapter 5 (the score @def-score, the
+Fisher information @def-fisher-information, the information equality @thm-information-equality, and
+above all the asymptotic normality of the maximum likelihood estimator, @thm-mle-asymptotic-normality),
+and the least-squares linear algebra of Chapter 6 (the normal equations @thm-ols-normal-equations and
+the projection geometry of @def-hat-matrix). The two primary references are @mccullagh1989glm, the
+canonical monograph on the subject, and @dias2018nma, which casts the entire ITC enterprise as a
+collection of linked GLMs.
+
+::: {.remark}
+## A note on reused symbols
+This chapter uses four symbols whose meaning the reader should hold distinct from a neighboring use
+elsewhere in the book. The natural parameter of the exponential family is written
+$\theta$; it is a specific instance of the generic statistical parameter $\boldsymbol\theta$ of Chapter
+5, and it is not the subscripted outcome-scale mean $\theta_{ijk}=g^{-1}(\eta_{ijk})$ that the
+network-model chapters use. The dispersion parameter is written $\phi$; when the standard normal density
+is needed (only in the discussion of the probit link) it is written as the derivative $\Phi'$ of the
+standard normal distribution function $\Phi$, so the symbol $\phi$ is never overloaded inside this
+chapter. The GLM mean is always written $\mu_i=\mathbb{E}[Y_i]$. Finally the letter $\nu$ does double
+duty: it is the **reference measure** in the definition of the exponential dispersion family (a single
+piece of bookkeeping that lets one formula cover both continuous and discrete responses; explained in
+plain terms in @sec-edf), and, separately, the **shape parameter** of the gamma distribution in
+@exm-edf-members. The two never appear in the same display, so no formula mixes them. $\blacktriangleleft$
+:::
+
+## GLM objects and scales: a first trial example {#sec-glm-map}
+
+The single hardest thing about a first encounter with GLMs is not any one proof; it is keeping track of
+how many different *scales* a single number can live on. A trial reports a count, the model predicts a
+mean, the mathematics works internally with a natural parameter, the regression part lives on a linear
+predictor, and the effect a clinician reads off is a ratio. These are five different scales for what is,
+morally, one fitted quantity. Before any formal definitions we therefore introduce one concrete trial,
+label every object on it, and collect the symbols in a table. Every later section is an instruction for
+moving between the columns of that table, and we return to this example at each transition.
+
+**Why a single family.** One could, in principle, build the binary-outcome model, the count model, and
+the survival model separately, each with its own likelihood, its own estimating equation, and its own
+software. The exponential dispersion family (EDF), defined in @sec-edf, is the device that makes this
+unnecessary. It is a template: a single algebraic form, @eq-edf-density, into which the normal,
+Bernoulli, binomial, Poisson, and gamma distributions all fit. The payoff is leverage. Because they share
+the template, one mean-variance theorem (@thm-glm-mean-variance), one score equation
+(@thm-glm-score), and one fitting algorithm (@thm-irls) serve all of them at once. Proving a fact about
+the template proves it simultaneously for logistic regression, Poisson regression, and ordinary linear
+regression. That is why the abstraction is worth the price of admission.
+
+::: {#exm-glm-running}
+## A running trial: one binary arm and one count arm
+Consider a single arm of a clinical trial in which $n=60$ patients are randomized and $R=18$ of them
+respond. We will reuse these numbers throughout the chapter.
+
+*The binary (response) outcome.* We record the **proportion** who responded, $y=R/n=18/60=0.30$. The
+model's job is to estimate the underlying response **probability** $\mu=p$. The proportion does not live
+on the same scale as the probability's regression: a probability is trapped in the interval $(0,1)$,
+whereas a regression $\eta=\mathbf x^\top\boldsymbol\beta$ ranges over all of $\mathbb R$. The **link**
+$g(\mu)=\log\frac{\mu}{1-\mu}$ (the logit) is the strictly increasing change of scale that carries the
+probability onto the whole real line, so that $\eta=g(\mu)$ can be modeled linearly. If the arm receives
+treatment, coded by an indicator $x=1$, its coefficient $\beta_1$ is a **log odds ratio** and $e^{\beta_1}$
+is the **odds ratio** a meta-analysis would combine. The natural variability of the proportion is
+$\mathrm{Var}(y)=p(1-p)/n$: largest near $p=\tfrac12$, vanishing as $p$ approaches $0$ or $1$.
+
+*The count (adverse-event) outcome.* Suppose the same arm accrues $7$ adverse events over $t=50$
+person-years. Here the response is the **count** $y=7$, the model estimates the expected count
+$\mu=\lambda$, and the natural variability is $\mathrm{Var}(y)=\lambda$ (a Poisson count's variance
+equals its mean). The link is the **log**, $g(\mu)=\log\mu$, which keeps the fitted mean positive; the
+known exposure enters as an **offset** $\log t$, and a treatment coefficient $\beta_1$ is then a **log
+rate ratio**, with $e^{\beta_1}$ the incidence rate ratio. $\blacktriangleleft$
+:::
+
+The objects just named, and the scale each one lives on, are collected below. This local map is the
+chapter in miniature; the formal definitions that follow simply make each row precise.
+
+| Symbol | Name | Role (what it does) | In the binary trial arm |
+|---|---|---|---|
+| $Y_i,\;y_i$ | response | the observed data for unit or group $i$ | proportion $y=R/n=0.30$ |
+| $\mu_i=\mathbb E[Y_i]$ | mean | what the model predicts, on the data's own scale | response probability $p$ |
+| $\theta$ | natural parameter | the EDF's internal coordinate; tunes the distribution | $\log\frac{p}{1-p}$ |
+| $b(\theta)$ | cumulant function | the EDF normalizer; its derivatives give mean and variance | $\log(1+e^\theta)$ |
+| $\phi$ | dispersion | overall variance scale; equals $1$ for binomial and Poisson | $1$ |
+| $w_i$ | prior weight | a known multiplicity, *not* a Bayesian prior; here the denominator | $w=n=60$ |
+| $V(\mu)$ | variance function | how the variance depends on the mean | $\mu(1-\mu)$ |
+| $\eta_i=\mathbf x_i^\top\boldsymbol\beta$ | linear predictor | the regression part; ranges over all of $\mathbb R$ | $\beta_0+\beta_1 x_i$ |
+| $g$ | link | strictly increasing map from the mean scale to the $\eta$ scale | logit $\log\frac{\mu}{1-\mu}$ |
+| $g^{-1}$ | inverse link | recovers the mean from the linear predictor | $e^\eta/(1+e^\eta)$ |
+| $\boldsymbol\beta$ | coefficients | the unknowns estimated from data | $(\beta_0,\beta_1)$; $e^{\beta_1}=$ odds ratio |
+
+Reading down the table is the same as touring the five scales: the **data** scale ($y$), the **mean**
+scale ($\mu$, a probability or a rate), the **natural-parameter** scale ($\theta$, the EDF's internal
+bookkeeping), the **linear-predictor** or **link** scale ($\eta=g(\mu)$, where the regression lives),
+and the **ratio** scale reached by exponentiating a coefficient ($e^{\beta_1}$, an odds or rate ratio).
+
+::: {.remark}
+## Why trial data arrive as a proportion with a weight
+A health researcher usually pictures a trial arm as a two-by-two count: $R$ responders and $n-R$
+nonresponders. A GLM consumes the same information in the slightly different shape "response $y=R/n$ with
+prior weight $w=n$." The reason is the arithmetic of @exm-glm-running: each of the $n$ patients is an
+independent $\mathrm{Ber}(p)$ trial, so their average $y=R/n$ has mean $p$ and variance $p(1-p)/n$. The
+denominator $n$ is not data to be modeled; it is a *known* multiplier that says how much each proportion
+should count, and it is exactly the prior weight $w_i$. Concretely, $R=18$ of $n=60$ gives $y=0.30$,
+$w=60$, mean $\mu=p$, and $\mathrm{Var}(y)=p(1-p)/60$. Trial-level ITC data almost always take this
+grouped form, one proportion-and-weight pair per arm, which is why we carry the weight $w$ through every
+formula. $\blacktriangleleft$
+:::
+
+## The exponential dispersion family {#sec-edf}
+
+The random component of a GLM is a member of the following family. The definition is stated once for
+both continuous and discrete responses, and the only price of that economy is a single symbol, the
+**reference measure** $\nu$. Operationally $\nu$ is nothing more exotic than a reminder of how to add up:
+for a continuous response (the normal, the gamma) "integrate against $\nu$" means ordinary integration
+$\int f(y)\,dy$, and for a discrete response (the Bernoulli, binomial, Poisson) it means summation
+$\sum_y f(y)$ over the possible values. A reader who has never met measure theory can mentally replace
+every $\int(\cdot)\,\nu(dy)$ by "integrate if continuous, sum if discrete" and lose nothing; the unified
+notation exists only so that the mean-variance theorem and the score equation below need to be proved
+once rather than twice. With that understanding we fix $\nu$ to be Lebesgue measure (ordinary $dy$) for
+continuous responses and counting measure on the integers (a sum) for discrete ones.
+
+::: {#def-exponential-family}
+## Exponential dispersion family
+A random variable $Y$ taking values in a set $\mathcal Y\subseteq\mathbb R$ belongs to the
+**exponential dispersion family** (EDF) with **natural parameter** $\theta$, **dispersion parameter**
+$\phi>0$, and known **prior weight** $w>0$ if its density (or probability mass function) with respect to
+$\nu$ has the form
+$$
+f(y;\theta,\phi) \;=\; \exp\!\left\{\frac{y\,\theta - b(\theta)}{a(\phi)} \;+\; c(y,\phi)\right\},
+\qquad a(\phi)=\frac{\phi}{w},
+$$ {#eq-edf-density}
+where:
+
+(i) the **cumulant function** $b:\Theta\to\mathbb R$ is twice continuously differentiable with
+$b''(\theta)>0$ for every $\theta$ in the interior of $\Theta$, and does not depend on $\phi$;
+
+(ii) the **natural parameter space**
+$\Theta=\bigl\{\theta\in\mathbb R:\int_{\mathcal Y}\exp(y\theta/a(\phi)+c(y,\phi))\,\nu(dy)<\infty\bigr\}$
+is a nonempty open interval;
+
+(iii) $c(\cdot,\cdot)$ is a function not involving $\theta$, chosen so that @eq-edf-density integrates to
+one.
+
+We write $Y\sim\mathrm{EDF}(\theta,\phi;w)$. When $w=1$ we write $\mathrm{EDF}(\theta,\phi)$.
+$\blacktriangleleft$
+:::
+
+*Reader translation.* The formula @eq-edf-density looks forbidding, but it has only three moving parts and
+each plays a single role. The term $y\theta$ **couples the data to the parameter**: it is the one place
+where the observation $y$ multiplies the unknown $\theta$, and it is what makes $\theta$ learnable from
+$y$. The term $-b(\theta)$ **normalizes**: it is whatever is needed to make the total probability equal
+one, and the next theorem shows it secretly stores the mean and variance. The term $c(y,\phi)$
+**collects the leftovers** that depend on the data and the dispersion but not on $\theta$; because it is
+free of $\theta$ it will drop out of every score equation and never touch $\hat{\boldsymbol\beta}$. The
+dispersion $\phi$ and the weight $w$ enter only through $a(\phi)=\phi/w$, an overall divisor of the
+exponent. Despite its name, the **prior weight** $w$ is not a Bayesian prior: it is a known multiplicity,
+typically the binomial denominator $n_i$ of a trial arm as in @exm-glm-running.
+
+Condition (iii) can be made explicit. The density @eq-edf-density must integrate to $1$ over $\mathcal Y$;
+since the factor $\exp\{-b(\theta)/a(\phi)\}$ is constant in $y$ it pulls outside the integral, and
+clearing it to the other side shows that for every $\theta\in\Theta$,
+$$
+\int_{\mathcal Y}\exp\!\left\{\frac{y\,\theta}{a(\phi)}+c(y,\phi)\right\}\nu(dy)
+\;=\;\exp\!\left\{\frac{b(\theta)}{a(\phi)}\right\}.
+$$ {#eq-edf-normalization}
+Equivalently, $b(\theta)=a(\phi)\log\int_{\mathcal Y}\exp(y\theta/a(\phi)+c(y,\phi))\,\nu(dy)$; the
+defining requirement that a single cumulant function $b$ serve all dispersions $\phi$ is what the word
+"dispersion" in the name records, and it holds for every example we use. Identity @eq-edf-normalization
+is the engine of the next theorem.
+
+The exponential dispersion family is genuinely a family of distributions, one for each pair
+$(\theta,\phi)$; varying $\theta$ moves the mean, and varying $\phi$ scales the variance without
+changing the mean, as we now prove.
+
+Before the general theorem, it helps to watch the template @eq-edf-density absorb one distribution
+slowly, with every term named.
+
+::: {#exm-edf-bernoulli}
+## The EDF density for one Bernoulli response, term by term
+Let $Y\sim\mathrm{Ber}(p)$ (@def-bernoulli), so $Y\in\{0,1\}$ with $P(Y=1)=p$. Its mass function
+$p^y(1-p)^{1-y}$, rewritten through its logarithm, is
+$$
+p^y(1-p)^{1-y}=\exp\Bigl\{\,y\underbrace{\log\tfrac{p}{1-p}}_{=\,\theta}\;+\;\underbrace{\log(1-p)}_{=\,-b(\theta)}\,\Bigr\}.
+$$
+Matching this to @eq-edf-density term by term gives the whole decomposition. The **natural parameter** is
+$\theta=\log\frac{p}{1-p}$, the log odds, so $p=e^\theta/(1+e^\theta)$. The **cumulant function** is
+$b(\theta)=-\log(1-p)=\log(1+e^\theta)$, using $1-p=1/(1+e^\theta)$. The **dispersion** is $\phi=1$ and
+the **weight** is $w=1$, so $a(\phi)=1$. The **leftover** term is $c(y,\phi)=0$: nothing is left over,
+because a single Bernoulli mass function has no data-only factor to absorb. Differentiating $b$ already
+previews the theorem below: $b'(\theta)=e^\theta/(1+e^\theta)=p=\mu$ returns the mean, and
+$b''(\theta)=e^\theta/(1+e^\theta)^2=p(1-p)$ returns the variance function $V(\mu)=\mu(1-\mu)$. The single
+binary patient of @exm-glm-running is exactly this object, with $p$ the response probability.
+$\blacktriangleleft$
+:::
+
+### Mean and variance from the cumulant function
+
+The single most useful fact about the EDF is that its mean and variance are read off from the
+derivatives of $b$. Two objects with nearly identical names appear here and must be kept apart: the
+**cumulant function** $b(\theta)$ is the fixed piece of the density @eq-edf-density, a property of the
+distribution, whereas the **cumulant generating function** $K_Y(t)=\log\mathbb E[e^{tY}]$ is a tool we
+build from $Y$ to extract its moments. They share the word "cumulant" because, as the proof shows, the
+first controls the second.
+
+*Strategy of the proof.* The mean and variance are the first two **cumulants** of $Y$, and cumulants are
+by definition the derivatives of $K_Y$ at $t=0$, so $\mathbb E[Y]=K_Y'(0)$ and
+$\mathrm{Var}(Y)=K_Y''(0)$. The proof is therefore a two-step plan: first compute $K_Y(t)$ in closed
+form, where it turns out to equal $[b(\theta+t\,a(\phi))-b(\theta)]/a(\phi)$, then differentiate it twice
+at $0$. A reader who grasps this plan can skip the algebra and still trust the conclusion.
+
+::: {#thm-glm-mean-variance}
+## Mean and variance of an EDF response
+Let $Y\sim\mathrm{EDF}(\theta,\phi;w)$ with $\theta$ in the interior of $\Theta$, and write
+$a(\phi)=\phi/w$. Then the moment generating function of $Y$ is finite in a neighborhood of the origin
+and
+$$
+\mathbb E[Y]=b'(\theta)=:\mu,\qquad
+\mathrm{Var}(Y)=a(\phi)\,b''(\theta)=\frac{\phi}{w}\,b''(\theta).
+$$ {#eq-glm-mean-variance}
+Moreover the map $\theta\mapsto\mu=b'(\theta)$ is a strictly increasing bijection from the interior of
+$\Theta$ onto an open interval $\mathcal M\subseteq\mathbb R$, the **mean space**; its inverse is written
+$\theta(\mu)$, and the **variance function**
+$$
+V(\mu):=b''\bigl(\theta(\mu)\bigr)>0
+$$ {#eq-variance-function}
+expresses the variance as $\mathrm{Var}(Y)=a(\phi)\,V(\mu)$, a known function of the mean times the
+dispersion.
+:::
+
+*Why this matters.* Equation @eq-glm-mean-variance is the lever the rest of the chapter pulls. Once the
+cumulant function $b$ of a distribution is known, its mean and its whole variance structure follow by
+differentiation alone, with no further integration. The same cumulant-function trick reappears in the
+score equation (@thm-glm-score), the Fisher information (@prp-glm-information), and the large-sample
+theory (@cor-glm-asymptotic-normality), so the work done here is repaid three more times. For an indirect
+comparison this is what puts every trial outcome, binary, count, or continuous, on a common footing with
+a known mean and variance, the precondition for combining them in a network meta-analysis.
+
+::: {.proof}
+Fix $\theta$ interior to $\Theta$. Because $\Theta$ is open, there is $\epsilon>0$ with
+$[\theta-\epsilon a(\phi),\,\theta+\epsilon a(\phi)]\subseteq\Theta$. The substitution that drives the
+computation is $\theta'=\theta+t\,a(\phi)$: it is chosen precisely so that the extra factor $e^{ty}$ from
+the moment generating function merges into the natural-parameter term of the density, because in the
+exponent
+$$
+ty+\frac{y\theta}{a(\phi)}=\frac{y\bigl(\theta+t\,a(\phi)\bigr)}{a(\phi)}=\frac{y\theta'}{a(\phi)}.
+$$
+For $|t|<\epsilon$ put $\theta'=\theta+t\,a(\phi)\in\Theta$ and compute the moment generating function
+$M_Y(t)=\mathbb E[e^{tY}]$ (@def-mgf) directly from @eq-edf-density:
+$$
+M_Y(t)=\int_{\mathcal Y}e^{ty}\exp\!\left\{\frac{y\theta-b(\theta)}{a(\phi)}+c(y,\phi)\right\}\nu(dy)
+=e^{-b(\theta)/a(\phi)}\int_{\mathcal Y}\exp\!\left\{\frac{y\theta'}{a(\phi)}+c(y,\phi)\right\}\nu(dy).
+$$
+The integral on the right is finite because $\theta'\in\Theta$, and by the normalization identity
+@eq-edf-normalization applied at $\theta'$ it equals $\exp\{b(\theta')/a(\phi)\}$. Hence, for
+$|t|<\epsilon$,
+$$
+M_Y(t)=\exp\!\left\{\frac{b(\theta+t\,a(\phi))-b(\theta)}{a(\phi)}\right\}<\infty.
+$$
+The moment generating function is therefore finite on a neighborhood of $0$, and the **cumulant
+generating function** $K_Y(t)=\log M_Y(t)$ is
+$$
+K_Y(t)=\frac{b(\theta+t\,a(\phi))-b(\theta)}{a(\phi)}.
+$$ {#eq-edf-cgf}
+Since $b$ is twice continuously differentiable on the open set $\Theta$, so is $K_Y$ near $0$, with
+$$
+K_Y'(t)=b'(\theta+t\,a(\phi)),\qquad K_Y''(t)=a(\phi)\,b''(\theta+t\,a(\phi)).
+$$
+Now relate the derivatives of $K_Y$ at $0$ to the mean and variance. Because $M_Y$ is finite near $0$ it
+is infinitely differentiable there with $M_Y(0)=1$, $M_Y'(0)=\mathbb E[Y]$, and $M_Y''(0)=\mathbb E[Y^2]$
+(@thm-mgf-moments). From $K_Y=\log M_Y$,
+$$
+K_Y'=\frac{M_Y'}{M_Y},\qquad K_Y''=\frac{M_Y''M_Y-(M_Y')^2}{M_Y^2},
+$$
+so at $t=0$, using $M_Y(0)=1$,
+$$
+K_Y'(0)=M_Y'(0)=\mathbb E[Y],\qquad
+K_Y''(0)=M_Y''(0)-\bigl(M_Y'(0)\bigr)^2=\mathbb E[Y^2]-\bigl(\mathbb E[Y]\bigr)^2=\mathrm{Var}(Y).
+$$
+Evaluating the two displayed derivatives of @eq-edf-cgf at $t=0$ gives $\mathbb E[Y]=b'(\theta)$ and
+$\mathrm{Var}(Y)=a(\phi)b''(\theta)$, which is @eq-glm-mean-variance.
+
+For the second claim, $b''>0$ on the interior of $\Theta$ makes $b'$ strictly increasing there, hence
+injective, and continuous. Its image $\mathcal M$ is an interval, because a continuous function carries an
+interval to an interval (the intermediate value theorem: every value lying between two attained values is
+itself attained). That interval is moreover *open*: a strictly increasing function on an open interval
+attains neither a largest nor a smallest value, since any candidate extreme point has a still-smaller or
+still-larger neighbor inside the domain, so $\mathcal M$ contains none of its endpoints. Thus
+$b':\mathrm{int}\,\Theta\to\mathcal M$ is a continuous strictly increasing bijection with continuous
+inverse $\theta(\cdot)$. Define $V(\mu)=b''(\theta(\mu))$; it is positive because $b''>0$, and
+$\mathrm{Var}(Y)=a(\phi)b''(\theta)=a(\phi)V(\mu)$ by substituting $\theta=\theta(\mu)$. $\square$
+:::
+
+::: {.remark}
+## Why the variance is tied to the mean
+Equation @eq-glm-mean-variance is the structural heart of the GLM. In the normal model the variance
+$\phi$ is free of the mean, but in every other member of the family the variance is forced to be
+$a(\phi)V(\mu)$ with $V$ fixed by the distribution. For the Bernoulli law $V(\mu)=\mu(1-\mu)$, so the
+variance must vanish at the endpoints; for the Poisson law $V(\mu)=\mu$, so the variance must equal the
+mean. For a trial this is not bookkeeping: the uncertainty in a response probability near $\tfrac12$
+genuinely exceeds that near $0$ or $1$, and the scatter of an event count genuinely grows with its
+expected size, so tying the variance to the mean is what lets a GLM report honest standard errors. A GLM
+does not get to choose the mean-variance relationship independently of the response
+distribution, and this is exactly the discipline that a normal linear model on a count or a proportion
+lacks. $\blacktriangleleft$
+:::
+
+### The standard members
+
+We verify that the distributions named in the introduction are EDF members and record their cumulant
+function, dispersion, and variance function. Each verification is a short algebraic rearrangement of the
+density into the canonical form @eq-edf-density.
+
+::: {#exm-edf-members}
+## Five exponential dispersion families
+**Normal.** For $Y\sim\mathcal N(\mu,\sigma^2)$ ([Notation](/notation.qmd)), expand the density:
+$$
+\frac{1}{\sqrt{2\pi\sigma^2}}e^{-(y-\mu)^2/(2\sigma^2)}
+=\exp\!\left\{\frac{y\mu-\mu^2/2}{\sigma^2}-\frac{y^2}{2\sigma^2}-\tfrac12\log(2\pi\sigma^2)\right\}.
+$$
+This is @eq-edf-density with $\theta=\mu$, $b(\theta)=\theta^2/2$, $\phi=\sigma^2$, $w=1$, and
+$c(y,\phi)=-y^2/(2\phi)-\tfrac12\log(2\pi\phi)$. Then $b'(\theta)=\theta=\mu$ and $b''(\theta)=1$, so
+$\mathrm{Var}(Y)=\phi=\sigma^2$ and $V(\mu)=1$: the variance is constant, as it must be.
+
+**Bernoulli.** For $Y\sim\mathrm{Ber}(p)$ (@def-bernoulli),
+$p^y(1-p)^{1-y}=\exp\{y\log\frac{p}{1-p}+\log(1-p)\}$. Set $\theta=\log\frac{p}{1-p}$, so
+$p=e^\theta/(1+e^\theta)$ and $\log(1-p)=-\log(1+e^\theta)$. Thus $b(\theta)=\log(1+e^\theta)$,
+$\phi=1$, $w=1$, $c\equiv0$. Here $b'(\theta)=e^\theta/(1+e^\theta)=p=\mu$ and
+$b''(\theta)=e^\theta/(1+e^\theta)^2=p(1-p)$, so $V(\mu)=\mu(1-\mu)$ and $\mathrm{Var}(Y)=\mu(1-\mu)$.
+
+**Binomial proportion.** For a grouped binomial response $Y=R/n$ with $R\sim\mathrm{Bin}(n,p)$
+(@def-binomial), the proportion has the same $\theta=\log\frac{p}{1-p}$ and $b(\theta)=\log(1+e^\theta)$
+as the Bernoulli, but with prior weight $w=n$ and $\phi=1$, so $a(\phi)=1/n$ and
+$\mathrm{Var}(Y)=\mu(1-\mu)/n$. The grouped form is what trial-level ITC data take.
+
+**Poisson.** For $Y\sim\mathrm{Poi}(\lambda)$ (@def-poisson),
+$e^{-\lambda}\lambda^y/y!=\exp\{y\log\lambda-\lambda-\log y!\}$. Set $\theta=\log\lambda$, so
+$b(\theta)=e^\theta=\lambda$, $\phi=1$, $w=1$, $c(y,\phi)=-\log y!$. Then $b'(\theta)=e^\theta=\lambda=\mu$
+and $b''(\theta)=e^\theta=\lambda$, so $V(\mu)=\mu$ and $\mathrm{Var}(Y)=\mu$: variance equals mean.
+
+**Gamma.** For $Y$ gamma with mean $\mu$ and shape $\nu$, density
+$\frac{1}{\Gamma(\nu)}(\nu/\mu)^\nu y^{\nu-1}e^{-\nu y/\mu}$, write the exponent as
+$\frac{y(-1/\mu)+\log\mu}{1/\nu}+(\nu-1)\log y+\nu\log\nu-\log\Gamma(\nu)$. Set $\theta=-1/\mu<0$, so
+$b(\theta)=-\log(-\theta)=\log\mu$, $\phi=1/\nu$, $w=1$. Then $b'(\theta)=-1/\theta=\mu$ and
+$b''(\theta)=1/\theta^2=\mu^2$, giving $V(\mu)=\mu^2$ and $\mathrm{Var}(Y)=\mu^2/\nu$: constant
+coefficient of variation. $\blacktriangleleft$
+:::
+
+The five members are summarized below; the canonical link in the last column is defined in
+@sec-links.
+
+| Distribution | $\theta(\mu)$ | $b(\theta)$ | $\phi$ | $V(\mu)$ | canonical link $g(\mu)$ |
+|---|---|---|---|---|---|
+| Normal $\mathcal N(\mu,\sigma^2)$ | $\mu$ | $\theta^2/2$ | $\sigma^2$ | $1$ | identity $\mu$ |
+| Bernoulli/Binomial | $\log\frac{\mu}{1-\mu}$ | $\log(1+e^\theta)$ | $1$ | $\mu(1-\mu)$ | logit $\log\frac{\mu}{1-\mu}$ |
+| Poisson | $\log\mu$ | $e^\theta$ | $1$ | $\mu$ | log $\log\mu$ |
+| Gamma | $-1/\mu$ | $-\log(-\theta)$ | $1/\nu$ | $\mu^2$ | reciprocal $-1/\mu$ |
+
+The theorem introduced the **mean space** $\mathcal M$, which deserves a plain reading: it is simply the
+set of values the mean is allowed to take for the distribution at hand. For the Bernoulli and binomial it
+is the open interval $(0,1)$, the range of a probability; for the Poisson and gamma it is $(0,\infty)$,
+the range of a positive rate or mean; for the normal it is all of $\mathbb R$. The link function, defined
+next, is a change of scale that acts exactly on $\mathcal M$.
+
+## Link functions and the generalized linear model {#sec-links}
+
+The EDF supplies the random component. The systematic component is the familiar linear predictor
+$\eta_i=\mathbf x_i^\top\boldsymbol\beta$. The link function is the bridge between them.
+
+::: {#def-link-function}
+## Link function
+A **link function** is a function $g:\mathcal M\to\mathbb R$ defined on the mean space $\mathcal M$ of an
+EDF that is twice continuously differentiable and strictly monotone, hence a bijection from $\mathcal M$
+onto an open interval $g(\mathcal M)\subseteq\mathbb R$. Its inverse $g^{-1}$, called the **mean
+function** or **response function**, recovers the mean from the linear predictor. A generalized linear
+model relates the mean of the $i$-th response to its linear predictor by
+$$
+g(\mu_i)=\eta_i=\mathbf x_i^\top\boldsymbol\beta,
+\qquad\text{equivalently}\qquad
+\mu_i=g^{-1}(\mathbf x_i^\top\boldsymbol\beta).
+$$ {#eq-link}
+$\blacktriangleleft$
+:::
+
+*Reader translation.* A link is just a relabeling of the mean onto the regression scale. It takes a mean
+$\mu$, which may be confined to a probability in $(0,1)$ or a positive rate in $(0,\infty)$, and reports a
+number $\eta=g(\mu)$ that is free to be any real, so the linear predictor $\mathbf x^\top\boldsymbol\beta$
+can equal it without running into a boundary. The logit turns a probability into a log odds; the log
+turns a rate into a log rate. Inverting the link, $\mu=g^{-1}(\eta)$, turns a fitted linear predictor back
+into a legal mean.
+
+Strict monotonicity is exactly what guarantees that $g$ can be inverted, so that every value of the
+linear predictor names exactly one mean; and because $g$ is strictly monotone and continuous on the open
+interval $\mathcal M$, its image $g(\mathcal M)$ is again an open interval (the same argument that made
+$\mathcal M$ open above), which is what lets the unrestricted linear predictor range over it freely. The
+twice-differentiability requirement is the one clause a beginner does not need yet: it is invisible until
+the estimation theory of @sec-glm-estimation, where the fitting algorithm differentiates the link twice;
+until then it can be read as "smooth enough." Among all links for a given EDF, one is distinguished.
+
+::: {#def-canonical-link}
+## Canonical link
+The **canonical link** (or natural link) of an EDF is $g_{\mathrm{c}}=(b')^{-1}=\theta(\cdot)$, the
+inverse of the mean map of @thm-glm-mean-variance. It is a valid link function: $b'$ is a strictly
+increasing $C^1$ bijection from $\mathrm{int}\,\Theta$ onto $\mathcal M$ by @thm-glm-mean-variance, so
+$\theta(\cdot)=g_{\mathrm c}$ is a strictly increasing $C^1$ bijection from $\mathcal M$ onto
+$\mathrm{int}\,\Theta$, and it is $C^2$ because $b'$ is $C^2$ with nonvanishing derivative $b''>0$.
+$\blacktriangleleft$
+:::
+
+*Reader translation.* Of the many links one could attach to a distribution, the canonical link is the one
+that coincides with the distribution's own natural parameter $\theta$. Choosing it is a convenience worth
+understanding now for one reason and trusting for another: it makes the estimation algorithm simplest
+(proved in @sec-glm-estimation), and for the families health researchers use it also yields the
+interpretable effect measures, the logit giving the odds ratio and the log giving the rate ratio. It is a
+sensible default, not an obligation.
+
+::: {#prp-canonical-eta-theta}
+## The canonical link identifies the linear predictor with the natural parameter
+A GLM uses its canonical link if and only if the natural parameter equals the linear predictor for every
+observation: $\theta_i=\eta_i$.
+:::
+
+::: {.proof}
+With the canonical link, $\eta_i=g_{\mathrm c}(\mu_i)=\theta(\mu_i)=\theta(b'(\theta_i))=\theta_i$, the
+last step because $\theta(\cdot)$ inverts $b'$. Conversely, if $\theta_i=\eta_i=g(\mu_i)$ for the link in
+use, then $g(\mu_i)=\theta_i=\theta(\mu_i)$ for all attainable $\mu_i$, so $g=\theta(\cdot)=g_{\mathrm c}$
+on $\mathcal M$. $\square$
+:::
+
+*Why this matters.* The identity $\theta_i=\eta_i$ is precisely why the canonical link makes the
+mathematics clean: the natural parameter, the EDF's internal coordinate, and the linear predictor, the
+regression, become one and the same object, collapsing the chain of scales in @sec-glm-map by a link.
+This single coincidence produces the simple score equation of @cor-canonical-score and the global
+concavity of @lem-canonical-hessian, and it is why logistic and Poisson regression, both canonical, are
+the workhorses on which network meta-analysis is built.
+
+Reading the canonical-link column of the table in @sec-edf confirms the familiar choices: the identity
+link for the normal, the **logit** link $g(\mu)=\log\frac{\mu}{1-\mu}$ for the Bernoulli and binomial,
+the **log** link $g(\mu)=\log\mu$ for the Poisson, and the reciprocal link $-1/\mu$ for the gamma. The
+canonical link is not mandatory, and @sec-links below introduces the probit and complementary log-log
+links for binary data, but it confers the analytic and computational simplifications proved in
+@sec-glm-estimation.
+
+We can now state the object of study precisely.
+
+::: {#def-glm}
+## Generalized linear model
+A **generalized linear model** for independent responses $Y_1,\dots,Y_n$ with known covariate vectors
+$\mathbf x_1,\dots,\mathbf x_n\in\mathbb R^p$ (the rows of the design matrix
+$\mathbf X\in\mathbb R^{n\times p}$) and known prior weights $w_1,\dots,w_n>0$ consists of three
+components:
+
+1. **Random component.** Each $Y_i\sim\mathrm{EDF}(\theta_i,\phi;w_i)$ independently, with the same
+cumulant function $b$ and dispersion $\phi$ across $i$, so that by @thm-glm-mean-variance
+$\mu_i=\mathbb E[Y_i]=b'(\theta_i)$ and $\mathrm{Var}(Y_i)=a_i(\phi)V(\mu_i)$ with $a_i(\phi)=\phi/w_i$.
+
+2. **Systematic component.** A linear predictor $\eta_i=\mathbf x_i^\top\boldsymbol\beta$ with unknown
+coefficient vector $\boldsymbol\beta\in\mathbb R^p$.
+
+3. **Link.** A link function $g$ (@def-link-function) with $g(\mu_i)=\eta_i$.
+
+The normal linear model of Chapter 6 (@def-linear-model) is the special case in which the random
+component is normal and the link is the identity. $\blacktriangleleft$
+:::
+
+*Reader translation.* A GLM is assembled from three independent choices, and naming all three specifies
+the model completely: pick the response distribution (which fixes the mean-variance link through $V$),
+pick the covariates that enter the linear predictor, and pick the link scale. Logistic regression is the
+choice (Bernoulli, covariates, logit); Poisson regression is (Poisson, covariates, log); the linear model
+of Chapter 6 is (normal, covariates, identity). Everything downstream, the estimate, its standard error,
+the model tests, is then computed mechanically. Notice one small notational shift now that several
+observations are in play: the single dispersion divisor $a(\phi)$ of @def-exponential-family becomes the
+per-observation $a_i(\phi)=\phi/w_i$, differing only through the known weight $w_i$.
+
+### Logistic regression {#sec-logistic}
+
+Take the Bernoulli or binomial random component and the canonical logit link. Writing $p_i=\mu_i$ for
+the success probability, the model is
+$$
+\mathrm{logit}(p_i)=\log\frac{p_i}{1-p_i}=\mathbf x_i^\top\boldsymbol\beta,
+\qquad
+p_i=\frac{e^{\mathbf x_i^\top\boldsymbol\beta}}{1+e^{\mathbf x_i^\top\boldsymbol\beta}}.
+$$ {#eq-logistic}
+The inverse link $g^{-1}(\eta)=e^\eta/(1+e^\eta)$ is the standard logistic distribution function; it maps
+the whole real line into $(0,1)$, so fitted probabilities are automatically valid. The interpretation of
+the coefficients is the reason this model dominates the analysis of binary trial outcomes. The quantity
+$p_i/(1-p_i)$ is the **odds** of success, and $\mathbf x_i^\top\boldsymbol\beta$ is the **log-odds**.
+If two observations differ by one unit in covariate $x_j$ and agree on every other covariate, their
+log-odds differ by exactly $\beta_j$, so their odds differ by the multiplicative factor $e^{\beta_j}$.
+That factor is the **odds ratio** (OR) associated with a unit change in $x_j$:
+$$
+\frac{\mathrm{odds}(x_j+1)}{\mathrm{odds}(x_j)}
+=\frac{p(x_j+1)/(1-p(x_j+1))}{p(x_j)/(1-p(x_j))}=e^{\beta_j}.
+$$ {#eq-odds-ratio}
+A treatment indicator's coefficient is therefore a log odds ratio, and $e^\beta$ is the odds ratio that
+network meta-analysis combines across trials (@dias2018nma, Chapter 4). The conditioning on "every other
+covariate held fixed" in this interpretation is precisely the conditional-effect language whose
+divergence from the marginal effect we examine in @sec-noncollapsibility. Hold onto the word
+*conditional*: this coefficient answers the question "what happens within a fixed covariate profile?",
+whereas an indirect comparison often needs a *marginal* answer averaged over a whole trial population, and
+@sec-noncollapsibility shows that for the odds ratio these two answers can differ even with no confounding
+at all.
+
+### Poisson regression {#sec-poisson}
+
+Take the Poisson random component and the canonical log link. With $\lambda_i=\mu_i$ the mean count,
+$$
+\log\lambda_i=\mathbf x_i^\top\boldsymbol\beta,
+\qquad
+\lambda_i=e^{\mathbf x_i^\top\boldsymbol\beta}.
+$$ {#eq-poisson}
+The mean is forced positive, as a count's mean must be. A unit change in $x_j$ multiplies the expected
+count by $e^{\beta_j}$, the **rate ratio**. When the observations accrue over different exposures (a
+person-time $t_i$ for a rate, or a denominator population for an incidence), one writes
+$\lambda_i=t_i\,e^{\mathbf x_i^\top\boldsymbol\beta}$, equivalently
+$\log\lambda_i=\log t_i+\mathbf x_i^\top\boldsymbol\beta$. The term $\log t_i$ is a known regressor with
+coefficient fixed at $1$, called an **offset**; it is not estimated. With an offset the linear predictor
+models the log-rate $\log(\lambda_i/t_i)$, and $e^{\beta_j}$ is an incidence rate ratio, the count
+analogue of the odds ratio.
+
+### The probit and complementary log-log links {#sec-other-links}
+
+For binary data the logit link is canonical but not the only sensible choice. Two non-canonical links
+recur in the ITC literature.
+
+The **probit** link is $g(\mu)=\Phi^{-1}(\mu)$, where $\Phi$ is the standard normal distribution
+function; its inverse link is $g^{-1}(\eta)=\Phi(\eta)$. It arises from a latent-variable model: if an
+unobserved $Y_i^\ast=\mathbf x_i^\top\boldsymbol\beta+\varepsilon_i$ with
+$\varepsilon_i\sim\mathcal N(0,1)$ crosses zero, $Y_i=\mathbf 1\{Y_i^\ast>0\}$, then
+$P(Y_i=1)=P(\varepsilon_i>-\mathbf x_i^\top\boldsymbol\beta)=\Phi(\mathbf x_i^\top\boldsymbol\beta)$. The
+inverse-link derivative is $\frac{d\mu}{d\eta}=\Phi'(\eta)$, the standard normal density. The probit and
+logit fits are numerically very close after rescaling the coefficients, because the logistic and normal
+distribution functions are similar in shape; the logit is usually preferred only because its coefficients
+carry the exact log odds ratio interpretation of @eq-odds-ratio.
+
+The **complementary log-log** (cloglog) link is $g(\mu)=\log(-\log(1-\mu))$, with inverse link
+$g^{-1}(\eta)=1-\exp(-e^\eta)$. Unlike the logit and probit it is asymmetric in $\mu$ and $1-\mu$. It
+arises from grouped survival data under a proportional hazards mechanism: if a continuous event time has
+hazard multiplied by $e^{\mathbf x^\top\boldsymbol\beta}$, the probability of an event within a fixed
+interval satisfies $\log(-\log(1-\mu))=\log(-\log S_0)+\mathbf x^\top\boldsymbol\beta$ for a baseline
+survival $S_0$, exactly a cloglog GLM with offset $\log(-\log S_0)$. This connection to the hazard ratio
+is the reason the cloglog link reappears when @sec-noncollapsibility discusses the non-collapsibility of
+the hazard ratio.
+
+::: {.remark}
+## Why the link scale matters for indirect comparison
+The choice of link is not a modeling nicety; it fixes the scale on which an indirect comparison does its
+arithmetic. Network meta-analysis and its regression extensions write the linear predictor of every trial
+arm as a study baseline plus relative treatment effects, and they add and subtract those effects on the
+link scale: the log-odds scale for binary outcomes, the log-rate scale for counts. A Bucher indirect
+comparison of treatments $B$ and $C$ through a common comparator $A$ (developed in Chapter 14), for
+instance, forms $d_{BC}=d_{AC}-d_{AB}$, subtracting two log odds ratios; the operation is coherent only
+because each $d$ lives on the same additive logit scale. The link is thus the common currency of the
+whole enterprise, and the conditional, link-scale reading of a coefficient from @sec-logistic is the
+reading those methods rely on. The price of that convenience, charged in @sec-noncollapsibility, is that a
+link-scale effect need not agree with the effect computed on population-averaged risks.
+$\blacktriangleleft$
+:::
+
+## Maximum likelihood estimation {#sec-glm-estimation}
+
+The coefficient vector $\boldsymbol\beta$ is estimated by maximum likelihood (@def-mle). Because the
+responses are independent EDF members, the log-likelihood is a sum of EDF log-densities, and its
+maximization has a remarkable structure: the stationarity condition is a weighted version of the normal
+equations of Chapter 6, and the Newton-type algorithm that solves it is a sequence of weighted linear
+regressions. We derive all of this from @eq-edf-density.
+
+*What the software is doing.* When a health researcher fits a logistic regression, the program is solving
+a single optimization problem: find the coefficient vector $\boldsymbol\beta$ that makes the observed
+responses most probable under the model. Unlike linear regression, this has no closed-form answer for the
+logistic or Poisson likelihood, so the program proceeds in steps. It writes down the condition that the
+gradient of the log-likelihood vanishes (the **score equations**), measures the curvature of the
+log-likelihood (the **Fisher information**), and walks toward the maximum by a Newton-type update
+(**Fisher scoring**) that turns out to be an ordinary weighted least-squares fit (**IRLS**). The four
+named results of this section are exactly those four ingredients, in that order; the worked example of
+@sec-glm-worked then runs them on real numbers.
+
+Throughout, the log-likelihood of the GLM as a function of $\boldsymbol\beta$ is, dropping the additive
+constant $\sum_i c(y_i,\phi)$ that does not involve $\boldsymbol\beta$,
+$$
+\ell(\boldsymbol\beta)=\sum_{i=1}^n\frac{y_i\theta_i-b(\theta_i)}{a_i(\phi)},
+\qquad a_i(\phi)=\frac{\phi}{w_i},
+$$ {#eq-glm-loglik}
+in which each $\theta_i=\theta(\mu_i)$ and $\mu_i=g^{-1}(\eta_i)$ and $\eta_i=\mathbf x_i^\top\boldsymbol\beta$
+are functions of $\boldsymbol\beta$ through the chain
+$\boldsymbol\beta\mapsto\eta_i\mapsto\mu_i\mapsto\theta_i$.
+
+### The score equations
+
+::: {#thm-glm-score}
+## GLM score equations
+For the GLM of @def-glm the score function (@def-score) $\mathbf U(\boldsymbol\beta)=\nabla_{\boldsymbol\beta}\ell(\boldsymbol\beta)$
+has components
+$$
+U_j(\boldsymbol\beta)=\sum_{i=1}^n\frac{w_i\,(y_i-\mu_i)}{\phi\,V(\mu_i)}\,\frac{d\mu_i}{d\eta_i}\,x_{ij},
+\qquad j=1,\dots,p,
+$$ {#eq-glm-score}
+equivalently, in matrix form with $\mathbf D=\mathrm{diag}(d\mu_i/d\eta_i)$ and the response covariance
+$\boldsymbol\Sigma=\mathrm{Cov}(\mathbf Y)=\mathrm{diag}(a_i(\phi)V(\mu_i))$,
+$$
+\mathbf U(\boldsymbol\beta)=\mathbf X^\top\mathbf D\,\boldsymbol\Sigma^{-1}(\mathbf y-\boldsymbol\mu).
+$$ {#eq-glm-score-matrix}
+The maximum likelihood estimator $\hat{\boldsymbol\beta}$ solves $\mathbf U(\hat{\boldsymbol\beta})=\mathbf 0$.
+The dispersion $\phi$ enters @eq-glm-score only as the overall factor $1/\phi$, so the solution
+$\hat{\boldsymbol\beta}$ does not depend on $\phi$.
+:::
+
+::: {.proof}
+Differentiate @eq-glm-loglik by the chain rule along $\boldsymbol\beta\mapsto\eta_i\mapsto\mu_i\mapsto\theta_i$.
+The four links of the chain are:
+$$
+\frac{\partial\ell}{\partial\theta_i}=\frac{y_i-b'(\theta_i)}{a_i(\phi)}=\frac{y_i-\mu_i}{a_i(\phi)},
+\qquad
+\frac{d\theta_i}{d\mu_i}=\frac{1}{b''(\theta_i)}=\frac{1}{V(\mu_i)},
+$$
+the first because $\partial_{\theta_i}(y_i\theta_i-b(\theta_i))=y_i-b'(\theta_i)$ and $b'(\theta_i)=\mu_i$
+by @thm-glm-mean-variance. The second factor unpacks in three short steps: (1) since $\mu_i=b'(\theta_i)$,
+differentiating gives $d\mu_i/d\theta_i=b''(\theta_i)$; (2) by the definition @eq-variance-function of the
+variance function, $b''(\theta_i)=V(\mu_i)$; (3) the derivative of an inverse function is the reciprocal of
+the derivative, so $d\theta_i/d\mu_i=1/(d\mu_i/d\theta_i)=1/V(\mu_i)$. Continuing the chain,
+$$
+\frac{d\mu_i}{d\eta_i}=\bigl(g'(\mu_i)\bigr)^{-1},
+\qquad
+\frac{\partial\eta_i}{\partial\beta_j}=x_{ij},
+$$
+the first because $\eta_i=g(\mu_i)$ gives $d\eta_i/d\mu_i=g'(\mu_i)$. Multiplying the four factors and
+summing over $i$,
+$$
+U_j(\boldsymbol\beta)=\frac{\partial\ell}{\partial\beta_j}
+=\sum_{i=1}^n\frac{y_i-\mu_i}{a_i(\phi)}\cdot\frac{1}{V(\mu_i)}\cdot\frac{d\mu_i}{d\eta_i}\cdot x_{ij}
+=\sum_{i=1}^n\frac{w_i(y_i-\mu_i)}{\phi\,V(\mu_i)}\frac{d\mu_i}{d\eta_i}x_{ij},
+$$
+using $a_i(\phi)=\phi/w_i$. This is @eq-glm-score. Collecting the summands into matrices with
+$\boldsymbol\Sigma=\mathrm{diag}(a_i(\phi)V(\mu_i))$ gives the $j$-th component of
+$\mathbf X^\top\mathbf D\,\boldsymbol\Sigma^{-1}(\mathbf y-\boldsymbol\mu)$, which is
+@eq-glm-score-matrix. The maximum likelihood estimator is an interior stationary point of the
+differentiable concave-or-not log-likelihood, so it satisfies the first-order condition
+$\mathbf U(\hat{\boldsymbol\beta})=\mathbf 0$. Finally, every summand of @eq-glm-score carries the same
+factor $1/\phi$, so $\mathbf U(\boldsymbol\beta)=\phi^{-1}\tilde{\mathbf U}(\boldsymbol\beta)$ for a
+$\phi$-free vector $\tilde{\mathbf U}$; the equation $\mathbf U(\boldsymbol\beta)=\mathbf 0$ is equivalent
+to $\tilde{\mathbf U}(\boldsymbol\beta)=\mathbf 0$, and $\hat{\boldsymbol\beta}$ is unchanged by $\phi$.
+$\square$
+:::
+
+The score equation has a transparent reading: $\mathbf U(\boldsymbol\beta)=\mathbf 0$ requires the
+covariate-weighted residuals $y_i-\mu_i$ to vanish, with each residual weighted by the local sensitivity
+of the mean to the linear predictor and inversely by its variance. *Why this matters:* this is the GLM's
+version of the orthogonality between residuals and the design columns that defined ordinary least squares
+in Chapter 6, and it is the exact condition every fitting routine drives to zero. For the canonical link a
+dramatic simplification occurs.
+
+::: {#cor-canonical-score}
+## Score equations under the canonical link
+Under the canonical link, $d\mu_i/d\eta_i=V(\mu_i)$, and the score equations reduce to
+$$
+\mathbf U(\boldsymbol\beta)=\frac{1}{\phi}\,\mathbf X^\top\mathbf W_0(\mathbf y-\boldsymbol\mu)
+\;\;\text{with}\;\;\mathbf W_0=\mathrm{diag}(w_i),
+\qquad\text{so}\qquad
+\sum_{i=1}^n w_i(y_i-\mu_i)\,\mathbf x_i=\mathbf 0.
+$$ {#eq-canonical-score}
+In particular, if the model contains an intercept (a column of $\mathbf X$ equal to $\mathbf 1_n$), then
+$\sum_i w_i\hat\mu_i=\sum_i w_iy_i$: the fitted values reproduce the response total exactly.
+:::
+
+::: {.proof}
+With the canonical link $\eta_i=\theta_i$ by @prp-canonical-eta-theta, so
+$d\mu_i/d\eta_i=d\mu_i/d\theta_i=b''(\theta_i)=V(\mu_i)$. Substituting into @eq-glm-score, the factor
+$V(\mu_i)$ cancels:
+$$
+U_j(\boldsymbol\beta)=\sum_i\frac{w_i(y_i-\mu_i)}{\phi V(\mu_i)}V(\mu_i)x_{ij}
+=\frac1\phi\sum_i w_i(y_i-\mu_i)x_{ij}.
+$$
+This is @eq-canonical-score. If a column of $\mathbf X$ is $\mathbf 1_n$, the corresponding component of
+$\mathbf U(\hat{\boldsymbol\beta})=\mathbf 0$ reads $\sum_i w_i(y_i-\hat\mu_i)=0$. $\square$
+:::
+
+::: {.remark}
+## The logistic score in its familiar form
+It is worth seeing @cor-canonical-score land on the textbook logistic score before meeting the general
+machinery. For logistic regression the EDF member is the binomial proportion with weight $w_i=n_i$ and
+mean $\mu_i=p_i$, so the canonical (logit) score equations read
+$$
+\sum_{i=1}^n n_i\,(y_i-p_i)\,\mathbf x_i=\mathbf 0:
+$$
+the covariate-weighted gap between observed proportions $y_i$ and fitted probabilities $p_i$ must vanish,
+exactly the form quoted in introductory texts. With an intercept column this forces
+$\sum_i n_i p_i=\sum_i n_i y_i=\sum_i R_i$, so the fitted model reproduces the total number of responders.
+For the single arm of @exm-glm-running, an intercept-only fit solves $60\,(0.30-\hat p)=0$, returning
+$\hat p=0.30$, the observed proportion. The general formula @eq-glm-score is just this familiar object
+dressed for an arbitrary link and distribution. $\blacktriangleleft$
+:::
+
+### Fisher information and Fisher scoring
+
+To solve $\mathbf U(\boldsymbol\beta)=\mathbf 0$ numerically we need the curvature of the
+log-likelihood. We use the expected information rather than the observed Hessian, an algorithm due to
+Fisher, because its form is especially clean.
+
+::: {#prp-glm-information}
+## Fisher information of a GLM
+The Fisher information matrix (@def-fisher-information) of the GLM of @def-glm is
+$$
+\mathcal I(\boldsymbol\beta)=\mathbf X^\top\mathbf W\mathbf X,
+\qquad
+\mathbf W=\mathrm{diag}(W_i),
+\quad
+W_i=\frac{w_i}{\phi\,V(\mu_i)}\left(\frac{d\mu_i}{d\eta_i}\right)^2.
+$$ {#eq-glm-information}
+The weights $W_i$ are positive, and $\mathcal I(\boldsymbol\beta)\succeq 0$, with
+$\mathcal I(\boldsymbol\beta)\succ 0$ whenever $\mathbf X$ has full column rank $p$.
+:::
+
+::: {.proof}
+By the information equality (@thm-information-equality), $\mathcal I(\boldsymbol\beta)=\mathrm{Cov}(\mathbf U(\boldsymbol\beta))$.
+From @eq-glm-score-matrix, $\mathbf U=\mathbf X^\top\mathbf D\,\boldsymbol\Sigma^{-1}(\mathbf y-\boldsymbol\mu)$,
+where only $\mathbf y$ is random with $\mathrm{Cov}(\mathbf y)=\boldsymbol\Sigma$. Hence
+$$
+\mathrm{Cov}(\mathbf U)
+=\mathbf X^\top\mathbf D\,\boldsymbol\Sigma^{-1}\,\boldsymbol\Sigma\,\boldsymbol\Sigma^{-1}\mathbf D\,\mathbf X
+=\mathbf X^\top\mathbf D\,\boldsymbol\Sigma^{-1}\mathbf D\,\mathbf X,
+$$
+using that $\mathbf D$ and $\boldsymbol\Sigma$ are diagonal hence symmetric. The diagonal matrix
+$\mathbf D\,\boldsymbol\Sigma^{-1}\mathbf D$ has $i$-th entry
+$$
+\frac{(d\mu_i/d\eta_i)^2}{a_i(\phi)V(\mu_i)}=\frac{w_i}{\phi V(\mu_i)}\left(\frac{d\mu_i}{d\eta_i}\right)^2=W_i,
+$$
+so $\mathbf D\,\boldsymbol\Sigma^{-1}\mathbf D=\mathbf W$ and $\mathcal I(\boldsymbol\beta)=\mathbf X^\top\mathbf W\mathbf X$.
+Each $W_i>0$ because $w_i,\phi,V(\mu_i)>0$ and $d\mu_i/d\eta_i\neq0$ (the link is strictly monotone). For
+any $\mathbf v\in\mathbb R^p$, $\mathbf v^\top\mathbf X^\top\mathbf W\mathbf X\mathbf v=\|\mathbf W^{1/2}\mathbf X\mathbf v\|_2^2\ge0$,
+so $\mathcal I\succeq0$; it equals zero only if $\mathbf W^{1/2}\mathbf X\mathbf v=\mathbf 0$, i.e.
+$\mathbf X\mathbf v=\mathbf 0$ (as $\mathbf W^{1/2}$ is invertible), which forces $\mathbf v=\mathbf 0$
+when $\mathbf X$ has full column rank. The characterization of positive definiteness used here is
+@thm-pd-characterization. $\square$
+:::
+
+*Why this matters.* The information matrix $\mathbf X^\top\mathbf W\mathbf X$ is the GLM's analogue of the
+$\mathbf X^\top\mathbf X$ that governed precision in Chapter 6, now reweighted by the working weights
+$\mathbf W$. Its inverse is the large-sample covariance of $\hat{\boldsymbol\beta}$
+(@cor-glm-asymptotic-normality), so the diagonal entries of $(\mathbf X^\top\mathbf W\mathbf X)^{-1}$ are
+the squared standard errors that a fitted model prints beside each coefficient. Curvature of the
+log-likelihood becomes precision of the estimate; this is the bridge from the abstract Fisher information
+to the standard error on a report.
+
+The **Fisher scoring** algorithm is the Newton-type iteration that replaces the observed Hessian by its
+expectation $\mathcal I$:
+$$
+\boldsymbol\beta^{(m+1)}=\boldsymbol\beta^{(m)}+\mathcal I(\boldsymbol\beta^{(m)})^{-1}\,\mathbf U(\boldsymbol\beta^{(m)}).
+$$ {#eq-fisher-scoring}
+We now show that this iteration is exactly a weighted least squares fit, which is the content of the
+acronym IRLS and the reason GLMs are computationally no harder than linear regression.
+
+### Iteratively reweighted least squares
+
+::: {#thm-irls}
+## Iteratively reweighted least squares
+The Fisher scoring update @eq-fisher-scoring for the GLM of @def-glm is identical to the weighted least
+squares estimator
+$$
+\boldsymbol\beta^{(m+1)}=\bigl(\mathbf X^\top\mathbf W^{(m)}\mathbf X\bigr)^{-1}\mathbf X^\top\mathbf W^{(m)}\mathbf z^{(m)},
+$$ {#eq-irls}
+in which the **working weights** $\mathbf W^{(m)}=\mathrm{diag}(W_i^{(m)})$ are the information weights of
+@eq-glm-information and the **working response** has components
+$$
+z_i^{(m)}=\eta_i^{(m)}+\bigl(y_i-\mu_i^{(m)}\bigr)\,\frac{d\eta_i}{d\mu_i}\bigg|^{(m)}
+=\eta_i^{(m)}+\bigl(y_i-\mu_i^{(m)}\bigr)\,g'(\mu_i^{(m)}),
+$$ {#eq-working-response}
+all quantities evaluated at $\boldsymbol\beta^{(m)}$. Each iteration is therefore the solution of the
+weighted normal equations $\mathbf X^\top\mathbf W^{(m)}\mathbf X\,\boldsymbol\beta=\mathbf X^\top\mathbf W^{(m)}\mathbf z^{(m)}$
+of Chapter 6 applied to the data $(\mathbf z^{(m)},\mathbf X)$ with weights $\mathbf W^{(m)}$. The common
+factor $1/\phi$ in $\mathbf W^{(m)}$ cancels between $(\mathbf X^\top\mathbf W^{(m)}\mathbf X)^{-1}$ and
+$\mathbf X^\top\mathbf W^{(m)}$, so neither the iterates nor their limit $\hat{\boldsymbol\beta}$ depend
+on $\phi$.
+:::
+
+::: {.proof}
+Write $\mathbf D=\mathrm{diag}(d\mu_i/d\eta_i)$, evaluated at $\boldsymbol\beta^{(m)}$, and recall from
+the proof of @prp-glm-information that $\mathbf W=\mathbf D\,\boldsymbol\Sigma^{-1}\mathbf D$, hence
+$\mathbf D\,\boldsymbol\Sigma^{-1}=\mathbf W\mathbf D^{-1}$ (all factors diagonal and invertible). By
+@eq-glm-score-matrix the score is
+$$
+\mathbf U(\boldsymbol\beta^{(m)})=\mathbf X^\top\mathbf D\,\boldsymbol\Sigma^{-1}(\mathbf y-\boldsymbol\mu^{(m)})
+=\mathbf X^\top\mathbf W\,\mathbf D^{-1}(\mathbf y-\boldsymbol\mu^{(m)}).
+$$
+The diagonal matrix $\mathbf D^{-1}$ has $i$-th entry $d\eta_i/d\mu_i=g'(\mu_i)$, so
+$\mathbf D^{-1}(\mathbf y-\boldsymbol\mu^{(m)})$ has $i$-th entry
+$(y_i-\mu_i^{(m)})g'(\mu_i^{(m)})=z_i^{(m)}-\eta_i^{(m)}$ by @eq-working-response. Therefore
+$$
+\mathbf U(\boldsymbol\beta^{(m)})=\mathbf X^\top\mathbf W\,(\mathbf z^{(m)}-\boldsymbol\eta^{(m)}),
+\qquad\boldsymbol\eta^{(m)}=\mathbf X\boldsymbol\beta^{(m)}.
+$$
+Insert this and $\mathcal I(\boldsymbol\beta^{(m)})=\mathbf X^\top\mathbf W\mathbf X$ (@eq-glm-information)
+into the Fisher scoring update @eq-fisher-scoring:
+$$
+\boldsymbol\beta^{(m+1)}
+=\boldsymbol\beta^{(m)}+(\mathbf X^\top\mathbf W\mathbf X)^{-1}\mathbf X^\top\mathbf W(\mathbf z^{(m)}-\mathbf X\boldsymbol\beta^{(m)}).
+$$
+Now $(\mathbf X^\top\mathbf W\mathbf X)^{-1}\mathbf X^\top\mathbf W\mathbf X\boldsymbol\beta^{(m)}=\boldsymbol\beta^{(m)}$,
+so the two $\boldsymbol\beta^{(m)}$ terms cancel:
+$$
+\boldsymbol\beta^{(m+1)}=\boldsymbol\beta^{(m)}+(\mathbf X^\top\mathbf W\mathbf X)^{-1}\mathbf X^\top\mathbf W\mathbf z^{(m)}-\boldsymbol\beta^{(m)}
+=(\mathbf X^\top\mathbf W\mathbf X)^{-1}\mathbf X^\top\mathbf W\mathbf z^{(m)},
+$$
+which is @eq-irls. This is the weighted least squares solution because it solves the weighted normal
+equations $\mathbf X^\top\mathbf W^{(m)}\mathbf X\boldsymbol\beta=\mathbf X^\top\mathbf W^{(m)}\mathbf z^{(m)}$,
+the weighted analogue of @thm-ols-normal-equations. Writing $\mathbf W^{(m)}=\phi^{-1}\tilde{\mathbf W}^{(m)}$
+with $\tilde{\mathbf W}^{(m)}$ free of $\phi$, the scalar $\phi^{-1}$ multiplies both
+$\mathbf X^\top\mathbf W^{(m)}\mathbf X$ and $\mathbf X^\top\mathbf W^{(m)}\mathbf z^{(m)}$ and cancels in
+@eq-irls. $\square$
+:::
+
+::: {.remark}
+## IRLS in words, and why it is a sequence of linear regressions
+The algorithm @eq-irls says: given a current coefficient guess, form a synthetic response $\mathbf z$ by
+taking the current linear predictor and adding the raw residual rescaled to the linear-predictor scale,
+attach the weight $W_i$ to observation $i$, run an ordinary weighted linear regression of $\mathbf z$ on
+$\mathbf X$, and repeat until the coefficients stop changing. Because each step is a weighted projection
+of $\mathbf z$ onto $\mathcal C(\mathbf X)$ in the $\mathbf W$-inner product (@def-hat-matrix), every tool
+of Chapter 6, the hat matrix, leverages, and the standard-error formula, transfers verbatim to the final
+iteration. This is why fitting a logistic or Poisson regression costs no more than a handful of linear
+regressions, and why GLM software is built on a linear-algebra core. $\blacktriangleleft$
+:::
+
+::: {.remark}
+## One IRLS step, with numbers
+To watch the machinery move before meeting more theory, take the two-group logistic data of
+@sec-glm-worked ($R_1=2$ of $n_1=10$ at $x=0$; $R_2=7$ of $n_2=10$ at $x=1$) and start from
+$\boldsymbol\beta^{(0)}=(0,0)^\top$, so every fitted probability is $p_i^{(0)}=\tfrac12$. The recipe of
+@eq-working-response and @eq-glm-information gives, for group $1$, a working response
+$z_1=0+(0.2-0.5)/(0.5\cdot0.5)=-1.2$ and a working weight $W_1=n_1p(1-p)=10(0.25)=2.5$, and likewise
+$z_2=0.8$, $W_2=2.5$. A single weighted least squares fit of the synthetic response
+$\mathbf z=(-1.2,\,0.8)^\top$ on $\mathbf X$ with these weights returns
+$\boldsymbol\beta^{(1)}=(-1.2,\,2.0)^\top$, already most of the way to the maximum likelihood value
+$(-1.386,\,2.234)$. That is the whole algorithm in one line: build $\mathbf z$, attach the weights, run one
+linear regression, repeat. The full iteration and its convergence are carried out in @sec-glm-worked.
+$\blacktriangleleft$
+:::
+
+For the canonical link the algorithm has a further property: Fisher scoring coincides with the exact
+Newton-Raphson method, because the observed and expected information agree.
+
+::: {#lem-canonical-hessian}
+## Canonical link: observed equals expected information, and concavity
+Under the canonical link the Hessian of the log-likelihood is the nonrandom matrix
+$$
+\nabla^2\ell(\boldsymbol\beta)=-\,\mathbf X^\top\mathbf W\mathbf X=-\,\mathcal I(\boldsymbol\beta),
+$$
+so the observed information equals the expected information and Fisher scoring @eq-fisher-scoring is
+Newton-Raphson. Consequently $\ell$ is concave in $\boldsymbol\beta$, and strictly concave when
+$\mathbf X$ has full column rank, so a stationary point is the unique global maximizer.
+:::
+
+::: {.proof}
+Under the canonical link, $\eta_i=\theta_i$ (@prp-canonical-eta-theta), so @eq-glm-loglik becomes
+$\ell(\boldsymbol\beta)=\sum_i(y_i\eta_i-b(\eta_i))/a_i(\phi)$ with $\eta_i=\mathbf x_i^\top\boldsymbol\beta$.
+Differentiating twice,
+$$
+\frac{\partial\ell}{\partial\beta_j}=\sum_i\frac{(y_i-b'(\eta_i))x_{ij}}{a_i(\phi)},
+\qquad
+\frac{\partial^2\ell}{\partial\beta_j\partial\beta_k}=-\sum_i\frac{b''(\eta_i)x_{ij}x_{ik}}{a_i(\phi)}.
+$$
+Because $b''(\eta_i)=V(\mu_i)$ and $a_i(\phi)=\phi/w_i$, the $i$-th coefficient is
+$w_iV(\mu_i)/\phi=W_i$ (the canonical-link weight, since $d\mu_i/d\eta_i=V(\mu_i)$ makes
+$W_i=w_iV(\mu_i)^2/(\phi V(\mu_i))=w_iV(\mu_i)/\phi$). Hence
+$\nabla^2\ell(\boldsymbol\beta)=-\mathbf X^\top\mathbf W\mathbf X=-\mathcal I(\boldsymbol\beta)$. This
+matrix does not involve $\mathbf y$, so the observed information $-\nabla^2\ell$ equals the expected
+information $\mathcal I$, and the Newton step $-(\nabla^2\ell)^{-1}\mathbf U=\mathcal I^{-1}\mathbf U$ is
+the Fisher scoring step. Since $\mathcal I=\mathbf X^\top\mathbf W\mathbf X\succeq0$ by
+@prp-glm-information, $\nabla^2\ell\preceq0$ and $\ell$ is concave; full column rank gives
+$\mathcal I\succ0$, strict concavity, and uniqueness of the maximizer. $\square$
+:::
+
+::: {.remark}
+## When the maximizer fails to exist: separation
+Strict concavity guarantees the maximizer is unique *if it exists*, but for logistic regression it may
+fail to exist. If a hyperplane $\mathbf x^\top\boldsymbol\beta=0$ perfectly separates the successes from
+the failures, the likelihood increases without bound as $\|\boldsymbol\beta\|\to\infty$ along the
+separating direction, and the IRLS weights $W_i=n_ip_i(1-p_i)\to0$. For a concrete health-data instance,
+take a subgroup table in which all $8$ treated patients respond and none of the $6$ controls do: the
+fitted treated odds are $8/0$, the estimated log odds ratio marches off to $+\infty$, and no finite
+$\hat\beta_1$ solves the score equation. This is **complete separation**; the
+finite-sample maximum likelihood estimator does not exist, even though the population parameter is
+perfectly well defined. The phenomenon is benign in large randomized trials but common in sparse
+subgroup tables, and it motivates the penalized and Bayesian fits of Chapter 8. $\blacktriangleleft$
+:::
+
+::: {.remark}
+## Overdispersion: where the dispersion re-enters
+@thm-glm-score showed that $\phi$ cancels from the estimating equation, so $\hat{\boldsymbol\beta}$ is the
+same whether the binomial or Poisson dispersion takes its nominal value $\phi=1$ or not. That does not
+make $\phi$ irrelevant. Real trial and count data are often **overdispersed**: the observed spread of the
+proportions or counts exceeds the $V(\mu)=\mu(1-\mu)$ or $V(\mu)=\mu$ that the family mandates, usually
+because of unmodeled heterogeneity between patients or clusters (extra-binomial or extra-Poisson
+variation). The point estimates $\hat{\boldsymbol\beta}$ remain valid, but the model-based standard errors
+from $(\mathbf X^\top\mathbf W\mathbf X)^{-1}$, computed as if $\phi=1$, are then too small. The standard
+remedies estimate a free dispersion $\hat\phi>1$ and inflate every standard error by $\sqrt{\hat\phi}$
+(quasi-likelihood), or move to a genuinely overdispersed model such as the negative binomial or a
+random-effects GLM, the latter being the subject of Chapter 8. The one thing overdispersion never does is
+change which $\hat{\boldsymbol\beta}$ solves the score equation. $\blacktriangleleft$
+:::
+
+### Large-sample distribution of the estimator
+
+The estimator $\hat{\boldsymbol\beta}$ is a maximum likelihood estimator of a regular parametric model,
+so its large-sample behavior is governed by the general theorem of Chapter 5. We state the specialization
+and verify its hypotheses.
+
+::: {#cor-glm-asymptotic-normality}
+## Asymptotic normality of the GLM estimator
+Consider the GLM of @def-glm with true coefficient $\boldsymbol\beta_0$, fixed dimension $p$, and design
+sequence such that $\frac1n\mathbf X^\top\mathbf W(\boldsymbol\beta_0)\mathbf X\to\mathbf A$ for a positive
+definite limit $\mathbf A$, with the regularity conditions (A1) to (A3) of @thm-mle-asymptotic-normality
+holding (they do for the canonical link with full column rank by @lem-canonical-hessian). Then the
+maximum likelihood estimator satisfies
+$$
+\sqrt n\,(\hat{\boldsymbol\beta}-\boldsymbol\beta_0)\;\xrightarrow{d}\;\mathcal N_p\!\bigl(\mathbf 0,\;\mathbf A^{-1}\bigr),
+$$ {#eq-glm-asymptotic-normality}
+and in the working finite-sample form
+$\hat{\boldsymbol\beta}\;\dot\sim\;\mathcal N_p\!\bigl(\boldsymbol\beta_0,\,(\mathbf X^\top\mathbf W\mathbf X)^{-1}\bigr)$.
+A standard error for $\hat\beta_j$ is the square root of the $(j,j)$ entry of
+$(\mathbf X^\top\hat{\mathbf W}\mathbf X)^{-1}$, with $\hat{\mathbf W}=\mathbf W(\hat{\boldsymbol\beta})$.
+:::
+
+*Why this matters.* This corollary is the reason a fitted GLM reports more than a point estimate. The
+limiting covariance $(\mathbf X^\top\mathbf W\mathbf X)^{-1}$ is exactly what statistical software returns
+as the squared standard errors next to each coefficient, and exponentiating a Wald interval for
+$\hat\beta_j$ (the next remark) is how the same software produces the confidence interval for an odds
+ratio or rate ratio that a meta-analysis then carries forward. Without this theorem an estimate would be a
+bare number with no measure of its uncertainty, and no indirect comparison could be built on it.
+
+::: {.proof}
+The GLM is a parametric model with log-likelihood @eq-glm-loglik, score
+$\mathbf U(\boldsymbol\beta)=\mathbf X^\top\mathbf D\boldsymbol\Sigma^{-1}(\mathbf y-\boldsymbol\mu)$
+(@thm-glm-score), and Fisher information $\mathcal I_n(\boldsymbol\beta)=\mathbf X^\top\mathbf W\mathbf X$
+(@prp-glm-information), where the subscript $n$ records that this is the information in all $n$
+observations. The per-observation scores are independent with mean zero (by @thm-glm-score each summand
+of @eq-glm-score has expectation $\propto\mathbb E[y_i-\mu_i]=0$) and finite covariance, so the
+hypotheses of @thm-mle-asymptotic-normality are exactly the stated regularity conditions. For the
+canonical link, @lem-canonical-hessian shows the Hessian is the constant matrix
+$-\mathbf X^\top\mathbf W\mathbf X$, so condition (A3) (a local uniform law for the Hessian) holds
+trivially and the model is regular on a neighborhood of $\boldsymbol\beta_0$; condition (A2) is
+$\mathbf A\succ0$. Applying @thm-mle-asymptotic-normality with total information
+$\mathcal I_n(\boldsymbol\beta_0)$ and the scaling
+$\frac1n\mathcal I_n(\boldsymbol\beta_0)=\frac1n\mathbf X^\top\mathbf W\mathbf X\to\mathbf A$ yields
+@eq-glm-asymptotic-normality. The finite-sample statement substitutes $\mathcal I_n^{-1}=(\mathbf X^\top\mathbf W\mathbf X)^{-1}$
+for $\frac1n\mathbf A^{-1}$, and consistency of $\hat{\mathbf W}$ for $\mathbf W(\boldsymbol\beta_0)$
+(continuity of $\mathbf W(\cdot)$ and $\hat{\boldsymbol\beta}\xrightarrow{p}\boldsymbol\beta_0$) with the
+continuous mapping theorem justifies the plug-in standard error. $\square$
+:::
+
+::: {.remark}
+## Standard errors for odds ratios and rate ratios
+The reported effect is usually not $\hat\beta_j$ but the odds ratio $e^{\hat\beta_j}$ or rate ratio
+$e^{\hat\beta_j}$. By the delta method (@thm-delta-method) with $h(\beta)=e^\beta$ and $h'(\beta)=e^\beta$,
+$$
+\mathrm{SE}\bigl(e^{\hat\beta_j}\bigr)\approx e^{\hat\beta_j}\,\mathrm{SE}(\hat\beta_j),
+$$
+and a confidence interval for the odds ratio is obtained by exponentiating the endpoints of a Wald
+interval for $\beta_j$, which respects the positivity of the ratio. $\blacktriangleleft$
+:::
+
+::: {.remark}
+## Why this matters for indirect comparison
+Everything in this section runs once per trial arm when an indirect comparison is assembled. The score
+equation locates each arm's fitted log-odds or log-rate; iteratively reweighted least squares computes it
+at the cost of a few linear regressions; the asymptotic theory attaches a standard error to it. A network
+meta-analysis then treats those per-arm link-scale effects, with their standard errors, as the data it
+combines (Chapters 13 to 15). The estimation machinery here is therefore not a detour: it is the exact
+procedure that turns a stack of trial two-by-two tables into the log odds ratios and variances the later
+chapters pool. $\blacktriangleleft$
+:::
+
+## Deviance {#sec-deviance}
+
+The residual sum of squares of Chapter 6 measured the misfit of a linear model and drove its
+$F$-tests. Its GLM generalization is the **deviance**, and the idea behind it is a direct translation of
+that story. In a linear model, misfit is the squared gap between the data and the fit; in a GLM, where the
+response need not be normal, the natural currency of fit is not squared error but log-likelihood, so we
+measure misfit by how far the fitted model's log-likelihood falls short of the best any model in the
+family could achieve on this data. That best is the **saturated model**, which fits every observation
+exactly. Twice the log-likelihood gap between the saturated fit and our fit is the deviance: it is
+nonnegative, it is zero exactly when the fit is perfect, and (as @prp-deviance-nonneg will show) for the
+normal linear model it equals the residual sum of squares outright, so the deviance genuinely extends
+Chapter 6 rather than replacing it. Differences of deviances between nested models then test whether added
+covariates improve fit, the GLM version of the extra-sum-of-squares $F$-test. We build these objects in
+order: the saturated model, the deviance itself, its nonnegativity, and finally the model-comparison test.
+
+::: {#def-saturated-model}
+## Saturated model
+The **saturated model** for responses $y_1,\dots,y_n$ is the GLM with one free mean parameter per
+observation, fitted at $\tilde\mu_i=y_i$ for every $i$, with natural parameter
+$\tilde\theta_i=\theta(y_i)$. It attains the largest log-likelihood achievable by any model in the family
+for the given data, because each term $y_i\theta_i-b(\theta_i)$ in @eq-glm-loglik is maximized over
+$\theta_i$ where its derivative vanishes, $\frac{d}{d\theta_i}\bigl[y_i\theta_i-b(\theta_i)\bigr]=y_i-b'(\theta_i)=0$,
+that is at $b'(\theta_i)=y_i$, i.e. at $\theta_i=\tilde\theta_i$. $\blacktriangleleft$
+:::
+
+::: {#def-deviance}
+## Deviance and residual deviance
+Let $\hat{\boldsymbol\beta}$ be the fitted coefficients of a GLM, with fitted means $\hat\mu_i$ and
+natural parameters $\hat\theta_i=\theta(\hat\mu_i)$. The **scaled deviance** is twice the log-likelihood
+gap between the saturated model and the fitted model,
+$$
+D^\ast(\mathbf y;\hat{\boldsymbol\mu})=2\bigl[\ell_{\mathrm{sat}}(\mathbf y)-\ell(\hat{\boldsymbol\beta})\bigr]
+=\frac{2}{\phi}\sum_{i=1}^n w_i\Bigl[y_i(\tilde\theta_i-\hat\theta_i)-b(\tilde\theta_i)+b(\hat\theta_i)\Bigr],
+$$ {#eq-scaled-deviance}
+and the **deviance** is its dispersion-free numerator
+$$
+D(\mathbf y;\hat{\boldsymbol\mu})=\phi\,D^\ast(\mathbf y;\hat{\boldsymbol\mu})
+=2\sum_{i=1}^n w_i\Bigl[y_i(\tilde\theta_i-\hat\theta_i)-b(\tilde\theta_i)+b(\hat\theta_i)\Bigr]
+=\sum_{i=1}^n d_i.
+$$ {#eq-deviance}
+The value of $D$ at the fitted model is the **residual deviance**; the **deviance residual** of
+observation $i$ is $r_i^D=\mathrm{sign}(y_i-\hat\mu_i)\sqrt{d_i}$, so that $\sum_i(r_i^D)^2=D$.
+$\blacktriangleleft$
+:::
+
+*Reader translation.* The deviance is one number saying how far the fitted model sits from a flawless fit:
+large deviance, poor fit; zero deviance, perfect fit. The **scaled** deviance simply divides by the
+dispersion $\phi$ (for the binomial and Poisson $\phi=1$, so the two coincide). The **deviance residuals**
+$r_i^D$ are the GLM's stand-ins for the ordinary residuals $y_i-\hat\mu_i$ of Chapter 6: they carry the
+sign of the raw residual, and their squares sum to the total deviance, exactly as squared residuals summed
+to the residual sum of squares.
+
+::: {.remark}
+## Bregman divergence (a named building block)
+The proof of the next proposition uses one recurring construction, so we name it once here rather than
+mid-argument. For a smooth strictly convex function $b$, the **Bregman divergence** from $v$ to $u$ is
+$$
+D_b(u,v)=b(u)-b(v)-b'(v)(u-v),
+$$
+the gap at the point $u$ between $b$ itself and its tangent line drawn at $v$. Because a convex function
+lies on or above each of its tangents, $D_b(u,v)\ge0$, with equality only when $u=v$; this single
+inequality is what forces the deviance to be nonnegative. No prior acquaintance with the term is assumed:
+it is just a name for "function minus its own tangent line." $\blacktriangleleft$
+:::
+
+::: {#prp-deviance-nonneg}
+## The deviance is a sum of nonnegative Bregman divergences
+Each deviance contribution satisfies $d_i\ge0$, with $d_i=0$ if and only if $\hat\mu_i=y_i$. Hence
+$D\ge0$, and $D=0$ if and only if the fit is saturated. For the normal linear model with identity link,
+$D=\sum_i(y_i-\hat\mu_i)^2$ is the residual sum of squares of Chapter 6.
+:::
+
+::: {.proof}
+Fix $i$ and write $u=\hat\theta_i$, $v=\tilde\theta_i$. Since $\tilde\mu_i=y_i=b'(\tilde\theta_i)=b'(v)$,
+$$
+\tfrac12\,d_i/w_i=y_i(v-u)-b(v)+b(u)=b'(v)(v-u)-b(v)+b(u)=b(u)-b(v)-b'(v)(u-v)=:D_b(u,v).
+$$
+The quantity $D_b(u,v)$ is exactly the Bregman divergence of the convex function $b$ just defined: by
+Taylor's theorem with the Lagrange form of the remainder there is $\xi$ between $u$ and $v$ with
+$D_b(u,v)=\tfrac12 b''(\xi)(u-v)^2\ge0$, since $b''>0$. It is zero exactly when $u=v$, i.e.
+$\hat\theta_i=\tilde\theta_i$, equivalently $\hat\mu_i=b'(\hat\theta_i)=b'(\tilde\theta_i)=y_i$. Thus
+$d_i=2w_iD_b(u,v)\ge0$ with equality iff $\hat\mu_i=y_i$, and summing gives $D\ge0$ with equality iff the
+fit is saturated. For the normal model $b(\theta)=\theta^2/2$, $\theta=\mu$, $w_i=1$, so
+$d_i=2[y_i(y_i-\hat\mu_i)-\tfrac12y_i^2+\tfrac12\hat\mu_i^2]=y_i^2-2y_i\hat\mu_i+\hat\mu_i^2=(y_i-\hat\mu_i)^2$,
+and $D=\sum_i(y_i-\hat\mu_i)^2=\mathrm{RSS}$. $\square$
+:::
+
+The deviance specializes to clean closed forms for the discrete families, which are the ones used in
+practice.
+
+::: {#exm-deviance-forms}
+## Poisson and binomial deviance
+**Poisson.** With $b(\theta)=e^\theta$, $\theta=\log\mu$, $w_i=1$, the $i$-th contribution is
+$d_i=2[y_i\log y_i-y_i-y_i\log\hat\mu_i+\hat\mu_i]=2[y_i\log(y_i/\hat\mu_i)-(y_i-\hat\mu_i)]$, so
+$$
+D_{\mathrm{Poisson}}=2\sum_{i=1}^n\Bigl[y_i\log\frac{y_i}{\hat\mu_i}-(y_i-\hat\mu_i)\Bigr],
+$$
+with the convention $0\log0=0$. If the model has an intercept then $\sum_i\hat\mu_i=\sum_iy_i$ by
+@cor-canonical-score, and the second term vanishes, leaving $D=2\sum_iy_i\log(y_i/\hat\mu_i)$.
+
+**Binomial proportion.** With $y_i=R_i/n_i$, $\hat\mu_i=\hat p_i$, $w_i=n_i$, and writing the fitted
+counts $\hat R_i=n_i\hat p_i$, the contribution is
+$d_i=2n_i[y_i\log(y_i/\hat p_i)+(1-y_i)\log((1-y_i)/(1-\hat p_i))]$, so in count form
+$$
+D_{\mathrm{binom}}=2\sum_{i=1}^n\Bigl[R_i\log\frac{R_i}{\hat R_i}+(n_i-R_i)\log\frac{n_i-R_i}{n_i-\hat R_i}\Bigr].
+$$
+$\blacktriangleleft$
+:::
+
+### Deviance for model comparison
+
+The deviance is to GLMs what the residual sum of squares is to linear models: the basis of the
+goodness-of-fit and nested-model tests. The key fact is that a difference of scaled deviances is exactly
+a likelihood ratio statistic.
+
+::: {#thm-deviance-test}
+## Analysis of deviance
+Let $M_0\subset M_1$ be nested GLMs with the same EDF, the same link, and the same known dispersion
+$\phi$, with $p_0<p_1$ parameters, fitted by maximum likelihood with residual deviances $D_0\ge D_1$.
+Then the scaled deviance difference equals the likelihood ratio statistic for $M_0$ within $M_1$,
+$$
+\frac{D_0-D_1}{\phi}=2\bigl[\ell(\hat{\boldsymbol\beta}_1)-\ell(\hat{\boldsymbol\beta}_0)\bigr],
+$$ {#eq-deviance-diff}
+and under $M_0$, as $n\to\infty$,
+$$
+\frac{D_0-D_1}{\phi}\;\xrightarrow{d}\;\chi^2_{\,p_1-p_0}.
+$$ {#eq-deviance-chisq}
+When $\phi$ is unknown (as for the normal or gamma families) it is replaced by a consistent estimator
+$\hat\phi$ and $(D_0-D_1)/\{\hat\phi(p_1-p_0)\}$ is referred to an $F_{p_1-p_0,\,n-p_1}$ distribution.
+:::
+
+::: {.proof}
+By @eq-scaled-deviance the scaled deviance of a model is $D^\ast=2[\ell_{\mathrm{sat}}-\ell(\hat{\boldsymbol\beta})]$,
+and the saturated log-likelihood $\ell_{\mathrm{sat}}(\mathbf y)$ does not depend on which fitted model
+is used. Subtracting,
+$$
+\frac{D_0-D_1}{\phi}=D_0^\ast-D_1^\ast
+=2[\ell_{\mathrm{sat}}-\ell(\hat{\boldsymbol\beta}_0)]-2[\ell_{\mathrm{sat}}-\ell(\hat{\boldsymbol\beta}_1)]
+=2[\ell(\hat{\boldsymbol\beta}_1)-\ell(\hat{\boldsymbol\beta}_0)],
+$$
+which is @eq-deviance-diff: the saturated term cancels and what remains is twice the maximized
+log-likelihood gap between the two models, i.e. the log likelihood ratio statistic for testing $M_0$
+inside $M_1$. Under $M_0$ this statistic converges in distribution to $\chi^2_{p_1-p_0}$ by Wilks's
+theorem (@thm-wilks), the number of degrees of freedom being the difference $p_1-p_0$ in the number of
+free parameters. The $F$ reference distribution for unknown $\phi$ follows from writing the statistic as
+a ratio of the deviance difference to an independent estimator of $\phi$ scaled by its degrees of
+freedom, exactly as the linear-model $F$-test of Chapter 6 arises from the ratio of two sums of squares.
+$\square$
+:::
+
+::: {.remark}
+## Reading an analysis-of-deviance table
+Theorem @thm-deviance-test licenses the standard workflow: fit a sequence of nested models, tabulate
+their residual deviances, and test each added term by referring the drop in deviance to a chi-square (or
+$F$) distribution on the added degrees of freedom. This is the GLM counterpart of the analysis-of-variance
+$F$-test used for the linear model of Chapter 6: the drop in deviance plays the role of the extra
+regression sum of squares, and for the normal family with the identity link the deviance test reduces to
+exactly that $F$-test. The residual deviance of a single model, compared to
+its degrees of freedom $n-p$, is itself a rough absolute goodness-of-fit check, because under a
+correctly specified model with $\phi$ known the residual deviance is approximately $\chi^2_{n-p}$ in
+favorable (large per-group count) regimes. The worked example of @sec-glm-worked carries this out by
+hand. $\blacktriangleleft$
+:::
+
+## Non-collapsibility of the odds ratio and the hazard ratio {#sec-noncollapsibility}
+
+We now reach the phenomenon that distinguishes nonlinear-link GLMs from the linear model and that
+reverberates through the rest of the book. In a linear model the coefficient of a treatment indicator is
+both the effect within every covariate stratum and the effect on the population average, because
+expectation is linear. For the odds ratio and the hazard ratio this is false: an effect that is constant
+across strata need not equal the effect computed from the population-averaged risks. The marginal and the
+conditional effect are different numbers, and the difference is not bias from confounding but an
+arithmetic consequence of the nonlinearity of the link.
+
+To see why the linear model is the special case, write the marginal treatment effect on the identity
+scale as the average of the stratum-specific effects. With no confounding,
+$$
+\mathbb E_X[\mu_1(X)]-\mathbb E_X[\mu_0(X)]=\mathbb E_X\bigl[\mu_1(X)-\mu_0(X)\bigr]=\delta,
+$$
+so if the within-stratum difference is a constant $\delta$, the population-average difference is that same
+$\delta$. Linearity of the expectation is doing all the work; the odds ratio and hazard ratio break
+precisely because their scales are nonlinear.
+
+For a health researcher the phenomenon is concrete before it is formal. Suppose a trial reports a
+conditional odds ratio of $3.5$ for an active drug versus control, and that this same $3.5$ holds in both
+younger and older patients, so there is no effect modification by age. Yet when the two age groups are
+pooled and a single odds ratio is computed from the combined response rates, the answer is about $3.14$,
+not $3.5$. Nothing was confounded and no subgroup interaction was hidden; the pooled number simply differs
+from the common stratum number by arithmetic. The whole of this section formalizes that observation, and
+its consequence for a systematic review is immediate: an odds ratio reported by a trial is a *conditional*
+effect tied to the covariates in that trial's model, whereas an indirect comparison may need a *marginal*
+effect for a target population, and the two are not interchangeable even under flawless randomization. The
+numbers $3.5$ and $3.14$ reappear, computed exactly, in @exm-noncollapsible-or.
+
+### A precise definition
+
+We work with two treatments, indexed by the potential outcomes $Y(0),Y(1)$ of [Notation](/notation.qmd), and a
+baseline covariate $X$ that stratifies the population. Write $\mu_t(x)=\mathbb E[Y(t)\mid X=x]$ for the
+stratum-specific mean outcome under treatment $t$, and assume throughout this section the no-confounding
+identity $\mathbb E[Y(t)]=\mathbb E_X[\mu_t(X)]$, so that the marginal mean is the average of the
+conditional means. We compare effects measured on the scale of a strictly increasing transform $g$, the
+effect measure's link (logit for the odds ratio).
+
+::: {#def-non-collapsibility}
+## Collapsibility and non-collapsibility of an effect measure
+For a strictly increasing transform $g$ define the **conditional effect** in stratum $x$ and the
+**marginal effect** by
+$$
+\psi_g(x)=g(\mu_1(x))-g(\mu_0(x)),
+\qquad
+\psi_g^{\mathrm M}=g\bigl(\mathbb E_X[\mu_1(X)]\bigr)-g\bigl(\mathbb E_X[\mu_0(X)]\bigr).
+$$ {#eq-cond-marg-effect}
+The effect measure based on $g$ is **collapsible** over $X$ if, whenever the conditional effect is
+constant in $x$ (no effect modification on the $g$-scale), $\psi_g(x)\equiv\psi_g$, the marginal effect
+equals that common value, $\psi_g^{\mathrm M}=\psi_g$, for every distribution of $X$ and every pair of
+stratum means $\mu_0(\cdot),\mu_1(\cdot)$ consistent with it. The measure is **non-collapsible** if it is
+not collapsible, that is, if there exist stratum means with constant conditional effect for which
+$\psi_g^{\mathrm M}\neq\psi_g$. $\blacktriangleleft$
+:::
+
+In plain terms, a measure is **collapsible** when a conditional effect that is identical in every stratum
+is inherited unchanged by the pooled population, no matter how large or small the strata are; it is
+**non-collapsible** when pooling can move that common number even though nothing modifies the effect from
+one stratum to the next.
+
+The definition isolates the question cleanly: collapsibility is the statement that the link commutes with
+averaging across strata when the conditional effect is constant. For some scales it does.
+
+::: {#prp-collapsibility-rd-rr}
+## The risk difference and the risk ratio are collapsible
+The identity-scale effect measure (the risk difference, $g(\mu)=\mu$) and the log-scale effect measure
+(the risk ratio, $g(\mu)=\log\mu$) are collapsible over $X$.
+
+[machine-checked: `theories/STC.v`, `Lemma STC_collapse_linear`]
+:::
+
+::: {.proof}
+**Risk difference.** Suppose $\psi_{\mathrm{id}}(x)=\mu_1(x)-\mu_0(x)\equiv\delta$. By linearity of
+expectation,
+$$
+\psi_{\mathrm{id}}^{\mathrm M}=\mathbb E_X[\mu_1(X)]-\mathbb E_X[\mu_0(X)]=\mathbb E_X[\mu_1(X)-\mu_0(X)]=\mathbb E_X[\delta]=\delta.
+$$
+**Risk ratio.** Suppose $\psi_{\log}(x)=\log\mu_1(x)-\log\mu_0(x)\equiv\rho$, equivalently
+$\mu_1(x)=e^\rho\mu_0(x)$ for all $x$. Taking expectations, $\mathbb E_X[\mu_1(X)]=e^\rho\mathbb E_X[\mu_0(X)]$,
+so
+$$
+\psi_{\log}^{\mathrm M}=\log\frac{\mathbb E_X[\mu_1(X)]}{\mathbb E_X[\mu_0(X)]}=\log e^\rho=\rho.
+$$
+In both cases the marginal effect equals the common conditional effect for every distribution of $X$, so
+the measure is collapsible. The mean-difference (identity-link) case is the one verified in the Coq
+development, where it is proved from linearity of expectation alone, exactly the property that the
+nonlinear logit lacks. $\square$
+:::
+
+### The odds ratio is non-collapsible
+
+The contrast with the logit scale is sharp, and a single explicit example proves non-collapsibility.
+
+::: {#exm-noncollapsible-or}
+## A two-stratum non-collapsible odds ratio
+Read $X$ as an age group ($0$ for younger, $1$ for older patients), split evenly across the trial, and
+read each pair of numbers below as the probability of response under control and under an active drug in
+that age group. Let $X\in\{0,1\}$ be this binary prognostic covariate with $P(X=0)=P(X=1)=\tfrac12$, and
+let the stratum-specific outcome probabilities under control and treatment be
+$$
+\mu_0(0)=0.3,\quad \mu_1(0)=0.6,\qquad \mu_0(1)=0.6,\quad \mu_1(1)=0.84.
+$$
+The conditional log odds ratio is *the same in both strata*. In stratum $X=0$,
+$$
+\psi_{\mathrm{logit}}(0)=\mathrm{logit}(0.6)-\mathrm{logit}(0.3)
+=\log\frac{0.6/0.4}{0.3/0.7}=\log\frac{1.5}{0.428571\ldots}=\log 3.5=1.25276\ldots,
+$$
+and in stratum $X=1$,
+$$
+\psi_{\mathrm{logit}}(1)=\mathrm{logit}(0.84)-\mathrm{logit}(0.6)
+=\log\frac{0.84/0.16}{0.6/0.4}=\log\frac{5.25}{1.5}=\log 3.5=1.25276\ldots .
+$$
+So the conditional effect is constant, $\psi_{\mathrm{logit}}(x)\equiv\log 3.5$, with conditional odds
+ratio $3.5$ and no effect modification on the logit scale.
+
+The marginal risks are the stratum averages,
+$$
+\mathbb E[Y(0)]=\tfrac12(0.3+0.6)=0.45,\qquad \mathbb E[Y(1)]=\tfrac12(0.6+0.84)=0.72,
+$$
+and the marginal log odds ratio is
+$$
+\psi_{\mathrm{logit}}^{\mathrm M}=\mathrm{logit}(0.72)-\mathrm{logit}(0.45)
+=\log\frac{0.72/0.28}{0.45/0.55}=\log\frac{2.571429\ldots}{0.818182\ldots}=\log 3.142857\ldots=1.14513\ldots .
+$$
+The marginal odds ratio is $\tfrac{22}{7}=3.142857\ldots$, strictly less than the conditional odds ratio
+$3.5$. Therefore
+$$
+\psi_{\mathrm{logit}}^{\mathrm M}=1.14513\ldots\;\neq\;1.25276\ldots=\psi_{\mathrm{logit}},
+$$
+so the odds ratio is non-collapsible, proving the negative half of @def-non-collapsibility. The marginal
+odds ratio is *attenuated* toward the null value $1$ relative to the conditional odds ratio $3.5$. This
+direction is not an accident of the chosen numbers: whenever the conditional odds ratio exceeds $1$ and
+the baseline risks genuinely differ across strata, the marginal odds ratio falls strictly between $1$ and
+the conditional value, so it is always pulled toward the null. The general statement, and its proof from
+the convexity of the logit (Jensen's inequality, @thm-jensen), are the content of the starred
+@exr-glm-noncollapse; the mechanism is unpacked in the remark just below. $\blacktriangleleft$
+:::
+
+::: {.remark}
+## Non-collapsibility is not confounding
+The example is engineered so that there is no confounding: we specified the potential-outcome stratum
+means $\mu_t(x)$ directly and used $\mathbb E[Y(t)]=\mathbb E_X[\mu_t(X)]$ to form the marginal risks, as
+would hold in a randomized trial where $X$ is a pure prognostic factor balanced across arms. No
+backdoor path, no omitted common cause, and yet the marginal and conditional odds ratios differ. The
+mechanism is Jensen's inequality (@thm-jensen): the marginal effect applies the nonlinear logit to the
+*average* risk, $g(\mathbb E_X[\mu_t(X)])$, whereas the constant conditional effect lives on the
+*average of the logits*; for a nonaffine $g$ these disagree,
+$$
+g\bigl(\mathbb E_X[\mu_t(X)]\bigr)\neq\mathbb E_X\bigl[g(\mu_t(X))\bigr],
+$$
+and the two halves of the contrast fail to cancel. The risk difference and risk ratio escape this fate
+because, as @prp-collapsibility-rd-rr shows, their links interact linearly with the averaging.
+$\blacktriangleleft$
+:::
+
+### The hazard ratio, and why this seeds later chapters
+
+The same mechanism afflicts the hazard ratio of survival analysis. A precise treatment requires the
+survival function and the proportional-hazards model, which we develop later, but the statement and its
+cause can be recorded now. If the cause-specific hazard under treatment $t$ in stratum $x$ is
+$h_t(x)$ with a constant conditional hazard ratio $h_1(x)/h_0(x)\equiv r$, the *marginal* hazard ratio,
+formed from the population-averaged survival functions $\bar S_t(u)=\mathbb E_X[\exp(-\int_0^u h_t(x)\,ds)]$,
+is in general not equal to $r$ and moreover drifts with time $u$. The reason is again a nonlinear
+averaging: survival is an exponential functional of the integrated hazard, and the population average of
+an exponential is not the exponential of the average. Concretely, writing the integrated hazard
+$H_t(x,u)=\int_0^u h_t(x)\,ds$, Jensen's inequality (@thm-jensen) applied to the strictly convex map
+$v\mapsto e^{-v}$ gives
+$$
+\bar S_t(u)=\mathbb E_X\!\bigl[e^{-H_t(X,u)}\bigr]\;>\;e^{-\mathbb E_X[H_t(X,u)]},
+$$
+so the population survival curve is not the survival curve of the average patient, and the marginal hazard
+$-\tfrac{d}{du}\log\bar S_t(u)$ it induces is not $r$ times any baseline hazard. This subsection is only a
+conceptual preview: the survival function, the integrated hazard, and the proportional-hazards model are
+developed in later chapters, and the full non-collapsibility proof for the hazard ratio is deferred to
+that machinery (flagged again in @sec-glm-notes). Thus the hazard ratio, like the odds ratio, is
+non-collapsible; this is exactly why the cloglog GLM of @sec-other-links, which encodes a conditional
+proportional-hazards model, cannot be read marginally without care.
+
+::: {.remark}
+## Consequences threaded through the book
+This single section seeds three later developments. In Chapter 11 collapsibility and effect modification
+are separated as the two distinct reasons a stratified and a pooled analysis can disagree, with the odds
+ratio's non-collapsibility as the running example. In Chapter 17 the choice between a conditional and a
+marginal estimand becomes the central design decision of a population-adjusted indirect comparison,
+precisely because on the non-collapsible logit and log-hazard scales the two estimands differ even under
+perfect adjustment. In Chapter 19 the simulated treatment comparison is shown to have two flavors, a
+conditional and a marginal version, that disagree by exactly the gap exhibited in @exm-noncollapsible-or,
+which is why a naive plug-in of covariate means into a fitted logistic model targets the wrong estimand.
+The network meta-analysis of @dias2018nma sidesteps the issue by combining evidence on the conditional
+log-odds scale and never marginalizing, and multilevel network meta-regression resolves it by integrating
+the inverse link over the covariate distribution rather than evaluating it at the mean. $\blacktriangleleft$
+:::
+
+## A fully worked example: logistic regression by hand {#sec-glm-worked}
+
+We carry out a complete logistic regression on a small grouped data set, computing the maximum
+likelihood estimate in closed form, executing one iteration of IRLS by hand to see the machinery move,
+and testing the slope with an analysis of deviance. Every number can be reproduced with a calculator.
+
+**The data.** Two groups defined by a binary covariate $x\in\{0,1\}$, each of $n=10$ trials, with
+observed successes
+$$
+x_1=0:\;\; R_1=2 \text{ of } n_1=10,\qquad
+x_2=1:\;\; R_2=7 \text{ of } n_2=10,
+$$
+so the observed proportions are $y_1=0.2$ and $y_2=0.7$. The model is logistic with linear predictor
+$\eta_i=\beta_0+\beta_1x_i$, design matrix and prior weights
+$$
+\mathbf X=\begin{pmatrix}1&0\\1&1\end{pmatrix},\qquad w_1=w_2=10,\qquad\phi=1.
+$$
+
+**Closed-form maximum likelihood estimate.** The model has two parameters and two groups, so it is
+saturated: the score equations @eq-canonical-score force $\hat p_i=y_i$, the observed proportions. Hence
+$$
+\hat\beta_0=\mathrm{logit}(0.2)=\log\frac{0.2}{0.8}=\log 0.25=-1.38629,
+$$
+$$
+\hat\beta_1=\mathrm{logit}(0.7)-\mathrm{logit}(0.2)=\log\frac{0.7/0.3}{0.2/0.8}=\log\frac{2.33333}{0.25}=\log 9.33333=2.23359.
+$$
+The fitted odds ratio for the covariate is $e^{\hat\beta_1}=9.3333=\tfrac{(7/3)}{(2/8)}$, the cross-product
+ratio of the two-by-two table, as it must be for a saturated logistic model.
+
+**One iteration of IRLS from $\boldsymbol\beta^{(0)}=(0,0)^\top$.** At the start the linear predictors are
+$\eta_i^{(0)}=0$, so $p_i^{(0)}=\tfrac12$ for both groups, and the logit-link quantities are
+$d\mu/d\eta=p(1-p)=0.25$ and $g'(\mu)=1/(p(1-p))=4$. The working response @eq-working-response and the
+working weights @eq-glm-information are
+$$
+z_i^{(0)}=\eta_i^{(0)}+\frac{y_i-p_i^{(0)}}{p_i^{(0)}(1-p_i^{(0)})},
+\qquad
+W_i^{(0)}=n_i\,p_i^{(0)}(1-p_i^{(0)}).
+$$
+Group 1: $z_1=0+\dfrac{0.2-0.5}{0.25}=-1.2$, $\;W_1=10(0.25)=2.5$. Group 2:
+$z_2=0+\dfrac{0.7-0.5}{0.25}=0.8$, $\;W_2=10(0.25)=2.5$. The weighted least squares step @eq-irls solves
+$\mathbf X^\top\mathbf W\mathbf X\,\boldsymbol\beta=\mathbf X^\top\mathbf W\mathbf z$ with
+$$
+\mathbf X^\top\mathbf W\mathbf X=\begin{pmatrix}W_1+W_2&W_2\\W_2&W_2\end{pmatrix}=\begin{pmatrix}5&2.5\\2.5&2.5\end{pmatrix},
+\qquad
+\mathbf X^\top\mathbf W\mathbf z=\begin{pmatrix}W_1z_1+W_2z_2\\W_2z_2\end{pmatrix}=\begin{pmatrix}-1.0\\2.0\end{pmatrix}.
+$$
+Subtracting the second equation from the first eliminates $\beta_1$: $2.5\,\beta_0=-1.0-2.0=-3.0$, so
+$\beta_0^{(1)}=-1.2$; back-substituting, $2.5(-1.2)+2.5\,\beta_1=2.0$ gives $\beta_1^{(1)}=2.0$. Thus
+$$
+\boldsymbol\beta^{(1)}=(-1.2,\;2.0)^\top.
+$$
+One step has moved the estimate from $(0,0)$ a large fraction of the way to the maximum likelihood value
+$(-1.386,\,2.234)$. A second IRLS iteration, evaluated at $\boldsymbol\beta^{(1)}$ where
+$p_1^{(1)}=1/(1+e^{1.2})=0.2315$ and $p_2^{(1)}=1/(1+e^{-0.8})=0.6900$, yields
+$\boldsymbol\beta^{(2)}=(-1.377,\,2.224)^\top$, and the iterates converge to the closed-form estimate
+above. This illustrates @thm-irls concretely: each step is an ordinary weighted least squares fit of the
+synthetic response $\mathbf z$ on $\mathbf X$.
+
+**Testing the slope by analysis of deviance.** The fitted (saturated) two-parameter model has residual
+deviance $D_1=0$ by @prp-deviance-nonneg, since $\hat p_i=y_i$. Compare it to the null,
+intercept-only model $\mathrm{logit}(p)=\beta_0$, whose maximum likelihood estimate is the pooled
+proportion $\hat p=(R_1+R_2)/(n_1+n_2)=9/20=0.45$, giving fitted counts $\hat R_i=n_i\hat p=4.5$ in each
+group. Its residual deviance from the binomial formula of @exm-deviance-forms is
+$$
+D_0=2\sum_{i=1}^2\Bigl[R_i\log\frac{R_i}{\hat R_i}+(n_i-R_i)\log\frac{n_i-R_i}{n_i-\hat R_i}\Bigr].
+$$
+Group 1 ($R_1=2$): $2\log\frac{2}{4.5}+8\log\frac{8}{5.5}=2(-0.81093)+8(0.37469)=-1.62186+2.99753=1.37567$.
+Group 2 ($R_2=7$): $7\log\frac{7}{4.5}+3\log\frac{3}{5.5}=7(0.44183)+3(-0.60614)=3.09282-1.81841=1.27441$.
+Summing and doubling, $D_0=2(1.37567+1.27441)=2(2.65008)=5.30016$.
+
+The analysis-of-deviance statistic for testing $H_0:\beta_1=0$ is, by @thm-deviance-test with $\phi=1$,
+$$
+D_0-D_1=5.30016-0=5.300\;\;\text{on}\;\;p_1-p_0=1\;\text{degree of freedom}.
+$$
+Referred to the $\chi^2_1$ distribution, whose $95\%$ quantile is $3.841$, the observed value $5.300$
+exceeds the critical value, so $H_0$ is rejected at the $5\%$ level; the upper-tail probability is
+$P(\chi^2_1>5.300)=0.0213$. The covariate is associated with the outcome, with estimated odds ratio
+$e^{2.234}=9.33$. This is the complete logistic-regression workflow, estimate, algorithm, and test,
+carried out by hand.
+
+## Notes and references {#sec-glm-notes}
+
+The exponential dispersion family and the unifying GLM framework are due to @mccullagh1989glm, whose
+Chapters 2 and 4 contain the mean-variance identity @thm-glm-mean-variance, the score equations
+@thm-glm-score, the iteratively reweighted least squares algorithm @thm-irls, and the deviance
+@def-deviance; our development gives full proofs of statements that the monograph often presents as
+calculations. The cumulant-generating-function proof of @thm-glm-mean-variance follows the exponential
+family tradition and uses the moment results of Chapter 4 (@def-mgf, @thm-mgf-moments). The asymptotic
+normality of the estimator, @cor-glm-asymptotic-normality, is the specialization to the GLM of the
+general maximum likelihood theory of Chapter 5 (@thm-mle-asymptotic-normality, @def-fisher-information,
+@thm-information-equality); the analysis-of-deviance test @thm-deviance-test rests on Wilks's theorem
+(@thm-wilks). The IRLS connection to weighted least squares ties the chapter back to the normal equations
+of Chapter 6 (@thm-ols-normal-equations) and the projection geometry of @def-hat-matrix.
+
+The treatment of GLMs as the outcome models of indirect comparison, with the linear predictor written as
+a study baseline plus relative treatment effects on the link scale, is the framework of @dias2018nma,
+whose Chapter 4 develops logistic, Poisson, and other GLM likelihoods for trial data and combines them on
+the conditional log-odds and log-rate scales. The non-collapsibility of the odds ratio
+(@exm-noncollapsible-or) is a classical fact of categorical data analysis; the numerical example here is
+the one used in the companion proof catalogue (catalogue result B.13). The collapsibility of the
+mean-difference (identity-link) effect, @prp-collapsibility-rd-rr, has a machine-checked counterpart in
+the Coq development at `theories/STC.v`, `Lemma STC_collapse_linear`, which proves marginal equals
+conditional for linear models from linearity of expectation alone; the proof there isolates exactly the
+property that the nonlinear logit lacks. The non-collapsibility of the hazard ratio is stated here and
+proved in full once the survival machinery is available; this is the one result of the chapter left as a
+forward reference rather than proved in place.
+
+## Exercises {#sec-glm-exercises}
+
+A starred exercise, marked $\star$, has a full worked solution in Appendix F. The first four exercises are
+low-barrier warm-ups and interpretation questions; the remainder mix computation and proof.
+
+::: {#exr-glm-fitted-prob}
+**(Warm-up.) From linear predictor to fitted probability.** A logistic model gives a patient the linear
+predictor $\eta=-0.4$. Compute the fitted probability $p=g^{-1}(\eta)=e^\eta/(1+e^\eta)$. If a treatment
+indicator has coefficient $\beta_1=\log 2$, by what multiplicative factor do the patient's odds of
+response change on treatment, and what is the treated fitted probability? (Use @eq-logistic and
+@eq-odds-ratio.)
+:::
+
+::: {#exr-glm-interpret-or}
+**(Interpretation.) Reading a coefficient as an odds ratio.** A trial arm reports $R=18$ responders out of
+$n=60$, as in @exm-glm-running. (a) Compute the observed proportion, the odds, and the log odds. (b) An
+intercept-only logistic fit returns $\hat\beta_0$ equal to this log odds; state its numerical value. (c) A
+second arm has fitted log odds larger by $0.2$. Write the odds ratio between the two arms, and say in one
+sentence what "$e^{\beta}$ is a *conditional* odds ratio" means to a clinician.
+:::
+
+::: {#exr-glm-identify-link}
+**(Warm-up.) Name the family, link, and variance function.** For each trial outcome, state the natural EDF
+member, its canonical link, and its variance function $V(\mu)$, reading them from the summary table in
+@sec-edf: (a) the number responding out of a fixed number randomized; (b) the count of adverse events over
+a fixed person-time; (c) a continuous biomarker modeled as normal.
+:::
+
+::: {#exr-glm-cond-marg-words}
+**(Interpretation.) Conditional versus marginal, in words.** Without any algebra, explain to a colleague
+why a logistic-regression odds ratio that is identical in every age stratum can differ from the odds ratio
+computed after pooling the ages, and why this is neither confounding nor effect modification. Then state
+which of the two, the conditional or the marginal odds ratio, a network meta-analysis working on the
+log-odds scale actually combines. (See @sec-noncollapsibility and @exm-noncollapsible-or.)
+:::
+
+::: {#exr-glm-edf-gamma}
+**Gamma as an EDF.** Starting from the gamma density with mean $\mu$ and shape $\nu$, verify the entries
+of the summary table in @sec-edf: that $\theta=-1/\mu$, $b(\theta)=-\log(-\theta)$, $\phi=1/\nu$, and
+$V(\mu)=\mu^2$. Confirm $\mathbb E[Y]=\mu$ and $\mathrm{Var}(Y)=\mu^2/\nu$ from @eq-glm-mean-variance, and
+identify the canonical link.
+:::
+
+::: {#exr-glm-canonical-list}
+**Canonical links from the cumulant function.** For each of the Bernoulli, Poisson, and gamma families,
+compute $b'(\theta)$, invert it to obtain $\theta(\mu)=(b')^{-1}(\mu)$, and confirm that the canonical
+link $g_{\mathrm c}=\theta(\cdot)$ is the logit, the log, and the reciprocal respectively.
+:::
+
+::: {#exr-glm-poisson-score}
+**Poisson score equations.** Write out the score equations @eq-glm-score for Poisson regression with the
+log link, and show they reduce to $\sum_i(y_i-\hat\mu_i)\mathbf x_i=\mathbf 0$. Deduce that a Poisson
+log-linear model with an intercept reproduces the total count, $\sum_i\hat\mu_i=\sum_iy_i$. Relate this to
+@cor-canonical-score.
+:::
+
+::: {#exr-glm-irls-probit}
+**($\star$) IRLS for the probit link.** For binary data with the non-canonical probit link
+$g(\mu)=\Phi^{-1}(\mu)$, derive the working weights and working response of @thm-irls explicitly in terms
+of $\Phi$ and its derivative $\Phi'$. Show that the working weight is
+$W_i=n_i\,\Phi'(\eta_i)^2/\{\Phi(\eta_i)(1-\Phi(\eta_i))\}$. Then show that for a non-canonical link the
+observed information differs from the expected information, so Fisher scoring and Newton-Raphson are not
+identical, in contrast to @lem-canonical-hessian.
+:::
+
+::: {#exr-glm-deviance-poisson}
+**Poisson deviance by hand.** Three Poisson observations $y=(3,5,10)$ are fitted by an intercept-only log-linear
+model. Compute $\hat\mu$, then the residual deviance using the Poisson formula of @exm-deviance-forms, and
+the three deviance residuals. Verify that the deviance residuals satisfy $\sum_i(r_i^D)^2=D$.
+:::
+
+::: {#exr-glm-deviance-rss}
+**Deviance generalizes the residual sum of squares.** Prove from @def-deviance that for a normal-response
+GLM with the identity link the deviance equals the residual sum of squares,
+$D=\sum_i(y_i-\hat\mu_i)^2$, recovering the central quantity of Chapter 6. Identify what plays the role of
+$\phi$ and explain why the deviance test of @thm-deviance-test reproduces the linear-model $F$-test in
+this case.
+:::
+
+::: {#exr-glm-offset-rate}
+**Offsets and rate ratios.** A Poisson regression models event counts $y_i$ accrued over person-times
+$t_i$ with $\log\mathbb E[y_i]=\log t_i+\beta_0+\beta_1 x_i$. Show that $\beta_1$ is a log incidence rate
+ratio, that the offset $\log t_i$ enters as a regressor with coefficient fixed at one, and that the score
+equation for $\beta_0$ equates the total observed count to the total fitted count.
+:::
+
+::: {#exr-glm-noncollapse}
+**($\star$) Constructing and bounding a non-collapsible odds ratio.** Let $X\in\{0,1\}$ with $P(X=1)=\pi$, and
+let the conditional odds ratio be a constant $\omega>1$ on the logit scale, with baseline risks
+$\mu_0(0)\neq\mu_0(1)$. (a) Construct a numerical example, different from @exm-noncollapsible-or, in
+which the marginal odds ratio is strictly between $1$ and $\omega$. (b) Prove in general that, under the
+no-confounding identity of @sec-noncollapsibility and with $\omega>1$ and genuinely unequal baseline
+risks, the marginal odds ratio lies strictly between $1$ and the conditional odds ratio $\omega$;
+conclude that the odds ratio is attenuated toward the null. (Hint: write the marginal odds ratio as a
+function of $\pi$ and use the strict convexity of the logistic transform, i.e. @thm-jensen.)
+:::
+
+::: {#exr-glm-wald-or}
+**Wald interval for an odds ratio.** In the worked example of @sec-glm-worked, the estimated information
+for the saturated model is $\mathbf X^\top\hat{\mathbf W}\mathbf X$ with
+$\hat W_i=n_i\hat p_i(1-\hat p_i)$. Compute $\hat{\mathbf W}$ at the maximum likelihood estimate, invert
+$\mathbf X^\top\hat{\mathbf W}\mathbf X$, read off $\mathrm{SE}(\hat\beta_1)$, and use the delta method
+(@thm-delta-method) to give a $95\%$ confidence interval for the odds ratio $e^{\beta_1}$.
+:::
+
+::: {#exr-glm-cloglog}
+**Complementary log-log and grouped survival.** For the cloglog link
+$g(\mu)=\log(-\log(1-\mu))$ with inverse $g^{-1}(\eta)=1-\exp(-e^\eta)$, compute $d\mu/d\eta$ and the IRLS
+working weight. Show that if a continuous event time has hazard scaled by $e^{\mathbf x^\top\boldsymbol\beta}$,
+then the probability of an event in a fixed interval follows a cloglog GLM with covariate coefficients
+$\boldsymbol\beta$ and a baseline offset, and explain why this makes the cloglog coefficient a conditional
+log hazard ratio.
+:::

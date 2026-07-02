@@ -1,0 +1,1140 @@
+---
+title: "Potential Outcomes and Identification"
+---
+
+The statistics of Part I lets us describe a joint distribution of covariates, treatments, and outcomes,
+and from samples of that distribution it lets us estimate conditional expectations such as
+$\mathbb{E}[Y\mid T=t,X=x]$ and marginal expectations such as $\mathbb{E}[Y]$ (recall the conditional
+expectation of @def-conditional-expectation and the estimators of Chapter 5). We can predict, classify,
+and quantify uncertainty. What we cannot yet do is answer a counterfactual question: how would a
+patient's outcome have changed had she received treatment $B$ instead of treatment $A$? The patient who
+received $A$ supplies her outcome under $A$, which we observe; her outcome under $B$ is unobserved, and
+it is unobservable in principle from this patient, because she did not in fact receive $B$ and cannot be
+assigned to both treatments at once. This unobservability is the *fundamental problem of causal
+inference*, and no amount of data from a single patient resolves it.
+
+Every indirect treatment comparison, however elaborate, is ultimately a statement about such
+counterfactuals: it claims that treatment $B$ would do better or worse than treatment $C$ in some target
+population, even though no trial randomized those two treatments head to head. Before we can compare
+treatments across studies, we must be able to say precisely what a treatment effect *is* and under what
+conditions a population can recover it from data. That is the work of this chapter. We develop the
+Neyman-Rubin potential-outcomes model (a bookkeeping device that gives every patient two outcomes, one
+per treatment), which separates *what we want to know*, the counterfactual contrast, from *what we
+observe*, the factual outcome under the received treatment. We state the stable-unit-treatment-value
+assumption (the condition that makes "a patient's outcome under her own treatment" a well-defined object)
+and the consistency identity (the algebra that links the observed outcome to the potential ones) that
+bind the two together. We define the estimands an indirect comparison might target: the average treatment
+effect, the effect on the treated, the effect on the controls, and the conditional average treatment
+effect. We then isolate the two assumptions, ignorability (treatment is as good as random within
+covariate strata) and positivity (every covariate stratum contains both treated and control patients),
+that turn an unobservable counterfactual mean into an observable functional of the data, and we prove the
+identification theorem for the average treatment effect by iterated expectation. Finally we prove that the
+naive treatment-minus-control contrast equals the effect on the treated plus a selection-bias term, which
+makes precise why adjustment is needed when treatment is not randomized.
+
+Throughout we use the causal notation of [Notation](/notation.qmd): $Y(0)$ and $Y(1)$ are the potential
+outcomes under control and active treatment, $T\in\{0,1\}$ is the treatment indicator, $X\in\mathcal{X}$
+collects baseline covariates, $e(x)=P(T=1\mid X=x)$ is the propensity score, $\mu_t(x)=\mathbb{E}[Y(t)\mid
+X=x]$ is the conditional mean potential outcome, $\tau(x)=\mu_1(x)-\mu_0(x)$ is the conditional average
+treatment effect, and $\tau=\mathbb{E}[\tau(X)]$ is the average treatment effect. Two symbols we will lean
+on heavily deserve to be named now, since they are not in the notation chapter: $P_X$ denotes the
+*marginal distribution (law) of the covariates* $X$, and $\mathbb{E}_X[\,\cdot\,]$ denotes an expectation
+taken *over that covariate distribution* (so $\mathbb{E}_X[h(X)]=\int h(x)\,dP_X(x)$). Both are spelled
+out again where they first do real work. The development follows @hernan2020whatif and @rosenbaum1983, and
+it corresponds to items B.1 through B.5 of the companion proof catalogue.
+
+Two navigational notes before we begin. First, several results carry a bracketed
+`[machine-checked: ...]` tag naming the corresponding lemma in the companion Coq development; those tags
+are for readers auditing the formalization and can be safely skipped on a first reading. Second, the
+probability facts we borrow from Part I (the tower property @thm-tower-property, dominated convergence
+@thm-dominated-convergence, the graphoid axioms @thm-graphoid-axioms) are cited by number as we use them,
+so you can follow the causal argument without re-deriving the underlying probability.
+
+## A running clinical example {#sec-po-running}
+
+We anchor the whole chapter in one small clinical picture and return to it at every turn. Imagine a
+single center studying a **new drug** ($T=1$) against **standard care** ($T=0$) for a chronic disease.
+The outcome $Y$ is a physical-function score at six months, on a scale where higher is better. Each
+patient has a *baseline prognostic status* $X$, coarsened to two levels: $X=1$ for favorable baseline,
+$X=0$ for poor baseline.
+
+Consider two patients. *Alice* has favorable baseline ($X=1$). If she takes the new drug she would score
+$Y(1)=24$; if she takes standard care she would score $Y(0)=20$. Her personal benefit from the new drug
+is $24-20=4$ points. *Bob* has poor baseline ($X=0$), with $Y(1)=14$ and $Y(0)=10$, again a benefit of
+$4$ points. The catch is structural: Alice can be given only one treatment, so we ever see only one of her
+two numbers. If she takes the new drug we record $24$ and her $20$ stays hidden forever; if she takes
+standard care we record $20$ and her $24$ is the counterfactual we can never observe. The same holds for
+Bob and for every patient.
+
+These two patients are representatives of the two covariate strata of the fully worked population in
+@exm-confounding-gformula, whose stratum means are exactly Alice's and Bob's numbers. We will use Alice
+and Bob to make each definition concrete, and near the end we will put real probabilities on this
+population and watch a naive analysis report a benefit of $9$ when the truth is $4$. Keep the picture in
+mind: two hidden numbers per patient, one revealed, and a chapter's worth of machinery devoted to
+recovering *averages* of the hidden ones.
+
+## The Neyman-Rubin model {#sec-po-rubin}
+
+The framework begins by positing, for each unit, not one outcome but two: the outcome that would be
+realized under each of the two treatments. These are the potential outcomes. They live on the same
+probability space as the observed data, and they are ordinary random variables; what distinguishes them
+is that only one of the two is ever revealed for any given unit.
+
+Before the formal definition, fix the picture the formalism encodes. Think of $\omega$ as *one patient*,
+and of the probability space $(\Omega,\mathcal{F},P)$ as the mathematical version of the sentence "draw a
+patient at random from the population." The set $\Omega$ is the population of patients; $P$ says how likely
+each kind of patient is to be drawn; a random variable is any number attached to a patient (her covariates,
+her treatment, her outcome). In this language Alice and Bob are two particular points $\omega\in\Omega$,
+and a potential outcome is just a rule that assigns each patient the score she *would* get under a given
+treatment.
+
+::: {#def-potential-outcome}
+## Potential outcomes
+Fix a probability space $(\Omega,\mathcal{F},P)$ whose points $\omega\in\Omega$ index the units of a
+population. A pair of **potential outcomes** is a pair of random variables
+$$
+Y(0):\Omega\to\mathbb{R},\qquad Y(1):\Omega\to\mathbb{R},
+$$
+where $Y(1)(\omega)$ is the outcome unit $\omega$ would experience under active treatment and
+$Y(0)(\omega)$ the outcome it would experience under control. More generally, for a treatment label
+$t\in\{0,1\}$ we write $Y(t)$ for the potential outcome under treatment $t$, so that $Y(t)=t\,Y(1)+(1-t)\,Y(0)$
+as a function of the label. Both $Y(0)$ and $Y(1)$ are assumed to be well-defined, measurable, and (unless
+stated otherwise) integrable, that is, $Y(0),Y(1)\in L^1(P)$. $\blacktriangleleft$
+:::
+
+[machine-checked: `theories/PotentialOutcomes.v`, `Record potential_outcomes`, `Definition potential_outcome`]
+
+**Reader translation.** Every patient carries two numbers, the outcome she would get under the new drug
+and the outcome she would get under standard care. For Alice these are $Y(1)(\omega)=24$ and
+$Y(0)(\omega)=20$. Only the one matching the treatment she actually receives is ever seen; the other is
+hidden but no less real. A note on the two kinds of "$t$": a *lowercase* $t\in\{0,1\}$ is a fixed label
+we choose (as in "the potential outcome $Y(t)$ under treatment $t$"), whereas the *uppercase* $T$ we meet
+next is the random treatment a patient actually receives. Watching this lowercase-versus-uppercase
+distinction (notation convention 2 of [Notation](/notation.qmd)) saves a great deal of confusion; the
+switch is doing real work every time it appears.
+
+The causal effect of treatment on a *single* unit is the difference between that unit's two potential
+outcomes. We name it because it is the quantity an idealized experiment on one patient, repeated in two
+parallel worlds, would measure.
+
+::: {#def-individual-effect}
+## Individual treatment effect
+The **individual treatment effect** (ITE) for unit $\omega$ is
+$$
+\tau(\omega)=Y(1)(\omega)-Y(0)(\omega).
+$$
+It is itself a random variable on $\Omega$, measurable whenever $Y(0)$ and $Y(1)$ are. $\blacktriangleleft$
+:::
+
+**Reader translation.** The ITE is one patient's personal benefit or harm from treatment, the difference
+between her two hidden numbers. Alice's ITE is $24-20=4$ and Bob's is $14-10=4$. It is the thing we would
+most like to report to a patient, and, by the very next theorem, exactly the thing no data set can ever
+deliver.
+
+The individual effect is exactly what we would like to know and exactly what we can never observe. The
+reason is structural, not a matter of sample size: for each unit, one of the two potential outcomes is
+realized and the other is *counterfactual*, the outcome under the treatment the unit did not receive. The
+next theorem makes this precise. In plain words it says: *two different worlds can produce identical
+observed data yet have different causal effects, so no analysis of the observed data alone can recover the
+effect.* Formally, two genuinely different populations, differing in their individual effects and even in
+their average effect, can produce identical observed data, so no procedure that reads only the observed
+data can recover the individual effect.
+
+::: {#thm-fundamental-problem}
+## The fundamental problem of causal inference
+Let the **observed outcome** under a treatment assignment $T:\Omega\to\{0,1\}$ be
+$Y=Y(T)$, that is, $Y(\omega)=Y(T(\omega))(\omega)$. There exist two pairs of potential outcomes
+$(Y(0),Y(1))$ and $(Y'(0),Y'(1))$ on a common space, and a common assignment $T$, such that the observed
+data $(T,Y)$ and $(T,Y')$ have the same joint distribution, yet the individual treatment effects differ
+at some unit:
+$$
+Y(1)-Y(0)\;\not\equiv\;Y'(1)-Y'(0).
+$$
+Consequently no function of the observed data $(T,Y)$ alone equals the individual treatment effect, and
+no such function equals the average individual effect either.
+:::
+
+[machine-checked: `theories/PotentialOutcomes.v`, `Lemma ITE_unobservable`]
+
+::: {.proof}
+We exhibit two worlds that agree on everything observable and disagree on the effect. Take any nonempty
+$\Omega$ and let every unit be treated, $T(\omega)=1$ for all $\omega$. Define
+$$
+\text{World A:}\quad Y(1)\equiv 1,\ Y(0)\equiv 0,
+\qquad
+\text{World B:}\quad Y'(1)\equiv 1,\ Y'(0)\equiv 1 .
+$$
+Because $T\equiv 1$, in both worlds the observed outcome is the potential outcome under treatment:
+$Y=Y(1)\equiv 1$ in World A and $Y'=Y'(1)\equiv 1$ in World B. Hence $(T,Y)$ and $(T,Y')$ are both the
+constant pair $(1,1)$ and have identical joint laws. The individual effects, however, are
+$Y(1)-Y(0)\equiv 1$ in World A and $Y'(1)-Y'(0)\equiv 0$ in World B, which differ at every unit; the
+average effects $\mathbb{E}[Y(1)-Y(0)]=1$ and $\mathbb{E}[Y'(1)-Y'(0)]=0$ differ as well.
+
+Now suppose some measurable functional $\Psi$ of the observed data satisfied $\Psi(T,Y)=Y(1)-Y(0)$ in
+every world. Applied to the two worlds above, $\Psi$ receives the *same* argument $(1,1)$ in both, so it
+returns the same value; but the targets $Y(1)-Y(0)$ and $Y'(1)-Y'(0)$ differ. This contradiction shows no
+such $\Psi$ exists. The identical argument with the constant targets replaced by their expectations rules
+out a functional returning the average effect. $\square$
+:::
+
+**Why this matters.** This impossibility is the logical warrant for the entire book. Because *no* method,
+however clever, can recover an individual effect from observed data, every estimand we pursue afterward, in
+regression, in network meta-analysis, and in indirect treatment comparison alike, is a *population
+average* rather than a person-level prediction. When a later chapter targets an average effect and not a
+personalized one, this theorem is the reason. The rest of the present chapter is the disciplined response
+to it: recover averages when individual effects are hopeless.
+
+The construction in the proof is deliberately extreme: with everyone treated there are no controls, so the
+control outcome $Y(0)$ is pure counterfactual and the data carry no information about it. The remainder of
+the chapter is the disciplined response to this problem. We cannot recover individual effects, but with
+the right structural assumptions we can recover *averages*. The first such assumption concerns how the
+observed outcome is generated from the potential ones.
+
+## SUTVA and the consistency identity {#sec-po-sutva}
+
+Writing $Y=Y(T)$ already smuggles in an assumption. It presumes that the outcome a unit displays under its
+received treatment is its own potential outcome under that treatment, unaffected by which treatments other
+units received and unambiguous as to which "version" of the treatment was given. These are the two
+components of the stable-unit-treatment-value assumption. Before the formal statement: SUTVA is what lets
+us pretend each patient lives in her own bubble, with one clearly defined "new drug" and one clearly
+defined "standard care", so that her observed score is simply whichever of her two potential scores matches
+the treatment she got.
+
+::: {#def-sutva}
+## Stable unit treatment value assumption (SUTVA)
+Let the population receive an assignment vector $\mathbf{t}=(t_\omega)_{\omega\in\Omega}\in\{0,1\}^\Omega$,
+and let $Y_\omega(\mathbf{t})$ denote the outcome unit $\omega$ would experience under the *full* vector
+$\mathbf{t}$. The **stable unit treatment value assumption** consists of two parts.
+
+- **(SUTVA-1) No interference.** Each unit's outcome depends on the assignment vector only through that
+  unit's own component: for all $\mathbf{t},\mathbf{t}'$ and all $\omega$,
+  $$
+  t_\omega=t'_\omega\ \Longrightarrow\ Y_\omega(\mathbf{t})=Y_\omega(\mathbf{t}').
+  $$
+- **(SUTVA-2) No hidden versions.** There is a single, well-defined version of each treatment level, so
+  that the label $t\in\{0,1\}$ determines the intervention unambiguously.
+
+$\blacktriangleleft$
+:::
+
+[machine-checked: `theories/CausalAssumptions.v`, `Definition SUTVA`, `Lemma no_interference_unit_level`]
+
+**Reader translation.** SUTVA says two things in plain clinical terms. First, *no interference*: my outcome
+depends on the treatment *I* take, not on who else in the study happened to be treated. Second, *no hidden
+versions*: "the new drug" names one well-defined intervention, not a grab-bag of different doses or
+regimens masquerading under one label. Only when both hold does it make sense to write a patient's observed
+outcome as her own potential outcome under her own assignment, $Y=Y(T)$.
+
+SUTVA is an assumption, not a theorem; it constrains the world, and it can fail. Interference fails in a
+vaccine trial where one unit's vaccination lowers another unit's infection risk through reduced
+transmission; hidden versions fail when "surgery" silently bundles several distinct procedures of
+differing efficacy. The failure that most threatens indirect comparison is the second one across studies:
+in a network of oncology trials, if one trial's "chemotherapy" arm delivers a higher dose than another's,
+the single label "chemotherapy" hides two different interventions, SUTVA-2 fails, and the shared anchor on
+which the indirect comparison depends is no longer one well-defined treatment. When you later read that two
+trials must share a *common comparator*, this is the assumption being invoked. What SUTVA-1 buys,
+mathematically, is the reduction from a vector-indexed family of outcomes to the two-potential-outcomes
+setup of @def-potential-outcome: under no interference there is a function
+$Y(\cdot)(\cdot):\{0,1\}\times\Omega\to\mathbb{R}$ with $Y_\omega(\mathbf{t})=Y(t_\omega)(\omega)$ for every
+assignment vector, because $Y_\omega(\mathbf{t})$ depends on $\mathbf{t}$ only through $t_\omega$. The
+witness is $Y(t)(\omega):=Y_\omega(\mathbf{t})$ evaluated at any $\mathbf{t}$ with $t_\omega=t$, for
+instance the constant vector $\mathbf{t}\equiv t$; no interference guarantees this does not depend on the
+choice. We may therefore speak of $Y(0)$ and $Y(1)$ as unit-level random variables, exactly as the
+catalogue records (corresponds to B.1 in the proof catalogue).
+
+The bookkeeping is easiest to see in a table. Three patients, each with two potential scores, are assigned
+a treatment; we observe the score in the assigned column and the other is counterfactual.
+
+| Patient | Baseline $X$ | Assigned $T$ | $Y(0)$ | $Y(1)$ | Observed $Y=Y(T)$ | Hidden (counterfactual) |
+|---|---|---|---|---|---|---|
+| Alice | $1$ (favorable) | $1$ (new drug) | $20$ | $24$ | $24$ | $Y(0)=20$ |
+| Bob | $0$ (poor) | $0$ (standard care) | $10$ | $14$ | $10$ | $Y(1)=14$ |
+| Carol | $1$ (favorable) | $0$ (standard care) | $20$ | $24$ | $20$ | $Y(1)=24$ |
+
+Each row shows the fundamental problem in miniature: exactly one number per patient is observed and one is
+forever hidden. The next result is simply the algebra of the "Observed $Y$" column.
+
+With the two potential outcomes in hand and a treatment indicator $T$, the observed outcome is determined
+by a case split: a treated unit shows its treated potential outcome, a control unit shows its control
+potential outcome. The next result records this and its algebraic encoding, which is the workhorse of
+every identification proof to come.
+
+::: {#thm-consistency-identity}
+## Consistency identity
+Under SUTVA, with $T\in\{0,1\}$ the treatment indicator and $Y=Y(T)$ the observed outcome,
+$$
+Y = T\,Y(1) + (1-T)\,Y(0)
+\qquad\text{pointwise on }\Omega.
+$$ {#eq-consistency-identity}
+Equivalently, $Y=Y(t)$ holds on the event $\{T=t\}$ for each $t\in\{0,1\}$. Moreover the treatment-masked
+identities
+$$
+T\,Y = T\,Y(1),
+\qquad
+(1-T)\,Y = (1-T)\,Y(0)
+$$ {#eq-consistency-masked}
+hold pointwise.
+:::
+
+[machine-checked: `theories/PotentialOutcomes.v`, `Definition consistency`, `Lemma consistency_equiv`, `Lemma consistency_expectation`]
+
+::: {.proof}
+Fix $\omega$ and split on the value of $T(\omega)\in\{0,1\}$. If $T(\omega)=1$, the right-hand side of
+@eq-consistency-identity is $1\cdot Y(1)(\omega)+0\cdot Y(0)(\omega)=Y(1)(\omega)$, which equals
+$Y(\omega)=Y(T(\omega))(\omega)=Y(1)(\omega)$; SUTVA-1 makes $Y(1)(\omega)$ depend only on $\omega$'s own
+assignment and SUTVA-2 makes it unambiguous, so this potential outcome is well-defined. If $T(\omega)=0$,
+the right-hand side is $0\cdot Y(1)(\omega)+1\cdot Y(0)(\omega)=Y(0)(\omega)=Y(\omega)$. In both cases the
+two sides agree, proving @eq-consistency-identity; the statement $Y=Y(t)$ on $\{T=t\}$ is the same case
+split read one branch at a time.
+
+For the masked identities, multiply @eq-consistency-identity by $T$ and use that $T$ takes values in
+$\{0,1\}$, so $T^2=T$ and $T(1-T)=0$:
+$$
+T\,Y = T\bigl(T\,Y(1)+(1-T)\,Y(0)\bigr) = T^2\,Y(1) + T(1-T)\,Y(0) = T\,Y(1).
+$$
+Multiplying instead by $1-T$ and using $(1-T)^2=1-T$ and $(1-T)T=0$ gives $(1-T)Y=(1-T)Y(0)$. $\square$
+:::
+
+**Why this matters.** The consistency identity is the single hinge that connects what we observe to what
+we want. Every identification formula in this book, and every indirect-comparison estimator built on it,
+passes through it: it is the one licensed move from an observed $Y$ to a potential outcome $Y(t)$.
+
+The identity @eq-consistency-identity is, in the epidemiological literature, called *consistency*, a word
+that unfortunately also names the convergence of an estimator; the two senses are unrelated and we keep
+them apart by always saying "consistency identity" for the causal one. Its importance is that it lets us
+trade the observed outcome for a potential outcome *inside conditional expectations*, on the event where
+the corresponding treatment was received. This swap is the single bridge across which all identification
+travels. The masked forms @eq-consistency-masked may look like a pointless multiplication by $T$, but the
+point is to *isolate a single arm*: $TY=TY(1)$ keeps only the treated units and equates their observed
+outcome with their treated potential outcome, discarding the controls. That is exactly the algebra behind
+the inverse-probability-weighting estimator of the next chapter (@thm-ipw-unbiased), which reconstructs
+$\mathbb{E}[Y(1)]$ from the treated arm alone; the masked identity is what makes that arm-by-arm
+reconstruction legitimate.
+
+::: {#cor-consistency-swap}
+## Outcome swap under consistency
+Under SUTVA, for each $t\in\{0,1\}$ and any covariate $X$,
+$$
+\mathbb{E}[Y\mid T=t,X] = \mathbb{E}[Y(t)\mid T=t,X]
+\qquad\text{a.s. on }\{P(T=t\mid X)>0\}.
+$$ {#eq-consistency-swap}
+:::
+
+[machine-checked: `theories/PotentialOutcomes.v`, `Lemma consistency_treated_mean`, `Lemma consistency_control_mean`]
+
+::: {.proof}
+By @thm-consistency-identity, $Y=Y(t)$ everywhere on the event $\{T=t\}$. The claim is then an instance of
+a general fact: a conditional expectation given $(T=t,X)$ depends on its integrand only through the
+integrand's values on the event $\{T=t\}$. To see why, recall the defining property of conditional
+expectation (@def-conditional-expectation and @eq-cond-exp-defining): $\mathbb{E}[\,\cdot\mid T=t,X]$ is
+characterized by its integrals against test sets of the form $\{T=t\}\cap B$ with $B$ an $X$-measurable
+set. For two integrands $f$ and $g$ that agree on $\{T=t\}$ we have $f\mathbf{1}_{\{T=t\}\cap B}=
+g\mathbf{1}_{\{T=t\}\cap B}$ pointwise, so their defining integrals coincide for every such test set;
+by the uniqueness clause of @def-conditional-expectation the two conditional expectations are therefore
+a.s. equal. Applying this with $f=Y$ and $g=Y(t)$, which agree on $\{T=t\}$ by consistency, gives
+@eq-consistency-swap wherever the conditioning event has positive probability. $\square$
+:::
+
+**Reader translation.** The corollary says: among patients with covariates $X$ who *actually received*
+treatment $t$, their observed outcome and their potential outcome under $t$ have the same average. The
+proviso is the honest limitation: this only speaks about patient types who are sometimes given treatment
+$t$. It says nothing about the treated potential outcome of a patient type who is never treated, because
+there is simply no one to average. The proviso $P(T=t\mid X)>0$ is exactly the positivity condition of
+@sec-po-assumptions; without it the conditioning event $\{T=t,X=x\}$ can be null and the left-hand
+conditional mean is not defined there.
+
+## Estimands {#sec-po-estimands}
+
+We cannot recover individual effects, so we target averages. Which average depends on the question. This
+section names the standard estimands; the rest of the chapter is about identifying the first of them from
+data. All are defined directly from the potential outcomes, with no reference yet to how treatment was
+assigned, so they are properties of the population, not of any estimator.
+
+One word carries a lot of weight here: *which* population. The "population" in each average is whichever
+population the covariates $X$ are drawn from. In a randomized trial it is the enrolled sample; in a cohort
+study it is the source population; in an indirect treatment comparison it is the decision maker's *target*
+population, which may be neither trial's. An effect that is correct in one population can be wrong in
+another, so keeping track of which population an estimand refers to is the single most important habit for
+the rest of the book.
+
+::: {#def-ate}
+## Average treatment effect
+The **average treatment effect** (ATE) is the population mean of the individual treatment effect,
+$$
+\tau := \mathbb{E}[Y(1)-Y(0)] = \mathbb{E}[Y(1)] - \mathbb{E}[Y(0)].
+$$ {#eq-ate}
+It is the expected change in outcome if the entire population were switched from control to active
+treatment. $\blacktriangleleft$
+:::
+
+[machine-checked: `theories/PotentialOutcomes.v`, `Definition ATE`, `Lemma ATE_split`]
+
+**Reader translation.** The ATE answers "if we treated *everyone* in this population instead of no one, how
+would the average score change?" In the running example it will turn out to be $4$: the average patient
+gains $4$ function points from the new drug.
+
+The second equality in @eq-ate is linearity of expectation, the same step that the Coq lemma `ATE_split`
+records; it already shows that the ATE is built from the two *marginal* mean potential outcomes
+$\mathbb{E}[Y(0)]$ and $\mathbb{E}[Y(1)]$, each of which we will identify separately. Restricting the
+average to the units who actually received treatment gives a different estimand, the one most relevant when
+a regulator asks what a drug did for the patients who took it.
+
+::: {#def-att}
+## Average treatment effect on the treated
+The **average treatment effect on the treated** (ATT) is
+$$
+\tau_{\mathrm{T}} := \mathbb{E}[Y(1)-Y(0)\mid T=1],
+$$ {#eq-att}
+the mean individual effect among units with $T=1$. The symmetric **average treatment effect on the
+controls** (ATC) is $\tau_{\mathrm{C}}:=\mathbb{E}[Y(1)-Y(0)\mid T=0]$. $\blacktriangleleft$
+:::
+
+[machine-checked: `theories/PotentialOutcomes.v`, `Definition ATT`, `Definition ATC`]
+
+**Reader translation.** The ATT restricts the question to the patients who *did* take the new drug: "for
+those actually treated, how much did treatment help on average?" The ATC asks the mirror question of those
+who received standard care. These differ from the ATE whenever the treated and untreated are different
+kinds of patient, which is the usual situation outside a randomized trial.
+
+::: {#def-cate}
+## Conditional average treatment effect
+For covariates $X$, the **conditional average treatment effect** (CATE) is the function
+$$
+\tau(x) := \mathbb{E}[Y(1)-Y(0)\mid X=x] = \mu_1(x)-\mu_0(x),
+\qquad \mu_t(x)=\mathbb{E}[Y(t)\mid X=x],
+$$ {#eq-cate}
+the mean effect within the covariate stratum $X=x$. $\blacktriangleleft$
+:::
+
+**Reader translation.** The CATE is the effect *within a stratum of patients*: the average benefit among
+favorable-baseline patients, and separately among poor-baseline patients. In the running example both
+strata have CATE $4$, so the effect happens to be constant; in general it varies with $x$, and that
+variation, called effect modification, is what makes an effect fail to carry from one population to another.
+The CATE is therefore the building block of every cross-population argument later in the book.
+
+The CATE refines the ATE by covariates, and the ATE is its average: by the tower property
+(@thm-tower-property),
+$$
+\tau = \mathbb{E}[Y(1)-Y(0)] = \mathbb{E}\bigl[\,\mathbb{E}[Y(1)-Y(0)\mid X]\,\bigr] = \mathbb{E}[\tau(X)],
+$$ {#eq-ate-is-mean-cate}
+which is the relation recorded in [Notation](/notation.qmd). This averaging is benign here because we are
+on the identity (mean-difference) scale, where the average of a constant stratum effect is that constant.
+*You do not need this yet, but a signpost for later:* on a nonlinear scale such as the odds ratio, a
+constant stratum effect need not average to itself, a phenomenon called non-collapsibility. We flag it only
+so the reader is not surprised in @def-non-collapsibility and @def-collapsibility, where it is developed
+properly; on the identity scale of this chapter @eq-ate-is-mean-cate holds with no caveat.
+
+It helps to see the four estimands side by side, together with where each surfaces in indirect comparison.
+
+| Estimand | Symbol | Question it answers | Role in ITC |
+|---|---|---|---|
+| Average treatment effect | $\tau$ | Effect if the whole target population switched control to treatment | The marginal, population-average target most population-adjustment methods aim at |
+| Effect on the treated | $\tau_{\mathrm{T}}$ | Effect among patients who actually received treatment | The estimand when the question is specifically about the treated subgroup |
+| Effect on the controls | $\tau_{\mathrm{C}}$ | Effect among patients who received control | The mirror image; appears in some transport arguments |
+| Conditional effect | $\tau(x)$ | Effect within covariate stratum $X=x$ | The building block that carries effect modification across populations |
+
+For orientation: most population-adjustment methods in this book, MAIC and STC in Part IV and ML-NMR in
+Part V, target a *marginal* treatment effect (an ATE-type estimand) in a specified target population, on a
+stated effect scale. The CATE is the object that makes such transport possible, because it is what changes
+across populations when effect modifiers are distributed differently. The three population-level averages
+are tied together by the proportion treated.
+
+::: {#prp-ate-att-atc}
+## Decomposition of the ATE over treatment groups
+Let $p=P(T=1)$. Then
+$$
+\tau = p\,\tau_{\mathrm{T}} + (1-p)\,\tau_{\mathrm{C}}.
+$$ {#eq-ate-decomp}
+:::
+
+[machine-checked: `theories/PotentialOutcomes.v`, `Lemma ATE_decomposition`]
+
+::: {.proof}
+Apply the law of total expectation (@cor-total-expectation) to the integrable variable $Y(1)-Y(0)$, using
+the partition $\{T=1\}\cup\{T=0\}$ of $\Omega$:
+$$
+\tau=\mathbb{E}[Y(1)-Y(0)]
+= P(T=1)\,\mathbb{E}[Y(1)-Y(0)\mid T=1] + P(T=0)\,\mathbb{E}[Y(1)-Y(0)\mid T=0],
+$$
+which is $p\,\tau_{\mathrm{T}}+(1-p)\,\tau_{\mathrm{C}}$ by @eq-att and the definition of $\tau_{\mathrm{C}}$. $\square$
+:::
+
+**Why this matters.** The decomposition says the population effect is a weighted blend of the effect in the
+treated and the effect in the controls. It holds with *no* assumptions whatsoever; in particular the ATE,
+ATT, and ATC need not coincide. They coincide precisely when the individual effect is mean-independent of
+treatment assignment, which is the situation a randomized experiment engineers and which the ignorability
+assumption of the next section formalizes.
+
+## Identifying assumptions: ignorability and positivity {#sec-po-assumptions}
+
+The estimands of @sec-po-estimands are defined from potential outcomes, but data report only $(X,T,Y)$.
+*Identification* is the act of writing an estimand as a functional of the observed-data distribution alone,
+so that it could in principle be computed if we had infinitely much data. Two glosses are worth pinning
+down, because a beginner can slip on both. A *functional* here means a map whose input is a whole
+probability distribution and whose output is a number; identification asks whether the estimand is *pinned
+down* by the distribution of the observable triple $(X,T,Y)$. This is a different question from
+*estimation*, which asks how to compute a good approximation from a finite sample. Identification is the
+infinite-data question; every estimator in later chapters presupposes that the answer to the identification
+question is yes. Without further assumptions the ATE is *not* identified: @thm-fundamental-problem already
+produced two populations with the same observed-data law and different ATEs. Two assumptions close the gap.
+The first asserts that, within strata of the measured covariates, treatment is assigned as if at random,
+independently of the potential outcomes. It comes in three strengths, and it is worth saying up front *why
+there are three*: the identification proof below needs only the weakest (mean ignorability); randomization
+delivers the strongest (strong ignorability) for free; and the balancing-score theory of the next chapter
+needs the strongest. Keeping the three apart lets us assume exactly as much as each result requires.
+
+::: {#def-ignorability}
+## Ignorability (strong, weak, mean)
+Let $X$ be baseline covariates. Three nested forms of **ignorability**, also called *no unmeasured
+confounding* or *conditional exchangeability*, are:
+
+- **Strong ignorability:** $\bigl(Y(0),Y(1)\bigr)\perp T \mid X$, the joint law of the two potential
+  outcomes is conditionally independent of treatment given $X$.
+- **Weak ignorability for $Y(t)$:** $Y(t)\perp T\mid X$ for the single label $t$ in question.
+- **Mean ignorability for $Y(t)$:** $\mathbb{E}[Y(t)\mid T,X]=\mathbb{E}[Y(t)\mid X]$ a.s.
+
+Conditional independence is meant in the sense of @def-conditional-independence. $\blacktriangleleft$
+:::
+
+[machine-checked: `theories/CausalAssumptions.v`, `Definition strong_unconfoundedness`, `Definition weak_unconfoundedness`, `Lemma strong_implies_weak_unconf`]
+
+**Reader translation.** In clinical words, ignorability says: *once we know a patient's covariates $X$,
+knowing which treatment she was given tells us nothing about what her outcome would have been under either
+treatment.* Within a stratum of $X$, the treated and untreated are exchangeable, as if a coin decided their
+treatment. This is what randomization guarantees by design; in an observational study it is a hope, namely
+that $X$ contains every characteristic that influenced both the treatment decision and the outcome. The
+three forms differ in *how much* exchangeability they demand, summarized here:
+
+| Form | Statement | Plain meaning | What it buys |
+|---|---|---|---|
+| Strong | $\bigl(Y(0),Y(1)\bigr)\perp T\mid X$ | Within a stratum, treatment is as-if-random with respect to *both* potential outcomes jointly | Identifies both arms; underwrites the balancing-score and propensity theory of Chapter 10 |
+| Weak (for $Y(t)$) | $Y(t)\perp T\mid X$ | Same, but only for the single arm $t$ | Identifies the mean potential outcome $\mathbb{E}[Y(t)]$ for that one arm |
+| Mean (for $Y(t)$) | $\mathbb{E}[Y(t)\mid T,X]=\mathbb{E}[Y(t)\mid X]$ | Within a stratum, the *average* $Y(t)$ is the same among treated and untreated | The minimum needed to identify the ATE |
+
+These three are genuinely different in strength, and the difference matters for which estimand can be
+identified. The following lemma orders them.
+
+::: {#lem-ignorability-hierarchy}
+## Hierarchy of ignorability
+Strong ignorability implies weak ignorability for both $t=0$ and $t=1$; weak ignorability for $Y(t)$
+implies mean ignorability for $Y(t)$, provided $Y(t)\in L^1$.
+:::
+
+*Reader's note: the proof below is the most technical in the chapter. Its message is simply that the three
+forms sit in a chain, strong $\Rightarrow$ weak $\Rightarrow$ mean. A reader meeting this material for the
+first time may take the chain on faith and skip to the "What to remember" paragraph after it; the machinery
+is here for completeness and for the Coq counterpart.*
+
+::: {.proof}
+*Strong implies weak.* By symmetry (graphoid axiom G1 of @thm-graphoid-axioms, which says
+$A\perp B\mid Z\iff B\perp A\mid Z$) strong ignorability is $T\perp\bigl(Y(0),Y(1)\bigr)\mid X$. The
+decomposition axiom (G2 of @thm-graphoid-axioms, which says that if $T$ is independent of a *pair* given
+$X$ then it is independent of each *member* given $X$) states that $T\perp(U,W)\mid X$ implies
+$T\perp U\mid X$; applying it with $U=Y(t)$ and $W=Y(1-t)$ yields $T\perp Y(t)\mid X$, that is, weak
+ignorability for $Y(t)$, for each $t$.
+
+*Weak implies mean.* Fix $t$ and write $V=Y(t)$. Conditional independence $V\perp T\mid X$ in the sense of
+@eq-cond-indep is equivalent to $\mathbb{E}[f(V)\mid T,X]=\mathbb{E}[f(V)\mid X]$ a.s. for every bounded
+measurable $f$. We must extend this from bounded $f$ to the (possibly unbounded) identity function, and
+this is where $V\in L^1$ enters. The idea is standard: approximate $V$ by bounded functions of $V$, apply
+the identity for each, and pass to the limit. For $m\ge 1$ let $f_m(v)=\max(-m,\min(m,v))$ be the
+truncation of $v$ to the interval $[-m,m]$; each $f_m$ is bounded and measurable, so
+$$
+\mathbb{E}[f_m(V)\mid T,X]=\mathbb{E}[f_m(V)\mid X]\quad\text{a.s.}
+$$
+As $m\to\infty$ the truncation is undone: $f_m(V)\to V$ pointwise (once $m$ exceeds $|V(\omega)|$ the value
+is untouched), and $|f_m(V)|\le|V|\in L^1$ provides a single integrable envelope for all $m$. By the
+conditional form of dominated convergence (the conditional-expectation analogue of
+@thm-dominated-convergence, obtained by applying that theorem inside each conditional expectation) the left
+side converges a.s. to $\mathbb{E}[V\mid T,X]$ and the right side to $\mathbb{E}[V\mid X]$. Hence
+$\mathbb{E}[Y(t)\mid T,X]=\mathbb{E}[Y(t)\mid X]$ a.s., which is mean ignorability. $\square$
+:::
+
+The converse implications fail: mean ignorability constrains only first moments and says nothing about the
+rest of the conditional law, while weak ignorability for one label says nothing about the other. A concrete
+illustration of the first gap: within a stratum $X=x$, suppose the treated potential outcome $Y(1)$ is
+distributed as follows.
+
+| Group | $Y(1)$ takes values | $\mathbb{E}[Y(1)\mid T,X=x]$ | $\mathrm{Var}(Y(1)\mid T,X=x)$ |
+|---|---|---|---|
+| Treated ($T=1$) | $9$ or $11$, each with probability $\tfrac12$ | $10$ | $1$ |
+| Untreated ($T=0$) | $5$ or $15$, each with probability $\tfrac12$ | $10$ | $25$ |
+
+The two conditional means are both $10$, so *mean* ignorability for $Y(1)$ holds; but the two conditional
+distributions differ (variances $1$ versus $25$), so $Y(1)\perp T\mid X$ *fails*. Mean ignorability is
+strictly weaker, and, as the identification proof will show, strictly enough. (@exr-po-mean-vs-weak asks you
+to turn this picture into a fully specified joint law and to check that the ATE is still identified.)
+
+**What to remember.** The practical distillation of the hierarchy is this. A randomized trial aims to make
+treatment independent of the potential outcomes, delivering *strong* ignorability for free. An
+observational analysis must instead *condition on enough covariates* to make treated and untreated patients
+comparable, and it can only hope for ignorability, never verify it. The ATE identification proof needs only
+the weakest form, *mean* ignorability of each arm; we nonetheless usually *state* the strong form, for two
+reasons. First, it is the natural output of randomization, so assuming it costs nothing there. Second, the
+balancing-score and propensity-score theory of the next chapter genuinely needs the full joint
+independence, not merely equal conditional means. So the extra strength is not wasted even though this one
+theorem does not use it. Finally, ignorability is *untestable* from the observed data, because it constrains
+the joint law of $T$ with the partly unobserved potential outcomes. A concrete example makes the danger
+vivid: in rheumatoid arthritis or oncology, disease severity often drives both which treatment a clinician
+chooses and how the patient fares. If severity is recorded, we can condition on it; if it is unmeasured, no
+amount of modeling of the *recorded* covariates repairs the confounding, and no diagnostic run on the data
+can reveal the omission. In a randomized trial ignorability holds by design, with $T$ assigned
+independently of everything, including unmeasured characteristics; in an observational study it demands
+that $X$ contain every confounder.
+
+The second assumption guarantees that every covariate stratum actually contains both treated and control
+units, so that the conditional means we will average are defined everywhere. The intuition is simple and
+worth stating before the inequalities: *we cannot learn the treated outcome for a type of patient who is
+never treated, nor the control outcome for a type who is never a control.* If, say, no frail patient ever
+receives the new drug, the data contain no treated outcomes for frail patients, and the active-arm mean for
+that stratum, hence the population ATE, cannot be recovered without extrapolation.
+
+::: {#def-positivity}
+## Positivity (overlap)
+With propensity score $e(x)=P(T=1\mid X=x)$, **positivity** (or **overlap**) holds for treatment $t$ if
+$$
+P(T=t\mid X=x)>0 \qquad\text{for } P_X\text{-almost every } x\in\mathcal{X},
+$$ {#eq-positivity}
+where $P_X$ denotes the marginal distribution (law) of the covariates $X$, so that "$P_X$-almost every $x$"
+means "for all $x$ except possibly a set of covariate values that occurs with probability zero."
+Equivalently, weak positivity for both treatments is $0<e(x)<1$ a.s. **Strict positivity** strengthens
+this to a uniform bound: there is $\varepsilon\in(0,\tfrac12)$ with
+$$
+\varepsilon\le e(x)\le 1-\varepsilon\qquad\text{for } P_X\text{-almost every } x.
+$$ {#eq-strict-positivity}
+The reason for the stronger, uniform version is estimation stability: estimators that divide by $e(X)$ or
+$1-e(X)$ (the weighting methods of the next chapter) have variance that blows up as the propensity nears
+$0$ or $1$, so a bound bounded away from the endpoints is what keeps them well-behaved.
+$\blacktriangleleft$
+:::
+
+[machine-checked: `theories/CausalAssumptions.v`, `Definition weak_positivity`, `Definition strong_positivity`, `Lemma strong_implies_weak`]
+
+**Reader translation.** Positivity says every kind of patient could, with some chance, have gone either
+way: each covariate stratum contains both treated and control patients. Weak positivity asks only that the
+chance be nonzero; strict positivity asks that it be *bounded away* from zero and one. In the
+indirect-comparison setting this same condition reappears as *covariate overlap between studies*. Picture a
+trial of drug $B$ that enrolled only elderly patients and a trial of drug $C$ that enrolled only young
+patients: there is no covariate region where both drugs are represented, so no reweighting can turn one
+trial's population into the other's, and the comparison of $B$ and $C$ rests entirely on extrapolation.
+
+Strict positivity implies weak positivity: if $\varepsilon\le e(x)\le 1-\varepsilon$ with
+$0<\varepsilon<\tfrac12$ then $0<\varepsilon\le e(x)$ and $e(x)\le 1-\varepsilon<1$, so $0<e(x)<1$. Weak
+positivity is what identification needs, because @cor-consistency-swap and the iterated-expectation
+argument require $P(T=t\mid X)>0$ almost everywhere; strict positivity is what *stable estimation* needs,
+for the variance reason just given. That failure of overlap is the formal reason matching-adjusted indirect
+comparison breaks down when trial populations barely overlap, taken up in Part IV, and it is the bridge to
+the transportability conditions of @def-transportability. Together, ignorability and positivity are
+@rosenbaum1983's **strong ignorability** (corresponds to B.3 and B.4 in the proof catalogue).
+
+## Identification of the average treatment effect {#sec-po-identification}
+
+We can now turn the unobservable ATE into an observable functional of the data. First, one piece of
+notation that is the conceptual hinge of the entire argument. We have two "conditional mean outcome"
+objects, and they look almost identical but mean very different things.
+
+::: {#def-observed-regression}
+## Observed outcome regression
+The **observed outcome regression** is
+$$
+\mu_t^{\mathrm{obs}}(x) := \mathbb{E}[Y\mid T=t,X=x],
+$$
+the average *observed* outcome among units with covariates $x$ who *received* treatment $t$. It is to be
+contrasted with the **potential mean** $\mu_t(x)=\mathbb{E}[Y(t)\mid X=x]$ of @def-cate, the average
+outcome those units *would* have under $t$. $\blacktriangleleft$
+:::
+
+**Reader translation.** $\mu_t^{\mathrm{obs}}(x)$ is a plain regression you can actually fit from data:
+group patients by their covariates $x$ and their received treatment $t$, and average the outcomes you see.
+$\mu_t(x)$ is the causal object we want but cannot see directly: the average outcome those patients *would*
+have under $t$, treated and untreated alike. Identification is precisely the claim that, under ignorability
+and positivity, these two coincide, $\mu_t(x)=\mu_t^{\mathrm{obs}}(x)$, so that a fittable regression equals
+an unfittable counterfactual mean. Alongside it we use $\mathbb{E}_X[\,\cdot\,]$ for an expectation over the
+covariate distribution $P_X$: in $\mathbb{E}_X\bigl[\mu_t^{\mathrm{obs}}(X)\bigr]$ the *outer*
+$\mathbb{E}_X$ averages the stratum-specific regression over the covariate distribution of the *target
+population*, not over the treated group and not over the control group. This outer averaging is the exact
+point where the choice of target population enters, and it is the bridge to population adjustment.
+
+The engine of identification is a single chain of three equalities, applied to each potential-outcome
+mean: peel off the covariate by the tower property, swap the treatment-assignment conditioning by
+ignorability, swap the potential outcome for the observed one by consistency. We isolate the per-arm result
+first.
+
+::: {#lem-mean-potential-identification}
+## Identification of a mean potential outcome
+Assume SUTVA (so the consistency identity @eq-consistency-identity holds), mean ignorability for $Y(t)$,
+and positivity for treatment $t$. Then
+$$
+\mathbb{E}[Y(t)] = \mathbb{E}_X\bigl[\,\mathbb{E}[Y\mid T=t,X]\,\bigr].
+$$ {#eq-gformula}
+:::
+
+::: {.proof}
+We chain three identities; each equality is labeled by the fact that licenses it.
+
+*Step 1 (tower property).* By @thm-tower-property, equivalently @cor-total-expectation, applied to
+$Y(t)\in L^1$ and the $\sigma$-algebra generated by $X$,
+$$
+\mathbb{E}[Y(t)] = \mathbb{E}_X\bigl[\,\mathbb{E}[Y(t)\mid X]\,\bigr].
+$$
+
+*Step 2 (ignorability).* By mean ignorability for $Y(t)$, $\mathbb{E}[Y(t)\mid T,X]=\mathbb{E}[Y(t)\mid X]$;
+evaluating on the event $\{T=t\}$, which by positivity has positive probability for $P_X$-almost every $x$,
+gives $\mathbb{E}[Y(t)\mid X]=\mathbb{E}[Y(t)\mid T=t,X]$ a.s., so
+$$
+\mathbb{E}[Y(t)] = \mathbb{E}_X\bigl[\,\mathbb{E}[Y(t)\mid T=t,X]\,\bigr].
+$$
+
+*Step 3 (consistency).* By the outcome swap of @cor-consistency-swap,
+$\mathbb{E}[Y(t)\mid T=t,X]=\mathbb{E}[Y\mid T=t,X]$ on the positivity event, and substituting yields
+@eq-gformula. Every conditional mean on the right-hand side is a functional of the observed-data law of
+$(X,T,Y)$, so $\mathbb{E}[Y(t)]$ is identified. $\square$
+:::
+
+Subtracting the two arms gives the central identification theorem of the chapter, the result on which
+standardization, inverse-probability weighting, and the entire machinery of Part IV ultimately rest.
+
+::: {#thm-ate-identification}
+## Identification of the ATE (adjustment formula)
+Assume SUTVA, mean ignorability for both $t=0$ and $t=1$ (in particular, strong ignorability suffices),
+and positivity for both treatments. Then the average treatment effect is identified by the **adjustment
+formula** (also called the **g-formula** or **standardization formula**)
+$$
+\tau = \mathbb{E}_X\bigl[\,\mathbb{E}[Y\mid T=1,X] - \mathbb{E}[Y\mid T=0,X]\,\bigr].
+$$ {#eq-ate-identification}
+In the notation of @def-observed-regression, this is
+$\tau=\mathbb{E}_X[\mu_1^{\mathrm{obs}}(X)-\mu_0^{\mathrm{obs}}(X)]$.
+:::
+
+[machine-checked: `theories/CausalAssumptions.v`, `Theorem ATE_identification`]
+
+::: {.proof}
+Apply @lem-mean-potential-identification once with $t=1$ and once with $t=0$, which is legitimate because
+the hypotheses hold for both labels, to obtain
+$\mathbb{E}[Y(1)]=\mathbb{E}_X[\mu_1^{\mathrm{obs}}(X)]$ and
+$\mathbb{E}[Y(0)]=\mathbb{E}_X[\mu_0^{\mathrm{obs}}(X)]$. By @def-ate and linearity of expectation
+(@thm-tower-property gives the outer expectation, linearity gives the subtraction),
+$$
+\tau=\mathbb{E}[Y(1)]-\mathbb{E}[Y(0)]
+=\mathbb{E}_X[\mu_1^{\mathrm{obs}}(X)]-\mathbb{E}_X[\mu_0^{\mathrm{obs}}(X)]
+=\mathbb{E}_X\bigl[\mu_1^{\mathrm{obs}}(X)-\mu_0^{\mathrm{obs}}(X)\bigr],
+$$
+which is @eq-ate-identification. $\square$
+:::
+
+**Why this matters.** The adjustment formula is the population target that every estimator in Part II and
+every population-adjustment method later (G-computation, inverse-probability weighting, MAIC, STC, ML-NMR)
+is built to estimate. Read it as a recipe: within each covariate stratum, take the difference of the
+observed treated and control means; then average those stratum differences using the *target population's*
+covariate distribution. When you later meet a "standardized" or "population-adjusted" indirect comparison,
+this equation is what it is approximating. Because a numerical grip helps before the general theory settles,
+we preview the running population immediately.
+
+::: {#exm-gformula-preview}
+## The adjustment formula at a glance
+Take the two-stratum population of @exm-confounding-gformula (developed in full below): $X\in\{0,1\}$ with
+$P(X=0)=P(X=1)=\tfrac12$, observed regressions $\mu_0^{\mathrm{obs}}(0)=10$, $\mu_1^{\mathrm{obs}}(0)=14$,
+$\mu_0^{\mathrm{obs}}(1)=20$, $\mu_1^{\mathrm{obs}}(1)=24$, and treatment three times more likely in the
+favorable stratum. The adjustment formula @eq-ate-identification averages the *stratum* differences over
+the *population* covariate split $\tfrac12,\tfrac12$:
+$$
+\tau=\tfrac12(14-10)+\tfrac12(24-20)=\tfrac12\cdot4+\tfrac12\cdot4=4 .
+$$
+The naive treatment-minus-control contrast, which instead averages over each arm's *own* (imbalanced)
+covariate mix, will come out to $9$. The gap between $4$ and $9$ is the selection bias the next section
+isolates; the full arithmetic, including the within-arm mixes, is in @exm-confounding-gformula.
+$\blacktriangleleft$
+:::
+
+The adjustment formula is the *population* statement; it tells an analyst with infinite data exactly how to
+combine observable conditional means into the ATE. It also dictates the estimators of the next chapter, of
+which two are central. *G-computation* models the inner regression $\mu_t^{\mathrm{obs}}(x)$ and averages
+it over the empirical covariate distribution; it is identified by exactly this theorem and developed as
+@thm-g-computation-unbiased. *Inverse-probability weighting* instead models the propensity score and
+reweights, recovering the same target through @thm-ipw-unbiased, since the masked identity
+@eq-consistency-masked gives $\mathbb{E}[TY/e(X)]=\mathbb{E}[Y(1)]$, another route to
+$\mathbb{E}[Y(1)]=\mathbb{E}_X[\mu_1^{\mathrm{obs}}(X)]$. You will meet these two first in the next chapter,
+and afterward their combination, the doubly robust estimator @thm-aipw-double-robust, together with the
+dimension-reducing balancing-score theory (@def-balancing-score, @thm-rosenbaum-rubin, @thm-ps-sufficiency)
+that lets the scalar $e(X)$ stand in for the full covariate vector $X$. What the present theorem supplies is
+the identification all of them implement.
+
+::: {.remark}
+It is worth dwelling on a subtlety the proof exposes. It used only *mean* ignorability for each arm, the
+weakest form in @def-ignorability, together with positivity and SUTVA. Yet the assumption we usually
+*state* is *strong* ignorability. Why assume more than we use? Two reasons, and they are not merely
+stylistic. First, strong ignorability is the natural output of randomization: a trial that assigns
+treatment by a coin flip makes $T$ independent of the entire joint law of $(Y(0),Y(1))$, not just of its
+conditional means, so in a trial the strong form is available at no extra cost. Second, the balancing-score
+and propensity-score theory of the next chapter genuinely requires the full conditional independence, not
+equal conditional means alone; the result that conditioning on the scalar $e(X)$ can replace conditioning
+on $X$ (@thm-rosenbaum-rubin) fails under mean ignorability. So the stronger assumption is doing real work
+elsewhere in the book, even though this single identification theorem does not need it.
+$\blacktriangleleft$
+:::
+
+## The naive contrast and selection bias {#sec-po-selection}
+
+Why not simply compare the average outcome among the treated with the average among the controls? That
+naive contrast is what an unadjusted analysis reports, and it is in general *not* the ATE. Here is the
+picture before the algebra: in the running example, clinicians give the new drug preferentially to
+favorable-baseline patients, so the treated arm is stacked with high scorers and the control arm with low
+scorers. Even if the drug did nothing, the treated would out-score the controls simply because they were
+healthier to begin with. That built-in head start is selection bias, and the next theorem locates it
+exactly: the naive contrast equals the effect on the treated plus a term measuring how treated and control
+groups would have differed even under no treatment.
+
+::: {#thm-naive-selection-bias}
+## The naive contrast equals ATT plus selection bias
+Under SUTVA, define the **naive contrast**
+$\Delta_{\mathrm{naive}}=\mathbb{E}[Y\mid T=1]-\mathbb{E}[Y\mid T=0]$. Then
+$$
+\Delta_{\mathrm{naive}}
+= \underbrace{\tau_{\mathrm{T}}}_{\text{ATT}}
++ \underbrace{\bigl(\mathbb{E}[Y(0)\mid T=1]-\mathbb{E}[Y(0)\mid T=0]\bigr)}_{\text{selection bias}} .
+$$ {#eq-naive-decomposition}
+:::
+
+[machine-checked: `theories/PotentialOutcomes.v`, `Lemma selection_bias_decomposition`]
+
+::: {.proof}
+By the consistency identity @thm-consistency-identity, $Y=Y(1)$ on $\{T=1\}$ and $Y=Y(0)$ on $\{T=0\}$, so
+the observed group means are potential-outcome means:
+$$
+\mathbb{E}[Y\mid T=1]=\mathbb{E}[Y(1)\mid T=1],
+\qquad
+\mathbb{E}[Y\mid T=0]=\mathbb{E}[Y(0)\mid T=0].
+$$
+Therefore
+$$
+\Delta_{\mathrm{naive}}=\mathbb{E}[Y(1)\mid T=1]-\mathbb{E}[Y(0)\mid T=0].
+$$
+Add and subtract the counterfactual control mean among the treated, $\mathbb{E}[Y(0)\mid T=1]$. We choose
+precisely this quantity because it is the one bridge between the two observed means: it shares the
+conditioning event $\{T=1\}$ with the first term (so the pair combines into an effect *among the treated*)
+and it shares the potential outcome $Y(0)$ with the second term (so that pair compares the *same*
+counterfactual across the two groups). Concretely,
+$$
+\Delta_{\mathrm{naive}}
+=\bigl(\mathbb{E}[Y(1)\mid T=1]-\mathbb{E}[Y(0)\mid T=1]\bigr)
++\bigl(\mathbb{E}[Y(0)\mid T=1]-\mathbb{E}[Y(0)\mid T=0]\bigr).
+$$
+The first bracket is $\mathbb{E}[Y(1)-Y(0)\mid T=1]=\tau_{\mathrm{T}}$ by linearity of conditional
+expectation and @eq-att; the second is the selection-bias term. This is @eq-naive-decomposition. $\square$
+:::
+
+**Why this matters.** This decomposition is the precise reason an indirect comparison cannot simply pool
+raw arm means across trials. The selection-bias term compares the *untreated* potential outcome $Y(0)$
+between the group that took treatment and the group that did not; it is nonzero exactly when the two groups
+would have differed even absent treatment, which is precisely confounding. It is an identity, not an
+approximation: it holds under SUTVA alone, with no ignorability. Population adjustment exists to remove this
+term. The next corollary shows it vanishes under the strongest form of ignorability, *marginal*
+independence, which is what a randomized trial provides, and that this is what makes the naive contrast
+valid there.
+
+::: {#cor-naive-unbiased-rct}
+## When the naive contrast is the ATE
+Suppose SUTVA holds and treatment is *marginally* ignorable, $\bigl(Y(0),Y(1)\bigr)\perp T$ (no
+conditioning on $X$), as in a marginally randomized experiment. Then the selection-bias term in
+@eq-naive-decomposition is zero and
+$$
+\Delta_{\mathrm{naive}}=\tau_{\mathrm{T}}=\tau.
+$$
+:::
+
+::: {.proof}
+Marginal independence gives $\mathbb{E}[Y(0)\mid T=1]=\mathbb{E}[Y(0)]=\mathbb{E}[Y(0)\mid T=0]$, so the
+selection-bias term in @eq-naive-decomposition is $0$ and $\Delta_{\mathrm{naive}}=\tau_{\mathrm{T}}$.
+Independence also gives $\mathbb{E}[Y(1)-Y(0)\mid T=1]=\mathbb{E}[Y(1)-Y(0)]$, so $\tau_{\mathrm{T}}=\tau$.
+$\square$
+:::
+
+Here "marginally randomized experiment" means the simplest randomized design: treatment is decided by one
+coin flip for every patient, the *same* flip probability for all, with no conditioning on covariates. This
+is the plain randomized controlled trial a health researcher already knows; the word "marginally" only
+signals that the coin ignores $X$ entirely, which is why the independence in the corollary holds without
+any conditioning. (A *stratified* trial, which flips a differently biased coin within each stratum of $X$,
+delivers only the *conditional* independence of @def-ignorability, and there one must still adjust.) When
+ignorability holds only *conditionally* on $X$, as in an observational study or in two trials with
+different case mixes, the selection-bias term is generally nonzero and the naive contrast is biased; the
+remedy is to condition on $X$ and average, which is exactly the adjustment formula @eq-ate-identification.
+This is the formal reason indirect comparisons cannot simply pool raw arm means across studies, and it
+motivates every population-adjustment method in Parts IV and V.
+
+## A worked example: confounding, the g-formula, and selection bias {#sec-po-example}
+
+We now put concrete numbers to the whole machinery in a single population, verifying the adjustment formula
+and the selection-bias decomposition by hand. This is the population Alice and Bob live in: the two
+covariate strata are their favorable ($X=1$) and poor ($X=0$) baselines, and the stratum means are exactly
+their potential scores. The example is deliberately built on the identity scale with a *constant*
+conditional effect, so that the only thing separating the naive contrast from the ATE is confounding, not
+the non-collapsibility studied in @exm-noncollapsible-or; that lets us see selection bias in isolation.
+
+::: {#exm-confounding-gformula}
+## Standardization undoes confounding in a two-stratum population
+Let $X\in\{0,1\}$ be a binary prognostic covariate with $P(X=0)=P(X=1)=\tfrac12$. Treatment is confounded
+by $X$ through the propensity score
+$$
+e(0)=P(T=1\mid X=0)=0.25,\qquad e(1)=P(T=1\mid X=1)=0.75,
+$$
+so that the favorable-baseline stratum $X=1$ is three times as likely to be treated (clinicians steer the
+new drug toward the patients who were already doing better). Assume SUTVA, strong ignorability, and
+positivity (both $e$ values lie strictly in $(0,1)$). The conditional mean potential outcomes are
+$$
+\mu_0(0)=10,\quad \mu_1(0)=14,\qquad \mu_0(1)=20,\quad \mu_1(1)=24,
+$$
+so the conditional average treatment effect is constant, $\tau(0)=\tau(1)=4$. Under ignorability the
+observable regressions equal these conditional means, $\mu_t^{\mathrm{obs}}(x)=\mu_t(x)$.
+
+**True ATE by the adjustment formula (@eq-ate-identification).** Averaging the constant stratum effect,
+$$
+\tau=\mathbb{E}_X[\mu_1(X)-\mu_0(X)] = \tfrac12(14-10)+\tfrac12(24-20) = \tfrac12\cdot 4+\tfrac12\cdot 4 = 4.
+$$
+Equivalently $\mathbb{E}[Y(1)]=\tfrac12(14)+\tfrac12(24)=19$ and $\mathbb{E}[Y(0)]=\tfrac12(10)+\tfrac12(20)=15$,
+giving $\tau=19-15=4$.
+
+**The naive contrast.** Treatment selection skews the covariate mix within each arm. The joint cell
+probabilities are $P(X=x,T=t)=P(X=x)\,e(x)^{t}(1-e(x))^{1-t}$:
+$$
+\begin{aligned}
+&P(X{=}0,T{=}1)=\tfrac12(0.25)=0.125,\quad P(X{=}1,T{=}1)=\tfrac12(0.75)=0.375,\\
+&P(X{=}0,T{=}0)=\tfrac12(0.75)=0.375,\quad P(X{=}1,T{=}0)=\tfrac12(0.25)=0.125.
+\end{aligned}
+$$
+Hence $P(T=1)=P(T=0)=0.5$, and the within-arm covariate distributions are
+$$
+P(X=1\mid T=1)=\frac{0.375}{0.5}=0.75,\qquad P(X=1\mid T=0)=\frac{0.125}{0.5}=0.25.
+$$
+The treated arm is covariate-shifted toward the high-risk stratum, the control arm toward the low-risk
+stratum. Using consistency, $\mathbb{E}[Y\mid T=1]=\mathbb{E}[Y(1)\mid T=1]$ and
+$\mathbb{E}[Y\mid T=0]=\mathbb{E}[Y(0)\mid T=0]$:
+$$
+\begin{aligned}
+\mathbb{E}[Y\mid T=1]&=0.25(14)+0.75(24)=3.5+18=21.5,\\
+\mathbb{E}[Y\mid T=0]&=0.75(10)+0.25(20)=7.5+5=12.5,
+\end{aligned}
+$$
+so the naive contrast is
+$$
+\Delta_{\mathrm{naive}}=21.5-12.5=9.0.
+$$
+The unadjusted analysis overstates the effect by more than a factor of two, reporting $9$ against the truth
+of $4$.
+
+**Selection-bias decomposition (@eq-naive-decomposition).** Because the conditional effect is the constant
+$4$, the effect on the treated is $\tau_{\mathrm{T}}=\mathbb{E}[\tau(X)\mid T=1]=4$. The counterfactual
+control mean among the treated and the factual control mean among the controls are
+$$
+\begin{aligned}
+\mathbb{E}[Y(0)\mid T=1]&=0.25(10)+0.75(20)=2.5+15=17.5,\\
+\mathbb{E}[Y(0)\mid T=0]&=0.75(10)+0.25(20)=7.5+5=12.5,
+\end{aligned}
+$$
+so the selection bias is $17.5-12.5=5.0$. The decomposition checks out:
+$$
+\Delta_{\mathrm{naive}}=\tau_{\mathrm{T}}+\text{selection bias}=4+5=9.0 .
+$$
+The entire discrepancy between the naive contrast and the ATE is the $5.0$ of selection bias, created
+because the treated would have had worse untreated outcomes (mean $17.5$) than the controls did (mean
+$12.5$), purely through the covariate imbalance the propensity score induces.
+
+**Standardization recovers the truth.** The adjustment formula reweights the stratum-specific contrasts by
+the *population* covariate distribution rather than the arm-specific one:
+$$
+\tau=\mathbb{E}_X\bigl[\mu_1^{\mathrm{obs}}(X)-\mu_0^{\mathrm{obs}}(X)\bigr]
+=\tfrac12(14-10)+\tfrac12(24-20)=4 ,
+$$
+matching the true ATE and removing the bias entirely. $\blacktriangleleft$
+:::
+
+The example exhibits the chapter in miniature. The same observed data $(X,T,Y)$ produce a biased number
+($9$) when contrasted naively and the correct number ($4$) when standardized, and the gap is exactly the
+selection-bias term the decomposition isolates. Notice that ATE, ATT, and CATE all equal $4$ here, because
+the effect is constant on the collapsible identity scale; had we measured the effect as an odds ratio the
+marginal and conditional effects would have parted ways even with no confounding, which is the separate
+phenomenon of @def-non-collapsibility and the subject of @def-collapsibility in the next chapter. It is
+worth separating two things this example might otherwise blur. The covariate $X$ here is a *prognostic
+variable* (it predicts the outcome) that is *also a confounder* (it steers treatment), and that is why the
+within-study effect is biased. In an indirect comparison the usual villain is different: it is an *effect
+modifier*, a covariate that changes the size of the treatment effect across its levels, distributed
+differently in two study populations. A baseline imbalance that involves only prognosis, with no effect
+modification, biases the naive within-study contrast (as here) but need not obstruct the cross-study
+transport of a *conditional* effect on a suitable scale. The distinction between prognostic variables,
+confounders, and effect modifiers is the theme of Chapter 11 (@def-prognostic-variable,
+@def-effect-modifier); keep it in view, because the whole logic of population adjustment turns on it.
+
+## Why identification is the foundation of indirect comparison {#sec-po-bridge}
+
+Everything so far concerned a *single* population. This closing section connects that single-population
+identification to the multi-study problem the book exists to solve, in three steps: what carries over
+within a study, what is needed to move across studies, and what therefore becomes central in later chapters.
+
+**Within a study, identification is settled.** One population has one covariate law $P_X$, one propensity
+score $e(x)$, one pair of observed regressions $\mu_t^{\mathrm{obs}}(x)$. The adjustment formula
+@eq-ate-identification identifies the ATE in that population, and the selection-bias decomposition
+@eq-naive-decomposition explains what goes wrong if we ignore the covariates. A randomized trial of $A$
+versus $B$ identifies the $A$-versus-$B$ effect in the trial's own population; a trial of $A$ versus $C$
+identifies the $A$-versus-$C$ effect in *its* own population. Nothing in this chapter compares $B$ with $C$.
+
+**Across studies, indirect comparison is the same logic applied between populations.** To compare $B$ with
+$C$ we exploit a shared anchor: the common treatment $A$. The structure is small enough to tabulate.
+
+| Study | Arms | Within-study effect it identifies | Role |
+|---|---|---|---|
+| $AB$ | $A$ vs $B$ | $d_{AB}$, the effect of $B$ vs $A$ in study $AB$'s population | supplies the $A$-vs-$B$ contrast |
+| $AC$ | $A$ vs $C$ | $d_{AC}$, the effect of $C$ vs $A$ in study $AC$'s population | supplies the $A$-vs-$C$ contrast |
+| target | $B$ vs $C$ | $d_{BC}=d_{AB}-d_{AC}$, valid only if both refer to a *common* population | the quantity we actually want |
+
+The subtraction $d_{BC}=d_{AB}-d_{AC}$ is the indirect (Bucher) comparison of Chapter 14. It is honest only
+when the two within-study effects live in, or can be transported to, a *common* population; otherwise we are
+subtracting effects defined in two different worlds. Transport across populations is governed by the very
+two assumptions of this chapter, now read *between* studies rather than within one. Positivity becomes
+covariate *overlap*: the studies' covariate ranges must intersect, or no reweighting can bridge them (the
+elderly-only versus young-only picture of @sec-po-assumptions is exactly this failure). Ignorability becomes
+the requirement that the covariates explaining between-study differences are *measured and adjusted for*,
+formalized as the transportability conditions of @def-transportability and as the absence of the ecological
+bias of @def-ecological-bias.
+
+**What therefore becomes central later.** Three things that were benign or invisible in one population move
+to the foreground across populations. First, the *estimand*: population-adjustment methods target a marginal
+effect in a *stated target population*, so naming that population is now unavoidable. Second, *effect
+modification*: a covariate whose distribution differs between studies and that modifies the effect will make
+a within-study effect fail to transport, which is why the CATE, not just the ATE, is the object that must be
+carried across. Third, the *effect scale*: benign here on the identity scale, it becomes decisive once
+nonlinear links and the non-collapsibility of @def-collapsibility enter, because then even a correctly
+transported conditional effect need not average to the marginal effect a decision maker wants. The next
+chapter develops the estimators that implement the adjustment formula within a study; Chapters 11 and 12
+extend identification to effect modification and transport; and Parts III to V build these into the
+Bucher comparison, network meta-analysis, MAIC, STC, and ML-NMR that indirect comparison actually requires.
+
+## Notes and references {#sec-po-notes}
+
+The potential-outcomes model is due to @hernan2020whatif's lineage of Neyman, in the 1923 randomization
+analysis of agricultural experiments, and Rubin, who in 1974 extended it to observational studies and named
+the counterfactual framework; Holland's 1986 article crystallized the "fundamental problem of causal
+inference" used in @thm-fundamental-problem. Our treatment follows @hernan2020whatif throughout, with the
+strong-ignorability formulation and the central role of the propensity score from @rosenbaum1983. The
+adjustment formula @eq-ate-identification is the simplest instance of Robins's g-formula (@robins1986); the
+letter "g" stands for *generalized*, since the same construction generalizes to sequences of treatments
+given over time, where it becomes the g-computation algorithm. This chapter corresponds to items B.1
+through B.5 of the companion proof catalogue: potential outcomes and SUTVA (B.1, @def-potential-outcome,
+@def-sutva), the consistency identity (B.2, @thm-consistency-identity), ignorability in its three forms
+(B.3, @def-ignorability), positivity (B.4, @def-positivity), and the identification of the ATE (B.5,
+@thm-ate-identification). The estimators that the adjustment formula underwrites, namely
+inverse-probability weighting, G-computation, and the doubly robust augmented estimator, are catalogue items
+B.6 through B.12 and are developed in the next chapter as @thm-ipw-unbiased, @thm-g-computation-unbiased,
+@thm-aipw-double-robust, and @thm-eif-bound, together with the balancing-score and propensity-score theory
+@def-balancing-score, @thm-rosenbaum-rubin, and @thm-ps-sufficiency.
+
+Several results carry machine-checked tags pointing to the companion Coq development; a reader auditing the
+formalization can follow them via Appendix G, and every other reader may ignore them. The fundamental
+problem is `ITE_unobservable` in `theories/PotentialOutcomes.v`; the consistency identity and its masked and
+swapped forms are `Definition consistency`, `Lemma consistency_equiv`, `Lemma consistency_expectation`,
+`Lemma consistency_treated_mean`, and `Lemma consistency_control_mean` in the same file; the estimands and
+their decomposition are `Definition ATE`, `Definition ATT`, `Definition ATC`, `Lemma ATE_split`, and
+`Lemma ATE_decomposition`; and the selection-bias decomposition is `Lemma selection_bias_decomposition`.
+The assumptions and the ATE identification live in `theories/CausalAssumptions.v`: SUTVA and the
+no-interference reduction are `Definition SUTVA` and `Lemma no_interference_unit_level`; ignorability is
+`Definition weak_unconfoundedness` and `Definition strong_unconfoundedness` with the ordering
+`Lemma strong_implies_weak_unconf`; positivity is `Definition weak_positivity` and
+`Definition strong_positivity` with `Lemma strong_implies_weak`; and the identification theorem is
+`Theorem ATE_identification`. The Coq development states the probabilistic content (the tower property, the
+locality of conditional expectation, and the conditional-independence consequences) as named hypotheses on
+abstract expectation operators, exactly as the pen-and-paper proofs here invoke @thm-tower-property,
+@cor-total-expectation, @thm-graphoid-axioms, and @def-conditional-independence from Chapter 4; the proofs
+in this chapter supply the measure-theoretic justifications the Coq statements take as inputs.
+
+The attributions to Neyman (1923, translated 1990), Rubin (1974), and Holland (1986) rely on sources not
+yet in the bibliography; they are listed with full bibliographic data in the work log for the orchestrator
+to merge. The worked example @exm-confounding-gformula is original to this text.
+
+## Exercises {#sec-po-exercises}
+
+A starred exercise ($\star$) has a full worked solution in Appendix F; the unstarred ones are for practice.
+The first two are gentle warm-ups; the later ones build to short proofs.
+
+::: {#exr-po-warmup-ite}
+## Warm-up: reading potential outcomes
+**(Warm-up.)** Recall Alice from @sec-po-running: her potential function scores are $Y(1)=24$ under the new
+drug and $Y(0)=20$ under standard care. (a) State her individual treatment effect $\tau(\omega)$. (b) If
+Alice is assigned the new drug, write down her observed outcome $Y$ and her counterfactual (hidden)
+outcome, and do the same if she is assigned standard care. (c) In one sentence, explain why, no matter
+which treatment she receives, we can never compute her ITE from her data alone, citing
+@thm-fundamental-problem.
+:::
+
+::: {#exr-po-interpret-estimand}
+## Interpretation: which estimand answers the question?
+**(Interpretation.)** For each question below, name which of the ATE, ATT, ATC, or CATE it asks for, and
+say (one clause) which population the average is over. (a) "Across all eligible patients, how much would
+average function improve if everyone switched from standard care to the new drug?" (b) "Among the patients
+who actually received the new drug, how much did it help on average?" (c) "For favorable-baseline patients
+specifically, what is the average benefit?" (d) A regulator asks what the drug did for the people who took
+it. Which estimand, and why does the answer differ from (a) when treatment was not randomized?
+:::
+
+::: {#exr-po-recompute}
+## Recomputing the worked example
+**(Computation.)** Repeat @exm-confounding-gformula with the propensities changed to $e(0)=0.1$ and
+$e(1)=0.9$, keeping the covariate law and all four conditional means $\mu_t(x)$ unchanged. (a) Recompute
+the within-arm covariate distributions $P(X=1\mid T=1)$ and $P(X=1\mid T=0)$. (b) Recompute the naive
+contrast $\Delta_{\mathrm{naive}}$. (c) Verify the selection-bias decomposition @eq-naive-decomposition
+numerically, and confirm that the standardized contrast @eq-ate-identification still equals $4$. (d)
+Explain in one sentence why sharper confounding (more extreme propensities) enlarges the bias while leaving
+the ATE untouched.
+:::
+
+::: {#exr-po-masked-identity}
+## The masked-outcome identities
+**(Computation and proof.)** Using only $T\in\{0,1\}$ and the consistency identity @eq-consistency-identity,
+prove the two masked identities @eq-consistency-masked, $TY=TY(1)$ and $(1-T)Y=(1-T)Y(0)$, and deduce that
+$\mathbb{E}[TY]=\mathbb{E}[TY(1)]$ and $\mathbb{E}[(1-T)Y]=\mathbb{E}[(1-T)Y(0)]$ for any population. Explain
+why these identities require no ignorability assumption.
+:::
+
+::: {#exr-po-att-atc}
+## ATE, ATT, and ATC in the worked example
+**(Computation.)** In the population of @exm-confounding-gformula, compute the ATT $\tau_{\mathrm{T}}$ and
+the ATC $\tau_{\mathrm{C}}$ directly from their definitions, and verify the decomposition
+$\tau=p\,\tau_{\mathrm{T}}+(1-p)\,\tau_{\mathrm{C}}$ of @prp-ate-att-atc with $p=P(T=1)$. Then modify a
+single conditional mean so that the CATE is no longer constant, and show that ATT and ATC now differ while
+the decomposition still holds.
+:::
+
+::: {#exr-po-mean-vs-weak}
+## Mean ignorability is strictly weaker
+**(Proof.)** Construct a joint law for $(Y(1),T,X)$ in which mean ignorability
+$\mathbb{E}[Y(1)\mid T,X]=\mathbb{E}[Y(1)\mid X]$ holds but weak ignorability $Y(1)\perp T\mid X$ fails.
+(Hint: use the two-row template of @sec-po-assumptions; fix a single stratum $X=x$ and give $Y(1)$ the same
+conditional mean but different conditional variances across $T=0$ and $T=1$, for instance the values
+$\{9,11\}$ among the treated and $\{5,15\}$ among the untreated.) Prove carefully that the conditional means
+are equal (so mean ignorability holds) yet the conditional laws differ (so weak ignorability fails). Confirm
+that the identification of $\mathbb{E}[Y(1)]$ in @lem-mean-potential-identification still goes through,
+illustrating that the proof uses only the first moment.
+:::
+
+::: {#exr-po-positivity-failure}
+## Positivity failure breaks identification ($\star$)
+**(Proof.)** Let $X\in\{0,1\}$ with $P(X=1)=\tfrac12$, and suppose treatment is deterministic in one
+stratum: $e(0)=P(T=1\mid X=0)=0$ while $e(1)=0.5$. Keep SUTVA and strong ignorability. As a preliminary,
+draw the $2\times 2$ table of the four cells $\{X=x,T=t\}$ and mark which cell is *empty* (has probability
+zero); this empty cell is the whole source of the failure. Then: (a) Show that $\mathbb{E}[Y\mid T=1,X=0]$
+is undefined, so the right-hand side of the adjustment formula @eq-ate-identification cannot be evaluated.
+(b) Exhibit two values of $\mu_1(0)=\mathbb{E}[Y(1)\mid X=0]$, consistent with the same observed-data law,
+that yield different ATEs, thereby proving the ATE is not identified when positivity fails. (c) Relate this
+to the covariate-overlap requirement for indirect comparisons discussed in @sec-po-bridge.
+*(Solution in Appendix F.)*
+:::
+
+::: {#exr-po-selection-bias-proof}
+## A symmetric selection-bias decomposition ($\star$)
+**(Challenge.)** Prove the control-side analogue of @thm-naive-selection-bias:
+$$
+\Delta_{\mathrm{naive}}=\tau_{\mathrm{C}}+\bigl(\mathbb{E}[Y(1)\mid T=1]-\mathbb{E}[Y(1)\mid T=0]\bigr),
+$$
+by adding and subtracting $\mathbb{E}[Y(1)\mid T=0]$ instead of $\mathbb{E}[Y(0)\mid T=1]$ in the proof.
+Then average the two decompositions (the ATT-side of @eq-naive-decomposition and this ATC-side) to express
+$\Delta_{\mathrm{naive}}$ as a half-and-half combination, and interpret the resulting symmetric bias term.
+Show that under marginal ignorability both bias terms vanish, recovering @cor-naive-unbiased-rct.
+*(Solution in Appendix F.)*
+:::

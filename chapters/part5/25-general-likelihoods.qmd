@@ -1,0 +1,1496 @@
+---
+title: "General Likelihoods: Survival and Ordered Categorical Outcomes"
+---
+
+## Introduction {#sec-genlik-intro}
+
+The four preceding chapters built multilevel network meta-regression (ML-NMR) on a single integral. An
+individual in an aggregate-data (AgD) study is invisible: we never see the patient's covariate vector
+$\mathbf{x}$, only the study's reported covariate distribution $f_j$. To place an individual-level outcome
+model in the same network as that study, we average the individual model over $f_j$. For a generalized
+linear model (GLM) the object that gets averaged is the conditional mean $g^{-1}(\eta_{jk}(\mathbf{x}))$,
+and the aggregate-level mean is $\bar\theta_{jk}=\int g^{-1}(\eta_{jk}(\mathbf{x}))\,f_j(\mathbf{x})\,
+d\mathbf{x}$ (@thm-aggregation). Chapter 20 showed this average is exact on the identity link
+(@thm-identity-link-exact), is the moment generating function on the log link (@thm-log-link-mgf), and has
+no closed form on the logit link (@thm-logit-no-closed-form); Chapter 22 then computed the intractable
+cases by quasi-Monte Carlo (QMC) on a Sobol' net (@def-sobol-net, @thm-hypercube-integration) with a
+Gaussian copula (@def-gaussian-copula, @thm-sklar) to encode covariate dependence. Chapters 23 and 24
+established the estimands and the Bayesian computation. All of this was carried out for outcomes that fit
+a one-parameter GLM: continuous, binary, and count.
+
+Health-technology-assessment (HTA) practice is dominated by outcomes that do not fit a one-parameter GLM.
+The single most common primary endpoint in oncology submissions is **time to an event**, recorded as a
+possibly right-censored survival time; cardiovascular and respiratory submissions add composite
+time-to-event endpoints; dermatology, oncology, and psychiatry report **ordered categorical** severity
+scales (the Psoriasis Area and Severity Index response bands, the Eastern Cooperative Oncology Group
+performance status, ordinal pain scales). A survival outcome is not summarized by a single mean: it is a
+whole curve, and its natural model lives on the hazard, an object indexed by time as well as by
+covariates. An ordered categorical outcome is a vector of cell probabilities tied together by a
+monotonicity constraint. Neither is a member of the exponential-dispersion family on which Chapters 20 to
+23 were built. The question this chapter answers is whether ML-NMR is confined to that family, or whether
+the aggregation principle is deeper than the GLM that first carried it.
+
+It is deeper. The aggregation in @thm-aggregation never used the GLM structure of the integrand for
+anything except naming it a mean. What the method actually requires is one ingredient: an
+**individual-level conditional likelihood**, a function $\pi_{\mathrm{Ind}}(y\mid\boldsymbol\theta(
+\mathbf{x};\boldsymbol\xi))$ giving the probability (or density) of the outcome $y$ for a patient with
+covariates $\mathbf{x}$ under parameters $\boldsymbol\xi$. Given that one object, the marginal likelihood
+of an AgD individual whose covariates are unobserved is the average of the conditional likelihood over the
+study's covariate distribution, and the arm likelihood is the product of these marginal contributions
+over the (possibly reconstructed) individuals on the arm. This is the **general-likelihood ML-NMR**
+framework of @phillippo2025general, and it makes ML-NMR the only population-adjustment method that extends
+verbatim to any outcome with a parametric individual model. By contrast, matching-adjusted indirect
+comparison (Chapter 18) balances reported moments and so needs the aggregate data in a moment form, and
+simulated treatment comparison (Chapter 19) needs an outcome regression on the IPD scale; neither absorbs
+a censored survival time or an ordinal band without bespoke surgery.
+
+This chapter develops the framework with survival as the leading and hardest case. We define the survival
+function (@def-survival-function) and hazard (@def-hazard) and prove the identity
+$S=\exp(-\int h)$ that lets the hazard parameterize the entire distribution
+(@thm-survival-hazard-relation). We then expose the feature that makes survival genuinely different from a
+GLM: under a proportional-hazards model the conditional log hazard ratio is a clean time-invariant linear
+function of the covariates (@thm-conditional-loghr-ph), yet the *marginal* hazard ratio one would estimate
+from a population is time-varying even when the conditional model is proportional
+(@thm-marginal-hr-time-varying), a survival-scale instance of the non-collapsibility of Chapter 7
+(@def-non-collapsibility). The restricted mean survival time (@def-rmst) repairs the collapsibility defect
+(@thm-rmst-collapsible) at the price of a transportability subtlety we flag for Chapter 26. We derive the
+right-censored individual likelihood (@def-censored-likelihood) from first principles under independent
+censoring (@prp-censored-likelihood-density), then build the two aggregation theorems that are the heart
+of the chapter: the marginal individual likelihood (@thm-marginal-individual-likelihood) and the aggregate
+arm likelihood (@thm-aggregate-marginal-likelihood), both resting on @thm-aggregation. The
+proportional-odds model (@def-proportional-odds) supplies the ordered-categorical case, and the
+general-likelihood theorem (@thm-general-likelihood-mlnmr) unifies everything: one integral, any outcome.
+A fully worked exponential-hazard example, in which every survival probability, every marginal hazard,
+the restricted mean, and the aggregate likelihood can be checked by hand, closes the development. This
+chapter corresponds to results J.1 to J.8 of the proof catalogue.
+
+Throughout, $T\ge 0$ denotes a time-to-event random variable, $S$, $h$, and $H$ its survival, hazard, and
+cumulative-hazard functions, and $g$ the link function (@def-link-function) on whose scale the linear
+predictor $\eta_{jk}(\mathbf{x})$ of [Notation](/notation.qmd) is built. A population $\mathcal{P}$ is a
+distribution over the covariate space $\mathcal{X}$ with density $f_{\mathcal{P}}$; $f_j$ is the
+covariate density of study $j$; $\boldsymbol\xi$ is the full parameter vector. We write
+$L_i(\boldsymbol\xi;y_i)$ for an individual likelihood contribution and $\bar L_{jk}(\boldsymbol\xi)$ for
+the contribution of arm $k$ of an AgD study $j$.
+
+## The core idea and a running example {#sec-genlik-core-idea}
+
+Before any measure theory, here is the entire method in four sentences, together with one small trial to
+hold onto. Every abstract object in this chapter has a concrete counterpart in that trial, and every
+theorem below is an elaboration of one of these four steps. A reader who remembers only this section still
+has the essential idea.
+
+::: {.remark}
+**The general-likelihood recipe, in four steps.**
+
+1. *One patient, covariates known.* Write the likelihood of the outcome for a single patient as if their
+covariates $\mathbf{x}$ were observed: choose a conditional individual likelihood
+$\pi_{\mathrm{Ind}}(y\mid\text{parameters at }\mathbf{x})$. For a binary outcome this is the Bernoulli
+mass; for survival it is the censored kernel $h^{\delta}S$; for an ordinal scale it is a category
+probability.
+2. *One patient, covariates unknown.* In an aggregate-data (AgD) study the patient's $\mathbf{x}$ was never
+recorded, so average the conditional likelihood over the study's reported covariate distribution $f_j$.
+This single integral is the whole population adjustment.
+3. *Whole arm.* Multiply those averaged contributions across the patients (or reconstructed
+pseudo-patients) on the arm.
+4. *Whole network.* Share the treatment-effect parameters across studies, so every study estimates the
+same relative effects on one linear-predictor scale.
+
+Steps 1 and 3 are ordinary likelihood bookkeeping; step 2 is the population adjustment that makes the AgD
+study comparable to the individual-level ones; step 4 is what makes it a network rather than a collection
+of separate models. Chapters 20 to 23 carried out these four steps for continuous, binary, and count
+outcomes. This chapter proves they go through unchanged for survival and ordered categorical outcomes, and
+states the theorem (@thm-general-likelihood-mlnmr) that makes "unchanged" precise. $\blacktriangleleft$
+:::
+
+::: {#exm-genlik-running}
+## A running two-arm myeloma trial
+Throughout the chapter we follow one small oncology example, a stylized version of the multiple-myeloma
+progression-free-survival network of @phillippo2025general. A single binary baseline covariate
+$X\in\{0,1\}$ marks a high-risk cytogenetic subgroup, present in half the comparator population,
+$P(X=1)=q=\tfrac12$. The endpoint is time to progression $T$, in years, modeled with a constant
+(exponential) conditional hazard. On the control arm $C$,
+$$
+h_C(s\mid x)=\lambda_x,\qquad \lambda_0=1,\quad \lambda_1=3\ \ \text{events per year},
+$$
+so a high-risk patient has triple the event rate of a standard-risk patient. Treatment $A$ acts by
+proportional hazards with a covariate-independent hazard ratio $\psi=\tfrac12$: it halves every patient's
+hazard, $h_A(s\mid x)=\tfrac12\lambda_x$, with no effect modification. This conditional model is as clean as
+a generalized linear model. The lesson of the chapter is that its *marginal* summaries nonetheless
+misbehave (the marginal hazard ratio drifts with time, @thm-marginal-hr-time-varying) while its
+aggregate-data likelihood requires a genuine integral (@thm-general-likelihood-mlnmr). We revisit this
+trial after every definition and complete the full computation in @exm-genlik-survival. $\blacktriangleleft$
+:::
+
+The survival-specific symbols of the chapter, each shown on the running trial, are collected here for
+reference; the abbreviations expand as usual (AgD, aggregate data; IPD, individual patient data).
+
+| Symbol | Name | Meaning | Running trial |
+|---|---|---|---|
+| $S(t\mid x)$ | survival function | chance of surviving event-free past $t$ | $e^{-\lambda_x t}$ |
+| $h(t\mid x)$ | hazard | instantaneous event rate among survivors | constant $\lambda_x$ |
+| $H(t\mid x)$ | cumulative hazard | accumulated risk $\int_0^t h$ | $\lambda_x t$ |
+| $f(t\mid x)$ | density | event-time density $h\,S$ | $\lambda_x e^{-\lambda_x t}$ |
+| $\delta$ | event indicator | $1$ event, $0$ right-censored | per patient |
+| $G(t\mid x)$ | censoring survival | chance the censoring time exceeds $t$ | nuisance, cancels |
+| $\psi$ | conditional hazard ratio | ratio of conditional hazards | $0.5$, constant |
+| $\mathrm{mHR}(s)$ | marginal hazard ratio | ratio of population-averaged hazards | time-varying |
+| $\operatorname{RMST}(\tau)$ | restricted mean survival | area under $S$ up to horizon $\tau$ | $\int_0^{\tau}S$ |
+| pseudo-IPD | | patient rows reconstructed from a Kaplan-Meier curve | @exm-genlik-survival |
+
+## The survival function and the hazard {#sec-genlik-survival}
+
+A time-to-event outcome is described equivalently by its distribution function, its survival function, its
+density, or its hazard. The hazard is the modeling target because it is the scale on which the standard
+proportional-hazards and accelerated-failure-time models are linear, and on which the network's relative
+effects are reported.
+
+In plain terms, the plan of this section is: define these four equivalent descriptions of a time-to-event
+outcome, prove that the hazard alone determines all the others (so a model placed on the hazard is
+automatically a complete model of the outcome), and read off the censored likelihood the network will
+consume. Keep the running trial in view throughout: the control hazard there is the single number
+$\lambda_x$, and we will watch every survival probability, density, and cumulative risk flow from it.
+
+::: {#def-survival-function}
+## Survival function
+Let $T\ge 0$ be a time-to-event random variable with cumulative distribution function $F_T$. The
+**survival function** of $T$ is
+$$
+S(t):=P(T>t)=1-F_T(t),\qquad t\ge 0,
+$$ {#eq-genlik-survival-def}
+and, given a covariate vector $\mathbf{x}\in\mathcal{X}$, the **conditional survival function** is
+$S(t\mid\mathbf{x}):=P(T>t\mid \mathbf{X}=\mathbf{x})$. The survival function is non-increasing and
+right-continuous, with $\lim_{t\to-\infty}$ replaced by $S(0^-)=1$; for a *continuous* $T$ it is
+continuous with $S(0)=1$, and for a *proper* distribution (one with $P(T<\infty)=1$) it satisfies
+$\lim_{t\to\infty}S(t)=0$. $\blacktriangleleft$
+:::
+
+**Reader translation.** $S(t)$ is just the probability that a patient has not yet had the event by time
+$t$. It starts at $S(0)=1$, everyone event-free at enrollment, and decays toward $0$. The three properties
+it inherits from the cumulative distribution function of Chapter 4, stated inline so that no back-reference
+is needed, are: $S$ is non-increasing (the chance of surviving longer can only fall as the horizon grows),
+right-continuous, and runs from $S(0)=1$ down to $\lim_{t\to\infty}S(t)=0$ for a proper distribution
+(everyone eventually has the event). We take these as given rather than reprove them. In the running trial
+$S_C(t\mid x)=e^{-\lambda_x t}$, so the one-year survival is $e^{-1}=0.37$ for a standard-risk control
+patient ($\lambda_0=1$) and $e^{-3}=0.05$ for a high-risk one ($\lambda_1=3$): the high-risk stratum is
+depleted far faster. The companion object is the instantaneous event rate among survivors.
+
+::: {#def-hazard}
+## Hazard function and cumulative hazard
+Let $T$ be a continuous time-to-event variable with density $f$ and survival $S$, and fix $t$ with
+$S(t)>0$. The **hazard function** is
+$$
+h(t):=\lim_{\Delta t\downarrow 0}\frac{P(t\le T<t+\Delta t\mid T\ge t)}{\Delta t}
+=\frac{f(t)}{S(t)},
+$$ {#eq-genlik-hazard-def}
+The second equality $h=f/S$, the working form used throughout, is derived in the proof immediately below.
+Conditionally on covariates $h(t\mid\mathbf{x}):=f(t\mid\mathbf{x})/S(t\mid\mathbf{x})$. The
+**cumulative hazard** is
+$$
+H(t):=\int_0^t h(s)\,ds,\qquad H(t\mid\mathbf{x}):=\int_0^t h(s\mid\mathbf{x})\,ds .
+$$ {#eq-genlik-cumhaz-def}
+The quantity $h(t\mid\mathbf{x})\,\Delta t$ is, to first order in $\Delta t$, the conditional probability
+of an event in the next short interval $[t,t+\Delta t)$ given survival to $t$; the hazard is the local
+*intensity* of failure, a rate, not a probability, and it can exceed $1$. A hazard of $0.2$ per year does
+not mean a $20\%$ chance over all follow-up; it means that among patients still event-free at time $t$, a
+fraction of about $0.2\,\Delta t$ have the event in the next interval of length $\Delta t$ years, so
+roughly $2\%$ in the next month. In the running trial the constant control hazard is $\lambda_0=1$ per year
+for a standard-risk patient and $\lambda_1=3$ per year for a high-risk one; the latter exceeds $1$ and is
+still a perfectly valid rate. $\blacktriangleleft$
+:::
+
+::: {.proof}
+We verify the second equality in @eq-genlik-hazard-def, which is the working form. By the definition of
+conditional probability and continuity of $T$,
+$$
+\frac{P(t\le T<t+\Delta t\mid T\ge t)}{\Delta t}
+=\frac{P(t\le T<t+\Delta t)}{\Delta t\,P(T\ge t)}
+=\frac{F_T(t+\Delta t)-F_T(t)}{\Delta t}\cdot\frac{1}{S(t)} ,
+$$
+using $P(T\ge t)=P(T>t)=S(t)$ for continuous $T$. As $\Delta t\downarrow 0$ the first factor tends to
+$F_T'(t)=f(t)$ at every point of differentiability of $F_T$, so the limit is $f(t)/S(t)$. $\square$
+:::
+
+The hazard is not merely one summary among several; it determines the distribution completely. This is the
+identity on which every parametric and semiparametric survival model rests, and it is the reason a model
+specified on the hazard scale yields a coherent likelihood.
+
+Before the formal statement, the idea in one line: the hazard *accumulates* over time into the cumulative
+hazard $H(t)=\int_0^t h$, and survival is the exponential of the negative accumulated risk, $S=e^{-H}$. A
+patient survives past $t$ exactly to the extent that the risk piled up over $[0,t]$ is small. The theorem
+makes this precise and, crucially, invertible: knowing the hazard at every time is the same as knowing the
+whole distribution, so a model that specifies the hazard has specified everything.
+
+::: {#thm-survival-hazard-relation}
+## The survival function is the exponential of minus the cumulative hazard
+Let $T$ be a continuous time-to-event variable whose survival function $S$ is absolutely continuous with
+$S(0)=1$, and let $h=f/S$ and $H(t)=\int_0^t h(s)\,ds$ be its hazard and cumulative hazard. Then for every
+$t\ge 0$ with $S(t)>0$,
+$$
+S(t)=\exp\!\Big(-\!\int_0^t h(s)\,ds\Big)=e^{-H(t)},
+\qquad\text{equivalently}\qquad
+H(t)=-\log S(t).
+$$ {#eq-genlik-S-exp-H}
+The same identity holds conditionally on covariates, $S(t\mid\mathbf{x})=\exp(-H(t\mid\mathbf{x}))$.
+Conversely, any measurable $h\ge 0$ that is locally integrable with $\int_0^\infty h=\infty$ defines,
+through @eq-genlik-S-exp-H, a survival function of a proper continuous distribution with density
+$f=h\,S$; thus the hazard and the distribution are in one-to-one correspondence.
+:::
+
+::: {.proof}
+*Forward direction.* Fix $t_0\ge 0$ with $S(t_0)>0$. Because $S$ is non-increasing, $S(s)\ge S(t_0)>0$
+for all $s\in[0,t_0]$, so $S$ is bounded away from zero on $[0,t_0]$. Since $S$ is absolutely continuous,
+so is $\log S$ on $[0,t_0]$: the logarithm is continuously differentiable on the compact interval
+$[S(t_0),1]$, which contains the range of $S$ over $[0,t_0]$, hence Lipschitz there, and a Lipschitz
+function composed with an absolutely continuous function is absolutely continuous. (Reminder for the
+reader meeting these words: a function is *absolutely continuous* when it is the integral of its own
+derivative, which is exactly the property that makes the fundamental theorem of calculus apply to it; it is
+*Lipschitz* on a set when the ratio of output change to input change stays bounded there. The logarithm has
+derivative $1/u$, which is bounded on $[S(t_0),1]$ because $u$ never drops below $S(t_0)>0$, so it is
+Lipschitz there, and feeding an absolutely continuous input into a Lipschitz function preserves absolute
+continuity.) An absolutely continuous function is the integral of its almost-everywhere derivative (the
+fundamental theorem of calculus for the Lebesgue integral). At every point $s$ where $S$ is differentiable, differentiate the relation $S=1-F_T$ term by term: since
+the density is the derivative of the cumulative distribution function, $F_T'=f$ almost everywhere
+(Chapter 4), the constant $1$ differentiates to $0$, and $S'(s)=-F_T'(s)=-f(s)$ almost everywhere. Hence
+$$
+\frac{d}{ds}\log S(s)=\frac{S'(s)}{S(s)}=-\frac{f(s)}{S(s)}=-h(s)
+\qquad\text{for almost every }s\in[0,t_0].
+$$
+Integrating from $0$ to $t_0$ and using $\log S(0)=\log 1=0$,
+$$
+\log S(t_0)=\log S(0)-\int_0^{t_0}h(s)\,ds=-H(t_0),
+$$
+and exponentiating gives $S(t_0)=e^{-H(t_0)}$. As $t_0$ was arbitrary subject to $S(t_0)>0$, this is
+@eq-genlik-S-exp-H. The conditional statement is identical with $\mathbf{x}$ carried throughout, since for
+each fixed $\mathbf{x}$ the function $s\mapsto S(s\mid\mathbf{x})$ is an absolutely continuous survival
+function.
+
+*Converse.* Let $h\ge 0$ be locally integrable. Then $H(t)=\int_0^t h$ is non-decreasing, absolutely
+continuous, with $H(0)=0$, so $S:=e^{-H}$ is non-increasing, absolutely continuous, $S(0)=1$, and
+$\lim_{t\to\infty}S(t)=e^{-\lim H(t)}=e^{-\infty}=0$ under the stated divergence
+$\int_0^\infty h=\infty$. Hence $S$ is the survival function of a proper continuous distribution. Its
+density is $f=-S'=H'\,e^{-H}=h\,e^{-H}=h\,S$ almost everywhere, and $f/S=h$ recovers the prescribed
+hazard. The map $h\mapsto S$ and its inverse $S\mapsto h=-(\log S)'$ are mutually inverse, giving the
+one-to-one correspondence. $\square$
+:::
+
+::: {.remark}
+**Why the hazard scale.** Identity @eq-genlik-S-exp-H is what lets a model place its structure on the
+hazard and still deliver a likelihood. Specify $h(t\mid\mathbf{x})$, integrate to $H(t\mid\mathbf{x})$,
+exponentiate to $S(t\mid\mathbf{x})$, and the density $f=h\,S$ and the censored likelihood of
+@def-censored-likelihood follow. A constant hazard $h(t\mid\mathbf{x})=\lambda(\mathbf{x})$ gives the
+exponential model $S(t\mid\mathbf{x})=e^{-\lambda(\mathbf{x})t}$; a power-law hazard
+$h(t\mid\mathbf{x})=\lambda(\mathbf{x})\nu t^{\nu-1}$ gives the Weibull model
+$S=e^{-\lambda(\mathbf{x})t^{\nu}}$; a flexible spline on $\log h_0$ gives the M-spline baseline used by
+the `multinma` survival models of @phillippo2025general. In the running trial the control hazard is the
+constant $\lambda_x$, so $H_C(t\mid x)=\lambda_x t$ and $S_C(t\mid x)=e^{-\lambda_x t}$: the entire
+time-to-progression distribution of each stratum is pinned down by the single number $\lambda_x$, which is
+exactly what a one-parameter exponential model asserts. All share the relation
+@eq-genlik-S-exp-H. $\blacktriangleleft$
+:::
+
+This pair of definitions and the identity correspond to J.1, J.2, and J.3 in the proof catalogue.
+
+## The conditional and marginal hazard ratio {#sec-genlik-hazard-ratio}
+
+The relative effect in a survival network is reported on the log-hazard scale, so the link is $g=\log$
+applied to the hazard. Why that scale? Because the Cox proportional-hazards model is the lingua franca of
+oncology and cardiovascular submissions: trials report hazard ratios, regulators and reimbursement agencies
+expect them, and the log-hazard is the scale on which those ratios are additive and, as we are about to
+see, the scale on which the network's shared effect is a single transportable number. The
+proportional-hazards (PH) model writes the conditional hazard as a baseline function modulated by the
+exponential of a linear predictor.
+
+::: {.remark}
+**The proportional-hazards ML-NMR model.** For an individual with covariates $\mathbf{x}$ in study $j$ on
+treatment arm $k$, the PH model is
+$$
+h_{jk}(s\mid\mathbf{x})=h_{0j}(s)\,\exp\!\big(\eta_{jk}(\mathbf{x})\big),
+\qquad
+\eta_{jk}(\mathbf{x})=\mathbf{x}^\top\boldsymbol\beta_1+\gamma_k+\mathbf{x}^\top\boldsymbol\beta_{2,k},
+$$ {#eq-genlik-ph}
+with reference-treatment constraints $\gamma_1=0$ and $\boldsymbol\beta_{2,1}=\mathbf{0}$. Here
+$h_{0j}(s)>0$ is the study-$j$ **baseline hazard**, $\mathbf{x}^\top\boldsymbol\beta_1$ the prognostic
+effect, $\gamma_k$ the treatment main effect, and $\mathbf{x}^\top\boldsymbol\beta_{2,k}$ the
+treatment-by-covariate interaction (effect modification). On the log-hazard scale the model is linear,
+$\log h_{jk}(s\mid\mathbf{x})=\log h_{0j}(s)+\eta_{jk}(\mathbf{x})$; the scalar study intercept $\mu_j$ of
+the GLM notation is here promoted to the baseline log-hazard *function* $\log h_{0j}(s)$, the one feature
+that distinguishes survival from a fixed-mean GLM. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Each study keeps its own baseline; the network shares only the effects.** The subscript $j$ on
+$h_{0j}(s)$ is load-bearing. Every study is allowed its own baseline hazard function, exactly as every
+study in a logistic or normal meta-analysis is allowed its own intercept $\mu_j$. What the network borrows
+across studies is not the baseline risk, which reflects each trial's population, accrual, and follow-up,
+but the *relative* quantities: the treatment main effects $\gamma_k$ and the effect-modifier interactions
+$\boldsymbol\beta_{2,k}$. This is the survival analogue of the fixed-study-intercept, shared-treatment-effect
+structure used throughout Parts III and V: a nuisance baseline per study, common effects across the network.
+It is why a study contributing only a control arm still informs the network (through its baseline and any
+prognostic terms) without pinning down a treatment effect on its own. $\blacktriangleleft$
+:::
+
+::: {#thm-conditional-loghr-ph}
+## Conditional log hazard ratio under proportional hazards
+Under the PH model @eq-genlik-ph, the conditional hazard ratio of treatment $b$ versus treatment $a$ at
+covariate value $\mathbf{x}$ is, for every time $s$,
+$$
+\frac{h_{b}(s\mid\mathbf{x})}{h_{a}(s\mid\mathbf{x})}
+=\exp\!\big(\eta_{b}(\mathbf{x})-\eta_{a}(\mathbf{x})\big),
+\qquad
+\log\frac{h_{b}(s\mid\mathbf{x})}{h_{a}(s\mid\mathbf{x})}
+=(\gamma_b-\gamma_a)+\mathbf{x}^\top(\boldsymbol\beta_{2,b}-\boldsymbol\beta_{2,a}).
+$$ {#eq-genlik-cond-loghr}
+The conditional log hazard ratio is therefore (i) **time-invariant**, free of $s$, and (ii) **affine in
+$\mathbf{x}$**, with slope the difference of interaction vectors. It does not depend on the prognostic
+term $\mathbf{x}^\top\boldsymbol\beta_1$ or on the baseline hazard $h_{0j}$.
+:::
+
+::: {.proof}
+Both arms share the same baseline hazard $h_{0j}(s)$ and prognostic term within a study, so by
+@eq-genlik-ph,
+$$
+\frac{h_b(s\mid\mathbf{x})}{h_a(s\mid\mathbf{x})}
+=\frac{h_{0j}(s)\exp(\mathbf{x}^\top\boldsymbol\beta_1+\gamma_b+\mathbf{x}^\top\boldsymbol\beta_{2,b})}
+{h_{0j}(s)\exp(\mathbf{x}^\top\boldsymbol\beta_1+\gamma_a+\mathbf{x}^\top\boldsymbol\beta_{2,a})} .
+$$
+The positive factor $h_{0j}(s)$ cancels, eliminating all dependence on $s$, and the common prognostic
+factor $\exp(\mathbf{x}^\top\boldsymbol\beta_1)$ cancels. What remains is
+$\exp\big((\gamma_b-\gamma_a)+\mathbf{x}^\top(\boldsymbol\beta_{2,b}-\boldsymbol\beta_{2,a})\big)$. Taking
+logarithms gives @eq-genlik-cond-loghr. Both stated properties are immediate from this expression: there
+is no $s$, and the dependence on $\mathbf{x}$ is linear. $\square$
+:::
+
+**Why this matters.** Because the conditional log hazard ratio is free of time and free of the baseline, one
+comparison in the network is described by a single contrast $\gamma_b-\gamma_a$ (plus interaction terms if
+there is effect modification), not by a whole time-varying curve. That is precisely what lets a survival
+network report one transportable number per treatment comparison, the same kind of estimand the Bucher and
+network-meta-analysis machinery of Part III reported on the log-odds and log-rate scales. Take the property
+away and there is no single "the effect of $b$ versus $a$" to pool.
+
+The conditional log hazard ratio is thus exactly the kind of object the network models: a contrast of
+linear predictors, with effect modification carried by $\boldsymbol\beta_{2,k}$, identifiable from any IPD
+arm with enough events by partial likelihood (Cox) or by full parametric likelihood. The marginal hazard
+ratio, the quantity a single Cox fit to a population would report, is a different and far less docile
+animal. We first record the representation that drives everything.
+
+::: {.remark}
+**Conditional versus marginal, in plain language.** A *conditional* hazard ratio compares two treatments
+for patients with the *same* covariate value $\mathbf{x}$: it is what a covariate-adjusted Cox model
+estimates, and under proportional hazards it is the single number of @thm-conditional-loghr-ph. A
+*marginal* hazard ratio compares the two treatments at the level of whole populations, with covariates
+averaged out: it is what an *unadjusted* Cox model, fitted to a whole trial arm, reports. One might expect
+these to coincide, as they would for a straight-line model. They do not. The reason is survivor selection:
+at any time $s>0$ the patients still at risk are not a random sample of the enrolled population but the ones
+who have not yet had the event, and treatment changes *who* survives. The marginal hazard ratio at time $s$
+therefore compares two differently selected risk sets, and it drifts with $s$ even when the conditional
+ratio is a fixed constant. The next lemma makes "averaged over the survivors" exact; the theorem after it
+shows the drift cannot be avoided. $\blacktriangleleft$
+:::
+
+::: {#lem-survivor-weighted-hazard}
+## Survivor-weighted representation of the marginal hazard
+Let $\mathcal{P}$ have covariate density $f_{\mathcal{P}}$, let the conditional hazard
+$s\mapsto h_t(s\mid\mathbf{x})$ be continuous for each $\mathbf{x}$, and suppose that for every finite
+horizon $\Sigma$ the envelope $\sup_{s\le\Sigma}h_t(s\mid\mathbf{x})$ is $f_{\mathcal{P}}$-integrable in
+$\mathbf{x}$. Define the population (marginal) survival under treatment $t$ as the covariate average
+$S_t^{\mathcal{P}}(s):=\mathbb{E}_{\mathbf{X}\sim f_{\mathcal{P}}}[S_t(s\mid\mathbf{X})]$ and the marginal
+hazard $h_t^{\mathcal{P}}(s):=-\partial_s\log S_t^{\mathcal{P}}(s)$. Then
+$$
+h_t^{\mathcal{P}}(s)=\frac{\int h_t(s\mid\mathbf{x})\,S_t(s\mid\mathbf{x})\,f_{\mathcal{P}}(\mathbf{x})\,
+d\mathbf{x}}{\int S_t(s\mid\mathbf{x})\,f_{\mathcal{P}}(\mathbf{x})\,d\mathbf{x}}
+=\mathbb{E}_{\tilde f_t(\cdot\mid s)}\!\big[h_t(s\mid\mathbf{X})\big],
+$$ {#eq-genlik-survivor-rep}
+where
+$$
+\tilde f_t(\mathbf{x}\mid s):=\frac{f_{\mathcal{P}}(\mathbf{x})\,S_t(s\mid\mathbf{x})}
+{S_t^{\mathcal{P}}(s)}
+$$ {#eq-genlik-survivor-density}
+is the **survivor covariate density**, the distribution of covariates among those still at risk at time $s$
+under treatment $t$.
+:::
+
+::: {.proof}
+By @thm-survival-hazard-relation, $\partial_s S_t(s\mid\mathbf{x})=-h_t(s\mid\mathbf{x})\,
+S_t(s\mid\mathbf{x})$. The integrability envelope and $S_t\le 1$ give a dominating function
+$\sup_{s\le\Sigma}h_t(s\mid\mathbf{x})$ for the integrand $|\partial_s S_t(s\mid\mathbf{x})|$ uniformly on
+$[0,\Sigma]$, so by the dominated-convergence justification for differentiating under the integral sign
+(@thm-dominated-convergence),
+$$
+\partial_s S_t^{\mathcal{P}}(s)=\int\partial_s S_t(s\mid\mathbf{x})\,f_{\mathcal{P}}(\mathbf{x})\,
+d\mathbf{x}=-\int h_t(s\mid\mathbf{x})\,S_t(s\mid\mathbf{x})\,f_{\mathcal{P}}(\mathbf{x})\,d\mathbf{x}.
+$$
+Dividing by $S_t^{\mathcal{P}}(s)=\int S_t(s\mid\mathbf{x})f_{\mathcal{P}}(\mathbf{x})d\mathbf{x}$ and
+negating yields the first equality in @eq-genlik-survivor-rep. The integrand of the numerator is
+$h_t(s\mid\mathbf{x})$ times the density @eq-genlik-survivor-density, so the ratio is the expectation of
+$h_t(s\mid\mathbf{X})$ under $\tilde f_t(\cdot\mid s)$. $\square$
+:::
+
+The representation says the marginal hazard at time $s$ is the conditional hazard averaged not over the
+original population but over the **survivors**, whose covariate distribution $\tilde f_t(\cdot\mid s)$
+drifts with $s$. This drift is the engine of non-collapsibility.
+
+::: {.remark}
+**A numeric snapshot of survivor drift (running trial).** Take the control arm of the running trial at
+$s=0.5$ years. The survivor covariate density @eq-genlik-survivor-density reweights each stratum by its
+survival, so the high-risk fraction among survivors is
+$$
+\tilde f_C(x{=}1\mid 0.5)=\frac{\tfrac12\,e^{-\lambda_1(0.5)}}{\tfrac12\,e^{-\lambda_0(0.5)}+\tfrac12\,
+e^{-\lambda_1(0.5)}}=\frac{e^{-1.5}}{e^{-0.5}+e^{-1.5}}=\frac{0.223}{0.607+0.223}=0.269,
+$$
+down from $0.5$ at enrollment, because high-risk patients have progressed faster. The marginal hazard is
+then the survivor-weighted average of the two conditional hazards,
+$$
+h_C^{\mathcal{P}}(0.5)=0.731\,\lambda_0+0.269\,\lambda_1=0.731(1)+0.269(3)=1.538,
+$$
+strictly below the enrollment-population average $\tfrac12(1)+\tfrac12(3)=2$. The population's apparent
+hazard fell not because any individual's hazard changed, each stratum keeps its constant $\lambda_x$, but
+because the sickest patients have been selected out of the risk set. Repeating this in both arms and at
+several times gives the drift of the covariate mix, the "moving picture" of survivor selection:
+
+| time $s$ (years) | high-risk fraction, control $\tilde f_C(1\mid s)$ | high-risk fraction, treated $\tilde f_A(1\mid s)$ |
+|---|---|---|
+| $0$ | $0.500$ | $0.500$ |
+| $0.5$ | $0.269$ | $0.378$ |
+| $2$ | $0.018$ | $0.119$ |
+
+At every time past $0$ the treated arm still holds relatively more high-risk patients than the control arm,
+because treatment $A$ slowed their progression: the two arms are comparing increasingly different covariate
+mixes. This is the entire mechanism, and the next theorem shows it forces the marginal hazard ratio to
+move. $\blacktriangleleft$
+:::
+
+The theorem below turns this picture into an inequality. Its practical consequence is blunt: a single
+marginal hazard ratio read off a Cox fit is an artifact of the follow-up window and the censoring pattern,
+not a parameter that transports across trials, populations, or follow-up lengths.
+
+::: {#thm-marginal-hr-time-varying}
+## The marginal hazard ratio is time-varying under conditional proportional hazards
+Work in a population $\mathcal{P}$ with a covariate that acts as a **frailty** (here meaning a multiplicative
+prognostic factor $\rho(\mathbf{x})$ that scales the baseline hazard; we use the word loosely, *not* in the
+sense of an unobserved random-effect frailty distribution): there is a measurable
+$\rho:\mathcal{X}\to(0,\infty)$, non-degenerate under $f_{\mathcal{P}}$, and a baseline
+$h_{a0}(s)>0$ such that the control hazard is $h_a(s\mid\mathbf{x})=h_{a0}(s)\,\rho(\mathbf{x})$, and let
+treatment $b$ satisfy conditional proportional hazards with covariate-independent ratio
+$h_b(s\mid\mathbf{x})/h_a(s\mid\mathbf{x})=\psi$, a constant with $0<\psi<1$ (a beneficial treatment, no
+effect modification on the log-hazard scale). Then the marginal hazard ratio
+$$
+\mathrm{mHR}(s):=\frac{h_b^{\mathcal{P}}(s)}{h_a^{\mathcal{P}}(s)}
+=\psi\cdot\underbrace{\frac{\mathbb{E}_{\tilde f_b(\cdot\mid s)}[\rho(\mathbf{X})]}
+{\mathbb{E}_{\tilde f_a(\cdot\mid s)}[\rho(\mathbf{X})]}}_{=:R(s)\ \ge\ 1}
+$$ {#eq-genlik-mhr}
+satisfies $\mathrm{mHR}(0)=\psi$ and $\mathrm{mHR}(s)>\psi$ for every $s>0$. Consequently
+$\mathrm{mHR}(\cdot)$ is **not constant**: although the conditional hazard ratio is the single number
+$\psi$, the marginal hazard ratio varies with time and is attenuated toward the null value $1$. This is
+non-collapsibility of the hazard ratio (@def-non-collapsibility) on the survival scale.
+:::
+
+::: {.proof}
+*The factorization.* Since $h_b=\psi\,h_a$ pointwise, @lem-survivor-weighted-hazard gives
+$h_b^{\mathcal{P}}(s)=\mathbb{E}_{\tilde f_b(\cdot\mid s)}[h_b(s\mid\mathbf{X})]=
+\psi\,\mathbb{E}_{\tilde f_b(\cdot\mid s)}[h_a(s\mid\mathbf{X})]$ and
+$h_a^{\mathcal{P}}(s)=\mathbb{E}_{\tilde f_a(\cdot\mid s)}[h_a(s\mid\mathbf{X})]$. Under the frailty
+structure $h_a(s\mid\mathbf{x})=h_{a0}(s)\rho(\mathbf{x})$, the common factor $h_{a0}(s)$ pulls out of both
+expectations and cancels in the ratio, leaving @eq-genlik-mhr with
+$R(s)=\mathbb{E}_{\tilde f_b(\cdot\mid s)}[\rho]/\mathbb{E}_{\tilde f_a(\cdot\mid s)}[\rho]$.
+
+*Value at $s=0$.* From @eq-genlik-survivor-density, $\tilde f_t(\mathbf{x}\mid 0)=f_{\mathcal{P}}(\mathbf{x})
+S_t(0\mid\mathbf{x})/S_t^{\mathcal{P}}(0)=f_{\mathcal{P}}(\mathbf{x})$ for both $t\in\{a,b\}$, because
+$S_t(0\mid\mathbf{x})=1$. Hence the two survivor distributions coincide with $f_{\mathcal{P}}$ at $s=0$,
+$R(0)=1$, and $\mathrm{mHR}(0)=\psi$.
+
+*Strict inequality for $s>0$.* By @thm-survival-hazard-relation and the frailty form,
+$S_a(s\mid\mathbf{x})=\exp(-\rho(\mathbf{x})\,A(s))$ with $A(s):=\int_0^s h_{a0}(u)\,du>0$, and
+$S_b(s\mid\mathbf{x})=S_a(s\mid\mathbf{x})^{\psi}=\exp(-\psi\rho(\mathbf{x})A(s))$. Therefore the two
+survivor densities @eq-genlik-survivor-density are exponential tilts of one another in $\rho$:
+$$
+\tilde f_a(\mathbf{x}\mid s)\propto f_{\mathcal{P}}(\mathbf{x})\,e^{-A(s)\rho(\mathbf{x})},
+\qquad
+\tilde f_b(\mathbf{x}\mid s)\propto f_{\mathcal{P}}(\mathbf{x})\,e^{-\psi A(s)\rho(\mathbf{x})} ,
+$$
+so $\tilde f_b\propto\tilde f_a\cdot e^{(1-\psi)A(s)\rho(\mathbf{x})}$ with $(1-\psi)A(s)>0$. (An *exponential
+tilt* of a distribution is a reweighting of its density by a factor $e^{c\,\rho(\mathbf{x})}$ followed by
+renormalizing; the parameter $c$ is the *natural parameter*, and the family so generated is a one-parameter
+exponential family with $\rho$ as its sufficient statistic. So the treated survivor density is an
+exponential tilt of the control survivor density.) Introduce the
+one-parameter family of tilts $d\mu_c(\mathbf{x})\propto f_{\mathcal{P}}(\mathbf{x})\,
+e^{-A(s)\rho(\mathbf{x})}\,e^{c\,\rho(\mathbf{x})}\,d\mathbf{x}$ for $c\in[0,(1-\psi)A(s)]$, so that
+$\mu_0=\tilde f_a(\cdot\mid s)$ and $\mu_{(1-\psi)A(s)}=\tilde f_b(\cdot\mid s)$. Let
+$m(c):=\mathbb{E}_{\mu_c}[\rho(\mathbf{X})]$. Differentiating the exponential family in its natural
+parameter $c$ gives
+$$
+m'(c)=\mathbb{E}_{\mu_c}[\rho^2]-\big(\mathbb{E}_{\mu_c}[\rho]\big)^2
+=\operatorname{Var}_{\mu_c}(\rho(\mathbf{X}))\ \ge\ 0,
+$$
+the last equality being the standard exponential-family identity that the derivative of the mean of the
+sufficient statistic with respect to the natural parameter equals its variance (the same score-variance
+calculation met for the score function in Chapter 5). The variance is strictly positive because $\rho$ is
+non-degenerate under $f_{\mathcal{P}}$ and the tilt keeps the support. Hence $m$ is strictly increasing, so
+$\mathbb{E}_{\tilde f_b(\cdot\mid s)}[\rho]=m((1-\psi)A(s))>m(0)=\mathbb{E}_{\tilde f_a(\cdot\mid s)}[\rho]$,
+that is $R(s)>1$ and $\mathrm{mHR}(s)=\psi R(s)>\psi$. Because $\psi<1$, moving above $\psi$ moves the
+marginal hazard ratio strictly closer to the null $1$. Since $\mathrm{mHR}(0)=\psi\neq\mathrm{mHR}(s)$ for
+any $s>0$, $\mathrm{mHR}(\cdot)$ is not constant. $\square$
+:::
+
+::: {.remark}
+**The mechanism, in words.** Treatment $b$ lowers everyone's hazard by the factor $\psi$, so high-frailty
+patients survive *longer* under $b$ than under $a$. At any later time the treated risk set therefore still
+contains relatively many high-frailty (high-$\rho$) patients, while the control risk set has been depleted
+of them; the surviving treated population has a higher average baseline hazard than the surviving control
+population. The marginal hazard ratio compares these two differently-selected risk sets and so understates
+the true protective effect: it is pulled toward $1$, by more as time passes and selection accumulates. The
+conditional model never changed; the marginalization moved. This is precisely the survival-scale form of
+the odds-ratio non-collapsibility of @def-non-collapsibility, and it is why a single reported hazard ratio
+is an artifact of the follow-up window and the censoring distribution, not a transportable parameter.
+$\blacktriangleleft$
+:::
+
+These results correspond to J.4a (@thm-conditional-loghr-ph) and J.4b (@thm-marginal-hr-time-varying) in
+the proof catalogue.
+
+## Restricted mean survival time, a collapsible alternative {#sec-genlik-rmst}
+
+The non-collapsibility and time-variation of the marginal hazard ratio motivate a marginal summary that
+behaves. The restricted mean survival time is the area under the survival curve up to a fixed horizon; it
+is collapsible over covariates by a one-line Fubini argument.
+
+::: {#def-rmst}
+## Restricted mean survival time
+For a horizon $\tau>0$, the **restricted mean survival time** (RMST) of treatment $t$ in population
+$\mathcal{P}$ is
+$$
+\operatorname{RMST}_t^{\mathcal{P}}(\tau):=\int_0^{\tau}S_t^{\mathcal{P}}(s)\,ds,
+$$ {#eq-genlik-rmst}
+the expected event-free time over $[0,\tau]$. The conditional RMST is
+$\operatorname{RMST}_t(\tau\mid\mathbf{x}):=\int_0^{\tau}S_t(s\mid\mathbf{x})\,ds$, and the **RMST
+contrast** of $b$ versus $a$ is
+$\Delta\!\operatorname{RMST}_{ba}^{\mathcal{P}}(\tau):=\operatorname{RMST}_b^{\mathcal{P}}(\tau)-
+\operatorname{RMST}_a^{\mathcal{P}}(\tau)$. $\blacktriangleleft$
+:::
+
+::: {#thm-rmst-collapsible}
+## RMST and the RMST contrast are collapsible over covariates
+With $S_t^{\mathcal{P}}(s)=\mathbb{E}_{\mathbf{X}\sim f_{\mathcal{P}}}[S_t(s\mid\mathbf{X})]$,
+$$
+\operatorname{RMST}_t^{\mathcal{P}}(\tau)
+=\mathbb{E}_{\mathbf{X}\sim f_{\mathcal{P}}}\!\big[\operatorname{RMST}_t(\tau\mid\mathbf{X})\big],
+\qquad
+\Delta\!\operatorname{RMST}_{ba}^{\mathcal{P}}(\tau)
+=\mathbb{E}_{\mathbf{X}\sim f_{\mathcal{P}}}\!\big[\operatorname{RMST}_b(\tau\mid\mathbf{X})
+-\operatorname{RMST}_a(\tau\mid\mathbf{X})\big].
+$$ {#eq-genlik-rmst-collapse}
+The marginal RMST is the population average of the conditional RMSTs: marginal equals average conditional,
+which is collapsibility.
+:::
+
+::: {.proof}
+The integrand $S_t(s\mid\mathbf{x})\ge 0$ is jointly measurable in $(s,\mathbf{x})$ and nonnegative, so by
+Tonelli's theorem (@thm-fubini-tonelli) the order of integration over $s\in[0,\tau]$ (Lebesgue measure)
+and over $\mathbf{x}$ (the measure $f_{\mathcal{P}}$) may be exchanged:
+$$
+\operatorname{RMST}_t^{\mathcal{P}}(\tau)=\int_0^{\tau}\!\!\Big(\int S_t(s\mid\mathbf{x})\,
+f_{\mathcal{P}}(\mathbf{x})\,d\mathbf{x}\Big)ds
+=\int\!\Big(\int_0^{\tau}S_t(s\mid\mathbf{x})\,ds\Big)f_{\mathcal{P}}(\mathbf{x})\,d\mathbf{x}
+=\mathbb{E}_{\mathbf{X}}\big[\operatorname{RMST}_t(\tau\mid\mathbf{X})\big].
+$$
+The contrast statement follows by linearity of expectation applied to the difference of the two arms.
+$\square$
+:::
+
+::: {.remark}
+**Collapsible but not automatically transportable.** Collapsibility (marginal equals average conditional)
+is a statement *within* one population $\mathcal{P}$; transportability is a statement *across*
+populations. The RMST contrast is collapsible by @thm-rmst-collapsible, yet if the conditional model is
+fitted on the log-hazard scale (PH, $g=\log$) while the reported effect is the RMST (a time-scale
+quantity), the composition $\operatorname{RMST}_t(\tau\mid\mathbf{x})=\int_0^{\tau}
+\exp\!\big(-\!\int_0^s e^{\eta_t(\mathbf{x})}h_{0}(u)\,du\big)ds$ is a nonlinear functional of
+$\eta_t(\mathbf{x})$. The shared-effect-modifier assumption (@def-sema) holds on the log-hazard scale, not
+on the RMST scale, so the RMST contrast computed in the comparator population does not generally equal the
+RMST contrast in a different target population; transporting it requires the target covariate
+distribution, exactly as in the scale-misalignment analysis taken up for the unanchored case in Chapter 26
+(@thm-mlumr-tte). The clean estimand to transport remains the conditional log-hazard model; RMST is a
+collapsible *read-out* in a stated population. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Collapsible does not mean transportable: a two-population snapshot.** It is tempting to hear "collapsible"
+and conclude "safe to compare across populations." It is not. Collapsibility says the marginal RMST contrast
+in a population equals the average of the conditional contrasts *in that same population*; it says nothing
+about a different population with a different covariate mix. In the running trial the conditional RMST
+contrast at horizon $\tau=2$ is $0.399$ years for a standard-risk patient ($x=0$) and $0.301$ years for a
+high-risk patient ($x=1$) (both computed in @exm-genlik-survival). A comparator population with high-risk
+prevalence $q=\tfrac12$ therefore has marginal contrast $\tfrac12(0.399)+\tfrac12(0.301)=0.350$ years,
+whereas a target population with $q^{*}=\tfrac14$ has $\tfrac34(0.399)+\tfrac14(0.301)=0.375$ years. Same
+conditional model, same treatment, different marginal RMST contrast, purely because the covariate mix
+differs. The object that *is* shared across the two populations is the conditional log-hazard model; the
+RMST contrast must be recomputed in each target population, which is why transporting it needs the target
+covariate distribution. Exercise @exr-genlik-rmst-transport works the general formula. $\blacktriangleleft$
+:::
+
+The practical decision rule for a survival submission follows.
+
+| Quantity | Scale | Transports across populations? | Role in the analysis |
+|---|---|---|---|
+| conditional log-hazard effects $\gamma_k,\boldsymbol\beta_{2,k}$ | log-hazard | yes, under the shared-effect-modifier assumption (@def-sema) | the estimand to fit and share across the network |
+| marginal hazard ratio $\mathrm{mHR}(s)$ | hazard | no; varies with time and population | not a transportable summary; avoid reporting it as one number |
+| RMST contrast $\Delta\!\operatorname{RMST}_{ba}^{\mathcal{P}}(\tau)$ | time | only by recomputing in the target covariate mix | collapsible read-out; always report with its target population $\mathcal{P}$ and horizon $\tau$ |
+
+In one line: fit and transport on the conditional log-hazard scale, report RMST as a population-specific
+read-out, and never treat a single marginal hazard ratio as a transportable parameter.
+
+This result corresponds to J.4c in the proof catalogue.
+
+## The right-censored individual likelihood {#sec-genlik-likelihood}
+
+Survival data are incomplete: for many patients we observe not the event time but a censoring time, the
+last moment at which they were known to be event-free. The likelihood must use the density for observed
+events and the survival probability for censored observations. We define the contribution and then derive
+it from the joint model of event and censoring under the standard independence assumption.
+
+::: {#def-censored-likelihood}
+## Right-censored individual likelihood
+Let an individual with covariates $\mathbf{x}$ have a (possibly right-censored) observation
+$(t,\delta)$, where $t\ge 0$ is the observed time and $\delta\in\{0,1\}$ is the event indicator:
+$\delta=1$ if $t$ is an event time and $\delta=0$ if $t$ is a right-censoring time. Under a model with
+conditional hazard $h(\cdot\mid\mathbf{x};\boldsymbol\xi)$ and survival $S(\cdot\mid\mathbf{x};
+\boldsymbol\xi)$, the **right-censored individual likelihood contribution** is
+$$
+L_{i\mid\mathbf{x}}(\boldsymbol\xi;t,\delta,\mathbf{x})
+=h(t\mid\mathbf{x};\boldsymbol\xi)^{\delta}\;S(t\mid\mathbf{x};\boldsymbol\xi)
+=\begin{cases}
+f(t\mid\mathbf{x};\boldsymbol\xi)=h(t\mid\mathbf{x})S(t\mid\mathbf{x}), & \delta=1,\\[2pt]
+S(t\mid\mathbf{x};\boldsymbol\xi), & \delta=0.
+\end{cases}
+$$ {#eq-genlik-censored-lik}
+$\blacktriangleleft$
+:::
+
+**Reader translation, and a timeline.** Picture one patient's follow-up as a horizontal line beginning at
+enrollment. Two things can end the line. If the event (progression) is *observed* at time $t$, we know
+exactly when it happened, and the contribution is the density $f(t\mid\mathbf{x})=h(t\mid\mathbf{x})
+S(t\mid\mathbf{x})$: the chance of surviving event-free up to $t$, times the instantaneous rate of failing
+right at $t$. If instead the patient is last seen event-free at time $t$, because the trial reached its data
+cutoff or the patient left for reasons unrelated to prognosis, the line is *right-censored*: we know only
+that $T>t$, and the contribution is the survival probability $S(t\mid\mathbf{x})$. An event pins down a
+point on the line; a censoring pins down only a lower bound. The single formula $h^{\delta}S$ encodes both
+by switching the hazard factor on ($\delta=1$) or off ($\delta=0$). In the running trial we will use exactly
+two such patients on the comparator control arm: an event at $t_1=0.5$ years and a censoring at $t_2=2$
+years (@exm-genlik-survival, Step 4).
+
+::: {#prp-censored-likelihood-density}
+## Derivation of the censored likelihood under independent censoring
+Let the event time $T$ have conditional density $f(\cdot\mid\mathbf{x};\boldsymbol\xi)$, survival
+$S(\cdot\mid\mathbf{x};\boldsymbol\xi)$, and hazard $h=f/S$, and let the censoring time $C$ be
+conditionally independent of $T$ given $\mathbf{x}$, with survival $G(\cdot\mid\mathbf{x})$ and density
+$g(\cdot\mid\mathbf{x})$ that do **not** depend on the event-model parameter $\boldsymbol\xi$
+(non-informative, independent censoring). We observe $\tilde T=\min(T,C)$ and
+$\delta=\mathbf{1}\{T\le C\}$. Then the joint density of the observed pair $(\tilde t,\delta)$ factorizes
+as
+$$
+p(\tilde t,\delta\mid\mathbf{x};\boldsymbol\xi)
+=\big[f(\tilde t\mid\mathbf{x};\boldsymbol\xi)\,G(\tilde t\mid\mathbf{x})\big]^{\delta}
+\big[S(\tilde t\mid\mathbf{x};\boldsymbol\xi)\,g(\tilde t\mid\mathbf{x})\big]^{1-\delta},
+$$ {#eq-genlik-joint-censor}
+and the factor depending on $\boldsymbol\xi$ is proportional to @eq-genlik-censored-lik. Hence the
+maximum-likelihood and Bayesian inferences for $\boldsymbol\xi$ may use $h^{\delta}S$ as the individual
+contribution, discarding the censoring factors $G^{\delta}g^{1-\delta}$ as constants in $\boldsymbol\xi$.
+:::
+
+::: {.proof}
+Condition on $\mathbf{x}$ throughout and suppress it; independence of $T$ and $C$ makes their joint
+density $f(t)g(c)$. Consider the two observable events.
+
+*An event ($\delta=1$) observed at $\tilde t=t$.* In words, we see an event at $t$ exactly when the true
+event time equals $t$ and the censoring time has not yet arrived, that is $C\ge t$; those are the censoring
+values compatible with observing the event. This is the set $\{T=t,\ C\ge t\}$, and its density in $t$ is
+obtained by integrating the joint density over all such censoring values $c\ge t$ that leave $T$ uncensored:
+$$
+\int_{t}^{\infty}f(t)\,g(c)\,dc=f(t)\int_t^{\infty}g(c)\,dc=f(t)\,G(t),
+$$
+using $\int_t^\infty g(c)\,dc=P(C>t)=G(t)$.
+
+*A censoring ($\delta=0$) observed at $\tilde t=c$.* Symmetrically, we see a censoring at $c$ exactly when
+the censoring time equals $c$ and the true event has not yet happened, that is $T>c$. This is the set
+$\{C=c,\ T>c\}$, with density in $c$
+$$
+\int_{c}^{\infty}f(t)\,g(c)\,dt=g(c)\int_c^{\infty}f(t)\,dt=g(c)\,S(c).
+$$
+Writing both cases with the indicator $\delta$ gives @eq-genlik-joint-censor. Substituting
+$f=h\,S$ in the $\delta=1$ branch,
+$$
+p(\tilde t,\delta\mid\mathbf{x};\boldsymbol\xi)
+=\big[h(\tilde t)S(\tilde t)\big]^{\delta}S(\tilde t)^{1-\delta}\cdot
+G(\tilde t)^{\delta}g(\tilde t)^{1-\delta}
+=\underbrace{h(\tilde t)^{\delta}S(\tilde t)}_{\text{depends on }\boldsymbol\xi}\cdot
+\underbrace{G(\tilde t)^{\delta}g(\tilde t)^{1-\delta}}_{\text{free of }\boldsymbol\xi},
+$$
+where the exponents of $S$ combine as $\delta+(1-\delta)=1$. The second factor does not involve
+$\boldsymbol\xi$, so as a function of $\boldsymbol\xi$ the contribution is proportional to
+$h(\tilde t\mid\mathbf{x})^{\delta}S(\tilde t\mid\mathbf{x})$, which is @eq-genlik-censored-lik. $\square$
+:::
+
+::: {.remark}
+**Scope of the assumption.** The factorization needs only that censoring is independent of the event time
+given covariates and that its mechanism carries no information about $\boldsymbol\xi$. In health-research
+terms, three common patterns clarify the boundary. *Administrative censoring* at a common data cutoff, when
+the trial database locks on a fixed calendar date, satisfies the assumption, because the cutoff date is
+unrelated to any individual patient's prognosis. *Loss to follow-up* satisfies it only when the reason a
+patient drops out is unrelated to their event risk after conditioning on covariates, for example a patient
+who moves house. *Informative dropout*, where patients leave the study precisely because they are
+deteriorating, violates it: then a censoring carries hidden bad news about $T$, the censoring survival $G$
+is no longer free of $\boldsymbol\xi$, and the clean split fails. Interval censoring and left truncation
+likewise break the split and require the corresponding modified contributions; see the survival-analysis
+texts cited in @sec-genlik-notes. For the network the important
+point is that @eq-genlik-censored-lik is a *conditional individual likelihood* of exactly the form the
+aggregation machinery of the next section consumes. $\blacktriangleleft$
+:::
+
+This corresponds to J.4 in the proof catalogue.
+
+## Aggregation for general likelihoods {#sec-genlik-aggregation}
+
+We now perform the step that makes survival (or any other) outcomes part of an ML-NMR network. In an AgD
+study the individual covariate vectors are unobserved, so the conditional likelihood
+@eq-genlik-censored-lik cannot be evaluated at a known $\mathbf{x}$. Instead we average it over the
+study's covariate distribution. This is the general-likelihood analogue of the mean-aggregation theorem
+@thm-aggregation of Chapter 20, and it is what @phillippo2025general call the integrated likelihood.
+
+One question must be settled before the theorems: if the study is *aggregate*, where do the individual
+observations $y_{1jk},\dots,y_{n_{jk}jk}$ in the theorems below come from? Two situations arise. When the
+outcome has a sufficient summary, a binary study reporting an event count, no individual rows are needed and
+the arm likelihood collapses to a single aggregate contribution (Chapters 20 and 21). Survival has no such
+single summary: the reported object is a Kaplan-Meier curve. There the individual rows are *pseudo-IPD*,
+patient-level times and event indicators reconstructed from the published curve, sketched in the bridge
+after @thm-aggregate-marginal-likelihood and developed in Chapter 26. The point to hold throughout this
+section is a split that beginners often miss: even after the event *times* are reconstructed, the
+*covariates* are still unobserved. We know when each pseudo-patient progressed or was censored, but not
+their covariate vector $\mathbf{x}$; that is exactly why the covariate integral over $f_j$ remains, applied
+to every pseudo-patient.
+
+::: {#thm-marginal-individual-likelihood}
+## Marginal individual likelihood
+Consider an individual $i$ in an AgD study $j$, with outcome $y_i$ observed but covariate vector
+$\mathbf{X}_i$ unobserved and distributed according to the study covariate density $f_j$. Let
+$L_{i\mid\mathbf{x}}(\boldsymbol\xi;y_i,\mathbf{x})$ be the conditional individual likelihood, that is the
+conditional density or probability mass $p(y_i\mid\mathbf{x},\boldsymbol\xi)$ of the outcome given
+covariates (for survival, @eq-genlik-censored-lik; for binary, the Bernoulli mass; and so on). Then the
+**marginal individual likelihood**, the likelihood contribution that uses only the observed $y_i$, is
+$$
+L_i(\boldsymbol\xi;y_i)
+=\int_{\mathcal{X}}L_{i\mid\mathbf{x}}(\boldsymbol\xi;y_i,\mathbf{x})\,f_j(\mathbf{x})\,d\mathbf{x}
+=\mathbb{E}_{\mathbf{X}\sim f_j}\!\big[\,p(y_i\mid\mathbf{X},\boldsymbol\xi)\,\big].
+$$ {#eq-genlik-marginal-lik}
+For discrete covariates the integral is a sum over $\mathcal{X}$.
+:::
+
+**Intuition.** The aggregate study never recorded $\mathbf{x}$, so we cannot condition on it. The only
+honest likelihood for the observed outcome $y_i$ is the one that integrates $\mathbf{x}$ out, weighting each
+possible covariate value by how common it is in *that* study, namely $f_j$. That weighted average is
+@eq-genlik-marginal-lik. The proof is nothing more than the law of total probability made explicit, but the
+modeling content is real: it is step 2 of the recipe of @sec-genlik-core-idea, and it is what makes an AgD
+arm comparable to an IPD arm in the same network.
+
+::: {.proof}
+Under parameter $\boldsymbol\xi$ the joint law of $(Y_i,\mathbf{X}_i)$ in study $j$ has density
+$p(y_i,\mathbf{x}\mid\boldsymbol\xi)=p(y_i\mid\mathbf{x},\boldsymbol\xi)\,f_j(\mathbf{x})=
+L_{i\mid\mathbf{x}}(\boldsymbol\xi;y_i,\mathbf{x})\,f_j(\mathbf{x})$, the conditional outcome model times
+the covariate density. The likelihood of the *observed* datum is the marginal density of $Y_i$, obtained
+by integrating out the unobserved $\mathbf{X}_i$ (the law of total probability, equivalently
+marginalization of a joint density, Chapter 4):
+$$
+L_i(\boldsymbol\xi;y_i)=p(y_i\mid\boldsymbol\xi)=\int_{\mathcal{X}}p(y_i,\mathbf{x}\mid\boldsymbol\xi)\,
+d\mathbf{x}=\int_{\mathcal{X}}L_{i\mid\mathbf{x}}(\boldsymbol\xi;y_i,\mathbf{x})\,f_j(\mathbf{x})\,
+d\mathbf{x},
+$$
+which is @eq-genlik-marginal-lik. The integral is finite because $L_{i\mid\mathbf{x}}\ge 0$ and, for a
+probability-mass outcome, $L_{i\mid\mathbf{x}}\le 1$, so the integral is at most $\int f_j=1$; for a
+density outcome it is the marginal density of $Y_i$, finite for almost every $y_i$. $\square$
+:::
+
+::: {.remark}
+**Relation to mean aggregation and to numerical integration.** Theorem @thm-aggregation aggregates the
+conditional *mean* $g^{-1}(\eta_{jk}(\mathbf{x}))$; theorem @thm-marginal-individual-likelihood aggregates
+the conditional *likelihood* $L_{i\mid\mathbf{x}}$. The two agree exactly when the likelihood kernel is
+affine in the mean, as for the Bernoulli mass $p^{y}(1-p)^{1-y}$, which equals $p$ at $y=1$ and $1-p$ at
+$y=0$: then $\int p(\mathbf{x})^{y}(1-p(\mathbf{x}))^{1-y}f_j\,d\mathbf{x}=\bar p^{\,y}(1-\bar p)^{1-y}$
+with $\bar p=\int p\,f_j$, so integrating the likelihood reproduces the aggregate-mean model. Contrast the
+count case as an explicit *non*-example: the Poisson mass $\theta^{y}e^{-\theta}/y!$ is not affine in its
+mean $\theta$ (it carries both a $\theta^{y}$ factor and an $e^{-\theta}$ factor), so in general
+$\int \theta(\mathbf{x})^{y}e^{-\theta(\mathbf{x})}/y!\,f_j\,d\mathbf{x}\ne\bar\theta^{y}e^{-\bar\theta}/y!$;
+averaging the likelihood is genuinely different from evaluating it at the average mean. The survival kernel
+$h^{\delta}S$ and the proportional-odds mass $p_k$ fail affinity in the same way. For kernels
+that are not affine in a single mean, survival ($h^{\delta}S$) and the proportional-odds mass of
+@def-proportional-odds among them, the integral @eq-genlik-marginal-lik genuinely exceeds mean
+aggregation, and like the logit case (@thm-logit-no-closed-form) it has no closed form. It is then
+evaluated by the Sobol' QMC rule of Chapter 22 (@def-sobol-net, @thm-hypercube-integration): with
+integration nodes $\mathbf{x}^{(1)},\dots,\mathbf{x}^{(N)}$ drawn from $f_j$ through the inverse-CDF map
+(@thm-inverse-cdf) and a Gaussian copula (@def-gaussian-copula, @thm-sklar) for covariate dependence,
+$$
+L_i(\boldsymbol\xi;y_i)\approx\frac{1}{N}\sum_{r=1}^{N}
+L_{i\mid\mathbf{x}}\!\big(\boldsymbol\xi;y_i,\mathbf{x}^{(r)}\big),
+$$
+the same average that drives every AgD contribution in the network. $\blacktriangleleft$
+:::
+
+The arm likelihood is the product of these marginal contributions. We make the conditional-independence
+structure explicit so that the product is justified rather than assumed.
+
+::: {#thm-aggregate-marginal-likelihood}
+## Aggregate arm likelihood
+Let arm $k$ of AgD study $j$ contribute $n_{jk}$ individual observations $y_{1jk},\dots,y_{n_{jk}jk}$ whose
+unobserved covariate vectors are independent draws from $f_j$, and let the outcomes be conditionally
+independent across individuals given their covariates and $\boldsymbol\xi$. Then the marginalized outcomes
+$Y_{1jk},\dots,Y_{n_{jk}jk}$ are independent, each with the marginal individual likelihood
+@eq-genlik-marginal-lik, and the **aggregate arm likelihood** factorizes as
+$$
+\bar L_{jk}(\boldsymbol\xi;\mathbf{y}_{jk})
+=\prod_{i=1}^{n_{jk}}L_i(\boldsymbol\xi;y_{ijk})
+=\prod_{i=1}^{n_{jk}}\int_{\mathcal{X}}L_{i\mid\mathbf{x}}(\boldsymbol\xi;y_{ijk},\mathbf{x})\,
+f_j(\mathbf{x})\,d\mathbf{x}.
+$$ {#eq-genlik-aggregate-lik}
+:::
+
+::: {.proof}
+Write $\mathbf{Y}=(Y_{1jk},\dots,Y_{n_{jk}jk})$ and $\mathbf{X}=(\mathbf{X}_{1},\dots,
+\mathbf{X}_{n_{jk}})$. Conditional independence of outcomes given covariates and $\boldsymbol\xi$ gives the
+joint conditional density $p(\mathbf{y}\mid\mathbf{X},\boldsymbol\xi)=\prod_{i}p(y_{ijk}\mid\mathbf{X}_i,
+\boldsymbol\xi)$, and independence of the covariate draws gives the joint covariate density
+$\prod_i f_j(\mathbf{x}_i)$. Marginalizing the covariates from the joint law and using Tonelli's theorem
+(@thm-fubini-tonelli) on the nonnegative integrand to factor the multiple integral into a product of
+single integrals,
+$$
+\bar L_{jk}(\boldsymbol\xi)
+=\int_{\mathcal{X}^{n_{jk}}}\prod_{i=1}^{n_{jk}}p(y_{ijk}\mid\mathbf{x}_i,\boldsymbol\xi)\,
+f_j(\mathbf{x}_i)\,d\mathbf{x}_1\cdots d\mathbf{x}_{n_{jk}}
+=\prod_{i=1}^{n_{jk}}\int_{\mathcal{X}}p(y_{ijk}\mid\mathbf{x},\boldsymbol\xi)\,f_j(\mathbf{x})\,
+d\mathbf{x}
+=\prod_{i=1}^{n_{jk}}L_i(\boldsymbol\xi;y_{ijk}),
+$$
+which is @eq-genlik-aggregate-lik. The factorization shows the $Y_{ijk}$ are independent with the stated
+marginals. $\square$
+:::
+
+::: {.remark}
+**Sufficient summaries and pseudo-IPD.** When the conditional kernel is affine in a mean and the AgD
+report a sufficient summary, @eq-genlik-aggregate-lik collapses to a low-dimensional aggregate model: for
+Bernoulli outcomes summarized by an event count $r_{jk}=\sum_i y_{ijk}$, the product is
+$\bar p_{jk}^{\,r_{jk}}(1-\bar p_{jk})^{n_{jk}-r_{jk}}$, the binomial likelihood with aggregate success
+probability $\bar p_{jk}=\int\operatorname{expit}(\eta_{jk})f_j$, recovering the binary ML-NMR of Chapters
+20 and 21 and, with no covariates to integrate, the standard network meta-analysis likelihood
+(@thm-mlnmr-generalizes-nma). For survival the reported summary is a Kaplan-Meier curve, which is not a
+single sufficient statistic; the individual observations entering @eq-genlik-aggregate-lik are then
+**pseudo-IPD** $(t_{ijk},\delta_{ijk})$ reconstructed from the published curve and the numbers at risk,
+the reconstruction whose validity is established for the unanchored setting in Chapter 26
+(@thm-pseudo-ipd-reconstruction). In outline the reconstruction, the algorithm of Guyot and colleagues,
+digitizes the published Kaplan-Meier curve into a fine grid of (time, survival-probability) points, then
+uses the reported numbers at risk in each interval to solve, step by step, for how many events and how many
+censorings must have occurred to produce the observed drops in the curve; its output is a table of
+pseudo-observations $(t_{ijk},\delta_{ijk})$ whose own Kaplan-Meier estimate reproduces the published one.
+What is recovered is the pair (time, event indicator) for each pseudo-patient; what remains unobserved is
+the covariate vector, which is again why each pseudo-patient still contributes the integrated likelihood
+@eq-genlik-marginal-lik over $f_j$ rather than a conditional likelihood at a known $\mathbf{x}$. This
+digitize-then-reconstruct step is the one part of a real submission that most distinguishes practice from
+the clean theory, so we flag it here rather than leaving it entirely to Chapter 26. Once reconstructed, each
+pseudo-individual contributes the marginal censored likelihood @eq-genlik-censored-lik integrated over
+$f_j$, exactly as in @eq-genlik-aggregate-lik. $\blacktriangleleft$
+:::
+
+These two theorems correspond to J.5 (@thm-marginal-individual-likelihood) and J.6
+(@thm-aggregate-marginal-likelihood) in the proof catalogue.
+
+## Ordered categorical outcomes {#sec-genlik-ordinal}
+
+The second outcome type that escapes the one-parameter GLM is the ordered categorical scale, and it is not
+a niche case. HTA submissions routinely report ordered severity bands: the Eastern Cooperative Oncology
+Group (ECOG) performance status $0,1,2,3,4$, psoriasis response bands (PASI 50, 75, 90), and ordinal pain or
+function scales. The categories have a meaningful order, better to worse, but no numeric spacing, so a mean
+is not the natural summary; the natural object is the whole vector of category probabilities, tied together
+by the order. The standard model is the proportional-odds (cumulative-logit) model, which places a single
+linear predictor against an increasing ladder of cutpoints. We develop it, give it the same concrete
+two-point treatment the survival case received, and show it drops into the aggregation machinery of
+@sec-genlik-aggregation without a single change.
+
+::: {#def-proportional-odds}
+## Proportional-odds model
+Let $Y\in\{1,2,\dots,K\}$ be an ordered categorical outcome (the categories carry a meaningful order, for
+example increasing disease severity). With cutpoints $\alpha_1\le\alpha_2\le\cdots\le\alpha_{K-1}$ and a
+linear predictor $\eta(\mathbf{x})$, the **proportional-odds model** specifies the cumulative
+probabilities by
+$$
+\operatorname{logit}P(Y\le k\mid\mathbf{X}=\mathbf{x})=\alpha_k-\eta(\mathbf{x}),
+\qquad k=1,\dots,K-1,
+$$ {#eq-genlik-po}
+equivalently $P(Y\le k\mid\mathbf{x})=\operatorname{expit}(\alpha_k-\eta(\mathbf{x}))$. With the
+conventions $\alpha_0=-\infty$ and $\alpha_K=+\infty$ (so $\operatorname{expit}(\alpha_0-\eta)=0$ and
+$\operatorname{expit}(\alpha_K-\eta)=1$), the **category probabilities** are the consecutive differences
+$$
+p_k(\mathbf{x};\boldsymbol\xi):=P(Y=k\mid\mathbf{x})
+=\operatorname{expit}(\alpha_k-\eta(\mathbf{x}))-\operatorname{expit}(\alpha_{k-1}-\eta(\mathbf{x})),
+\qquad k=1,\dots,K.
+$$ {#eq-genlik-po-prob}
+For ML-NMR (and the unanchored ML-UMR of Chapter 26) the linear predictor is the network linear predictor
+$\eta_{jk}(\mathbf{x})=\mathbf{x}^\top\boldsymbol\beta_1+\gamma_k+\mathbf{x}^\top\boldsymbol\beta_{2,k}$,
+with study-specific cutpoints $\alpha_{k}^{(j)}$ permitted. $\blacktriangleleft$
+:::
+
+**Reader translation.** Imagine a hidden continuous "severity" axis. The cutpoints
+$\alpha_1\le\cdots\le\alpha_{K-1}$ are fixed thresholds that slice this axis into the $K$ ordered
+categories, and the linear predictor $\eta(\mathbf{x})$ shifts a patient's position along it. (Recall
+$\operatorname{expit}(z)=1/(1+e^{-z})$, the inverse logit, increasing from $0$ to $1$.) The minus sign in
+$\operatorname{logit}P(Y\le k\mid\mathbf{x})=\alpha_k-\eta(\mathbf{x})$ is a direction convention: a *larger*
+$\eta(\mathbf{x})$ lowers every cumulative probability $P(Y\le k)$, which pushes probability mass toward the
+*higher* (worse) categories. So with this convention a positive treatment or covariate effect on $\eta$
+means "more severe." The name *proportional odds* refers to the property proved next: the effect of
+covariates on the cumulative odds is the *same at every cutpoint* $k$, a single shared slope rather than one
+slope per threshold, which is what makes the model parsimonious enough to enter a network with a single
+$\eta_{jk}$.
+
+::: {#lem-ordinal-valid-probabilities}
+## The proportional-odds category probabilities are a valid distribution; proportional odds
+Fix $\mathbf{x}$ and write $p_k=p_k(\mathbf{x};\boldsymbol\xi)$ as in @eq-genlik-po-prob. If the cutpoints
+are ordered, $\alpha_1\le\cdots\le\alpha_{K-1}$, then $p_k\ge 0$ for all $k$ and $\sum_{k=1}^{K}p_k=1$.
+Moreover the model has the **proportional-odds property**: for any two covariate values
+$\mathbf{x},\mathbf{x}'$ and any cutpoint $k\in\{1,\dots,K-1\}$, the cumulative log odds ratio
+$$
+\log\frac{\operatorname{odds}(Y\le k\mid\mathbf{x})}{\operatorname{odds}(Y\le k\mid\mathbf{x}')}
+=\eta(\mathbf{x}')-\eta(\mathbf{x})
+$$
+does not depend on $k$.
+:::
+
+::: {.proof}
+*Nonnegativity.* The function $\operatorname{expit}$ is strictly increasing. For $1\le k\le K$ the
+ordering $\alpha_{k-1}\le\alpha_k$ (including the conventions $\alpha_0=-\infty\le\alpha_1$ and
+$\alpha_{K-1}\le+\infty=\alpha_K$) gives $\alpha_{k-1}-\eta(\mathbf{x})\le\alpha_k-\eta(\mathbf{x})$, hence
+$\operatorname{expit}(\alpha_{k-1}-\eta)\le\operatorname{expit}(\alpha_k-\eta)$, so
+$p_k=\operatorname{expit}(\alpha_k-\eta)-\operatorname{expit}(\alpha_{k-1}-\eta)\ge 0$.
+
+*Sum to one.* The sum telescopes:
+$$
+\sum_{k=1}^{K}p_k=\sum_{k=1}^{K}\Big[\operatorname{expit}(\alpha_k-\eta)-\operatorname{expit}
+(\alpha_{k-1}-\eta)\Big]=\operatorname{expit}(\alpha_K-\eta)-\operatorname{expit}(\alpha_0-\eta)=1-0=1.
+$$
+
+*Proportional odds.* From @eq-genlik-po, $\operatorname{logit}P(Y\le k\mid\mathbf{x})=
+\alpha_k-\eta(\mathbf{x})$, and the logit of a probability is the log odds, so the log odds of $Y\le k$ is
+$\alpha_k-\eta(\mathbf{x})$. Subtracting the same expression at $\mathbf{x}'$ cancels the cutpoint
+$\alpha_k$:
+$$
+\log\operatorname{odds}(Y\le k\mid\mathbf{x})-\log\operatorname{odds}(Y\le k\mid\mathbf{x}')
+=\big(\alpha_k-\eta(\mathbf{x})\big)-\big(\alpha_k-\eta(\mathbf{x}')\big)=\eta(\mathbf{x}')-\eta(\mathbf{x}),
+$$
+independent of $k$. $\square$
+:::
+
+The conditional individual likelihood for an ordered categorical observation $y_i=k$ is simply the
+category probability $L_{i\mid\mathbf{x}}(\boldsymbol\xi;k,\mathbf{x})=p_k(\mathbf{x};\boldsymbol\xi)$ of
+@eq-genlik-po-prob, which is a probability mass in $[0,1]$, so @thm-marginal-individual-likelihood and
+@thm-aggregate-marginal-likelihood apply verbatim: the marginal individual likelihood of an AgD ordinal
+observation is $\int_{\mathcal{X}}p_{k}(\mathbf{x};\boldsymbol\xi)f_j(\mathbf{x})\,d\mathbf{x}$, evaluated
+by QMC. Because $p_k$ is not affine in a single mean, this integral, like the survival integral, does not
+reduce to mean aggregation.
+
+::: {#exm-genlik-ordinal}
+## A three-category performance-status aggregation
+Collapse ECOG performance status into three ordered bands $Y\in\{1,2,3\}$ (good, intermediate, poor), and
+use the same binary high-risk covariate $X\in\{0,1\}$ as the running survival trial, with prevalence
+$q=P(X=1)=\tfrac12$ in the comparator AgD population. Take cutpoints $\alpha_1=-1,\ \alpha_2=1$ and a linear
+predictor $\eta(x)=\eta_0+\beta x$ with $\eta_0=0,\ \beta=1$, so $\eta(0)=0$ and $\eta(1)=1$; the high-risk
+covariate raises severity.
+
+**Conditional category probabilities.** With
+$p_k(x)=\operatorname{expit}(\alpha_k-\eta(x))-\operatorname{expit}(\alpha_{k-1}-\eta(x))$ and
+$\operatorname{expit}(z)=1/(1+e^{-z})$,
+$$
+\begin{aligned}
+x=0:\quad &P(Y\le1)=\operatorname{expit}(-1)=0.269,\quad P(Y\le2)=\operatorname{expit}(1)=0.731,\\
+&(p_1,p_2,p_3)=(0.269,\ 0.462,\ 0.269);\\[2pt]
+x=1:\quad &P(Y\le1)=\operatorname{expit}(-2)=0.119,\quad P(Y\le2)=\operatorname{expit}(0)=0.500,\\
+&(p_1,p_2,p_3)=(0.119,\ 0.381,\ 0.500).
+\end{aligned}
+$$
+The high-risk covariate ($x=1$) moves mass out of the good band ($p_1:0.269\to0.119$) and into the poor band
+($p_3:0.269\to0.500$), exactly the "larger $\eta$ means more severe" direction of the sign convention.
+Proportional odds is visible directly: the $x{=}1$ versus $x{=}0$ difference in cumulative log odds is
+$\eta(0)-\eta(1)=-1$ at *both* cutpoints (at $k=1$, $(-2)-(-1)=-1$; at $k=2$, $0-1=-1$), one shared slope.
+
+**Marginal (aggregate) category probabilities.** Averaging over $X\sim\operatorname{Ber}(\tfrac12)$, a
+two-point sum with weights $\tfrac12,\tfrac12$, gives the integrated category probabilities of an AgD
+patient:
+$$
+\bar p_1=\tfrac12(0.269)+\tfrac12(0.119)=0.194,\quad
+\bar p_2=\tfrac12(0.462)+\tfrac12(0.381)=0.421,\quad
+\bar p_3=\tfrac12(0.269)+\tfrac12(0.500)=0.384,
+$$
+which sum to $1$. The marginal individual likelihood of a single AgD observation recorded in the poor band
+is $L_i=\bar p_3=0.384$; for the intermediate band it is $\bar p_2=0.421$. These are the ordinal instances of
+@thm-marginal-individual-likelihood: the two integration nodes are the covariate values $\{0,1\}$ with QMC
+weights $\{\tfrac12,\tfrac12\}$, exactly as in Step 4 of the survival example, and a continuous covariate
+would replace the two-point sum with an $N$-node Sobol' average. The aggregate arm likelihood is the product
+of such $\bar p_{y_i}$ over the arm's individuals, by @thm-aggregate-marginal-likelihood. Because $p_k$ is
+not affine in a single mean, this integrated likelihood does not collapse to a category probability
+evaluated at some aggregate mean; the full two-point (in general $N$-point) average is retained, precisely
+as for survival. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**When proportional odds fails.** The single slope $\eta(\mathbf{x})$ shared across cutpoints is an
+assumption; it can be assessed and relaxed. Sensitivity models include the adjacent-category logit, the
+continuation-ratio model, and the unconstrained multinomial logit; each supplies a different conditional
+category-probability kernel $L_{i\mid\mathbf{x}}$, and each is aggregated by the identical integral
+@eq-genlik-marginal-lik. The generality of the framework is precisely that the choice of ordinal model is
+a choice of integrand, not a change of machinery. $\blacktriangleleft$
+:::
+
+This corresponds to J.7 in the proof catalogue.
+
+## The general-likelihood ML-NMR framework {#sec-genlik-general}
+
+We can now state the unifying theorem. Everything above was a special case of a single construction: pick
+a conditional individual likelihood, average it over the covariate distribution to aggregate, multiply
+over individuals.
+
+Before the statement, a map of its symbols, since several parameter objects appear at once. Each abstract
+object corresponds to a concrete item in a submission, illustrated on the running trial.
+
+| Symbol | Name | Plain meaning | Running trial |
+|---|---|---|---|
+| $\pi_{\mathrm{Ind}}(y\mid\boldsymbol\theta)$ | conditional individual likelihood | the outcome model for one patient with known covariates | $h^{\delta}S$, exponential |
+| $\boldsymbol\theta$ | conditional parameter | the parameter that outcome model needs (a mean, a hazard, a probability vector) | the hazard $\lambda_x$ |
+| $\boldsymbol\theta_{jk}(\mathbf{x};\boldsymbol\xi)$ | network-mapped parameter | how the network builds that parameter from covariates and shared effects | $\psi\lambda_x$ treated, $\lambda_x$ control |
+| $\eta_{jk}(\mathbf{x})$ | linear predictor | prognostic plus treatment plus interaction terms | the log-hazard shift |
+| $\boldsymbol\xi$ | full parameter vector | all unknowns: baselines, prognostic effects, treatment effects, cutpoints | $(\lambda_0,\lambda_1,\psi)$ |
+| $f_j$ | study covariate distribution | the reported covariate mix of study $j$ | $X\sim\operatorname{Ber}(\tfrac12)$ |
+| IPD arm | | patient-level rows observed | an individual-level study |
+| AgD arm | | only summaries; covariates integrated out | the comparator arm |
+
+Whether the general integral @eq-genlik-general *simplifies* depends entirely on one property of the kernel,
+affinity in the mean, summarized in @tbl-genlik-reduction.
+
+| Outcome family | Kernel in the mean $\theta$ | Affine in $\theta$? | Integrated likelihood $=\pi(y\mid\bar\theta_{jk})$? |
+|---|---|---|---|
+| Gaussian, identity link | linear in $\theta$ | yes | yes |
+| Bernoulli / binomial | $\theta^{y}(1-\theta)^{1-y}$ | yes | yes |
+| Poisson, count | $\theta^{y}e^{-\theta}/y!$ | no | no |
+| Censored survival | $h^{\delta}S$ | no | no |
+| Ordered categorical | $p_k$ | no | no |
+
+: Which outcome families collapse to mean aggregation. For the "yes" families the arm likelihood is the
+kernel evaluated at the aggregate mean $\bar\theta_{jk}=\int g^{-1}(\eta_{jk})f_j$; computing
+$\bar\theta_{jk}$ may still need quasi-Monte Carlo when the link has no closed-form average (the logit,
+@thm-logit-no-closed-form), but the likelihood *structure* collapses. For the "no" families the full
+node-by-node integral is retained. {#tbl-genlik-reduction}
+
+The theorem then says: choose the one function $\pi_{\mathrm{Ind}}$, and the entire aggregation,
+integration, and inference pipeline of Chapters 20 to 24 runs unchanged. That is the structural reason
+ML-NMR, unlike MAIC (Chapter 18) and STC (Chapter 19), never needs to be rebuilt for a new outcome type.
+
+::: {#thm-general-likelihood-mlnmr}
+## General-likelihood ML-NMR
+Let $\pi_{\mathrm{Ind}}(y\mid\boldsymbol\theta)$ be any individual-level conditional likelihood (a density
+or probability mass in $y$ for each value of the conditional parameter $\boldsymbol\theta$), and let the
+network model determine the conditional parameter of an individual with covariates $\mathbf{x}$ in study
+$j$ on arm $k$ through $\boldsymbol\theta=\boldsymbol\theta_{jk}(\mathbf{x};\boldsymbol\xi)$, built from the
+linear predictor $\eta_{jk}(\mathbf{x})=\mathbf{x}^\top\boldsymbol\beta_1+\gamma_k+\mathbf{x}^\top
+\boldsymbol\beta_{2,k}$ of [Notation](/notation.qmd). Then:
+
+1. **(IPD arm.)** For an IPD arm with observed covariates, the arm log-likelihood is the sum of
+conditional contributions,
+$\sum_{i}\log\pi_{\mathrm{Ind}}\big(y_{ijk}\mid\boldsymbol\theta_{jk}(\mathbf{x}_{ijk};\boldsymbol\xi)\big)$.
+
+2. **(AgD arm.)** For an AgD arm with $n_{jk}$ (possibly reconstructed) observations and unobserved
+covariates distributed as $f_j$, the arm likelihood is the integrated likelihood
+$$
+\bar L_{jk}(\boldsymbol\xi)=\prod_{i=1}^{n_{jk}}\int_{\mathcal{X}}\pi_{\mathrm{Ind}}
+\big(y_{ijk}\mid\boldsymbol\theta_{jk}(\mathbf{x};\boldsymbol\xi)\big)\,f_j(\mathbf{x})\,d\mathbf{x},
+$$ {#eq-genlik-general}
+each factor a well-defined likelihood contribution by @thm-marginal-individual-likelihood, the product
+justified by @thm-aggregate-marginal-likelihood, and the integral computed by the Sobol' QMC rule of
+Chapter 22.
+
+3. **(GLM reduction.)** If $\pi_{\mathrm{Ind}}(y\mid\theta)$ is a one-parameter GLM density with mean
+$\theta=g^{-1}(\eta_{jk}(\mathbf{x}))$ and the kernel is affine in $\theta$ for each fixed $y$, then
+@eq-genlik-general reduces to the mean-aggregation model of @thm-aggregation with aggregate mean
+$\bar\theta_{jk}=\int g^{-1}(\eta_{jk}(\mathbf{x}))f_j(\mathbf{x})\,d\mathbf{x}$. The affine-in-$\theta$
+hypothesis is essential and restrictive: it holds for the Bernoulli mass and the identity-link Gaussian
+mean, but *not* for the Poisson mass $\theta^{y}e^{-\theta}/y!$, the survival kernel $h^{\delta}S$, or the
+proportional-odds mass $p_k$, all of which are nonlinear in $\theta$ and retain the full integral
+(@tbl-genlik-reduction). So "reduces to a GLM" really means "reduces in the Bernoulli or identity-link
+case"; the other families genuinely need @eq-genlik-general.
+
+4. **(NMA reduction.)** If there are no covariates (or $f_j$ is degenerate at a single $\mathbf{x}_j$),
+@eq-genlik-general reduces to the standard network meta-analysis likelihood (@thm-mlnmr-generalizes-nma).
+
+In particular @eq-genlik-general accommodates survival outcomes with
+$\pi_{\mathrm{Ind}}=h^{\delta}S$ (@def-censored-likelihood) and ordered categorical outcomes with
+$\pi_{\mathrm{Ind}}=p_k$ (@def-proportional-odds), as well as continuous, binary, count, and negative
+binomial outcomes, by changing only the integrand $\pi_{\mathrm{Ind}}$.
+:::
+
+::: {.proof}
+*Part 1* is the definition of a likelihood from conditionally independent observations: with covariates
+observed, individual $i$ contributes $\pi_{\mathrm{Ind}}(y_{ijk}\mid\boldsymbol\theta_{jk}(\mathbf{x}_{ijk};
+\boldsymbol\xi))$, and conditional independence makes the arm likelihood the product, hence the arm
+log-likelihood the sum.
+
+*Part 2* is @thm-aggregate-marginal-likelihood with the conditional kernel
+$L_{i\mid\mathbf{x}}(\boldsymbol\xi;y_{ijk},\mathbf{x})=\pi_{\mathrm{Ind}}(y_{ijk}\mid
+\boldsymbol\theta_{jk}(\mathbf{x};\boldsymbol\xi))$. Each factor is well defined and finite by
+@thm-marginal-individual-likelihood: for a probability-mass kernel $\pi_{\mathrm{Ind}}\in[0,1]$ the
+integral is at most $1$, and for a density kernel it is the marginal density of $Y_{ijk}$, finite for
+almost every value. The QMC evaluation is the Sobol' rule of @thm-hypercube-integration applied to the
+nonnegative integrand $\mathbf{x}\mapsto\pi_{\mathrm{Ind}}(y_{ijk}\mid\boldsymbol\theta_{jk}(\mathbf{x};
+\boldsymbol\xi))$, with the covariate marginals mapped by @thm-inverse-cdf and the dependence supplied by
+the Gaussian copula (@def-gaussian-copula, @thm-sklar).
+
+*Part 3.* Suppose $\pi_{\mathrm{Ind}}(y\mid\theta)$ is, for each fixed $y$, an affine function of the mean
+$\theta$, say $\pi_{\mathrm{Ind}}(y\mid\theta)=A(y)+B(y)\,\theta$. With $\theta(\mathbf{x})=
+g^{-1}(\eta_{jk}(\mathbf{x}))$ and $\bar\theta_{jk}=\int g^{-1}(\eta_{jk})f_j$,
+$$
+\int_{\mathcal{X}}\pi_{\mathrm{Ind}}\big(y\mid g^{-1}(\eta_{jk}(\mathbf{x}))\big)f_j(\mathbf{x})\,
+d\mathbf{x}=A(y)\!\int\! f_j+B(y)\!\int\! g^{-1}(\eta_{jk})f_j=A(y)+B(y)\,\bar\theta_{jk}
+=\pi_{\mathrm{Ind}}(y\mid\bar\theta_{jk}),
+$$
+so the integrated likelihood equals the kernel evaluated at the aggregate mean $\bar\theta_{jk}$, which is
+the mean-aggregation model of @thm-aggregation. (The Bernoulli kernel $\theta^{y}(1-\theta)^{1-y}$ with
+$y\in\{0,1\}$ is affine in $\theta$, equal to $\theta$ when $y=1$ and $1-\theta$ when $y=0$, so binary
+ML-NMR is the canonical instance.)
+
+*Part 4.* If there are no covariates, $\boldsymbol\theta_{jk}(\mathbf{x};\boldsymbol\xi)=
+\boldsymbol\theta_{jk}(\boldsymbol\xi)$ is constant in $\mathbf{x}$, the integral over the (degenerate)
+$f_j$ is the integrand itself, and @eq-genlik-general becomes $\prod_i\pi_{\mathrm{Ind}}(y_{ijk}\mid
+\boldsymbol\theta_{jk}(\boldsymbol\xi))$, the ordinary arm likelihood of a network meta-analysis on the
+chosen scale; the network reduces to the no-regression case of @thm-mlnmr-generalizes-nma.
+
+The survival and ordinal instances are immediate: substitute $\pi_{\mathrm{Ind}}(t,\delta\mid\mathbf{x})=
+h(t\mid\mathbf{x})^{\delta}S(t\mid\mathbf{x})$ from @def-censored-likelihood, or
+$\pi_{\mathrm{Ind}}(k\mid\mathbf{x})=p_k(\mathbf{x};\boldsymbol\xi)$ from @def-proportional-odds, into
+@eq-genlik-general. Neither kernel is affine in a single mean, so neither reduces under Part 3; the full
+integral is retained and computed by QMC. $\square$
+:::
+
+::: {.remark}
+**Cost, and why it is the price of generality.** The simple picture first: for each aggregate patient we
+compute the outcome likelihood at $N$ representative covariate values and average them, and we redo this
+every time the sampler proposes new parameters. Everything after this sentence is detail. The integrated
+likelihood @eq-genlik-general is evaluated at $N$ Sobol' nodes for each AgD observation at every Hamiltonian
+Monte Carlo leapfrog step (Chapter 24). For survival there is a second integral hidden inside each node: computing
+$S(t\mid\mathbf{x})=\exp(-\int_0^t h)$ at a flexible baseline hazard requires integrating the hazard over
+time. The cost is therefore $N$ covariate nodes times a time quadrature times the number of observations
+times the number of gradient evaluations; this is the heaviest computation in the book, but it is linear
+in each factor and entirely parallelizable, and it is what buys an outcome-agnostic method. The
+diagnostics of Chapter 24, $\widehat R$ (@thm-gelman-rubin), effective sample size (@def-mcmc-ess), and
+the integration-error monitoring of @def-integration-error-monitoring, govern both the Markov chain and
+the QMC truncation; model comparison across competing likelihoods (a Weibull against an M-spline baseline,
+proportional odds against multinomial) uses the information criteria of @thm-dic-waic-loo and the
+Pareto-smoothed importance-sampling leave-one-out of @def-psis-loo. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**One family at a time, or a joint network?** A natural question is whether a single network may combine
+survival, ordinal, binary, and count outcomes. Two readings, both supported by the framework. The common
+case in this book is one outcome family per network: every study reports the same endpoint, one kernel
+$\pi_{\mathrm{Ind}}$ is used throughout, and the machinery is reused across outcome families only in the
+sense that different networks plug in different kernels. The framework also permits, in principle, a single
+joint model whose studies report *different* outcome families, provided they share the treatment-effect
+parameters $\gamma_k$ and $\boldsymbol\beta_{2,k}$ on one common linear-predictor scale: then study $j$
+contributes its own kernel $\pi_{\mathrm{Ind}}^{(j)}$ but the same $\eta_{jk}(\mathbf{x})$, and the shared
+estimand is the relative effect on that scale. What makes such a combination meaningful is precisely a
+shared linear-predictor-scale effect; without it there is nothing to pool. Unless stated otherwise, the
+networks in this book use one family at a time. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Generality as the distinguishing feature.** This theorem is the structural reason ML-NMR is more
+flexible than its competitors. Matching-adjusted indirect comparison (Chapter 18) requires the aggregate
+data in a moment form to solve its balancing equations, and simulated treatment comparison (Chapter 19)
+requires an outcome regression of a specific form; both need rework for each outcome type, and neither
+ingests a censored survival time or an ordinal band without it. General-likelihood ML-NMR changes one
+function, $\pi_{\mathrm{Ind}}$, and reuses the entire aggregation, integration, and inference pipeline.
+The same generality carries to the unanchored extension ML-UMR (Chapter 26), where the time-to-event and
+proportional-odds kernels reappear inside the unanchored likelihood (@thm-mlumr-tte). $\blacktriangleleft$
+:::
+
+This capstone corresponds to J.8 in the proof catalogue.
+
+## A fully worked survival example {#sec-genlik-example}
+
+We carry a complete survival aggregation from a conditional hazard model to an aggregate-data likelihood,
+choosing the numbers so that every survival probability, marginal hazard, restricted mean, and likelihood
+factor is exact and checkable by hand. The example uses a single binary covariate, which turns every
+covariate integral into a two-point sum (the degenerate QMC rule for a Bernoulli marginal) and makes the
+non-collapsibility of the hazard ratio and the collapsibility of the RMST visible in closed form. It is a
+stylized analogue of the multiple-myeloma progression-free-survival network of @phillippo2025general,
+whose `multinma` analysis integrates four covariates (age modeled as gamma, three binary) at $64$ Sobol'
+nodes with a Gaussian copula; here we keep one binary covariate so the arithmetic is transparent.
+
+::: {#exm-genlik-survival}
+## Exponential-hazard aggregation with a binary prognostic covariate
+This is the full computation promised for the running trial of @exm-genlik-running; it takes that trial from
+the conditional hazard model to the aggregate-data likelihood. A target population $\mathcal{P}$ (the
+comparator AgD population) has a single binary prognostic covariate
+$X\in\{0,1\}$ with $P(X=1)=q=\tfrac12$; $X$ marks a high-risk subgroup. The outcome is time to progression,
+modeled with a constant (exponential) conditional hazard. The control treatment $C$ has
+$$
+h_C(s\mid x)=\lambda_x,\qquad \lambda_0=1,\quad\lambda_1=3\quad(\text{events per year}),
+$$
+so the high-risk group has triple the control hazard. Treatment $A$ acts by proportional hazards with a
+covariate-independent conditional hazard ratio $\psi=\tfrac12$ (a beneficial treatment, conditional log
+HR $=\log\tfrac12=-0.693$, no effect modification),
+$$
+h_A(s\mid x)=\psi\,\lambda_x=\tfrac12\lambda_x .
+$$
+By @thm-survival-hazard-relation the conditional survival functions are
+$S_C(s\mid x)=e^{-\lambda_x s}$ and $S_A(s\mid x)=e^{-\psi\lambda_x s}=e^{-\lambda_x s/2}$.
+
+**Step 1: marginal survival.** Averaging over $X$ (a two-point sum, weights $\tfrac12,\tfrac12$),
+$$
+S_C^{\mathcal{P}}(s)=\tfrac12 e^{-s}+\tfrac12 e^{-3s},\qquad
+S_A^{\mathcal{P}}(s)=\tfrac12 e^{-s/2}+\tfrac12 e^{-3s/2}.
+$$
+
+**Step 2: the marginal hazard ratio is time-varying (@thm-marginal-hr-time-varying).** Using
+@lem-survivor-weighted-hazard, $h_C^{\mathcal{P}}(s)=(e^{-s}+3e^{-3s})/(e^{-s}+e^{-3s})$ and
+$h_A^{\mathcal{P}}(s)=\tfrac12(e^{-s/2}+3e^{-3s/2})/(e^{-s/2}+e^{-3s/2})$. The conditional hazard ratio is
+the constant $\psi=0.5$ at every time and covariate; the marginal hazard ratio
+$\mathrm{mHR}(s)=h_A^{\mathcal{P}}(s)/h_C^{\mathcal{P}}(s)$ is not:
+
+| $s$ (years) | $h_C^{\mathcal{P}}(s)$ | $h_A^{\mathcal{P}}(s)$ | $\mathrm{mHR}(s)$ |
+|---|---|---|---|
+| $0$ | $2.0000$ | $1.0000$ | $0.5000$ |
+| $0.5$ | $1.5379$ | $0.8776$ | $0.5706$ |
+| $1$ | $1.2384$ | $0.7689$ | $0.6209$ |
+| $2$ | $1.0360$ | $0.6192$ | $0.5977$ |
+| $4$ | $1.0007$ | $0.5180$ | $0.5176$ |
+| $\infty$ | $1.0000$ | $0.5000$ | $0.5000$ |
+
+At $s=0$ no selection has occurred and the marginal hazard ratio equals the conditional value $0.5$; for
+every $s>0$ it exceeds $0.5$, attenuated toward the null $1$, peaking near $0.62$ around one year before
+the slow ($x=0$) stratum comes to dominate both risk sets and the ratio returns toward $0.5$. A single Cox
+fit reporting "$\mathrm{HR}=0.60$" would be reporting an artifact of the one-year follow-up window, not the
+conditional effect $0.5$. (Check the $s=0$ entry by hand: $h_C^{\mathcal{P}}(0)=(1+3)/2=2$ is the average
+baseline hazard, $h_A^{\mathcal{P}}(0)=\tfrac12\cdot 2=1$, ratio $0.5$.)
+
+**Step 3: RMST is collapsible (@thm-rmst-collapsible).** Take horizon $\tau=2$ years. The conditional
+RMSTs are $\operatorname{RMST}_t(\tau\mid x)=\int_0^{\tau}e^{-\lambda_x^{(t)}s}\,ds=(1-e^{-\lambda_x^{(t)}
+\tau})/\lambda_x^{(t)}$ with $\lambda_x^{(C)}=\lambda_x$ and $\lambda_x^{(A)}=\tfrac12\lambda_x$:
+$$
+\operatorname{RMST}_C(2\mid 0)=1-e^{-2}=0.8647,\quad
+\operatorname{RMST}_C(2\mid 1)=\tfrac{1-e^{-6}}{3}=0.3325,
+$$
+$$
+\operatorname{RMST}_A(2\mid 0)=\tfrac{1-e^{-1}}{0.5}=1.2642,\quad
+\operatorname{RMST}_A(2\mid 1)=\tfrac{1-e^{-3}}{1.5}=0.6335 .
+$$
+The marginal RMSTs computed two ways agree exactly. Averaging the conditional values:
+$\operatorname{RMST}_C^{\mathcal{P}}(2)=\tfrac12(0.8647+0.3325)=0.5986$ and
+$\operatorname{RMST}_A^{\mathcal{P}}(2)=\tfrac12(1.2642+0.6335)=0.9489$. Integrating the marginal survival
+of Step 1: $\int_0^{2}(\tfrac12 e^{-s}+\tfrac12 e^{-3s})\,ds=\tfrac12(1-e^{-2})+\tfrac16(1-e^{-6})=
+0.5986$, the same. The collapsible RMST contrast is
+$\Delta\!\operatorname{RMST}_{AC}^{\mathcal{P}}(2)=0.9489-0.5986=0.3503$ years, equal to the average of the
+conditional contrasts $\tfrac12(0.3995+0.3010)=0.3503$. Unlike the hazard ratio, this marginal contrast is
+the average of conditional contrasts.
+
+**Step 4: the marginal individual likelihood (@thm-marginal-individual-likelihood).** The comparator study
+reports its covariate distribution ($X\sim\operatorname{Ber}(\tfrac12)$) and supplies, on the control arm,
+reconstructed pseudo-IPD; take two pseudo-observations, an event at $t_1=0.5$ ($\delta_1=1$) and a
+right-censoring at $t_2=2$ ($\delta_2=0$). With the conditional censored kernel
+$L_{i\mid x}=h_C(t\mid x)^{\delta}S_C(t\mid x)=\lambda_x^{\delta}e^{-\lambda_x t}$, the marginal
+contributions are the two-point sums
+$$
+L_1(\boldsymbol\xi)=\tfrac12\big[\lambda_0 e^{-\lambda_0 t_1}\big]+\tfrac12\big[\lambda_1
+e^{-\lambda_1 t_1}\big]
+=\tfrac12 e^{-0.5}+\tfrac12\,(3e^{-1.5})=0.3033+0.3347=0.6380,
+$$
+$$
+L_2(\boldsymbol\xi)=\tfrac12\big[e^{-\lambda_0 t_2}\big]+\tfrac12\big[e^{-\lambda_1 t_2}\big]
+=\tfrac12 e^{-2}+\tfrac12 e^{-6}=0.06767+0.00124=0.06891 .
+$$
+($L_1$ is a density, with units of inverse time; $L_2$ is a probability.) Here the two integration nodes
+are the covariate values $\{0,1\}$ with QMC weights $\{\tfrac12,\tfrac12\}$; a continuous covariate would
+replace this exact two-point rule with an $N$-node Sobol' average, as in the $64$-node `multinma`
+analysis.
+
+**Step 5: the aggregate arm likelihood (@thm-aggregate-marginal-likelihood).** The product over the two
+pseudo-observations is
+$$
+\bar L_{C}(\boldsymbol\xi)=L_1(\boldsymbol\xi)\,L_2(\boldsymbol\xi)=0.6380\times 0.06891=0.04396 .
+$$
+This is the contribution of the comparator control arm to the network likelihood at the parameter values
+$(\lambda_0,\lambda_1)=(1,3)$; as a function of the unknown $\boldsymbol\xi$ it is
+$\bar L_C(\boldsymbol\xi)=\big[\tfrac12\lambda_0 e^{-\lambda_0/2}+\tfrac12\lambda_1 e^{-\lambda_1/2}\big]
+\cdot\big[\tfrac12 e^{-2\lambda_0}+\tfrac12 e^{-2\lambda_1}\big]$ (each bracket is $L_1$ and $L_2$ rewritten
+as functions of the free rates, using the observed times $t_1=\tfrac12$ and $t_2=2$: the first factor
+carries $e^{-\lambda_x t_1}=e^{-\lambda_x/2}$, the second $e^{-\lambda_x t_2}=e^{-2\lambda_x}$), ready for
+Hamiltonian Monte Carlo. The
+treatment arm contributes the analogous product with $\lambda_x$ replaced by $\psi\lambda_x$, tying the
+arms together through the shared $\psi$ exactly as the anchored network requires. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**What the example shows.** The conditional model is as clean as a GLM: a constant hazard ratio $\psi=0.5$,
+linear on the log-hazard scale, identifiable from any arm. Yet the marginal hazard ratio is time-varying
+(Step 2), so it is not a transportable parameter; the RMST contrast is collapsible (Step 3), so it is a
+faithful read-out in a stated population but, by the scale-misalignment remark after
+@thm-rmst-collapsible, still requires the target covariate distribution to transport. The aggregation
+itself (Steps 4 and 5) is exactly the integrated likelihood @eq-genlik-general with $\pi_{\mathrm{Ind}}=
+h^{\delta}S$, computed as a finite sum because the covariate is binary. Replace $h^{\delta}S$ by the
+proportional-odds mass $p_k$ and the same five steps deliver the ordinal aggregate likelihood; this is the
+generality of @thm-general-likelihood-mlnmr made concrete. $\blacktriangleleft$
+:::
+
+## Notes and references {#sec-genlik-notes}
+
+The general-likelihood ML-NMR framework of this chapter is the contribution of @phillippo2025general,
+which extends the original binary and count ML-NMR of @phillippo2020mlnmr to survival, ordered
+categorical, and other outcome types through the integrated likelihood @eq-genlik-general, and is
+implemented in the `multinma` package. The survival development, the proportional-hazards and
+accelerated-failure-time individual models, the flexible M-spline baseline hazard, and the
+reconstruction of pseudo-IPD from published Kaplan-Meier curves, follows @phillippo2025general and Chapter
+7 of @phillippo2019thesis. The survival fundamentals of @sec-genlik-survival, the survival function, the
+hazard, the identity $S=\exp(-\int h)$, and the right-censored likelihood under independent censoring, are
+classical; the standard reference is Klein and Moeschberger (see the proposed bibliography entry in the
+work log), and the independent-censoring factorization @prp-censored-likelihood-density is the textbook
+construction. The Kaplan-Meier reconstruction algorithm is due to Guyot and colleagues (proposed entry in
+the log); its role in the unanchored network is developed in Chapter 26 (@thm-pseudo-ipd-reconstruction).
+
+The non-collapsibility of the marginal hazard ratio (@thm-marginal-hr-time-varying) is a much-discussed
+feature of survival analysis: even a correctly specified conditional proportional-hazards model induces a
+marginal hazard ratio that varies with time and is attenuated toward the null, because the at-risk set is
+selected by survival. The survivor-weighted representation @eq-genlik-survivor-rep and the exponential-tilt
+covariance argument given here make the attenuation precise and quantitative; the phenomenon is the
+survival-scale instance of the general non-collapsibility of @def-non-collapsibility (Chapter 7) and of
+the odds-ratio non-collapsibility of Chapter 11, and it is the reason the restricted mean survival time
+(@def-rmst), collapsible by the Fubini argument of @thm-rmst-collapsible, is increasingly preferred as a
+marginal summary. The transportability subtlety, that RMST collapsibility does not imply RMST
+transportability when the conditional model is on the log-hazard scale, is the scale-misalignment finding
+analyzed for the unanchored case by @chandler2025mlumr and revisited in Chapter 26 (@thm-mlumr-tte); the
+clean transportable object remains the conditional log-hazard model under the shared-effect-modifier
+assumption (@def-sema) of Chapter 17.
+
+The proportional-odds model (@def-proportional-odds) is the standard cumulative-logit model for ordered
+categorical data; the validity lemma @lem-ordinal-valid-probabilities and the proportional-odds
+interpretation are elementary and appear in any categorical-data text, with @mccullagh1989glm the classical
+GLM reference. The aggregation theorems @thm-marginal-individual-likelihood and
+@thm-aggregate-marginal-likelihood are the general-likelihood forms of the mean-aggregation theorem
+@thm-aggregation of Chapter 20, and they inherit the numerical-integration apparatus of Chapter 22, the
+Sobol' net (@def-sobol-net, @thm-hypercube-integration, @sobol1967), the inverse-CDF transform
+(@thm-inverse-cdf, @owen1956), and the Gaussian copula (@def-gaussian-copula, @thm-sklar, @sklar1959). The
+Bayesian computation, including the diagnostics and model comparison referenced in @sec-genlik-general, is
+the Stan/Hamiltonian Monte Carlo apparatus of Chapter 24 (@carpenter2017stan), and the network reductions
+to standard NMA (@thm-mlnmr-generalizes-nma) connect to @dias2018nma.
+
+There is no machine-checked counterpart for this chapter. The companion Coq development
+(`~/Documents/GitHub/ITC_Coq/theories/`) does not formalize survival, hazard, restricted mean survival
+time, or ordered categorical outcomes: there is no `Survival.v`, and the only mention of hazards and
+non-collapsibility is a prose comment in `STC.v`. The reasons, recorded in the source manuscript, are that
+survival's content requires Lebesgue integration over time beyond the analysis machinery used elsewhere in
+the development, and that the most interesting statements, the time-variation of the marginal hazard ratio
+and its non-collapsibility, are analytic results more naturally stated in prose than as Coq lemmas. The
+results of this chapter are therefore pen-and-paper, and the proofs above are self-contained. This chapter
+corresponds to results J.1 (survival function), J.2 (hazard), J.3 (the identity $S=\exp(-\int h)$), J.4
+(the right-censored likelihood, with J.4a the conditional hazard ratio, J.4b the time-varying marginal
+hazard ratio, and J.4c the collapsible RMST), J.5 (the marginal individual likelihood), J.6 (the aggregate
+arm likelihood), J.7 (the proportional-odds model), and J.8 (the general-likelihood framework) of the
+proof catalogue in `proofs/J_general_likelihoods.md`.
+
+## Exercises {#sec-genlik-exercises}
+
+The exercises progress from warm-up and interpretation to computation and proof. A star ($\star$) marks an
+exercise whose full worked solution appears in Appendix F. Start with the first two if the formal
+development felt fast: they use only the running trial and the definitions.
+
+::: {#exr-genlik-hazard-not-probability}
+**(Warm-up: hazard is a rate, not a probability.)** In the running trial (@exm-genlik-running) the control
+hazard is the constant $\lambda_0=1$ per year for standard-risk and $\lambda_1=3$ per year for high-risk
+patients. (a) Using $S(t\mid x)=e^{-\lambda_x t}$, compute the probability a standard-risk control patient
+is progression-free at $t=1$ and at $t=2$ years. (b) Do the same for a high-risk patient. (c) A colleague
+says "a hazard of $3$ per year means a $300\%$ chance of progressing in a year, which is impossible." In one
+or two sentences, explain what is wrong with this reading and what the number $3$ actually measures.
+:::
+
+::: {#exr-genlik-cond-vs-marg-interpretation}
+**(Interpretation: conditional versus marginal hazard ratio.)** The running trial has conditional hazard
+ratio $\psi=0.5$ at every time and covariate value, yet the marginal hazard ratio in @exm-genlik-survival
+rises to about $0.62$ near one year before falling back. (a) State in one sentence which of the two,
+conditional or marginal, is the transportable estimand the network reports, and why. (b) Using the
+risk-set-drift table in @sec-genlik-hazard-ratio, explain in plain language why the treated arm retains
+relatively more high-risk patients at later times. (c) A submission reports a single "HR $=0.60$" from an
+unadjusted Cox fit with two years of follow-up. Explain why this number should not be read as the
+per-patient effect of treatment.
+:::
+
+::: {#exr-genlik-weibull-hazard}
+**(Computation) Weibull from the hazard.** Let the conditional hazard be the power law
+$h(s\mid\mathbf{x})=\lambda(\mathbf{x})\,\nu\,s^{\nu-1}$ with shape $\nu>0$ and scale
+$\lambda(\mathbf{x})>0$. Using @thm-survival-hazard-relation, compute the cumulative hazard
+$H(s\mid\mathbf{x})$, the survival function $S(s\mid\mathbf{x})$, and the density $f(s\mid\mathbf{x})$, and
+verify that $f=h\,S$. Show that with $\nu=1$ the model is exponential. Then write the right-censored
+individual likelihood @eq-genlik-censored-lik for an observation $(t,\delta)$ and confirm it reduces to a
+density when $\delta=1$ and to a survival probability when $\delta=0$.
+:::
+
+::: {#exr-genlik-cumulative-hazard-additive}
+**(Computation) Additivity of the cumulative hazard under PH.** Under the PH model @eq-genlik-ph with a constant
+baseline hazard $h_{0j}(s)=\kappa_j$, show that the conditional cumulative hazard is
+$H_{jk}(t\mid\mathbf{x})=\kappa_j t\,\exp(\eta_{jk}(\mathbf{x}))$ and hence
+$S_{jk}(t\mid\mathbf{x})=\exp(-\kappa_j t\,e^{\eta_{jk}(\mathbf{x})})$. Deduce that on the log
+cumulative-hazard scale, $\log H_{jk}(t\mid\mathbf{x})=\log(\kappa_j t)+\eta_{jk}(\mathbf{x})$, so the
+covariate effect is additive and time-invariant. Explain why this makes the conditional log hazard ratio
+@eq-genlik-cond-loghr time-invariant but does not make the marginal hazard ratio time-invariant.
+:::
+
+::: {#exr-genlik-binary-reduction}
+**(Proof) Binary ML-NMR as a special case.** Take $\pi_{\mathrm{Ind}}(y\mid\theta)=\theta^{y}(1-\theta)^{1-y}$
+with $y\in\{0,1\}$ and $\theta=\operatorname{expit}(\eta_{jk}(\mathbf{x}))$. Using
+@thm-general-likelihood-mlnmr part 3, show that the integrated marginal likelihood
+@eq-genlik-marginal-lik equals $\bar p_{jk}^{\,y}(1-\bar p_{jk})^{1-y}$ with $\bar p_{jk}=\int
+\operatorname{expit}(\eta_{jk})f_j$, and that the aggregate arm likelihood for an event count $r_{jk}$ out
+of $n_{jk}$ is the binomial kernel $\bar p_{jk}^{\,r_{jk}}(1-\bar p_{jk})^{n_{jk}-r_{jk}}$. Contrast this
+with the survival kernel $h^{\delta}S$ and explain precisely why the latter does not collapse to a
+function of a single aggregate mean.
+:::
+
+::: {#exr-genlik-ordinal-network}
+**(Computation) A three-category proportional-odds likelihood.** Let $K=3$ with cutpoints $\alpha_1\le\alpha_2$ and
+linear predictor $\eta$. Write the three category probabilities $p_1,p_2,p_3$ from @eq-genlik-po-prob
+explicitly in terms of $\operatorname{expit}$, verify directly that they are nonnegative and sum to one
+(@lem-ordinal-valid-probabilities), and compute the marginal individual likelihood of an AgD observation
+$y=2$ when $X\in\{0,1\}$ with $P(X=1)=q$ and $\eta(x)=\gamma+\beta x$, as the two-point sum
+$q\,p_2(1)+(1-q)\,p_2(0)$. Numerically evaluate it for $\alpha_1=-1,\alpha_2=1,\gamma=0.5,\beta=1,q=0.4$.
+:::
+
+::: {#exr-genlik-mhr-attenuation}
+**($\star$, Challenge) Quantifying the attenuation.** In the frailty setting of @thm-marginal-hr-time-varying with a binary
+frailty $\rho(X)\in\{\rho_0,\rho_1\}$, $\rho_0<\rho_1$, $P(X=1)=q$, constant baseline $h_{a0}(s)=1$, and
+constant conditional hazard ratio $\psi\in(0,1)$, derive a closed-form expression for the correction
+factor $R(s)$ in @eq-genlik-mhr and hence for $\mathrm{mHR}(s)$. Prove that $R(s)\ge 1$ for all $s$ with
+equality only at $s=0$ and as $s\to\infty$, that $\mathrm{mHR}(s)>\psi$ on $(0,\infty)$, and that
+$\lim_{s\to 0^+}\mathrm{mHR}(s)=\lim_{s\to\infty}\mathrm{mHR}(s)=\psi$. Identify the time of maximal
+attenuation by setting $\tfrac{d}{ds}R(s)=0$ and interpret it as the moment of maximal survivor selection.
+(This generalizes the table in @exm-genlik-survival, recovered at $\rho_0=1,\rho_1=3,q=\tfrac12,
+\psi=\tfrac12$.)
+
+*Hint.* With a binary frailty the survivor covariate density is a two-point distribution, so write $R(s)$
+as a ratio of two tilted two-point means and use the exponential-tilt identity from the proof of
+@thm-marginal-hr-time-varying. The maximizer of $R(s)$ solves a transcendental equation; identifying it
+qualitatively, as the time of maximal spread between the two survivor distributions, is enough for the
+interpretation.
+:::
+
+::: {#exr-genlik-rmst-transport}
+**($\star$, Proof) Collapsible but not transportable.** Consider two populations $\mathcal{P}$ and $\mathcal{P}^{*}$
+with the same binary covariate $X$ but different prevalences $q\ne q^{*}$, and the exponential PH model of
+@exm-genlik-survival (conditional hazards $\lambda_x$ for control and $\psi\lambda_x$ for treatment, shared
+across populations: the shared-effect-modifier assumption holds on the log-hazard scale). Using
+@thm-rmst-collapsible, show that the RMST contrast $\Delta\!\operatorname{RMST}_{AC}(\tau)$ differs between
+$\mathcal{P}$ and $\mathcal{P}^{*}$, and give an explicit formula for the difference in terms of
+$q-q^{*}$. Conclude that RMST collapsibility (a within-population identity) does not imply RMST
+transportability (a cross-population identity), and explain how this differs from the conditional
+log-hazard model, which is shared across the two populations by assumption. Relate your conclusion to the
+scale-misalignment remark following @thm-rmst-collapsible and to Chapter 26 (@thm-mlumr-tte).
+
+*Hint.* By @thm-rmst-collapsible each population's RMST contrast is a weighted average of the two
+conditional contrasts with weights $(1-q,q)$; subtract the two averages, the conditional contrasts cancel,
+and the difference is a single multiple of $q-q^{*}$. The two-population snapshot in @sec-genlik-rmst is the
+numeric special case.
+:::

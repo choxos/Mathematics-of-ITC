@@ -1,0 +1,616 @@
+---
+title: "Probability Distributions"
+---
+
+This appendix is a reference catalogue of the probability distributions used in the book. For each
+family we record the support, the probability mass or density function, the mean, the variance, and the
+moment generating function where it exists. The discrete families (Bernoulli, binomial, Poisson
+binomial, Poisson) and the normal, multivariate normal, and standard normal are defined and their
+moments derived in @sec-distributions and @sec-mvn of Chapter 4; this appendix collects those results
+and adds the further families (exponential, gamma, beta, Weibull, Dirichlet) that appear later as
+survival baselines in Chapters 25 and 26 and as conjugate priors in Chapter 8. Nothing here is proved
+that is not proved in the chapters or that does not follow by a one-line calculation; the value of the
+appendix is a single place to look up a defining formula. For the symbols used throughout, see
+[Notation](/notation.qmd).
+
+## How to read this appendix {#sec-dist-howto}
+
+The fastest way to use this catalogue is to first name the **modeling role** you are in, then look up
+the family. Every distribution in the book plays one of six roles:
+
+1. an **outcome likelihood**, the model for the observed data on one arm of a trial (a binomial for
+   responders, a Poisson for event counts, a normal for a continuous endpoint);
+2. a **prior**, the distribution placed on an unknown parameter before seeing data (a beta on a
+   response probability, a gamma on a rate, a normal on a treatment effect);
+3. a **covariate model**, the distribution of baseline patient characteristics (a multivariate normal
+   for correlated covariates);
+4. a **discrete aggregation device**, used to turn individual-level risks into an aggregate event count
+   (the Poisson binomial and its Poisson approximation in Part V);
+5. a **survival baseline**, the model for a time-to-event outcome (exponential, Weibull); or
+6. a **numerical integration device**, used to average an individual likelihood over a covariate
+   distribution (the standard normal and the Gaussian copula in the ML-NMR integration of Chapter 22).
+
+@tbl-dist-roles maps each family to the clinical object it typically models and to the chapters that use
+it. A reader browsing this appendix should start there, identify the role, and then read only the
+relevant catalogue entry.
+
+| Distribution | Typical health-data object | Role in this book | Where it appears |
+|---|---|---|---|
+| Bernoulli, binomial | responders out of randomized patients (binary endpoint) | outcome likelihood | Ch. 4, 7, 13; Part V |
+| Poisson | event counts, or events per person-time | outcome likelihood | Ch. 7; count aggregation @sec-poisson-aggregate |
+| Poisson binomial | aggregate event count from patients with unequal risks | discrete aggregation device | @sec-pobin (Ch. 21) |
+| Multinomial | counts across more than two response categories | outcome likelihood | Ch. 8 conjugacy |
+| Normal | a continuous endpoint; an estimated log-effect; a prior | likelihood, approximate likelihood, prior | Ch. 4, 6, 8, 13 |
+| Multivariate normal | correlated baseline covariates; random effects; copula scores | covariate model, random-effects prior, integration device | Ch. 4, 8; @sec-qmc-gaussian (Ch. 22) |
+| Beta | a single response probability | prior on a probability | Ch. 8 |
+| Dirichlet | a vector of category probabilities summing to one | prior on a probability vector | Ch. 8; this appendix |
+| Gamma | a positive rate, or a precision | prior on a rate or precision; survival baseline | Ch. 8; Ch. 25, 26 |
+| Exponential | time to event with constant hazard | survival baseline | Ch. 25, 26 |
+| Weibull | time to event with a rising or falling hazard | survival baseline | @sec-genlik-survival (Ch. 25), 26 |
+| Standard normal $\Phi,\phi$ | probit link; normal scores for QMC integration | link function, integration device | Ch. 7; @sec-qmc-pit, @sec-qmc-gaussian (Ch. 22) |
+
+: Distribution-to-role map. Read this first: name the role (likelihood, prior, covariate model,
+aggregation device, survival baseline, integration device), then read the matching catalogue entry.
+{#tbl-dist-roles}
+
+## Conventions {#sec-dist-conventions}
+
+Three plain-language reminders precede the formulas, because the tables below mix objects of different
+kinds. The **support** of a distribution is the set of values the random variable can actually take,
+that is, the values where the mass or density is positive; everything outside the support has
+probability zero (for a binomial the support is $\{0,1,\dots,n\}$, for a Weibull survival time it is
+$(0,\infty)$). A **mass function** $P(X=k)$ gives a genuine probability at each point of a discrete
+support and never exceeds $1$. A **density** $f(x)$ does not: it is a rate of probability per unit
+length, and an actual probability is recovered only by integrating $f$ over an interval, so a density
+can exceed $1$ (a tightly concentrated normal has a peak above $1$) even though no probability ever
+does. This is why a density value is not itself a probability.
+
+The **moment generating function** (MGF) of a random vector $X$ is
+$M_X(\mathbf{t})=\mathbb{E}[e^{\mathbf{t}^{\top}X}]$, written $M_X(t)=\mathbb{E}[e^{tX}]$ in the scalar
+case (@def-mgf). We say the MGF *exists* when it is finite for all $\mathbf{t}$ in an open neighborhood
+of the origin; in that case it determines all moments by differentiation at the origin
+(@thm-mgf-moments) and determines the law uniquely (@thm-mgf-uniqueness). Intuitively the MGF is a
+bookkeeping device: because $\frac{d}{dt}e^{tX}=X e^{tX}$, each derivative evaluated at $t=0$ pulls down
+one extra factor of $X$, so $M_X^{(r)}(0)=\mathbb{E}[X^{r}]$ and the entire sequence of moments is
+stored in one function. That is the only reason the MGF earns a column in the tables below: given the
+MGF, the mean and variance are two derivatives away. For some families with a finite MGF the function
+has no elementary closed form; for the beta and Weibull families this is noted in the catalogue, and for
+the Dirichlet the joint MGF on the ambient space is degenerate.
+
+*(Advanced; skip on a first pass.)* "Degenerate on the ambient space" means the following. When the
+support lies in a hyperplane, as it does for the Dirichlet whose components satisfy $\sum_k x_k=1$, one
+coordinate is fixed by the others, namely $x_K=1-\sum_{k<K}x_k$. The joint MGF on $\mathbb{R}^{K}$ is
+then really a function of only $K-1$ free arguments and cannot characterize the law in the usual
+full-rank way, so we describe such a family by its moments instead of by an MGF. This is why the
+Dirichlet row lists moments rather than an MGF.
+
+Two special functions recur. The **gamma function** is
+$$
+\Gamma(s)=\int_0^{\infty} u^{s-1}e^{-u}\,du,\qquad s>0,
+$$ {#eq-dist-gamma-function}
+which satisfies $\Gamma(s+1)=s\,\Gamma(s)$ and $\Gamma(n)=(n-1)!$ for positive integers $n$; it is the
+continuous interpolation of the factorial and appears in the normalizing constants of the gamma, beta,
+Weibull, and Dirichlet densities. The **beta function** is
+$$
+B(a,b)=\int_0^1 u^{a-1}(1-u)^{b-1}\,du=\frac{\Gamma(a)\,\Gamma(b)}{\Gamma(a+b)},\qquad a,b>0,
+$$ {#eq-dist-beta-function}
+and its multivariate form, used by the Dirichlet density, is
+$B(\boldsymbol{\alpha})=\prod_{k=1}^K\Gamma(\alpha_k)\big/\Gamma\!\big(\sum_{k=1}^K\alpha_k\big)$; the
+scalar $B(a,b)$ is the $K=2$ case of the vector $B(\boldsymbol{\alpha})$, so the two share a symbol on
+purpose. The numerical evaluation of these functions, together with the error function below, is treated
+in [Appendix D](/appendices/D-special-functions.qmd).
+
+We fix two parametrization conventions that are sources of confusion across the literature. The gamma
+and exponential families are parametrized by a **rate**, so that
+$\mathrm{Gamma}(\alpha,\beta)$ has shape $\alpha$, rate $\beta$, and mean $\alpha/\beta$; this matches
+the convention of @prp-conjugate-gamma-poisson in Chapter 8. The Weibull family is parametrized by a
+shape and a **scale**, related to the proportional-hazards parametrization of Chapter 25 as recorded
+below. A rate has units of events per unit of the variable, so a larger rate means shorter times; a
+scale has the units of the variable itself, so a larger scale means longer times. Because closely
+related survival families are written with a rate, a scale, or a hazard depending on the chapter,
+@tbl-dist-param gathers the three side by side.
+
+| Family | Parameters (this book) | Symbols | Mean in terms of them |
+|---|---|---|---|
+| Exponential | rate | $\lambda$ | $1/\lambda$ |
+| Gamma | shape, rate | $\alpha,\ \beta$ | $\alpha/\beta$ |
+| Weibull (this appendix) | shape, scale | $k,\ \lambda$ | $\lambda\,\Gamma(1+1/k)$ |
+| Weibull (Chapter 25 hazard form) | shape, rate-type coefficient | $\nu,\ \lambda(\mathbf{x})$ | via $S(t)=\exp(-\lambda(\mathbf{x})\,t^{\nu})$ |
+| Normal | mean, variance | $\mu,\ \sigma^{2}$ | $\mu$ |
+
+: Parametrization cheat sheet. The gamma and exponential use a **rate** (events per unit, larger means
+shorter times); the Weibull table uses a **scale** (a typical time, larger means longer times); Chapter
+25 rewrites the Weibull through its **hazard** with shape $\nu=k$ and coefficient
+$\lambda(\mathbf{x})=\lambda^{-\nu}$. All three describe the same families with different symbols. A
+Bayesian **precision** means the reciprocal of a variance, $1/\sigma^{2}$; the normal conjugacy of
+@sec-dist-conjugacy adds precisions rather than variances.
+{#tbl-dist-param}
+
+## Discrete distributions {#sec-dist-discrete}
+
+The four discrete families are defined in @def-bernoulli, @def-binomial, @def-poisson-binomial, and
+@def-poisson. Their moment generating functions are finite for every $t\in\mathbb{R}$.
+
+| Distribution | Support | Mass function $P(X=k)$ | $\mathbb{E}[X]$ | $\mathrm{Var}(X)$ | MGF $M_X(t)$ |
+|---|---|---|---|---|---|
+| $\mathrm{Ber}(p)$, $\;p\in[0,1]$ | $\{0,1\}$ | $p^{k}(1-p)^{1-k}$ | $p$ | $p(1-p)$ | $(1-p)+pe^{t}$ |
+| $\mathrm{Bin}(n,p)$ | $\{0,1,\dots,n\}$ | $\binom{n}{k}p^{k}(1-p)^{n-k}$ | $np$ | $np(1-p)$ | $\big((1-p)+pe^{t}\big)^{n}$ |
+| $\mathrm{PoBin}(\mathbf{p})$, $\;\mathbf{p}\in[0,1]^{n}$ | $\{0,1,\dots,n\}$ | $\displaystyle\sum_{\lvert S\rvert=k}\ \prod_{i\in S}p_i\prod_{i\notin S}(1-p_i)$ | $\displaystyle\sum_{i=1}^{n}p_i$ | $\displaystyle\sum_{i=1}^{n}p_i(1-p_i)$ | $\displaystyle\prod_{i=1}^{n}\big((1-p_i)+p_ie^{t}\big)$ |
+| $\mathrm{Poi}(\lambda)$, $\;\lambda>0$ | $\{0,1,2,\dots\}$ | $e^{-\lambda}\lambda^{k}/k!$ | $\lambda$ | $\lambda$ | $\exp\!\big(\lambda(e^{t}-1)\big)$ |
+
+: Discrete distributions used in the book. In the Poisson binomial row $S$ ranges over the
+subsets of $\{1,\dots,n\}$ of size $k$, and the trial probabilities $p_i$ may differ.
+{#tbl-dist-discrete}
+
+Each family models a distinct kind of health data.
+
+**Bernoulli.** A single yes/no outcome with success probability $p$: one patient, responder ($X=1$) or
+non-responder ($X=0$). It is the atom from which the binary-outcome likelihoods of the book are built.
+
+**Binomial.** The number of successes in $n$ independent, identical yes/no trials, each with the same
+probability $p$: the count of responders out of $n$ randomized patients. This is the workhorse
+likelihood for aggregate binary endpoints in meta-analysis (Chapter 13) and network meta-analysis, where
+each arm reports "$r$ responders out of $n$."
+
+**Poisson binomial.** The number of successes in $n$ independent trials whose success probabilities
+$p_1,\dots,p_n$ are allowed to **differ**. The mass function looks forbidding but says something simple:
+to get exactly $k$ successes, sum over every way of choosing which $k$ of the $n$ trials succeed, and for
+each such choice multiply the success probabilities of the chosen trials by the failure probabilities of
+the rest. It is the natural law for an aggregate event count when a model assigns each patient a
+different predicted risk, which is exactly the situation in covariate-adjusted binary outcomes; it drives
+the discrete aggregation results of @sec-pobin in Chapter 21.
+
+**Poisson.** The count of events when events arrive independently at a constant average, for example the
+number of relapses in a fixed follow-up window. In practice the Poisson mean is a **rate times an
+exposure**: if events occur at rate $\rho$ per person-year and a patient is followed for time $E$, then
+the event count is $\mathrm{Poi}(\rho E)$, so $\lambda=\rho E$. This is how Poisson models describe
+events per person-time rather than bare counts.
+
+The families nest. A Bernoulli variable is $\mathrm{Bin}(1,p)$; a binomial is the Poisson binomial with
+all $p_i$ equal to a common $p$, in which case every entry of the Poisson binomial row reduces to its
+binomial counterpart. The Poisson is the law of rare events: if $X_n\sim\mathrm{Bin}(n,\lambda/n)$ then
+$X_n\xrightarrow{d}\mathrm{Poi}(\lambda)$ (@thm-poisson-limit), so a Poisson is the limit of a binomial
+with many trials each individually rare; a quantitative total-variation
+form of this approximation drives the discrete aggregation results of Part V. Sums of independent
+Poisson variables are Poisson, with rates adding, by the product rule for moment generating functions
+(@thm-mgf-sum).
+
+::: {.remark}
+For a fixed mean $\sum_i p_i$, the Poisson binomial variance $\sum_i p_i(1-p_i)=\sum_i p_i-\sum_i
+p_i^2$ is largest when the $p_i$ are equal, by convexity of $p\mapsto p^2$. (Convexity means
+$\sum_i p_i^2$ is *smallest* when the $p_i$ are all equal, hence the variance
+$\sum_i p_i-\sum_i p_i^2$ is *largest* there; pulling the risks apart only lowers the aggregate
+variance.) Heterogeneous individual risks therefore produce a less dispersed aggregate count than a
+binomial with the same expected number of events, a fact used when an aggregate event count is modeled
+under covariate-adjusted risks. $\blacktriangleleft$
+:::
+
+::: {#exm-dist-pobin}
+## Aggregating three unequal risks
+Suppose three patients have predicted event probabilities $p_1=0.1$, $p_2=0.3$, $p_3=0.6$, and we want
+the distribution of the total number of events $X\sim\mathrm{PoBin}(0.1,0.3,0.6)$. Reading the Poisson
+binomial mass function one value of $k$ at a time,
+$$
+\begin{aligned}
+P(X=0)&=(0.9)(0.7)(0.4)=0.252,\\
+P(X=1)&=(0.1)(0.7)(0.4)+(0.9)(0.3)(0.4)+(0.9)(0.7)(0.6)=0.514,\\
+P(X=2)&=(0.1)(0.3)(0.4)+(0.1)(0.7)(0.6)+(0.9)(0.3)(0.6)=0.216,\\
+P(X=3)&=(0.1)(0.3)(0.6)=0.018,
+\end{aligned}
+$$
+which sum to $1$. The mean is $\mathbb{E}[X]=0.1+0.3+0.6=1.0$ and the variance is
+$\mathrm{Var}(X)=0.1(0.9)+0.3(0.7)+0.6(0.4)=0.54$. Compare a binomial with the same mean, namely
+$\mathrm{Bin}(3,\tfrac13)$, whose variance is $3\cdot\tfrac13\cdot\tfrac23=\tfrac23\approx0.667$. The
+heterogeneous risks give the smaller variance $0.54<0.667$, exactly the effect of the remark above: when
+predicted risks differ across patients the aggregate event count is less dispersed than a binomial with
+the same expected number of events. $\blacktriangleleft$
+:::
+
+When there are more than two response categories, the binomial generalizes to the **multinomial**, which
+the appendix uses only as the likelihood conjugate to the Dirichlet of @sec-dist-dirichlet.
+
+::: {#def-dist-multinomial}
+## Multinomial distribution
+Fix $N\in\{1,2,\dots\}$ and a probability vector $\mathbf{p}=(p_1,\dots,p_K)$ with $p_k\ge 0$ and
+$\sum_{k=1}^{K}p_k=1$. The count vector $\mathbf{n}=(n_1,\dots,n_K)$ of the outcomes of $N$ independent
+trials, each landing in category $k$ with probability $p_k$, has the **multinomial distribution**
+$\mathrm{Multinomial}(N,\mathbf{p})$, with mass function
+$$
+P(\mathbf{n})=\binom{N}{n_1,\dots,n_K}\prod_{k=1}^{K}p_k^{\,n_k}
+=\frac{N!}{n_1!\cdots n_K!}\prod_{k=1}^{K}p_k^{\,n_k},
+\qquad \sum_{k=1}^{K}n_k=N,
+$$ {#eq-dist-multinomial}
+on the set of nonnegative integer vectors summing to $N$.
+:::
+
+The multinomial is the count of how many of $N$ patients fall into each of $K$ response categories, for
+example none, partial, or complete response. It records the joint distribution of category counts, so a
+single component $n_k$ is $\mathrm{Bin}(N,p_k)$ and at $K=2$ the whole family reduces to
+$\mathrm{Bin}(N,p_1)$. Its first two moments are
+$$
+\mathbb{E}[n_k]=N p_k,\qquad \mathrm{Var}(n_k)=N p_k(1-p_k),\qquad
+\mathrm{Cov}(n_j,n_k)=-N p_j p_k\ (j\neq k),
+$$
+the negative covariance reflecting that the counts must sum to $N$, so a surplus in one category forces a
+deficit in another. This is the likelihood in the Dirichlet-multinomial conjugate pair of
+@tbl-dist-conjugacy.
+
+## Continuous univariate distributions {#sec-dist-continuous}
+
+The normal density and its moments are @def-normal. The remaining four families are first used here; the
+gamma and exponential appear as the conjugate prior and count-data baseline of Chapter 8 and as survival
+baselines in Chapters 25 and 26, the Weibull is the power-law-hazard survival model of @sec-genlik-survival in
+Chapter 25, and the beta is the conjugate prior of @thm-conjugate-beta-binomial. The gamma function
+$\Gamma$ and beta function $B$ are those of @eq-dist-gamma-function and @eq-dist-beta-function.
+
+| Distribution | Support | Density $f(x)$ | $\mathbb{E}[X]$ | $\mathrm{Var}(X)$ | MGF $M_X(t)$ |
+|---|---|---|---|---|---|
+| $\mathcal{N}(\mu,\sigma^{2})$, $\;\sigma^{2}>0$ | $\mathbb{R}$ | $\dfrac{1}{\sqrt{2\pi}\,\sigma}\exp\!\Big(-\dfrac{(x-\mu)^{2}}{2\sigma^{2}}\Big)$ | $\mu$ | $\sigma^{2}$ | $\exp\!\big(\mu t+\tfrac12\sigma^{2}t^{2}\big)$ |
+| $\mathrm{Exp}(\lambda)$, $\;\lambda>0$ (rate) | $(0,\infty)$ | $\lambda e^{-\lambda x}$ | $1/\lambda$ | $1/\lambda^{2}$ | $\dfrac{\lambda}{\lambda-t}$, $\;t<\lambda$ |
+| $\mathrm{Gamma}(\alpha,\beta)$, shape $\alpha>0$, rate $\beta>0$ | $(0,\infty)$ | $\dfrac{\beta^{\alpha}}{\Gamma(\alpha)}\,x^{\alpha-1}e^{-\beta x}$ | $\alpha/\beta$ | $\alpha/\beta^{2}$ | $\Big(1-\dfrac{t}{\beta}\Big)^{-\alpha}$, $\;t<\beta$ |
+| $\mathrm{Beta}(a,b)$, $\;a,b>0$ | $(0,1)$ | $\dfrac{1}{B(a,b)}\,x^{a-1}(1-x)^{b-1}$ | $\dfrac{a}{a+b}$ | $\dfrac{ab}{(a+b)^{2}(a+b+1)}$ | ${}_1F_1(a;a+b;t)$, no elementary form |
+| $\mathrm{Weib}(k,\lambda)$, shape $k>0$, scale $\lambda>0$ | $(0,\infty)$ | $\dfrac{k}{\lambda}\Big(\dfrac{x}{\lambda}\Big)^{k-1}\!\exp\!\big(-(x/\lambda)^{k}\big)$ | $\lambda\,\Gamma\!\big(1+\tfrac1k\big)$ | $\lambda^{2}\big[\Gamma\!\big(1+\tfrac2k\big)-\Gamma\!\big(1+\tfrac1k\big)^{2}\big]$ | no elementary form |
+
+: Continuous univariate distributions used in the book. The exponential and gamma moment generating
+functions are finite only for $t$ below the rate; the others are discussed in the text.
+{#tbl-dist-continuous}
+
+Several entries deserve comment. In modeling terms the four non-normal families split cleanly by role:
+the exponential and Weibull model **time-to-event** outcomes (overall or progression-free survival),
+the gamma is a **prior on a positive rate or precision**, and the beta is a **prior on a probability**;
+the normal models a **continuous endpoint** and, on the log scale, an estimated relative effect.
+
+**Exponential and gamma.** The exponential is the gamma of unit shape, $\mathrm{Exp}(\lambda)=
+\mathrm{Gamma}(1,\lambda)$, as the densities and moment generating functions show. It is the simplest
+time-to-event model, the one with a **constant hazard**: the instantaneous event rate does not change
+over time, so the exponential is **memoryless**, meaning a patient who has survived to time $s$ has the
+same remaining-life distribution as a fresh patient ($P(X>s+u\mid X>s)=P(X>u)$). Because independent
+moment generating functions multiply (@thm-mgf-sum), a sum of $n$ independent $\mathrm{Exp}(\lambda)$
+variables has MGF $(1-t/\lambda)^{-n}$, hence is $\mathrm{Gamma}(n,\lambda)$; more generally gammas with
+a common rate add in shape. The chi-square law with $\nu$ degrees of freedom is
+$\mathrm{Gamma}(\nu/2,\,1/2)$. The gamma is the book's default prior on a positive quantity such as a
+Poisson rate (@prp-conjugate-gamma-poisson) or a precision; its shape parameter $\alpha$ sets the shape
+of the density, with $\alpha<1$ giving a density that diverges at the origin and decreases, $\alpha=1$
+the exponential, and $\alpha>1$ a unimodal density that starts at zero, rises to a peak, and decays. The
+MGF $(1-t/\beta)^{-\alpha}$ is finite precisely for $t<\beta$ and
+diverges as $t\uparrow\beta$, the right tail being too heavy to integrate against $e^{tx}$ beyond that
+point (for $t\ge\beta$ the defining integral $\int_0^\infty e^{tx}f(x)\,dx$ diverges because
+$e^{tx}e^{-\beta x}$ no longer decays); all moments are nonetheless finite, with
+$\mathbb{E}[X^{r}]=\Gamma(\alpha+r)/\big(\beta^{r}\Gamma(\alpha)\big)$ for $r>-\alpha$.
+
+**Beta.** The single most useful fact for a health researcher is that the beta puts a flexible
+distribution on a **probability**: because its support is $(0,1)$, it is the natural prior on a response
+rate, and it is the conjugate prior for the binomial (@thm-conjugate-beta-binomial). Its two parameters
+read as **pseudo-counts**: $a$ behaves like a number of prior successes and $b$ like a number of prior
+failures, so the prior mean $a/(a+b)$ is the prior success fraction and larger $a+b$ means a more
+concentrated, more confident prior. As a shape guide: $a=b=1$ is the uniform law on $(0,1)$ (no prior
+information); $a=b>1$ is symmetric and unimodal at $\tfrac12$; $a>b$ leans toward $1$ and $a<b$ toward
+$0$; and $a,b<1$ is U-shaped, piling mass near the two endpoints. The density is bounded with compact
+support, so the MGF is finite for every $t$, but it has no elementary closed form. *(Advanced; you will
+not use the beta MGF in practice, since the moments below are elementary and are what the book uses.)*
+The MGF equals the confluent hypergeometric function
+$$
+M_X(t)={}_1F_1(a;a+b;t)=\sum_{n=0}^{\infty}\frac{(a)_n}{(a+b)_n}\frac{t^{n}}{n!},\qquad
+(c)_n:=c(c+1)\cdots(c+n-1),
+$$ {#eq-dist-beta-mgf}
+where $(c)_n$ is the rising factorial (Pochhammer symbol). Moments are elementary even though the MGF is
+not: $\mathbb{E}[X^{r}]=B(a+r,b)/B(a,b)=\Gamma(a+r)\Gamma(a+b)\big/\big(\Gamma(a)\Gamma(a+b+r)\big)$ for
+$r>-a$, which gives the mean and variance in @tbl-dist-continuous. The case $a=b=1$ is the uniform law
+on $(0,1)$.
+
+**Weibull.** The survival function is $S(x)=\exp(-(x/\lambda)^{k})$ and the hazard is
+$h(x)=\frac{k}{\lambda}(x/\lambda)^{k-1}$, a power law in $x$. The shape parameter $k$ controls whether
+risk rises or falls over time, which is exactly what a clinician chooses a survival model to capture:
+$k<1$ gives a **decreasing** hazard (early high risk that wanes, the "infant mortality" pattern), $k=1$
+gives a **constant** hazard (the exponential), and $k>1$ gives an **increasing** hazard (risk that
+grows with time, the "aging" or wear-out pattern). The $r$-th moment is
+$\mathbb{E}[X^{r}]=\lambda^{r}\Gamma(1+r/k)$, from which the tabulated mean and variance follow. With
+$k=1$ the hazard is constant and the Weibull is the exponential with rate $1/\lambda$. The moment
+generating function has no elementary closed form and, more sharply, is finite on a neighborhood of the
+origin only when $k\ge 1$: for $k<1$ the tail $\exp(-(x/\lambda)^{k})$ decays slower than any
+exponential, so $\mathbb{E}[e^{tX}]=\infty$ for every $t>0$ and the MGF does not exist, though all
+polynomial moments remain finite. (The reason $k<1$ makes the tail slow is that the exponent
+$(x/\lambda)^{k}$ then grows *sub-linearly* in $x$, so $e^{-(x/\lambda)^{k}}$ falls off more slowly than
+$e^{-cx}$ for any $c>0$.)
+
+::: {#exm-dist-weibull}
+## How the Weibull shape bends the hazard
+Fix the scale $\lambda=1$ and read the hazard $h(x)=k\,x^{k-1}$ at three follow-up times for three
+shapes. The table gives $h(x)$ at $x=0.25,\ 1,\ 4$.
+
+| Shape $k$ | $h(0.25)$ | $h(1)$ | $h(4)$ | Hazard over time |
+|---|---|---|---|---|
+| $0.5$ | $1.00$ | $0.50$ | $0.25$ | decreasing (early risk wanes) |
+| $1$ | $1.00$ | $1.00$ | $1.00$ | constant (exponential, memoryless) |
+| $2$ | $0.50$ | $2.00$ | $8.00$ | increasing (risk grows with time) |
+
+With $k=0.5$ the event rate is highest just after baseline and falls; with $k=1$ it never changes; with
+$k=2$ it climbs steadily. All three curves pass through $h=1$ at $x=\lambda=1$, so the scale sets the
+time at which the hazard equals the reference level $1/\lambda$ and the shape sets the tilt. This is the
+single most important reading of a Weibull survival model: the shape $k$ is chosen to match whether a
+clinical hazard rises or falls with time. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Hazard parametrization.** Chapter 25 writes the Weibull through its hazard,
+$h(t\mid\mathbf{x})=\lambda(\mathbf{x})\,\nu\,t^{\nu-1}$, giving the survival function
+$S(t\mid\mathbf{x})=\exp(-\lambda(\mathbf{x})\,t^{\nu})$ (see @sec-genlik-survival). This is the shape-scale form
+above with shape $k=\nu$ and scale $\lambda=\lambda(\mathbf{x})^{-1/\nu}$, equivalently
+$\lambda(\mathbf{x})=\lambda^{-\nu}$. The two parametrizations describe the same family; the
+hazard form places the covariate structure on the rate-type coefficient $\lambda(\mathbf{x})$, which is
+convenient for proportional-hazards regression. See @tbl-dist-param for the three survival
+parametrizations side by side. $\blacktriangleleft$
+:::
+
+## The multivariate normal {#sec-dist-mvn}
+
+The multivariate normal $\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})$ is defined in @def-mvn
+through its moment generating function and is developed in full in @sec-mvn of Chapter 4. We restate the
+core formulas and point to the chapter for proofs. In this book the family plays four roles: it models a
+vector of correlated **baseline covariates** in a trial population (Chapters 12 and 20); it is the prior
+for a vector of **random effects** in a hierarchical model (Chapter 8); it is the approximate
+**sampling distribution** of a vector of estimated log-effects fed into network meta-analysis (Chapters
+13 and 15); and, through the Gaussian copula, it is the engine that ties marginal covariate
+distributions together for the **ML-NMR numerical integration** of Chapter 22 (@sec-qmc-gaussian).
+Throughout, $\boldsymbol{\Sigma}\succ 0$ means $\boldsymbol{\Sigma}$ is positive definite, which is the
+condition under which the covariance is invertible and a density exists.
+
+| Quantity | Formula | Reference |
+|---|---|---|
+| Support | $\mathbb{R}^{p}$; density exists on $\mathbb{R}^{p}$ when $\boldsymbol{\Sigma}\succ 0$ | @def-mvn |
+| Density ($\boldsymbol{\Sigma}\succ 0$) | $(2\pi)^{-p/2}\det(\boldsymbol{\Sigma})^{-1/2}\exp\!\big(-\tfrac12(\mathbf{x}-\boldsymbol{\mu})^{\top}\boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu})\big)$ | @prp-mvn-density, @eq-mvn-density |
+| Mean | $\boldsymbol{\mu}$ | @def-mvn |
+| Covariance | $\boldsymbol{\Sigma}$ | @def-mvn |
+| MGF | $\exp\!\big(\mathbf{t}^{\top}\boldsymbol{\mu}+\tfrac12\,\mathbf{t}^{\top}\boldsymbol{\Sigma}\,\mathbf{t}\big)$, all $\mathbf{t}\in\mathbb{R}^{p}$ | @eq-mvn-mgf |
+
+: The multivariate normal $\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})$ with mean
+$\boldsymbol{\mu}$ and positive semidefinite covariance $\boldsymbol{\Sigma}$.
+{#tbl-dist-mvn}
+
+The family is closed under the operations that drive normal-theory inference, proved in Chapter 4.
+
+- **Affine maps.** If $\mathbf{X}\sim\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})$ and
+  $\mathbf{Y}=\mathbf{b}+B\mathbf{X}$, then
+  $\mathbf{Y}\sim\mathcal{N}_q(\mathbf{b}+B\boldsymbol{\mu},\,B\boldsymbol{\Sigma}B^{\top})$
+  (@thm-mvn-linear). In particular every subvector is multivariate normal and every linear combination
+  $\mathbf{a}^{\top}\mathbf{X}$ is univariate normal.
+- **Uncorrelated implies independent.** Jointly normal blocks with zero cross-covariance are
+  independent (@lem-normal-uncorrelated-independent), a property special to the normal family.
+- **Conditioning.** With $\boldsymbol{\Sigma}_{22}\succ 0$,
+  $$
+  \mathbf{X}_1\mid\mathbf{X}_2=\mathbf{x}_2\ \sim\
+  \mathcal{N}\!\Big(\boldsymbol{\mu}_1+\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}
+  (\mathbf{x}_2-\boldsymbol{\mu}_2),\ \boldsymbol{\Sigma}_{11}-\boldsymbol{\Sigma}_{12}
+  \boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\Sigma}_{21}\Big),
+  $$
+  the conditional mean affine in $\mathbf{x}_2$ and the conditional covariance, the Schur complement of
+  $\boldsymbol{\Sigma}_{22}$, free of $\mathbf{x}_2$ (@thm-mvn-conditional, @eq-mvn-conditional).
+
+The conditioning formula is best read as a **linear regression of $\mathbf{X}_1$ on $\mathbf{X}_2$**: the
+conditional mean is the prediction $\boldsymbol{\mu}_1+\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}
+(\mathbf{x}_2-\boldsymbol{\mu}_2)$ with regression-coefficient matrix
+$\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}$, and the conditional covariance (the term some
+readers know as the Schur complement, which you may take as a name on a first pass) does not depend on
+the observed value $\mathbf{x}_2$, so observing $\mathbf{X}_2$ shifts the center of $\mathbf{X}_1$ but
+does not change its spread. This is precisely what one needs to impute an unreported baseline covariate
+from reported ones in a population-adjustment problem.
+
+::: {#exm-dist-mvn-predict}
+## Predicting a missing covariate from an observed one
+Let $(X_1,X_2)$ be bivariate normal with means $\mu_1=\mu_2=0$, unit variances, and correlation
+$\rho=0.6$, so $\boldsymbol{\Sigma}_{12}=\rho=0.6$ and $\boldsymbol{\Sigma}_{22}=1$. Suppose $X_1$ (say a
+baseline covariate not reported by a study) is unknown but the correlated covariate $X_2=2$ is observed.
+The conditioning formula gives
+$$
+X_1\mid X_2=2\ \sim\ \mathcal{N}\big(\rho\cdot 2,\ 1-\rho^{2}\big)=\mathcal{N}(1.2,\ 0.64).
+$$
+The predicted mean $1.2$ is the regression of $X_1$ on $X_2$ with slope $\rho=0.6$, and the conditional
+variance $0.64$ is smaller than the marginal variance $1$: knowing the correlated covariate sharpens the
+prediction. The conditional variance $1-\rho^{2}$ would be the same whatever value of $X_2$ we had
+observed. $\blacktriangleleft$
+:::
+
+The univariate normal is the case $p=1$, and the standard normal $\mathcal{N}(0,1)$, with density $\phi$
+and distribution function $\Phi$, is treated in @sec-dist-standard-normal.
+
+## The Dirichlet distribution {#sec-dist-dirichlet}
+
+The Dirichlet is the distribution of a random probability vector and is the multivariate generalization
+of the beta. In one line: it is a **prior for a list of probabilities that must add up to one**, such as
+the probabilities of the response categories none, partial, and complete. It is the natural conjugate
+prior for the cell probabilities of a categorical or multinomial outcome (@def-dist-multinomial),
+generalizing the beta-binomial pair of @thm-conjugate-beta-binomial.
+
+::: {#def-dist-dirichlet}
+## Dirichlet distribution
+Let $\boldsymbol{\alpha}=(\alpha_1,\dots,\alpha_K)$ with each $\alpha_k>0$, and write
+$\alpha_0=\sum_{k=1}^{K}\alpha_k$. A random vector
+$\mathbf{X}=(X_1,\dots,X_K)$ supported on the open simplex
+$\Delta^{K-1}=\{\mathbf{x}:x_k>0,\ \sum_{k=1}^{K}x_k=1\}$ has the **Dirichlet distribution**
+$\mathrm{Dir}(\boldsymbol{\alpha})$ if it has density
+$$
+f(\mathbf{x})=\frac{1}{B(\boldsymbol{\alpha})}\prod_{k=1}^{K}x_k^{\alpha_k-1},
+\qquad B(\boldsymbol{\alpha})=\frac{\prod_{k=1}^{K}\Gamma(\alpha_k)}{\Gamma(\alpha_0)},
+$$ {#eq-dist-dirichlet-density}
+with respect to Lebesgue measure on the $(K-1)$-dimensional simplex, taking $x_1,\dots,x_{K-1}$ as free
+coordinates and $x_K=1-\sum_{k<K}x_k$.
+:::
+
+The **simplex** $\Delta^{K-1}$ is just the set of valid probability vectors: $K$ nonnegative numbers that
+add to one. *(Advanced; skip on a first pass.)* The phrase "density with respect to Lebesgue measure on
+the $(K-1)$-dimensional simplex, taking $x_1,\dots,x_{K-1}$ as free coordinates" means only that we treat
+$x_1,\dots,x_{K-1}$ as the free variables, with the last coordinate forced to be
+$x_K=1-\sum_{k<K}x_k$, and integrate over those $K-1$ free variables. The normalizing constant
+$B(\boldsymbol{\alpha})$ is the multivariate beta function of @eq-dist-beta-function, the product-of-gammas
+generalization of the scalar $B(a,b)$.
+
+The simplex constraint $\sum_k X_k=1$ forces the components to be negatively associated and makes the
+joint moment generating function on $\mathbb{R}^{K}$ degenerate, so the Dirichlet is described by its
+moments rather than by an MGF (this is the hyperplane degeneracy explained in @sec-dist-conventions). The
+mixed moments are
+$$
+\mathbb{E}\!\Big[\prod_{k=1}^{K}X_k^{r_k}\Big]
+=\frac{B(\boldsymbol{\alpha}+\mathbf{r})}{B(\boldsymbol{\alpha})}
+=\frac{\Gamma(\alpha_0)}{\Gamma(\alpha_0+\textstyle\sum_k r_k)}\prod_{k=1}^{K}
+\frac{\Gamma(\alpha_k+r_k)}{\Gamma(\alpha_k)},
+$$ {#eq-dist-dirichlet-moments}
+from which the first two moments follow.
+
+| Quantity | Formula |
+|---|---|
+| Support | $\Delta^{K-1}=\{\mathbf{x}:x_k>0,\ \sum_k x_k=1\}$ |
+| Density | $\dfrac{1}{B(\boldsymbol{\alpha})}\prod_{k=1}^{K}x_k^{\alpha_k-1}$ |
+| Mean | $\mathbb{E}[X_k]=\alpha_k/\alpha_0$ |
+| Variance | $\mathrm{Var}(X_k)=\dfrac{\alpha_k(\alpha_0-\alpha_k)}{\alpha_0^{2}(\alpha_0+1)}$ |
+| Covariance | $\mathrm{Cov}(X_j,X_k)=\dfrac{-\alpha_j\alpha_k}{\alpha_0^{2}(\alpha_0+1)}$, $\;j\neq k$ |
+| MGF | degenerate (support in the hyperplane $\sum_k x_k=1$); use @eq-dist-dirichlet-moments |
+
+: The Dirichlet distribution $\mathrm{Dir}(\boldsymbol{\alpha})$ on the simplex $\Delta^{K-1}$, with
+$\alpha_0=\sum_k\alpha_k$.
+{#tbl-dist-dirichlet}
+
+With $K=2$ and $\boldsymbol{\alpha}=(a,b)$ the first coordinate $X_1$ is $\mathrm{Beta}(a,b)$, so the
+beta entries of @tbl-dist-continuous are the $K=2$ case of @tbl-dist-dirichlet. The parameters read as
+**pseudo-counts**, exactly as for the beta: $\alpha_k$ is a prior count for category $k$, and the total
+$\alpha_0=\sum_k\alpha_k$ is a **concentration**. The mean is $\alpha_k/\alpha_0$ regardless of
+$\alpha_0$, while the variances and covariances shrink as $\alpha_0$ grows. The picture: a small
+$\alpha_0$ spreads the random probability vector out toward the corners of the simplex (nearly all mass
+on one category, but which one varies), while a large $\alpha_0$ clusters it tightly around the mean
+vector $(\alpha_1/\alpha_0,\dots,\alpha_K/\alpha_0)$. Concentration is thus the multivariate reading of
+"how confident is the prior," the same role $a+b$ plays for the beta.
+
+## The standard normal function and density {#sec-dist-standard-normal}
+
+The standard normal $\mathcal{N}(0,1)$ is the case $\mu=0,\ \sigma^{2}=1$ of @def-normal. Its density and
+distribution function carry the dedicated symbols $\phi$ and $\Phi$:
+$$
+\phi(z)=\frac{1}{\sqrt{2\pi}}\,e^{-z^{2}/2},\qquad
+\Phi(z)=\int_{-\infty}^{z}\phi(u)\,du,\qquad z\in\mathbb{R}.
+$$ {#eq-dist-phi}
+The density $\phi$ is even and satisfies the differential identities
+$$
+\phi'(z)=-z\,\phi(z),\qquad \phi''(z)=(z^{2}-1)\,\phi(z),\qquad \Phi'(z)=\phi(z),
+$$ {#eq-dist-phi-derivs}
+and the distribution function satisfies $\Phi(0)=\tfrac12$, the reflection identity
+$\Phi(-z)=1-\Phi(z)$, and the limits $\Phi(z)\to 1$ as $z\to\infty$ and $\Phi(z)\to 0$ as
+$z\to-\infty$. The mean and variance are $\mathbb{E}[Z]=0$ and $\mathrm{Var}(Z)=1$, the moment
+generating function is $M_Z(t)=e^{t^{2}/2}$, finite for all $t$, and the moments are
+$$
+\mathbb{E}[Z^{2m-1}]=0,\qquad \mathbb{E}[Z^{2m}]=\frac{(2m)!}{2^{m}m!}=(2m-1)!!,\qquad m=1,2,\dots,
+$$ {#eq-dist-normal-moments}
+read off as the Taylor coefficients of $e^{t^{2}/2}=\sum_{m\ge 0}t^{2m}/(2^{m}m!)$ through
+@thm-mgf-moments.
+
+There is no elementary closed form for $\Phi$. It is expressed through the **error function**
+$\mathrm{erf}(x)=\frac{2}{\sqrt{\pi}}\int_0^{x}e^{-u^{2}}\,du$ and its complement
+$\mathrm{erfc}=1-\mathrm{erf}$ by
+$$
+\Phi(z)=\tfrac12\Big[1+\mathrm{erf}\!\big(z/\sqrt{2}\big)\Big],\qquad
+1-\Phi(z)=\tfrac12\,\mathrm{erfc}\!\big(z/\sqrt{2}\big),
+$$ {#eq-dist-Phi-erf}
+whose numerical evaluation is treated in [Appendix D](/appendices/D-special-functions.qmd). *(Advanced;
+optional on a first pass.)* For the upper tail the Mills ratio gives the two-sided bound, valid for
+$z>0$,
+$$
+\Big(\frac{1}{z}-\frac{1}{z^{3}}\Big)\phi(z)\ <\ 1-\Phi(z)\ <\ \frac{\phi(z)}{z},
+$$ {#eq-dist-mills}
+so that $1-\Phi(z)\sim \phi(z)/z$ as $z\to\infty$. This bound matters because $1-\Phi(z)$ is the tail
+probability of a standardized effect, so it controls how fast $p$-values and normal-approximation tail
+probabilities for large standardized effects decay; a novice can note the asymptotic
+$1-\Phi(z)\sim\phi(z)/z$ and move on.
+
+The function $\Phi$ also feeds two constructions the book uses later. It is the inverse link of the
+**probit regression model** (Chapter 7), the model in which a binary probability is written
+$P(Y=1)=\Phi(\eta)$ for a linear predictor $\eta$. And its inverse $\Phi^{-1}$ is the **normal quantile
+transform** at the heart of the Gaussian copula
+$C_\Omega(\mathbf{u})=\Phi_\Omega\big(\Phi^{-1}(u_1),\dots,\Phi^{-1}(u_d)\big)$ used in ML-NMR numerical
+integration: given a uniform variable $u\in(0,1)$, the value $\Phi^{-1}(u)$ is the standard-normal score
+with that lower-tail probability, so $\Phi^{-1}$ turns the uniform points of a quasi-Monte Carlo rule
+into correlated normal covariate draws over which an individual likelihood is averaged (@sec-qmc-pit,
+@sec-qmc-gaussian). See [Notation](/notation.qmd) for the copula symbol.
+
+## Conjugate pairs {#sec-dist-conjugacy}
+
+A prior family is *conjugate* to a likelihood when the posterior stays in the family with updated
+hyperparameters. Conjugacy is an **algebraic convenience**, not a requirement of Bayesian modeling: it
+makes the update a closed-form parameter change instead of a numerical integration, but a valid Bayesian
+analysis may use any proper prior (and the book's hierarchical models in Chapter 8 and Chapter 24 mostly
+use non-conjugate priors sampled by Markov chain Monte Carlo). Chapter 8 proves the three pairs of
+@sec-conjugacy in full and uses them to build the
+shrinkage estimator and the Gibbs updates of its samplers. @tbl-dist-conjugacy collects those pairs,
+together with the Dirichlet-multinomial pair that generalizes the beta-binomial; throughout, the gamma
+prior uses the shape-rate parametrization, so $\mathrm{Gamma}(a,b)$ has mean $a/b$.
+
+| Prior | Likelihood (data model) | Posterior | Reference |
+|---|---|---|---|
+| $\theta\sim\mathcal{N}(\mu_0,\tau_0^{2})$ | $y\mid\theta\sim\mathcal{N}(\theta,\sigma^{2})$, $\sigma^{2}$ known | $\theta\mid y\sim\mathcal{N}(\mu_1,\tau_1^{2})$, $\tau_1^{-2}=\tau_0^{-2}+\sigma^{-2}$ | @thm-conjugate-normal |
+| $\boldsymbol{\theta}\sim\mathcal{N}_p(\mathbf{m}_0,\boldsymbol{\Omega}_0)$ | $\mathbf{y}\mid\boldsymbol{\theta}\sim\mathcal{N}_p(\boldsymbol{\theta},\boldsymbol{\Sigma})$, $\boldsymbol{\Sigma}$ known | $\boldsymbol{\theta}\mid\mathbf{y}\sim\mathcal{N}_p(\mathbf{m}_1,\boldsymbol{\Omega}_1)$, $\boldsymbol{\Omega}_1^{-1}=\boldsymbol{\Omega}_0^{-1}+\boldsymbol{\Sigma}^{-1}$ | @cor-conjugate-normal-mv |
+| $p\sim\mathrm{Beta}(a,b)$ | $y\mid p\sim\mathrm{Bin}(n,p)$ | $p\mid y\sim\mathrm{Beta}(a+y,\,b+n-y)$ | @thm-conjugate-beta-binomial |
+| $\lambda\sim\mathrm{Gamma}(a,b)$ | $y_i\mid\lambda\sim\mathrm{Poi}(\lambda)$ iid | $\lambda\mid\mathbf{y}\sim\mathrm{Gamma}\!\big(a+\sum_i y_i,\ b+n\big)$ | @prp-conjugate-gamma-poisson |
+| $\mathbf{p}\sim\mathrm{Dir}(\boldsymbol{\alpha})$ | $\mathbf{n}\mid\mathbf{p}\sim\mathrm{Multinomial}(N,\mathbf{p})$ | $\mathbf{p}\mid\mathbf{n}\sim\mathrm{Dir}(\boldsymbol{\alpha}+\mathbf{n})$ | generalizes @thm-conjugate-beta-binomial |
+
+: Conjugate prior-likelihood pairs. The first four are proved in @sec-conjugacy of Chapter 8; the
+Dirichlet-multinomial pair is the standard $K$-category generalization of the beta-binomial pair, with
+the beta-binomial recovered at $K=2$.
+{#tbl-dist-conjugacy}
+
+In each row the posterior hyperparameters combine prior information with data additively. For the
+normal-normal pair **precisions** (the reciprocals of the variances) add, and the posterior mean is the
+precision-weighted average of prior mean and data (@eq-conjugate-normal): if the prior says the effect is
+about $\mu_0$ and the data say about $y$, the posterior mean sits between them, pulled toward whichever is
+more precise. For the beta-binomial and Dirichlet-multinomial pairs the prior
+hyperparameters act as pseudo-counts that are incremented by the observed counts (@eq-conjugate-beta);
+and for the gamma-Poisson pair the shape is incremented by the total count and the rate by the number of
+observations. The posterior mean is in every case a convex combination of the prior mean and the
+maximum likelihood estimate, the analytic form of shrinkage that Chapter 8 develops.
+
+::: {#exm-dist-betabinom}
+## A beta-binomial update with numbers
+Put a uniform prior $\mathrm{Beta}(1,1)$ on a response probability $p$ (the flat prior: every value in
+$(0,1)$ equally likely, prior mean $\tfrac12$). Observe $y=7$ responders out of $n=10$ patients. By the
+beta-binomial row of @tbl-dist-conjugacy the posterior is
+$$
+p\mid y\ \sim\ \mathrm{Beta}(1+7,\ 1+10-7)=\mathrm{Beta}(8,4),
+$$
+with posterior mean $8/(8+4)=8/12=2/3\approx0.667$. The two prior pseudo-counts $a=b=1$ have been
+incremented by the $7$ observed successes and $3$ observed failures. Contrast the maximum likelihood
+estimate $\hat p=7/10=0.7$ and the prior mean $0.5$: the posterior mean $0.667$ lies between them, and
+is in fact their convex combination
+$$
+\frac{a+b}{a+b+n}\cdot\frac12+\frac{n}{a+b+n}\cdot\frac{y}{n}
+=\frac{2}{12}\cdot 0.5+\frac{10}{12}\cdot 0.7=0.667,
+$$
+weighted toward the data because the flat prior carries only $a+b=2$ pseudo-observations against $n=10$
+real ones. This is the shrinkage reading of the closing paragraph, made concrete. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why the inverse-gamma is not cataloged.** The classical conjugate prior for the variance $\sigma^{2}$
+of a normal likelihood with known mean is the **inverse-gamma** (a gamma law on the precision
+$1/\sigma^{2}$). This book does not use it: for the between-study variance of a hierarchical model the
+text follows modern practice and places a half-normal or half-$t$ prior on the between-study standard
+deviation (Chapter 8; @dias2018nma), which behaves better when the variance may be near zero, where an
+inverse-gamma prior is unstable. The inverse-gamma is therefore mentioned here only so a reader does not
+search the tables for it. $\blacktriangleleft$
+:::
+
+## Notes and references {#sec-dist-notes}
+
+The catalogue draws on the following sources; each family points back to where it is derived or used.
+
+- **Bernoulli, binomial, Poisson binomial, Poisson, normal, and multivariate normal**: mass functions,
+  densities, means, variances, and moment generating functions, with derivations, are in
+  @sec-distributions and @sec-mvn of Chapter 4.
+- **Moment generating function properties** that justify the MGF columns are @thm-mgf-moments (moments by
+  differentiation) and @thm-mgf-uniqueness (the MGF determines the law), the latter relying on the
+  inversion of the characteristic function (@billingsley1995, §29 to §30).
+- **Gamma, beta, exponential, Weibull, Dirichlet, multinomial** and the gamma and beta special functions
+  are standard; a measure-theoretic treatment is @billingsley1995, and the special-function evaluations
+  are collected in [Appendix D](/appendices/D-special-functions.qmd).
+- **Conjugate pairs and their shrinkage reading** are proved in @sec-conjugacy of Chapter 8; the
+  half-normal and half-$t$ priors preferred over the inverse-gamma for heterogeneity variances are
+  discussed in Chapter 8 and @dias2018nma.
+- **Hazard parametrization** of the Weibull and exponential, used for survival baselines, is that of
+  @sec-genlik-survival in Chapter 25 and of @phillippo2025general.
+- **Standard normal in numerical integration**: the probability integral transform and the Gaussian
+  copula that consume $\Phi$ and $\Phi^{-1}$ are @sec-qmc-pit and @sec-qmc-gaussian of Chapter 22.

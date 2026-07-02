@@ -1,0 +1,1291 @@
+---
+title: "Indirect Comparison and Bucher's Theorem"
+---
+
+## Introduction {#sec-bucher-intro}
+
+A health technology assessment routinely faces a question that the available trials never asked. A
+regulator must decide whether a new drug $A$ is better than an established drug $B$, but the two have
+never been compared head to head. To keep a concrete picture in view throughout the chapter, let $A$ be a
+*new* statin and $B$ an *established* statin, each tested in its own randomized trial against the *same*
+comparator $C$ (a placebo or standard of care), with an unfavorable cardiovascular event as the outcome.
+What does exist is a trial of $A$ against $C$, and a separate trial of $B$ against the same comparator
+$C$. The clinical question is about $A$ versus $B$; the evidence speaks only about $A$ versus $C$ and $B$
+versus $C$. The task of this chapter is to make precise the simplest device that bridges the gap: the
+**anchored indirect comparison**, and the theorem of @bucher1997 that governs it.
+
+The idea is disarmingly simple. If the effect of $A$ relative to $C$ is $d_{AC}$ and the effect of $B$
+relative to $C$ is $d_{BC}$, both measured on a scale where contrasts add, then the effect of $A$
+relative to $B$ ought to be the difference $d_{AC}-d_{BC}$, because the common comparator $C$ cancels.
+Replacing the unknown true effects by their trial estimates gives the **Bucher estimator**
+$\hat d_{AB}=\hat d_{AC}-\hat d_{BC}$. The algebra is the algebra of a triangle. What makes the chapter a
+piece of mathematics rather than a piece of arithmetic is the question of *when the algebra is licensed*.
+The estimator is unbiased only if the true effect of $A$ versus $C$ is the same quantity in the $A$
+versus $C$ trial as it would be in the (hypothetical) population where we want to report $A$ versus $B$,
+and likewise for $B$ versus $C$. That requirement is the **transitivity** assumption, equivalently the
+**constancy of relative effects**. It is the load-bearing hypothesis of every method in this book, and
+the rest of the book is, in a precise sense, the study of what to do when it fails.
+
+We prove four things in full. First, that the relative effects on a fixed scale obey an antisymmetry law
+and an additivity law within any single population, so that $d_{AC}-d_{BC}=d_{AB}$ is a tautology *inside
+one population* (@lem-relative-effect-algebra). Second, that under transitivity the same identity holds
+*across* the three trial populations, which is the content of constancy (@prp-transitivity-consistency).
+Third, that the Bucher estimator is then unbiased for the cross-population contrast (@thm-bucher-unbiased),
+with variance equal to the sum of the two direct variances under independence (@thm-bucher-variance).
+Fourth, that the common comparator is exactly what cancels the study-specific baselines, so that the
+anchored comparison is protected against a bias that destroys the naive single-arm comparison
+(@prp-baseline-cancellation, @prp-unanchored-bias). A fully worked example on the log odds-ratio scale,
+computed from raw two-by-two tables, closes the development.
+
+Throughout we use the relative-effect notation of [Notation](/notation.qmd): $d_{ab(\mathcal P)}$ is the
+marginal effect of treatment $b$ versus treatment $a$ in population $\mathcal P$, on a stated scale, and
+$\hat d_{ab(j)}$ is its estimator from study $j$. The potential-outcome machinery of Chapter 9
+(@def-potential-outcome, @def-ate, @thm-ate-identification) supplies the meaning of a single trial's
+relative effect; the inference tools of Chapter 5 (@thm-delta-method, @thm-mle-asymptotic-normality)
+supply its standard error. This chapter corresponds to results D.1 to D.4 of the proof catalogue.
+
+## A running example and a map of the argument {#sec-bucher-running}
+
+Before any formalism, fix the picture we will return to at every turn. Two randomized trials share the
+comparator $C$ (placebo):
+
+- Trial $AC$ compares the new statin $A$ with placebo $C$ and reports an odds ratio of the cardiovascular
+  event of $2$ for $C$ versus $A$; on the log scale, $\hat d_{AC}=\log 2\approx 0.69$. In words, placebo
+  patients had twice the odds of the event, so $A$ is protective.
+- Trial $BC$ compares the established statin $B$ with placebo $C$ and reports an odds ratio of $1.5$ for
+  $C$ versus $B$; on the log scale, $\hat d_{BC}=\log 1.5\approx 0.41$. Placebo patients had one and a
+  half times the odds, so $B$ is protective too, but less so.
+
+We will compute the full example from raw counts in @sec-bucher-example; the two trials there produce
+exactly these numbers.
+
+**What "population" means here.** By a *population* we do not mean the specific people enrolled, but the
+*distribution* of their baseline characteristics: the mix of ages, disease severities, and risk factors a
+trial would draw from. Formally it is a probability distribution over the covariate space $\mathcal X$.
+The two trials draw from two different such distributions, $\mathcal P_{AC}$ and $\mathcal P_{BC}$, and we
+will also speak of a third, $\mathcal P_{AB}$: the population in which we actually want the $A$-versus-$B$
+answer, typically the patients who would receive the drug in routine care. No trial was ever run in
+$\mathcal P_{AB}$ for $A$ against $B$; that absence is the entire reason an indirect comparison is needed.
+
+**Two recurring words.** A **contrast** is a difference of two positions on the chosen scale, such as
+$\eta_B-\eta_A$; it is the mathematical form of the phrase "relative effect." The **link scale** is the
+transformed scale (log-odds for a probability, log for a rate or hazard, or the untransformed mean for a
+continuous outcome) on which we agree to do all subtraction, chosen precisely so that contrasts add along
+a path.
+
+The available and missing comparisons form a triangle:
+
+```
+              A  - - - - - - - - -  B        target contrast d_AB
+               \                   /            (dashed: NO A-vs-B trial)
+                \                 /
+          d_AC   \               /   d_BC
+       (trial AC) \             / (trial BC)
+                   \           /
+                    \         /
+                     \       /
+                        C                     common comparator (the anchor)
+```
+
+The two solid legs $A\!-\!C$ and $B\!-\!C$ are the trials we have; the dashed edge $A\!-\!B$ is the
+comparison we want. Bucher walks the triangle: go from $A$ down to $C$, then from $C$ up to $B$, and the
+detour through $C$ recovers the missing edge.
+
+::: {.remark}
+**The object, stated once, up front.** Everything below serves one formula. Writing $\hat d_{AC}$ and
+$\hat d_{BC}$ for the two trials' estimated log-scale effects against the shared comparator $C$, the
+**Bucher estimator** of the $A$-versus-$B$ effect is the single subtraction
+$$
+\hat d_{AB}=\hat d_{AC}-\hat d_{BC},
+$$
+with standard error $\sqrt{\mathrm{SE}_{AC}^2+\mathrm{SE}_{BC}^2}$ when the two trials are independent. In
+the running example $\hat d_{AC}=\log 2$ and $\hat d_{BC}=\log 1.5$, so
+$\hat d_{AB}=\log 2-\log 1.5=\log\tfrac43\approx 0.29$: the indirect odds ratio of the event for $B$
+versus $A$ is $\tfrac43$. The rest of the chapter answers one question: *when is this subtraction
+allowed?* $\blacktriangleleft$
+:::
+
+**Orientation, once and for all.** The single most common source of confusion in indirect comparison is
+sign. We follow [Notation](/notation.qmd): $d_{ab}=\eta_b-\eta_a$ places the *reference* treatment first
+and the *active* treatment second. Because the outcome is unfavorable, a *positive* contrast flags
+*higher, hence worse,* odds for the treatment in the second slot. The following table translates between
+the applied phrasing and this chapter's symbols; keep it at hand.
+
+| Applied phrasing | This chapter's symbol | Equals | A positive value means |
+|---|---|---|---|
+| effect of $C$ relative to $A$ | $d_{AC}$ | $\eta_C-\eta_A$ | $C$ has higher (worse) event odds than $A$, so $A$ is protective |
+| "$A$ versus $C$" (common applied phrasing) | $-d_{AC}$ | $\eta_A-\eta_C$ | $A$ has higher (worse) event odds than $C$ |
+| effect of $B$ relative to $A$ (the **target**) | $d_{AB}$ | $\eta_B-\eta_A$ | $B$ has higher (worse) event odds than $A$, so $A$ is the better statin |
+| the Bucher combination | $d_{AB}=d_{AC}-d_{BC}$ | $(\eta_C-\eta_A)-(\eta_C-\eta_B)$ | the shared $\eta_C$ cancels |
+
+In the running example $\hat d_{AC}=\log 2>0$ says placebo is worse than $A$; $\hat d_{AB}=\log\tfrac43>0$
+says $B$ has slightly higher event odds than $A$, so on this evidence $A$ is the better statin.
+
+**Map of the argument.** The chapter has one destination (the subtraction is licensed and its variance
+is known) reached through five results. This table is a scaffold; each entry is proved below.
+
+| Result | Plain statement | Its job in the indirect comparison |
+|---|---|---|
+| @lem-relative-effect-algebra | contrasts reverse sign and add along a path | makes $d_{AC}-d_{BC}=d_{AB}$ arithmetic *inside one population* |
+| @def-transitivity, @prp-transitivity-consistency | the relevant effects are the same in every trial population | lets that subtraction carry *across* the three populations |
+| @thm-bucher-unbiased | the Bucher estimator has the right expectation | the indirect estimate is on target |
+| @thm-bucher-variance | its variance is the sum of the two direct variances | indirect evidence is less precise than direct |
+| @prp-baseline-cancellation, @prp-unanchored-bias | the anchor cancels the study baselines | anchored comparison beats the naive single-arm one |
+
+## The relative effect and its scale {#sec-bucher-scale}
+
+The goal of this section is modest but easy to lose sight of: we want to put every treatment arm on a
+single additive scale, a number $\eta_k$ we can subtract, so that "effect" becomes "difference."
+Everything in the section is machinery for doing that honestly when the outcome is binary or a survival
+time rather than a plain average.
+
+Fix three treatments $A$, $B$, $C$ and a strictly increasing, differentiable **link function** $g$
+(@def-link-function) that maps a mean outcome to a "linear-predictor" scale on which effects are to be
+reported: the logit for binary outcomes (giving log odds ratios), the log for rates and hazards (giving
+log rate or hazard ratios), and the identity for continuous outcomes (giving mean differences). For a
+treatment $k\in\{A,B,C\}$ write $\mu_k(x)=\mathbb E[Y(k)\mid X=x]$ for the conditional mean of the
+potential outcome under $k$ (@def-potential-outcome), as a function of the baseline covariates
+$x\in\mathcal X$.
+
+::: {#def-marginal-link-position}
+## Marginal link-scale position
+Let $\mathcal P$ be a population with covariate density $f_{\mathcal P}$. The **marginal mean** of
+treatment $k$ in $\mathcal P$ is $\bar\mu_{k(\mathcal P)}=\int \mu_k(x)\,f_{\mathcal P}(x)\,dx$, and its
+**marginal link-scale position** is
+$$
+\eta_{k(\mathcal P)} \;=\; g\!\left(\bar\mu_{k(\mathcal P)}\right)
+\;=\; g\!\left(\int \mu_k(x)\,f_{\mathcal P}(x)\,dx\right).
+$$ {#eq-bucher-eta}
+The **marginal relative effect** of treatment $b$ versus treatment $a$ in $\mathcal P$ (@def-marginal-effect)
+is the contrast of link-scale positions,
+$$
+d_{ab(\mathcal P)} \;=\; \eta_{b(\mathcal P)}-\eta_{a(\mathcal P)}
+\;=\; g\!\left(\bar\mu_{b(\mathcal P)}\right)-g\!\left(\bar\mu_{a(\mathcal P)}\right).
+$$ {#eq-bucher-reldef}
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** The phrase "link-scale position" is jargon coined here; take it to mean "the
+arm's adjusted location on the report scale, before we subtract two arms." The object $\eta_{k(\mathcal P)}$
+is a two-step recipe. Step one: in population $\mathcal P$, work out the *average* outcome you would see
+if everyone took treatment $k$; this is the inner integral $\bar\mu_{k(\mathcal P)}$, an ordinary
+population mean. Step two: push that single average through the link $g$ to land on the additive scale
+(the logit of a probability, the log of a rate). The relative effect $d_{ab(\mathcal P)}$ is then just the
+gap between two such numbers. One notational caution: $\eta_{k(\mathcal P)}$ is a *population-level*
+(marginal) quantity indexed by a treatment and a population; it is **not** the individual-level linear
+predictor $\eta_{ijk}$ of [Notation](/notation.qmd), which carries a person, study, and arm subscript.
+Same Greek letter, a coarser object. $\blacktriangleleft$
+:::
+
+Two further points of interpretation deserve emphasis before we use @eq-bucher-reldef.
+
+::: {.remark}
+**Marginal, not conditional.** Equation @eq-bucher-reldef marginalizes the conditional means *first*
+(the inner integral) and applies the link *second*. This is the effect a trial reports when it compares
+arm-level summaries: the marginal odds ratio, the marginal hazard ratio. It is in general not equal to
+the conditional effect $g(\mu_b(x))-g(\mu_a(x))$ averaged over $x$, because a nonlinear $g$ does not
+commute with averaging. Here is the phenomenon in one line of arithmetic: if half a population has event
+probability $0.9$ and half has $0.1$, the average probability is $0.5$ with logit $0$, whereas the
+average of the two logits is $\tfrac12\operatorname{logit}(0.9)+\tfrac12\operatorname{logit}(0.1)=0$ only
+by the symmetry of this toy case; shift the split to $0.8$ and $0.1$ and $g$ of the average
+($\operatorname{logit}0.45=-0.20$) no longer equals the average of the $g$'s
+($\tfrac12\operatorname{logit}0.8+\tfrac12\operatorname{logit}0.1\approx-0.40$). For the identity link the
+two always coincide; for the logit and log links they differ, the phenomenon of non-collapsibility
+(@def-non-collapsibility, @def-collapsibility, @thm-noncollapsibility-or-hr). The Bucher construction
+operates on whatever marginal effects the trials report, and the transitivity assumption below is a
+statement about those marginal effects. We return to the interaction between non-collapsibility and
+indirect comparison in Chapter 16. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why a scale on which contrasts add.** The whole construction lives on the link scale precisely because
+on that scale a relative effect is a *difference* of two positions, and differences subtract cleanly. On
+the natural outcome scale the same information is multiplicative: an odds ratio of $A$ versus $C$ times
+the odds ratio of $C$ versus $B$ gives the odds ratio of $A$ versus $B$. Taking logarithms turns the
+product into the sum @eq-bucher-reldef. The risk difference is the one common effect measure that adds
+on the identity scale directly. We make the additive structure a lemma in @sec-bucher-algebra. $\blacktriangleleft$
+:::
+
+### The single trial as a source of an unbiased contrast {#sec-bucher-singletrial}
+
+A randomized trial comparing two of the treatments in a population $\mathcal P$ delivers an (approximately)
+unbiased estimator of the corresponding marginal relative effect @eq-bucher-reldef. We record this as the
+input to everything that follows; the proof is the identification argument of Chapter 9. The reader who
+wants only the upshot may read the proposition, skip its proof, and note the plain-language remark that
+follows it.
+
+::: {#prp-trial-unbiased}
+## A randomized trial estimates its own marginal contrast
+Let study $j$ randomize patients drawn from population $\mathcal P_j$ between arms $a$ and $b$, with
+randomization probability $P(T=b\mid X=x)=\pi\in(0,1)$ independent of $x$. Then the arms satisfy
+ignorability and positivity (@def-ignorability, @def-positivity) by design, the arm means identify the
+marginal potential-outcome means $\bar\mu_{a(\mathcal P_j)}$ and $\bar\mu_{b(\mathcal P_j)}$
+(@thm-ate-identification), and any estimator $\hat d_{ab(j)}$ formed by applying $g$ to consistent arm-mean
+estimators is consistent for $d_{ab(\mathcal P_j)}$, with $\mathbb E[\hat d_{ab(j)}]\to d_{ab(\mathcal P_j)}$.
+:::
+
+::: {.proof}
+Randomization makes the treatment indicator $T$ independent of the potential outcomes $(Y(a),Y(b))$ and
+of the covariates $X$; in particular $T\perp (Y(a),Y(b))\mid X$ holds with the conditioning on $X$
+vacuous, which is ignorability (@def-ignorability), and $\pi\in(0,1)$ is positivity (@def-positivity). By
+the identification theorem (@thm-ate-identification) applied within $\mathcal P_j$, the observed mean in
+arm $a$, namely $\mathbb E[Y\mid T=a]$, equals $\mathbb E[Y(a)]=\bar\mu_{a(\mathcal P_j)}$, and likewise for
+$b$. An estimator that plugs consistent arm-mean estimators $\widehat{\bar\mu}_{a(j)},\widehat{\bar\mu}_{b(j)}$
+into $g$ and differences them is, by the continuous mapping theorem and the differentiability of $g$,
+consistent for $g(\bar\mu_{b(\mathcal P_j)})-g(\bar\mu_{a(\mathcal P_j)})=d_{ab(\mathcal P_j)}$; its bias
+vanishes in the limit, and to first order in the delta-method expansion of @sec-bucher-logodds it is
+unbiased. $\square$
+:::
+
+::: {.remark}
+**What the proof said, in plain words.** *Ignorability* means that, thanks to randomization, which
+treatment a patient received tells you nothing about how they would have fared under either treatment; the
+two arms are exchangeable. Because the coin flip is independent of everything about the patient, the
+conditioning on $X$ is "vacuous," that is, unnecessary. *Positivity* is just $\pi\in(0,1)$: everyone had a
+genuine chance of either arm. Together these are what a randomized trial buys you by design, so the arm
+averages estimate the population averages you would have seen if everyone had taken that treatment.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Consistent, and unbiased to first order.** A subtlety worth stating plainly: the empirical log
+odds-ratio is *not exactly* unbiased in a finite sample. What @prp-trial-unbiased delivers is (i)
+*consistency*, meaning that as the arm sizes grow, $\hat d_{ab(j)}$ converges in probability to the true
+contrast, and (ii) *first-order (asymptotic) unbiasedness*, meaning the leading term of its bias vanishes
+as the sample grows. Every use of the word "unbiased" in this chapter, including in the statement of
+Bucher's theorem below, is meant in this large-sample sense, which is the scale on which all Bucher
+calculations operate. For trials of realistic size the distinction is harmless; we flag it only so the
+word is not over-read. A separate warning about the word *consistent*: in @prp-trial-unbiased it is the
+statistical sense (an estimator converging to its target); in @eq-bucher-consistency below it is the
+network-meta-analysis sense (direct and indirect estimates *agreeing*). The two senses are unrelated;
+context disambiguates. $\blacktriangleleft$
+:::
+
+The phrase "unbiased estimator of $d_{AC}$" in Bucher's theorem is shorthand for the conclusion of
+@prp-trial-unbiased: each trial estimates *its own* population's marginal contrast without (first-order)
+bias. The entire subtlety of indirect comparison is that the trial estimates the contrast in *its*
+population $\mathcal P_j$, whereas we wish to combine the trials into a statement about a single contrast.
+Bridging the populations is the work of the transitivity assumption.
+
+## The algebra of contrasts {#sec-bucher-algebra}
+
+Inside a single population the relative effects @eq-bucher-reldef are differences of three numbers
+$\eta_{A},\eta_{B},\eta_{C}$ (suppressing the population subscript), and therefore satisfy two
+elementary laws. They are the entire algebraic content of Bucher's identity; the statistics enters only
+through @prp-trial-unbiased and the variance bookkeeping of @sec-bucher-variance.
+
+It is fair to ask why a book states a theorem for something so elementary. The reason is that this
+trivial algebra is the *entire* mathematical skeleton of the Bucher estimator: the variance result
+(@thm-bucher-variance), the cancellation of baselines (@prp-baseline-cancellation), and the unbiasedness
+theorem (@thm-bucher-unbiased) all reduce to the two laws below applied on the right scale. Naming them
+now lets those later proofs cite them by name rather than re-derive them.
+
+::: {#lem-relative-effect-algebra}
+## Antisymmetry and additivity of contrasts
+Fix a population $\mathcal P$ and let $d_{ab}=\eta_{b}-\eta_{a}$ for $a,b\in\{A,B,C\}$ as in
+@eq-bucher-reldef. Then for all treatments $a,b,c$:
+
+1. **Antisymmetry (reversal):** $d_{ab}=-d_{ba}$, and in particular $d_{aa}=0$.
+
+2. **Additivity (the triangle identity):**
+$$
+d_{ac} \;=\; d_{ab}+d_{bc}, \qquad\text{equivalently}\qquad d_{ab}=d_{ac}-d_{bc}.
+$$ {#eq-bucher-additivity}
+:::
+
+::: {.proof}
+Both laws are immediate from the representation $d_{ab}=\eta_b-\eta_a$. For antisymmetry,
+$d_{ab}=\eta_b-\eta_a=-(\eta_a-\eta_b)=-d_{ba}$, and setting $b=a$ gives $d_{aa}=\eta_a-\eta_a=0$. For
+additivity,
+$$
+d_{ab}+d_{bc}=(\eta_b-\eta_a)+(\eta_c-\eta_b)=\eta_c-\eta_a=d_{ac}.
+$$
+Adding $-d_{bc}$ to both sides of $d_{ac}=d_{ab}+d_{bc}$ and using antisymmetry rearranges this to
+$d_{ab}=d_{ac}-d_{bc}$. The middle term $\eta_b$ cancels because it enters $d_{ab}$ with a plus sign and
+$d_{bc}$ with a minus sign; this cancellation of the intermediate treatment's link-scale position is the
+algebraic seed of the indirect comparison. $\square$
+:::
+
+::: {.remark}
+**Why this matters.** Read the triangle identity with the roles of the running example: setting
+$a=A,b=C,c=B$ in $d_{ab}=d_{ac}-d_{bc}$ gives exactly $d_{AB}=d_{AC}-d_{BC}$, the Bucher combination. The
+lemma says this is a *tautology* whenever all three contrasts live in one population; the whole difficulty,
+taken up next, is that our three contrasts come from three different populations. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**A note on index order and the clinical convention.** With the convention of [Notation](/notation.qmd),
+$d_{ab}=\eta_b-\eta_a$ places the *reference* treatment first and the *active* treatment second. The
+common comparator of an anchored comparison is $C$, so the two trial contrasts that involve $C$ are
+$d_{AC}=\eta_C-\eta_A$ and $d_{BC}=\eta_C-\eta_B$, in which $C$ occupies the second slot; the target
+contrast between the two new treatments is $d_{AB}=\eta_B-\eta_A$. Much applied writing uses the opposite
+order, "$A$ versus $C$," and reports $-d_{AC}=\eta_A-\eta_C$. By the antisymmetry law
+@lem-relative-effect-algebra(1) the two orderings differ only by an overall sign and carry identical
+information; the indirect identity $d_{AB}=d_{AC}-d_{BC}$ holds verbatim in either bookkeeping, because
+reversing all three contrasts negates both sides. The practical rule to remember, tabulated in
+@sec-bucher-running: with an *unfavorable* outcome, a **positive** $d_{ab}$ means the second-slot
+treatment has the higher (worse) odds. We keep the [Notation](/notation.qmd) order and let the reader
+translate by the reversal law where a "$A$ versus $C$" phrasing is more natural. $\blacktriangleleft$
+:::
+
+The additivity law @eq-bucher-additivity is a tautology when all three contrasts live in *one*
+population, where the $\eta$'s are three fixed numbers. The trials, however, live in three different
+populations $\mathcal P_{AB}$, $\mathcal P_{AC}$, $\mathcal P_{BC}$, each with its own $\eta$'s. To carry
+@eq-bucher-additivity across populations we need exactly the assumption that the relevant contrasts do
+not depend on which population we evaluate them in.
+
+## Constancy of relative effects and transitivity {#sec-bucher-transitivity}
+
+Before the formal definitions, the assumption in plain terms, because it is the most important idea in
+the chapter. The two trials were run in different populations. Anchoring (Section
+@sec-bucher-cancellation) will handle any difference in *baseline risk* for free. What it cannot handle is
+a difference in the *size of a treatment effect* between the populations. A covariate that changes the
+size of a treatment effect is an **effect modifier** (@def-effect-modifier); a covariate that shifts
+outcomes but leaves treatment effects unchanged is a **prognostic variable** (@def-prognostic-variable).
+Transitivity is the assumption that the trial populations are alike in their effect modifiers, and it
+allows them to differ freely in everything else.
+
+| Question about the trial populations | Answer under transitivity |
+|---|---|
+| What **must** be similar? | The distribution of any *effect modifier* of the relevant relative effects, that is, any covariate that changes the size of a treatment effect. |
+| What is **allowed** to differ? | Baseline risk and purely *prognostic* factors, which shift outcomes but not treatment effects; the anchor cancels these (@prp-baseline-cancellation). |
+| What **cannot** be repaired by more data? | Bias from an imbalance in effect modifiers. It is a bias, not a variance, so a larger trial does not shrink it. |
+
+::: {.remark}
+**A clinical instance, before the algebra.** Return to the two statin trials. Suppose age modifies the
+effect of statin $B$ versus placebo $C$: the reduction in cardiovascular events is larger in older
+patients. If the $BC$ trial enrolled a substantially younger population than the one in which we want to
+report $A$ versus $B$, then $\hat d_{BC}$ estimates $B$'s effect in a *younger* population, and
+subtracting it from $\hat d_{AC}$ silently mixes two different populations; transitivity fails. If instead
+age only *predicts* cardiovascular risk but does *not* change the size of the statin effect, then age is a
+prognostic variable, not an effect modifier: it shifts a study's baseline but not its treatment effect,
+and anchoring absorbs the difference at no cost. Transitivity is thus a statement about effect modifiers,
+not about baseline comparability. $\blacktriangleleft$
+:::
+
+::: {#def-constancy-relative-effects}
+## Constancy of relative effects
+Let a network of studies be given, study $j$ having population $\mathcal P_j$ with covariate density
+$f_j$. The marginal relative effect of $b$ versus $a$ in $\mathcal P_j$ on the scale $g$ is, as in
+@eq-bucher-reldef,
+$$
+d_{ab(\mathcal P_j)}=g\!\left(\int \mu_b(x)\,f_j(x)\,dx\right)-g\!\left(\int \mu_a(x)\,f_j(x)\,dx\right).
+$$
+The **constancy of relative effects** assumption asserts that this quantity does not depend on the
+population: for every ordered pair of treatments $(a,b)$ and all studies $j,j'$,
+$$
+d_{ab(\mathcal P_j)} \;=\; d_{ab(\mathcal P_{j'})} \;=:\; d_{ab}.
+$$ {#eq-bucher-constancy}
+The common value $d_{ab}$ is then a population-free **network contrast**. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** Constancy says every relative effect in the network is a single number that does
+not care which study you look at, so "the effect of $b$ versus $a$" is well defined without naming a
+population. It is the general network assumption. Transitivity, defined next, is its restriction to the
+one triangle $\{A,B,C\}$ we need for a single Bucher comparison: constancy for the whole network,
+transitivity for the triangle. $\blacktriangleleft$
+:::
+
+Constancy @eq-bucher-constancy is a property of every pair of treatments across every study. For a single
+indirect comparison we need only its restriction to the triangle $\{A,B,C\}$ and the three populations in
+play. That restriction is the transitivity assumption.
+
+::: {#def-transitivity}
+## Transitivity (for the anchored triangle)
+Let $A$, $B$, $C$ be three treatments studied in populations $\mathcal P_{AB}$, $\mathcal P_{AC}$,
+$\mathcal P_{BC}$ (the population of a hypothetical direct $A$-versus-$B$ trial, and the populations of
+the available $A$-versus-$C$ and $B$-versus-$C$ trials). The **transitivity** assumption asserts that each
+of the three relative effects takes the same value in every one of the three populations:
+$$
+d_{AB(\mathcal P_{AB})}=d_{AB(\mathcal P_{AC})}=d_{AB(\mathcal P_{BC})}=:d_{AB},
+$$ {#eq-bucher-transitivity}
+and likewise $d_{AC(\mathcal P_{AB})}=d_{AC(\mathcal P_{AC})}=d_{AC(\mathcal P_{BC})}=:d_{AC}$ and
+$d_{BC(\mathcal P_{AB})}=d_{BC(\mathcal P_{AC})}=d_{BC(\mathcal P_{BC})}=:d_{BC}$. Equivalently, transitivity
+is the restriction of constancy @eq-bucher-constancy to the treatment triangle $\{A,B,C\}$. $\blacktriangleleft$
+
+[machine-checked: `theories/Bucher.v`, `Definition transitivity`]
+:::
+
+::: {.remark}
+**Reader translation.** Transitivity says: the number you would call "the effect of $B$ versus $C$" is the
+*same* number whether you measure it in the $A$-vs-$C$ trial's population, the $B$-vs-$C$ trial's
+population, or the target population where you actually want the answer, and likewise for the other two
+contrasts. It does *not* require the populations to be alike in every way; it requires them to be alike in
+the ingredients that change treatment effects, the effect modifiers. It is the population-level cousin of
+"no unmeasured confounding": ignorability (@def-ignorability) lets one study impersonate a randomized
+experiment, and transitivity lets three studies impersonate one connected experiment run in a single
+population. In practice a reviewer checks it not from the data but from the trial reports, by asking
+whether the trials enrolled comparable patients with respect to known effect modifiers of the outcome; it
+is a judgment about clinical similarity, informed by subject-matter knowledge, that the data alone cannot
+confirm. $\blacktriangleleft$
+:::
+
+The next proposition makes the bridge precise: under transitivity the additivity law @eq-bucher-additivity,
+a tautology inside one population, becomes a genuine relation among the three well-defined network
+contrasts.
+
+::: {#prp-transitivity-consistency}
+## Transitivity yields the population consistency equation
+Under transitivity (@def-transitivity), the network contrasts satisfy the **consistency equation**
+$$
+d_{AB} \;=\; d_{AC}-d_{BC}.
+$$ {#eq-bucher-consistency}
+Conversely, if the relative effects in each population obey the within-population additivity law
+@eq-bucher-additivity and the consistency equation @eq-bucher-consistency holds for the common values,
+then the three contrasts are mutually consistent in the sense required by @def-transitivity.
+
+[machine-checked: `theories/Bucher.v`, `Lemma transitivity_subtract`, `Lemma subtract_transitivity`]
+:::
+
+::: {.proof}
+By @def-transitivity the three symbols $d_{AB},d_{AC},d_{BC}$ are well defined, each being the common
+value of a relative effect across the three populations. Evaluate the within-population additivity law
+@lem-relative-effect-algebra(2) in, say, the population $\mathcal P_{AC}$:
+$$
+d_{AB(\mathcal P_{AC})}=d_{AC(\mathcal P_{AC})}-d_{BC(\mathcal P_{AC})}.
+$$
+Transitivity replaces each population-specific effect on the right and the left by its common value,
+$d_{AB(\mathcal P_{AC})}=d_{AB}$, $d_{AC(\mathcal P_{AC})}=d_{AC}$, $d_{BC(\mathcal P_{AC})}=d_{BC}$, giving
+$d_{AB}=d_{AC}-d_{BC}$, which is @eq-bucher-consistency. The same conclusion follows from evaluating the
+additivity law in any of the three populations, since transitivity forces them to agree.
+
+For the converse, suppose each population obeys @eq-bucher-additivity and the common values obey
+@eq-bucher-consistency. Then in any population $\mathcal P_j$ the additivity law reads
+$d_{AB(\mathcal P_j)}=d_{AC(\mathcal P_j)}-d_{BC(\mathcal P_j)}$; if two of the three contrasts are constant
+across populations the third is forced to equal $d_{AC}-d_{BC}=d_{AB}$, the common value, in every
+population, which is @def-transitivity. $\square$
+:::
+
+::: {.remark}
+**Reading the two directions.** The forward direction is the one an analyst uses; the table records both.
+
+| Direction | Assume | Conclude | Who uses it |
+|---|---|---|---|
+| Forward | transitivity (@def-transitivity) | consistency equation @eq-bucher-consistency | @thm-bucher-unbiased, the whole method |
+| Converse | within-population additivity plus consistency of the common values | transitivity | bookkeeping only |
+
+The converse is a consistency check, not something a data analyst invokes: it says the three contrasts
+cannot be *defined* inconsistently. "If two of the three are constant across populations, the third is
+forced" because inside each population the three already satisfy $d_{AB}=d_{AC}-d_{BC}$ by pure algebra
+(@lem-relative-effect-algebra), so fixing any two of them across populations pins the third by
+subtraction. Which two does not matter; the algebra is symmetric. A first-time reader can take the forward
+direction and move on. $\blacktriangleleft$
+:::
+
+::: {.remark}
+The Coq development encodes transitivity in the equivalent additive form $d_{AC}=d_{AB}+d_{BC}$
+(`Definition transitivity`) and proves the two implications $d_{AC}=d_{AB}+d_{BC}\Rightarrow d_{AB}=d_{AC}-d_{BC}$
+(`Lemma transitivity_subtract`) and its converse (`Lemma subtract_transitivity`); these are precisely the
+two directions of @prp-transitivity-consistency, stripped to their field algebra. $\blacktriangleleft$
+:::
+
+## The anchored indirect comparison {#sec-bucher-anchored}
+
+We can now name the estimator and the contrasting naive alternative it improves upon.
+
+::: {#def-anchored-comparison}
+## Anchored indirect comparison
+Suppose study $AC$ provides an estimator $\hat d_{AC}$ of the $A$-versus-$C$ network contrast and study
+$BC$ provides an estimator $\hat d_{BC}$ of the $B$-versus-$C$ network contrast, the two studies sharing
+the common comparator $C$. The **anchored indirect comparison** of $A$ and $B$, or **Bucher estimator**,
+is
+$$
+\hat d_{AB}^{\,\mathrm{Bucher}} \;:=\; \hat d_{AC}-\hat d_{BC}.
+$$ {#eq-bucher-estimator}
+The comparison is called *anchored* because the within-study contrasts to the shared comparator $C$ (the
+anchor) are differenced, rather than the bare arm-level outcomes. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation and orientation.** The estimator subtracts the two "versus $C$" log-effects. In the
+chapter's orientation the result estimates $d_{AB}=\eta_B-\eta_A$, so a **positive** Bucher estimate means
+$B$ has the higher (with an unfavorable outcome, worse) odds, hence $A$ is the better treatment. In the
+running example $\hat d_{AB}^{\,\mathrm{Bucher}}=\log 2-\log 1.5=\log\tfrac43>0$: $B$ carries slightly
+higher event odds than $A$. Always restate the direction when reporting: "$B$ versus $A$, higher is worse."
+$\blacktriangleleft$
+:::
+
+We also name the *wrong* thing to do, because seeing why it is wrong is the fastest route to seeing why
+anchoring works. The following naive comparison is a foil: it is what you get if you ignore the common
+comparator and simply compare the two active arms across studies. It is used in practice only as a last
+resort, for disconnected networks (Chapter 26); here it is the cautionary contrast that makes the value of
+the anchor visible.
+
+::: {#def-unanchored-comparison}
+## Unanchored (naive single-arm) comparison
+With the same two studies, the **unanchored comparison** discards the comparator arms and contrasts the
+two *active* arms directly across studies:
+$$
+\hat d_{AB}^{\,\mathrm{naive}} \;:=\; \hat\eta_{A(\mathcal P_{AC})}-\hat\eta_{B(\mathcal P_{BC})},
+$$ {#eq-bucher-naive}
+where $\hat\eta_{A(\mathcal P_{AC})}$ is the estimated link-scale outcome of arm $A$ in study $AC$, and
+$\hat\eta_{B(\mathcal P_{BC})}$ that of arm $B$ in study $BC$. This comparison ignores the anchor $C$
+entirely. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** The unanchored estimator throws away the placebo arms and directly compares the
+new statin's event rate in one trial to the established statin's event rate in the other. That is exactly
+what you would do if you had two single-arm studies with no common comparator. The comparison looks
+tempting because it seems to use the arms you care about, but it silently assumes the two trials had the
+same baseline risk, which they almost never do; @prp-unanchored-bias makes the error precise and
+@exm-anchored-vs-unanchored shows it as a number. $\blacktriangleleft$
+:::
+
+Section @sec-bucher-cancellation shows that the unanchored comparison carries a bias equal to the
+difference of the two study baselines, a bias that the anchored comparison removes by construction. The
+distinction between anchored and unanchored comparison organizes the whole of population-adjusted
+indirect comparison: anchored methods (Chapters 17 to 20) repair residual bias in @eq-bucher-estimator,
+while unanchored methods (Chapter 26) confront the baseline bias of @eq-bucher-naive head on.
+
+## Bucher's theorem: unbiasedness {#sec-bucher-unbiased}
+
+The next two results look almost the same, and it helps to say up front how they differ. First we prove
+the *deterministic* identity: if the trials reported the true contrasts *with no sampling error at all*,
+the subtraction lands exactly on the target (@prp-bucher-identity). Then we reintroduce sampling error and
+show that the subtraction is still right *on average* (@thm-bucher-unbiased). The first is arithmetic; the
+second is arithmetic plus one line of expectation.
+
+::: {#prp-bucher-identity}
+## Bucher's identity (exact estimates)
+If $\hat d_{AC}=d_{AC}$ and $\hat d_{BC}=d_{BC}$ hold exactly and transitivity (@def-transitivity) holds,
+then $\hat d_{AB}^{\,\mathrm{Bucher}}=d_{AB}$.
+:::
+
+::: {.proof}
+Substitute the exact values into the estimator @eq-bucher-estimator and apply the consistency equation
+@eq-bucher-consistency of @prp-transitivity-consistency:
+$$
+\hat d_{AB}^{\,\mathrm{Bucher}}=\hat d_{AC}-\hat d_{BC}=d_{AC}-d_{BC}=d_{AB}. \qquad\square
+$$
+:::
+
+[machine-checked: `theories/Bucher.v`, `Theorem bucher_identity`]
+
+The stochastic version replaces exact equality by unbiasedness and the substitution by linearity of
+expectation. This is the theorem of @bucher1997.
+
+::: {#thm-bucher-unbiased}
+## Bucher's theorem (unbiasedness)
+Suppose two studies provide estimators of pairwise relative effects of the form
+$$
+\hat d_{AC}=d_{AC(\mathcal P_{AC})}+\varepsilon_{AC},\qquad
+\hat d_{BC}=d_{BC(\mathcal P_{BC})}+\varepsilon_{BC},
+$$
+with mean-zero errors $\mathbb E[\varepsilon_{AC}]=\mathbb E[\varepsilon_{BC}]=0$, so that $\hat d_{AC}$ and
+$\hat d_{BC}$ are unbiased for the relative effects in their own trial populations (@prp-trial-unbiased).
+Assume transitivity (@def-transitivity). Then the Bucher estimator @eq-bucher-estimator is unbiased for
+the network contrast $d_{AB}$:
+$$
+\mathbb E\!\left[\hat d_{AB}^{\,\mathrm{Bucher}}\right]=d_{AB}.
+$$
+:::
+
+[machine-checked: `theories/Bucher.v`, `Theorem bucher_unbiased`]
+
+::: {.remark}
+**Why this matters.** This is the license for the whole method: *provided transitivity holds*, the
+one-line subtraction $\hat d_{AC}-\hat d_{BC}$ targets the right quantity, so an indirect estimate is a
+legitimate answer to the $A$-versus-$B$ question. The theorem localizes all the risk in a single
+assumption, which the remainder of the chapter, and much of the book, learns to inspect. $\blacktriangleleft$
+:::
+
+::: {.proof}
+Linearity of expectation applied to @eq-bucher-estimator gives
+$$
+\mathbb E\!\left[\hat d_{AB}^{\,\mathrm{Bucher}}\right]
+=\mathbb E[\hat d_{AC}]-\mathbb E[\hat d_{BC}].
+$$
+By the unbiasedness hypothesis the two expectations equal the trial-population relative effects,
+$$
+\mathbb E[\hat d_{AC}]=d_{AC(\mathcal P_{AC})},\qquad
+\mathbb E[\hat d_{BC}]=d_{BC(\mathcal P_{BC})}.
+$$
+Transitivity (@def-transitivity) identifies each trial-population effect with the corresponding network
+contrast, $d_{AC(\mathcal P_{AC})}=d_{AC}$ and $d_{BC(\mathcal P_{BC})}=d_{BC}$, so
+$$
+\mathbb E\!\left[\hat d_{AB}^{\,\mathrm{Bucher}}\right]=d_{AC}-d_{BC}.
+$$
+Finally the consistency equation @eq-bucher-consistency, which @prp-transitivity-consistency derives from
+transitivity, gives $d_{AC}-d_{BC}=d_{AB}$. Chaining the three displays yields
+$\mathbb E[\hat d_{AB}^{\,\mathrm{Bucher}}]=d_{AB}$. $\square$
+:::
+
+::: {.remark}
+**Where each hypothesis is spent.** The proof uses each assumption exactly once and at a distinct step.
+Unbiasedness of the trial estimators converts expectations into trial-population effects; this is a
+property of randomization within each trial and uses no cross-trial information. Transitivity converts
+trial-population effects into network contrasts; this is the only cross-population assumption and is the
+one that can fail. The consistency equation converts the difference of network contrasts into the target;
+this is pure algebra (@lem-relative-effect-algebra) and never fails. The theorem is therefore as strong
+as its weakest hypothesis, and the weakest is invariably transitivity. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**The estimator is trivial; the assumption is not.** Equation @eq-bucher-estimator is one subtraction,
+and one might wonder why it warrants a theorem. The answer is that the subtraction is licensed only on
+the consistency-constrained set where @eq-bucher-consistency holds, and membership in that set is the
+substantive scientific claim. Every population-adjusted method in Parts IV and V is, in the end, a device
+for making @eq-bucher-consistency hold after a correction, or for quantifying the error when it does not.
+The simplicity of Bucher's formula is exactly why the assumption that underwrites it must be stated with
+care. $\blacktriangleleft$
+:::
+
+## The Bucher variance {#sec-bucher-variance}
+
+We already know from @thm-bucher-unbiased that the indirect estimate is centered correctly. The question
+now is how *precise* it is, and the headline is simple: an indirect estimate is built from two uncertain
+inputs, so its uncertainty is larger than either. The estimator @eq-bucher-estimator is a linear
+combination of two trial summaries, so its variance is a two-line consequence of the bilinearity of
+covariance. We first record the general identity, valid whether or not the trials are independent, because
+the general form is what later chapters need when a multi-arm trial makes the two contrasts dependent.
+
+::: {#lem-var-difference}
+## Variance of a difference
+For any two square-integrable random variables $U,V$ (that is, random variables with finite variance),
+$$
+\mathrm{Var}(U-V)=\mathrm{Var}(U)+\mathrm{Var}(V)-2\,\mathrm{Cov}(U,V).
+$$ {#eq-bucher-varidentity}
+:::
+
+::: {.proof}
+Write $\mathrm{Var}(U-V)=\mathbb E\big[(U-V-\mathbb E[U-V])^2\big]$ and put $\tilde U=U-\mathbb E[U]$,
+$\tilde V=V-\mathbb E[V]$, so $U-V-\mathbb E[U-V]=\tilde U-\tilde V$. Expanding the square and using
+linearity of expectation,
+$$
+\mathbb E\big[(\tilde U-\tilde V)^2\big]
+=\mathbb E[\tilde U^2]-2\,\mathbb E[\tilde U\tilde V]+\mathbb E[\tilde V^2]
+=\mathrm{Var}(U)-2\,\mathrm{Cov}(U,V)+\mathrm{Var}(V),
+$$
+which is @eq-bucher-varidentity. The covariance is a symmetric bilinear form on centered variables, the
+same form whose positive semidefiniteness is recorded in @thm-cov-psd. $\square$
+:::
+
+::: {#thm-bucher-variance}
+## The Bucher variance
+Let $\hat d_{AC}$ and $\hat d_{BC}$ have variances $v_{AC}=\mathrm{Var}(\hat d_{AC})$ and
+$v_{BC}=\mathrm{Var}(\hat d_{BC})$. If the two estimators are uncorrelated, $\mathrm{Cov}(\hat d_{AC},\hat d_{BC})=0$
+(as holds when they come from disjoint sets of trials), then the Bucher estimator @eq-bucher-estimator has
+variance
+$$
+\mathrm{Var}\!\left(\hat d_{AB}^{\,\mathrm{Bucher}}\right)=v_{AC}+v_{BC}.
+$$ {#eq-bucher-varsum}
+In general, without the independence assumption,
+$\mathrm{Var}(\hat d_{AB}^{\,\mathrm{Bucher}})=v_{AC}+v_{BC}-2\,\mathrm{Cov}(\hat d_{AC},\hat d_{BC})$.
+:::
+
+[machine-checked: `theories/Bucher.v`, `Theorem bucher_variance`]
+
+::: {.remark}
+**Why this matters, and a picture.** Indirect evidence is real evidence, but it is more expensive: its
+uncertainty is the *sum* of the two direct uncertainties. Independent uncertainties add in quadrature,
+exactly as independent errors combine by the Pythagorean rule, so the indirect standard error is the
+hypotenuse $\sqrt{\mathrm{SE}_{AC}^2+\mathrm{SE}_{BC}^2}$ of the two direct standard errors. A practical
+consequence, made concrete in @sec-bucher-example: an indirect comparison anchored on a *tiny*
+$B$-versus-$C$ trial can be uninformative even when both direct trials are individually significant,
+because the small trial's large variance is added in. $\blacktriangleleft$
+:::
+
+::: {.proof}
+Apply @lem-var-difference with $U=\hat d_{AC}$ and $V=\hat d_{BC}$:
+$$
+\mathrm{Var}\!\left(\hat d_{AB}^{\,\mathrm{Bucher}}\right)
+=v_{AC}+v_{BC}-2\,\mathrm{Cov}(\hat d_{AC},\hat d_{BC}),
+$$
+which is the general formula. Under the independence hypothesis the covariance term is zero, leaving
+$v_{AC}+v_{BC}$, equation @eq-bucher-varsum. $\square$
+:::
+
+The independence hypothesis holds in the canonical Bucher setting, where the $A$-versus-$C$ evidence and
+the $B$-versus-$C$ evidence come from separate trials. It fails when a single multi-arm trial contributes
+to both contrasts through a shared comparator arm: then the shared arm's sampling error enters both
+$\hat d_{AC}$ and $\hat d_{BC}$ with the same sign, inducing a positive covariance. Intuitively, the
+shared comparator's error is *partly subtracted away* rather than counted twice, so a positive covariance
+*reduces* the Bucher variance below the sum @eq-bucher-varsum. The standard homoskedastic random-effects
+model (a model in which every contrast is given the same variance) makes that correlation exactly one
+half; the intuition is that two contrasts sharing one of their two arms overlap in half of their sampling
+error, and we compute it exactly in @thm-re-nma-correlation. Because the covariance is positive, treating
+correlated contrasts as independent overstates the variance, which is conservative for this comparison.
+
+::: {#cor-bucher-efficiency}
+## The price of indirectness
+Under the independence hypothesis of @thm-bucher-variance, the standard error of the Bucher estimate
+strictly exceeds the standard error of either direct contrast it is built from:
+$$
+\mathrm{SE}\!\left(\hat d_{AB}^{\,\mathrm{Bucher}}\right)=\sqrt{v_{AC}+v_{BC}}
+\;>\;\max\!\left(\sqrt{v_{AC}},\,\sqrt{v_{BC}}\right),
+$$
+whenever both $v_{AC}>0$ and $v_{BC}>0$.
+:::
+
+::: {.proof}
+Since $v_{AC},v_{BC}>0$, we have $v_{AC}+v_{BC}>v_{AC}$ and $v_{AC}+v_{BC}>v_{BC}$; taking square roots,
+which is monotone on the nonnegative reals, gives $\sqrt{v_{AC}+v_{BC}}>\sqrt{v_{AC}}$ and
+$>\sqrt{v_{BC}}$, hence the inequality with the maximum. $\square$
+:::
+
+The corollary quantifies a fact of evidence synthesis: an indirect comparison is less precise than either
+of the direct comparisons it rests on, because it accumulates the uncertainty of both. Indirect evidence
+is genuine evidence, but it is statistically more expensive than a head-to-head trial of the same size.
+This is one half of the case for direct trials; the other half, that indirect evidence can be *biased*
+when transitivity fails, is the subject of @sec-bucher-failure.
+
+## The common comparator cancels baseline differences {#sec-bucher-cancellation}
+
+We now make precise the sense in which the anchor $C$ protects the comparison. Decompose each arm's
+link-scale position into a study-specific baseline and a treatment-specific effect. Under transitivity the
+treatment effects are population-free; the baselines are not, and they are exactly what the anchoring
+removes.
+
+::: {#def-additive-arm-decomposition}
+## The additive arm decomposition
+Write the marginal link-scale position of arm $k$ in study $j$ as
+$$
+\eta_{k(\mathcal P_j)} \;=\; \mu_j+\alpha_k,
+$$ {#eq-bucher-decomp}
+where $\mu_j$ is a study-specific **baseline** and $\alpha_k$ is a treatment-specific **shift** shared
+across studies, with the reference treatment normalized to $\alpha_{\mathrm{ref}}=0$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation, with a picture.** The decomposition splits each arm's position into "where the study
+starts" plus "how far the treatment moves it." Concretely, normalizing the comparator as reference,
+$\alpha_C=0$, so $\mu_j=\eta_{C(\mathcal P_j)}$ is literally the placebo arm's link-scale outcome in study
+$j$:
+
+```
+   position eta_k(P_j)  =  mu_j (study baseline)  +  alpha_k (treatment shift)
+
+   study AC:   arm C:  mu_AC + 0            study BC:   arm C:  mu_BC + 0
+               arm A:  mu_AC + alpha_A                  arm B:  mu_BC + alpha_B
+
+   mu_AC, mu_BC differ across studies      (different baseline risk)
+   alpha_A, alpha_B, alpha_C are SHARED     (constancy of relative effects)
+```
+
+Read $\mu_j$ as "how risky study $j$'s population is under the reference treatment," its baseline log-odds
+of the event; read $\alpha_k$ as "how much treatment $k$ moves that risk on the link scale," the same move
+in every study. This $\mu_j$ is exactly the study-$j$ baseline (intercept) of [Notation](/notation.qmd);
+the reuse of the symbol is deliberate, not a clash. Because both trials share $C$, the two baselines
+$\mu_{AC}$ and $\mu_{BC}$ are the *same kind of quantity*, the placebo log-odds, measured in two different
+populations, and they will differ. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**The decomposition encodes constancy.** The decomposition @eq-bucher-decomp is precisely the
+fixed-effect network model in the reference-treatment parameterization (@def-reference-treatment-param).
+The same $\alpha_k$ appears in every study, so the contrast $\alpha_k-\alpha_{k'}$ is the population-free
+network effect $d_{k'k}$: under @eq-bucher-decomp,
+$d_{ab(\mathcal P_j)}=\eta_{b(\mathcal P_j)}-\eta_{a(\mathcal P_j)}=\alpha_b-\alpha_a$, free of $\mu_j$.
+This is the model form of transitivity, and it is the bridge to the network meta-analysis of Chapter 15,
+where the same $\mu_j$-plus-$\alpha_k$ structure is fitted to a whole network at once. $\blacktriangleleft$
+:::
+
+::: {#prp-baseline-cancellation}
+## Anchoring removes both the baselines and the comparator
+Assume the additive decomposition @eq-bucher-decomp with a common comparator $C$ present in both studies.
+Then the Bucher estimand is free of the study baselines $\mu_{AC},\mu_{BC}$ and of the comparator effect
+$\alpha_C$:
+$$
+d_{AC(\mathcal P_{AC})}-d_{BC(\mathcal P_{BC})}=(\alpha_C-\alpha_A)-(\alpha_C-\alpha_B)=\alpha_B-\alpha_A=d_{AB}.
+$$
+Each direct contrast already cancels its own study baseline, and the difference of contrasts then cancels
+the shared comparator effect $\alpha_C$.
+:::
+
+::: {.proof}
+In study $AC$ the two arms have positions $\eta_{A(\mathcal P_{AC})}=\mu_{AC}+\alpha_A$ and
+$\eta_{C(\mathcal P_{AC})}=\mu_{AC}+\alpha_C$ by @eq-bucher-decomp. Their contrast is
+$$
+d_{AC(\mathcal P_{AC})}=\eta_{C(\mathcal P_{AC})}-\eta_{A(\mathcal P_{AC})}=(\mu_{AC}+\alpha_C)-(\mu_{AC}+\alpha_A)=\alpha_C-\alpha_A,
+$$
+the baseline $\mu_{AC}$ cancelling because it is common to both arms of the same study. This is the
+within-study cancellation effected by randomization. Identically, study $BC$ gives
+$d_{BC(\mathcal P_{BC})}=\alpha_C-\alpha_B$. Subtracting,
+$$
+d_{AC(\mathcal P_{AC})}-d_{BC(\mathcal P_{BC})}=(\alpha_C-\alpha_A)-(\alpha_C-\alpha_B)=\alpha_B-\alpha_A,
+$$
+the comparator effect $\alpha_C$ cancelling because it is common to both contrasts. The result
+$\alpha_B-\alpha_A$ equals $d_{AB}$ by @eq-bucher-decomp. $\square$
+:::
+
+::: {.remark}
+**Why this matters.** This is the precise sense in which the anchor earns its keep. Differencing *within*
+each trial before differencing *across* trials deletes the study baselines $\mu_j$ in two stages, so the
+anchored comparison is immune to the baseline-risk differences that sink the naive comparison. It does
+not, however, protect against differences in the *treatment shifts* $\alpha_k$ across populations; that is
+the province of transitivity, and its failure is @sec-bucher-failure. $\blacktriangleleft$
+:::
+
+The contrast with the unanchored comparison is now sharp. The naive estimator @eq-bucher-naive forgoes
+the within-study cancellation and inherits the difference of baselines as outright bias.
+
+::: {#prp-unanchored-bias}
+## The unanchored comparison is biased by the baseline difference
+Under the additive decomposition @eq-bucher-decomp, the unanchored estimand @eq-bucher-naive is
+$$
+\eta_{A(\mathcal P_{AC})}-\eta_{B(\mathcal P_{BC})}=(\mu_{AC}-\mu_{BC})+(\alpha_A-\alpha_B)=(\mu_{AC}-\mu_{BC})-d_{AB},
+$$
+so, taking $\hat d_{AB}^{\,\mathrm{naive}}$ as an estimate of $-d_{AB}$ (the $A$-versus-$B$ contrast in the
+reversed orientation), its bias is the difference of study baselines:
+$$
+\text{bias}\;=\;\mu_{AC}-\mu_{BC}.
+$$ {#eq-bucher-unanchored}
+The bias vanishes only in the special case $\mu_{AC}=\mu_{BC}$, that is, only when the two studies happen
+to share the same baseline link-scale outcome.
+:::
+
+::: {.proof}
+By @eq-bucher-decomp, $\eta_{A(\mathcal P_{AC})}=\mu_{AC}+\alpha_A$ and
+$\eta_{B(\mathcal P_{BC})}=\mu_{BC}+\alpha_B$. Subtracting,
+$$
+\eta_{A(\mathcal P_{AC})}-\eta_{B(\mathcal P_{BC})}=(\mu_{AC}-\mu_{BC})+(\alpha_A-\alpha_B).
+$$
+By @eq-bucher-decomp again, $\alpha_A-\alpha_B=-(\alpha_B-\alpha_A)=-d_{AB}$. Hence the estimand equals
+$(\mu_{AC}-\mu_{BC})-d_{AB}$, an estimate of $-d_{AB}$ offset by $\mu_{AC}-\mu_{BC}$, which is the claimed
+bias. It is zero precisely when $\mu_{AC}=\mu_{BC}$. $\square$
+:::
+
+::: {#exm-anchored-vs-unanchored}
+## Anchored versus unanchored, on the same data
+Use the two trials of the running example (computed in full in @sec-bucher-example). The placebo (arm
+$C$) log-odds were $\hat\eta_C^{(AC)}=\log 0.5=-0.693$ in trial $AC$ and $\hat\eta_C^{(BC)}=\log 0.375=-0.981$
+in trial $BC$; normalizing $\alpha_C=0$ makes these the two baselines,
+$$
+\mu_{AC}=-0.693,\qquad \mu_{BC}=-0.981,\qquad \mu_{AC}-\mu_{BC}=0.288.
+$$
+The two statin arms happened to have *identical* event rates, $\hat\eta_A=\hat\eta_B=\log 0.25=-1.386$, so
+the two analyses disagree sharply:
+
+| Quantity | Anchored (Bucher) | Unanchored (naive) |
+|---|---|---|
+| what is contrasted | within-study contrasts $\hat d_{AC},\hat d_{BC}$ | active arms $\hat\eta_A,\hat\eta_B$ across studies |
+| uses the placebo arms? | yes, as the anchor | no, they are discarded |
+| estimate on the log scale | $\hat d_{AB}=0.288$ | $\hat\eta_A-\hat\eta_B=0$ |
+| target it estimates | $d_{AB}$ | $-d_{AB}$ |
+| odds ratio reported | $e^{0.288}=\tfrac43=1.33$ | $e^{0}=1.00$ |
+| bias | none (under transitivity) | $\mu_{AC}-\mu_{BC}=0.288$ |
+
+The naive comparison concludes the two statins are identical ($\mathrm{OR}=1$), because their event rates
+look the same. But they are *not* comparable: statin $B$ was tested against a placebo population with a
+lower event rate ($27\%$ versus $33\%$), so $B$ merely had an easier comparator. The anchored comparison
+corrects for this and finds $B$ carries $\tfrac43$ the event odds of $A$. The entire discrepancy, $0.288$,
+is precisely the gap between the two placebo baselines, exactly as @eq-bucher-unanchored predicts.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why anchoring matters.** The baseline $\mu_j$ absorbs everything about study $j$'s population that
+shifts the absolute outcome level: disease severity, follow-up duration, the prevalence of prognostic
+variables (@def-prognostic-variable). Two trials of different drugs are run in different places at
+different times and essentially never share a baseline, so $\mu_{AC}-\mu_{BC}$ is essentially never zero,
+and the unanchored estimator @eq-bucher-naive is essentially always biased, as @exm-anchored-vs-unanchored
+just showed. The anchored estimator @eq-bucher-estimator removes this bias for free, by differencing
+within each study before differencing across studies. This is the whole reason anchored indirect
+comparison is the default and unanchored comparison a last resort reserved for disconnected networks
+(Chapter 26), where it must be propped up by strong additional assumptions to control @eq-bucher-unanchored.
+Crucially, anchoring does *not* protect against differences in the *treatment effects* $\alpha_k$ across
+populations; that is the province of transitivity, and its failure is @sec-bucher-failure. $\blacktriangleleft$
+:::
+
+## The variance of an empirical log-odds {#sec-bucher-logodds}
+
+To turn the worked example into honest numbers we need the standard error of a single trial's log
+odds-ratio. It follows from the delta method (@thm-delta-method), and it is the standard error every
+applied Bucher computation uses.
+
+::: {.remark}
+**You may skip the proof on a first reading.** The only thing the worked example needs from this section
+is the boxed formula @eq-bucher-logoddsvar: the estimated variance of a log odds-ratio is the sum of the
+reciprocals of the four cell counts of its two-by-two table. A reader in a hurry can take this on faith
+and go straight to @sec-bucher-example; the delta-method derivation below merely justifies it, repeating
+the machinery of Chapter 5 (@thm-delta-method). $\blacktriangleleft$
+:::
+
+::: {#prp-logodds-variance}
+## Large-sample variance of an empirical log-odds and log odds-ratio
+Let an arm enroll $n$ patients of whom $r$ experience the event, with $r\sim\mathrm{Bin}(n,p)$ and
+$0<p<1$. Let $\hat p=r/n$ and let the empirical log-odds be $\hat\eta=\operatorname{logit}(\hat p)=\log\frac{\hat p}{1-\hat p}$.
+Then, to first order,
+$$
+\mathrm{Var}(\hat\eta)\approx\frac{1}{np(1-p)},\qquad
+\widehat{\mathrm{Var}}(\hat\eta)=\frac{1}{r}+\frac{1}{n-r}.
+$$ {#eq-bucher-logoddsvar}
+Consequently the empirical log odds-ratio contrasting two independent arms, with event counts $r_1,r_2$
+out of $n_1,n_2$, has estimated variance $\big(\tfrac1{r_1}+\tfrac1{n_1-r_1}\big)+\big(\tfrac1{r_2}+\tfrac1{n_2-r_2}\big)$,
+the sum of the inverse cell counts of the underlying two-by-two table.
+:::
+
+::: {.proof}
+The logit $g(p)=\log p-\log(1-p)$ has derivative $g'(p)=\frac1p+\frac1{1-p}=\frac{1}{p(1-p)}$. Since
+$\hat p$ is the mean of $n$ independent Bernoulli$(p)$ variables, $\mathbb E[\hat p]=p$ and
+$\mathrm{Var}(\hat p)=p(1-p)/n$, and by the central limit theorem $\sqrt n(\hat p-p)\xrightarrow{d}\mathcal N(0,p(1-p))$.
+The delta method (@thm-delta-method) applied to $g$ gives
+$$
+\sqrt n\big(g(\hat p)-g(p)\big)\xrightarrow{d}\mathcal N\!\big(0,\,[g'(p)]^2\,p(1-p)\big),
+\qquad [g'(p)]^2\,p(1-p)=\frac{p(1-p)}{p^2(1-p)^2}=\frac{1}{p(1-p)},
+$$
+so $\mathrm{Var}(\hat\eta)\approx\frac{1}{np(1-p)}$. Substituting the plug-in estimate $\hat p=r/n$,
+$$
+\widehat{\mathrm{Var}}(\hat\eta)=\frac{1}{n\hat p(1-\hat p)}=\frac{1}{n\cdot\frac{r}{n}\cdot\frac{n-r}{n}}
+=\frac{n}{r(n-r)}=\frac{(n-r)+r}{r(n-r)}=\frac1r+\frac1{n-r},
+$$
+which is @eq-bucher-logoddsvar. The two arms are independent, so by @lem-var-difference (with zero
+covariance) the variance of their difference of log-odds is the sum of the two arm variances; collecting
+the four reciprocals gives the stated table formula. The normal approximation underlying a Wald interval
+is justified by the asymptotic normality of the maximum likelihood estimator (@thm-mle-asymptotic-normality),
+of which $\hat\eta$ is an instance. $\square$
+:::
+
+## A worked Bucher comparison on the log odds-ratio scale {#sec-bucher-example}
+
+We carry a complete example from raw counts to a confidence interval, so that every number can be checked
+by hand. The event is an unfavorable outcome (a cardiovascular event); larger log-odds means worse.
+
+::: {.remark}
+**Recipe: Bucher from published trials.** Most of the time you will not have raw counts but a reported
+estimate and interval. The five-step recipe is then:
+
+1. **Recover each standard error** from a reported $95\%$ interval on the log scale:
+   $\mathrm{SE}=(\text{upper}-\text{lower})/(2\times 1.96)$, both endpoints on the log scale.
+2. **Line up the orientation**: express both direct effects as "versus the common comparator $C$" on the
+   same log scale (log OR, log RR, or log HR), so that $\hat d_{AC}$ and $\hat d_{BC}$ mean $\eta_C-\eta_A$
+   and $\eta_C-\eta_B$.
+3. **Subtract**: $\hat d_{AB}=\hat d_{AC}-\hat d_{BC}$.
+4. **Add variances** (if the trials are independent):
+   $\mathrm{SE}(\hat d_{AB})=\sqrt{\mathrm{SE}_{AC}^2+\mathrm{SE}_{BC}^2}$.
+5. **Interval, then back-transform**: form a Wald interval on the log scale, then exponentiate the
+   estimate and both interval endpoints to report a ratio.
+
+The example below runs this recipe starting one step earlier, from the raw tables. $\blacktriangleleft$
+:::
+
+::: {#exm-bucher-logor}
+## Indirect comparison of $A$ and $B$ through a common comparator $C$
+
+**Orientation check.** We report on the chapter's $d_{ab}=\eta_b-\eta_a$ scale. The event is unfavorable,
+so a *positive* contrast flags *higher, worse* odds. We expect both statins to beat placebo, so we expect
+$\hat d_{AC}=\eta_C-\eta_A>0$ and $\hat d_{BC}=\eta_C-\eta_B>0$ (placebo worse than each statin), and the
+target is $d_{AB}=\eta_B-\eta_A$, "$B$ versus $A$, higher is worse."
+
+Two randomized trials report the following two-by-two tables.
+
+Study $AC$ (treatment $A$ versus comparator $C$):
+
+| Arm | Events $r$ | Non-events $n-r$ | Total $n$ |
+|---|---|---|---|
+| $A$ | $30$ | $120$ | $150$ |
+| $C$ | $50$ | $100$ | $150$ |
+
+Study $BC$ (treatment $B$ versus comparator $C$):
+
+| Arm | Events $r$ | Non-events $n-r$ | Total $n$ |
+|---|---|---|---|
+| $B$ | $40$ | $160$ | $200$ |
+| $C$ | $60$ | $160$ | $220$ |
+
+**Step 1: arm log-odds.** With $\hat\eta=\log\frac{r}{n-r}$,
+$$
+\hat\eta_A=\log\tfrac{30}{120}=\log 0.25=-1.38629,\qquad
+\hat\eta_C^{(AC)}=\log\tfrac{50}{100}=\log 0.5=-0.69315,
+$$
+$$
+\hat\eta_B=\log\tfrac{40}{160}=\log 0.25=-1.38629,\qquad
+\hat\eta_C^{(BC)}=\log\tfrac{60}{160}=\log 0.375=-0.98083.
+$$
+
+**Step 2: direct contrasts.** Using the [Notation](/notation.qmd) order $d_{kC}=\eta_C-\eta_k$,
+$$
+\hat d_{AC}=\hat\eta_C^{(AC)}-\hat\eta_A=-0.69315-(-1.38629)=0.69315=\log 2,
+$$
+$$
+\hat d_{BC}=\hat\eta_C^{(BC)}-\hat\eta_B=-0.98083-(-1.38629)=0.40546=\log 1.5.
+$$
+Both are positive, as the orientation check anticipated. On the odds-ratio scale the comparator $C$ has
+twice the event odds of $A$ and one and a half times the event odds of $B$; equivalently $A$ and $B$ are
+both protective relative to $C$, with $A$ the more so.
+
+**Step 3: direct variances** by @prp-logodds-variance, summing inverse cell counts,
+$$
+\widehat{\mathrm{Var}}(\hat d_{AC})=\tfrac1{30}+\tfrac1{120}+\tfrac1{50}+\tfrac1{100}=0.071667,\qquad
+\mathrm{SE}=0.26771,
+$$
+$$
+\widehat{\mathrm{Var}}(\hat d_{BC})=\tfrac1{40}+\tfrac1{160}+\tfrac1{60}+\tfrac1{160}=0.054167,\qquad
+\mathrm{SE}=0.23274.
+$$
+
+**Step 4: the Bucher estimate.** By @eq-bucher-estimator and @eq-bucher-varsum,
+$$
+\hat d_{AB}^{\,\mathrm{Bucher}}=\hat d_{AC}-\hat d_{BC}=0.69315-0.40546=0.28768=\log\tfrac43,
+$$
+$$
+\widehat{\mathrm{Var}}\!\left(\hat d_{AB}^{\,\mathrm{Bucher}}\right)=0.071667+0.054167=0.125833,\qquad
+\mathrm{SE}=0.35473.
+$$
+
+**Step 5: interval and back-transformation.** A $95\%$ Wald interval on the log scale is
+$0.28768\pm 1.95996\times 0.35473=0.28768\pm 0.69526=(-0.40758,\,0.98293)$. Exponentiating, the indirect
+odds ratio of the event comparing $B$ to $A$ is
+$$
+\widehat{\mathrm{OR}}_{AB}=e^{0.28768}=1.3333=\tfrac43,\qquad
+95\%\ \mathrm{CI}=(e^{-0.40758},\,e^{0.98293})=(0.665,\,2.672).
+$$
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Final interpretation, in both orientations.** On this chapter's $d_{AB}=\eta_B-\eta_A$ scale, the event
+odds for statin $B$ are estimated as $1.33$ times those for statin $A$; equivalently, the event odds for
+$A$ are $1/1.33=0.75$ times those for $B$. Either way, the point estimate favors $A$ as the better statin.
+But the $95\%$ interval for the odds ratio, $(0.67,\,2.67)$, comfortably includes $1$, so on this evidence
+the difference is not statistically distinguishable from no difference. And the estimate is trustworthy
+*only under transitivity*: it assumes the two trials' populations shared the distribution of any covariate
+that modifies the statin effect on the log odds-ratio scale. $\blacktriangleleft$
+:::
+
+Three further features of the example repay attention.
+
+::: {.remark}
+**Ratios divide; logs subtract.** The indirect odds ratio $\tfrac43$ is exactly the ratio of the two
+reported odds ratios, $2/1.5=\tfrac43$, which is the multiplicative face of the additive identity
+$\log\tfrac43=\log 2-\log 1.5$. Had we (wrongly) subtracted the odds ratios, $2-1.5=0.5$, we would have
+produced a number with no meaning. The additive scale of @lem-relative-effect-algebra is not optional
+bookkeeping; it is where the cancellation lives. The same arithmetic works verbatim on any additive
+scale: if a rheumatoid-arthritis network instead reported $\hat d_{AC}=-0.40$ and $\hat d_{BC}=-0.15$ as
+log *hazard* ratios of disease progression, then $\hat d_{AB}=-0.40-(-0.15)=-0.25$, a hazard ratio
+$e^{-0.25}=0.78$; only the name of the scale changed. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**The price of indirectness, concretely.** The Bucher standard error $0.355$ exceeds both direct standard
+errors $0.268$ and $0.233$, as @cor-bucher-efficiency guarantees. The effect on inference is stark. The
+direct $A$-versus-$C$ contrast is significant ($z=0.69315/0.26771=2.59$), the direct $B$-versus-$C$
+contrast borderline ($z=0.40546/0.23274=1.74$), yet the indirect $A$-versus-$B$ contrast is firmly
+inconclusive ($z=0.28768/0.35473=0.81$, two-sided $p\approx 0.42$), its $95\%$ interval for the odds
+ratio running from $0.67$ to $2.67$ and comfortably including $1$. Two informative direct comparisons can
+combine into an uninformative indirect one. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**What the number means, and what it assumes.** The estimate $\widehat{\mathrm{OR}}_{AB}=\tfrac43$ is
+unbiased for the true $A$-versus-$B$ odds ratio *only under transitivity*: the populations of the two
+trials must share the distribution of any covariate that modifies the treatment effect on the log
+odds-ratio scale. If, for instance, study $BC$ enrolled younger patients and age modifies the effect of
+$B$, then $\hat d_{BC}$ estimates the effect in a younger population than the one in which $\hat d_{AC}$
+estimates the effect of $A$, and the subtraction mixes populations. No amount of data fixes this; it is a
+bias, not a variance, and it is invisible in the standard error $0.355$. Diagnosing and repairing it is
+the subject of node-splitting (@def-node-splitting), a diagnostic that splits a comparison into its direct
+and indirect parts and checks whether they agree, and of population adjustment (Parts IV and V).
+$\blacktriangleleft$
+:::
+
+## When transitivity fails {#sec-bucher-failure}
+
+Bucher's theorem is exact under its hypotheses, so every difficulty with indirect comparison is a
+difficulty with a hypothesis. The variance hypothesis (independence) is mild and is relaxed by an honest
+covariance term, @thm-bucher-variance. The unbiasedness hypothesis (randomization) holds by design in the
+trials that anchored comparisons are built from. The hypothesis that bears the weight is transitivity,
+and it fails for a definite mechanism: an **effect modifier** (@def-effect-modifier) whose distribution
+differs between the trial populations.
+
+To see the mechanism, suppose a binary covariate $Z$ modifies the $B$-versus-$C$ effect, so that the
+conditional contrast $d_{BC}(z)$ takes one value at $z=0$ and another at $z=1$. The marginal effect
+@eq-bucher-reldef is then a weighted average of $d_{BC}(0)$ and $d_{BC}(1)$ with weights given by the
+prevalence of $Z$ in the population. If study $BC$ has a different prevalence of $Z$ than the population
+in which we wish to report $A$ versus $B$, the marginal $d_{BC(\mathcal P_{BC})}$ differs from
+$d_{BC(\mathcal P_{AB})}$, transitivity @eq-bucher-transitivity is violated, the consistency equation
+@eq-bucher-consistency no longer holds, and the Bucher estimator @eq-bucher-estimator is biased by exactly
+the discrepancy $d_{BC(\mathcal P_{BC})}-d_{BC(\mathcal P_{AB})}$.
+
+::: {#exm-transitivity-failure}
+## A transitivity failure as a specific number
+Let $Z$ be presence of diabetes, an effect modifier of the statin-$B$ effect. On the log odds-ratio scale,
+the conditional $B$-versus-$C$ contrast is $d_{BC}(Z=0)=0.4$ in non-diabetics and $d_{BC}(Z=1)=1.0$ in
+diabetics (statin $B$ is more protective in diabetics). Diabetes is more common in the $BC$ trial than in
+the target population where we want the answer:
+
+| $Z$ (diabetes) | conditional $d_{BC}(Z)$ | prevalence in $BC$ trial | prevalence in target $\mathcal P_{AB}$ |
+|---|---|---|---|
+| $Z=0$ | $0.4$ | $0.4$ | $0.8$ |
+| $Z=1$ | $1.0$ | $0.6$ | $0.2$ |
+
+The marginal $B$-versus-$C$ effects are the prevalence-weighted averages
+$$
+\begin{aligned}
+d_{BC(\mathcal P_{BC})} &= 0.4\times 0.4 + 1.0\times 0.6 = 0.76,\\
+d_{BC(\mathcal P_{AB})} &= 0.4\times 0.8 + 1.0\times 0.2 = 0.52.
+\end{aligned}
+$$
+Suppose the $A$-versus-$C$ effect is unaffected by $Z$ and equals $d_{AC}=0.6$ in every population. The
+*true* target contrast is $d_{AB}=d_{AC}-d_{BC(\mathcal P_{AB})}=0.6-0.52=0.08$. The Bucher estimand,
+however, subtracts the $BC$ trial's own marginal effect,
+$d_{AC}-d_{BC(\mathcal P_{BC})}=0.6-0.76=-0.16$. The bias is
+$$
+-0.16-0.08=-0.24=-\big(d_{BC(\mathcal P_{BC})}-d_{BC(\mathcal P_{AB})}\big),
+$$
+a log-odds-ratio error of $-0.24$, a multiplicative error of $e^{-0.24}\approx 0.79$ in the odds ratio,
+about $21\%$. It does not shrink as the trials grow: it is a bias, not a variance, and it is invisible in
+any standard error. This is the mechanism the rest of the book is built to detect and repair.
+$\blacktriangleleft$
+:::
+
+Chapter 16 makes this calculation general and names the resulting failure (@thm-failure-of-bucher), and
+shows how it compounds with the non-collapsibility of the odds ratio and with **ecological bias**
+(@def-ecological-bias), the bias that arises when a relationship estimated at the trial-average level does
+not hold at the individual level. The point to carry forward is structural: prognostic variables that are
+not effect modifiers do *not* break transitivity, because they shift the baselines $\mu_j$, which
+@prp-baseline-cancellation already cancels; only effect modifiers, which alter the $\alpha_k$ across
+populations, can break it.
+
+When both direct and indirect evidence exist for the same contrast, the consistency equation becomes
+testable by comparing them: this is **node-splitting** (@def-node-splitting, @thm-consistency-closure),
+the diagnostic developed in Chapter 15 that splits a comparison into its direct and indirect parts and
+checks whether they agree. A significant discrepancy is the empirical signature of a transitivity failure
+and the trigger for the population-adjustment methods that occupy the remainder of the book.
+
+Transitivity is also the assumption that connects this chapter to the transportability framework of
+Chapter 12. Transportability asks when a relative effect measured in one population may be carried to
+another; transitivity is exactly the special case, direct transportability (@def-transportability,
+@thm-direct-transportability), in which the relative effect is assumed to transport *unchanged* from each
+trial population to the target. In the language of @exm-transitivity-failure, transportability would have
+us reweight the conditional contrasts $d_{BC}(z)$ to the target prevalence of $Z$ before subtracting; the
+population-adjustment methods of Parts IV and V are precisely the machinery that performs that reweighting
+when it is needed. Transitivity is the assumption that it is *not* needed, and the bridge to Chapter 12 is
+the tool for the cases where it is.
+
+## Notes and references {#sec-bucher-notes}
+
+The anchored indirect comparison and the estimator @eq-bucher-estimator are due to @bucher1997, who
+introduced the difference of log relative effects and its variance @eq-bucher-varsum as the basis for
+indirect comparison in meta-analysis of randomized trials. The framing in terms of constancy of relative
+effects and transitivity, and the embedding of the estimator in the network model with the
+reference-treatment decomposition @eq-bucher-decomp, follows @dias2018nma and the thesis of
+@phillippo2019thesis (Eq. 1.2 for constancy, Eq. 1.3 for the indirect estimator). The two-layer
+cancellation argument of @sec-bucher-cancellation, separating the within-study cancellation of baselines
+from the across-study cancellation of the comparator, is the algebraic core of why anchored comparisons
+are preferred to unanchored ones; the bias formula @eq-bucher-unanchored for the naive comparison is the
+quantity that unanchored population adjustment (Chapter 26) must control. The delta-method variance of the
+empirical log-odds (@prp-logodds-variance) is classical; the sum-of-inverse-cell-counts form is the
+standard error reported by every two-by-two table routine.
+
+This chapter corresponds to results D.1 (transitivity), D.2 (Bucher's theorem), D.3 (the Bucher variance),
+and D.4 (constancy of relative effects) of the proof catalogue in
+`proofs/D_network_meta_analysis.md`. The network-level material that builds on Bucher's identity, namely
+the parameterizations (@def-baseline-shift-param, @def-reference-treatment-param), identifiability via the
+graph incidence rank (@thm-fe-nma-identifiability), the random-effects contrast correlation
+(@thm-re-nma-correlation), the consistency closure and node-splitting (@thm-consistency-closure,
+@def-node-splitting), and goodness-of-fit (@def-residual-deviance, @def-dic), is developed in Chapter 15;
+the breakdown of transitivity under effect modification (@thm-failure-of-bucher, @def-ecological-bias) is
+developed in Chapter 16. When the two direct contrasts are themselves pooled over several trials, the
+pooling is the pairwise meta-analysis of Chapter 13 (@thm-fixed-effect-blue for the fixed-effect
+inverse-variance estimate, @thm-dersimonian-laird for the random-effects estimate), and Bucher's identity
+operates on the pooled summaries. The connection to transportability (@def-transportability,
+@thm-direct-transportability) is developed in Chapter 12.
+
+Three results of this chapter have machine-checked counterparts in the companion Coq development, in
+`theories/Bucher.v`. The exact identity @prp-bucher-identity is `Theorem bucher_identity`; the
+unbiasedness theorem @thm-bucher-unbiased is `Theorem bucher_unbiased`; the variance theorem
+@thm-bucher-variance is `Theorem bucher_variance`. The transitivity definition @def-transitivity and the
+equivalence @prp-transitivity-consistency are formalized as `Definition transitivity` together with
+`Lemma transitivity_subtract` and `Lemma subtract_transitivity`. The Coq development treats expectation,
+variance, and covariance as abstract operators satisfying linearity and the difference identity
+@eq-bucher-varidentity, exactly the structure used in the proofs above, so that the formalization captures
+the algebraic content of Bucher's theorem while leaving the measure-theoretic construction of those
+operators to the caller.
+
+## Exercises {#sec-bucher-exercises}
+
+The exercises progress from warm-up to challenge, and are tagged by kind. An exercise marked $\star$ has a
+full worked solution in Appendix F. The first two are gentle checks of orientation and interpretation; the
+later ones build toward the network theory of Chapters 15 and 16.
+
+::: {#exr-bucher-warmup}
+**Warm-up. Identify, orient, compute.** A health technology assessment has two independent trials against
+a common comparator $C$ (placebo). Trial $AC$ reports the effect of a new drug on the log odds-ratio scale
+as $\hat d_{AC}=\eta_C-\eta_A=0.50$ with $\mathrm{SE}=0.20$; trial $BC$ reports
+$\hat d_{BC}=\eta_C-\eta_B=0.30$ with $\mathrm{SE}=0.15$. The outcome is unfavorable, so higher odds is
+worse. (a) Name the common comparator and the target contrast. (b) State whether a positive $\hat d_{AC}$
+means the new drug $A$ is better or worse than $C$, and why. (c) Compute the Bucher estimate $\hat d_{AB}$
+and its standard error. (d) Back-transform to an odds ratio for $B$ versus $A$ and say, in one sentence,
+which drug the point estimate favors. (e) State the transitivity assumption you relied on, in one plain
+sentence.
+:::
+
+::: {#exr-bucher-interpret}
+**Interpretation. What breaks it, and what does not.** In the setting of @exr-bucher-warmup, suppose you
+learn that trial $BC$ enrolled much older patients than trial $AC$. (a) If age strongly modifies the
+effect of drug $B$, is the age difference a threat to the Bucher comparison, and which assumption does it
+threaten? (b) Would enrolling more patients in each trial remove the threat? Explain in one sentence why
+or why not. (c) Now suppose instead that age predicts the outcome but does *not* change the size of any
+treatment effect. Explain why the anchored comparison is then unharmed, naming the result
+(@prp-baseline-cancellation) that does the work.
+:::
+
+::: {#exr-bucher-recompute}
+**Computation. A Bucher computation from summaries.** Two trials report log hazard ratios on the
+proportional-hazards scale: $\hat d_{AC}=-0.51$ with $\mathrm{SE}=0.18$, and $\hat d_{BC}=-0.22$ with
+$\mathrm{SE}=0.13$, the contrasts being independent. Compute the indirect log hazard ratio of $A$ versus
+$B$, its standard error, a $95\%$ confidence interval, and the back-transformed hazard ratio with
+interval. State the transitivity assumption you are relying on in words.
+:::
+
+::: {#exr-bucher-tables}
+**Computation. From raw tables.** Repeat the worked example @exm-bucher-logor with the tables: study $AC$
+has $A:24/120$ and $C:48/160$; study $BC$ has $B:20/100$ and $C:30/150$. Report the two direct log
+odds-ratios with standard errors, the Bucher estimate with standard error, and the indirect odds ratio
+with $95\%$ interval. Verify that the indirect odds ratio equals the ratio of the two direct odds ratios.
+:::
+
+::: {#exr-bucher-scales}
+**Proof. Additivity holds on the right scales.** Prove that the antisymmetry and additivity laws
+@lem-relative-effect-algebra hold for the log risk-ratio contrast $d_{ab}=\log\bar\mu_b-\log\bar\mu_a$ and
+for the mean-difference contrast $d_{ab}=\bar\mu_b-\bar\mu_a$, and show by a numerical counterexample that
+they fail for the risk-ratio contrast taken on the ratio scale itself, $\bar\mu_b/\bar\mu_a$ (that is,
+that $\bar\mu_C/\bar\mu_A\ne(\bar\mu_C/\bar\mu_B)\cdot\text{(something additive)}$ unless one first takes
+logarithms). Conclude that Bucher's subtraction is a statement about the link scale.
+:::
+
+::: {#exr-bucher-unanchored}
+**Computation. The cost of dropping the anchor.** Using the additive decomposition @eq-bucher-decomp,
+suppose $\mu_{AC}=-1.2$, $\mu_{BC}=-1.8$, $\alpha_A=-0.7$, $\alpha_B=-0.4$, $\alpha_C=0$ on the logit
+scale. Compute the true network contrast $d_{AB}$, the anchored estimand $d_{AC}-d_{BC}$, and the
+unanchored estimand @eq-bucher-naive, and verify that the unanchored estimand is off by exactly
+$\mu_{AC}-\mu_{BC}$ as @prp-unanchored-bias predicts. Comment on which of the five parameters an anchored
+comparison is immune to.
+:::
+
+::: {#exr-bucher-chain}
+**Proof. A longer chain.** Generalize Bucher's identity to a path of comparators $A\to C\to D\to B$, in
+which trial $AC$ estimates $d_{AC}$, trial $CD$ estimates $d_{CD}$, and trial $DB$ estimates $d_{DB}$, all
+independent. Using @lem-relative-effect-algebra, derive the chained indirect estimator of $d_{AB}$ as a
+signed sum of the three direct contrasts, prove it unbiased under transitivity along the path, and show
+its variance is the sum of the three direct variances. Explain why each additional link strictly inflates
+the variance.
+:::
+
+::: {#exr-bucher-correlated}
+**($\star$, challenge) Correlated contrasts from a three-arm trial.** Suppose a single three-arm trial
+reports both $\hat d_{AC}$ and $\hat d_{BC}$ (arms $A$, $B$, $C$ in one study), so the shared comparator
+arm makes the two contrasts correlated with $\mathrm{Cov}(\hat d_{AC},\hat d_{BC})=\rho\sqrt{v_{AC}v_{BC}}$
+for some $\rho>0$. Using the general formula in @thm-bucher-variance, write the variance of the Bucher
+estimate of $d_{AB}$ and show it is strictly smaller than $v_{AC}+v_{BC}$. For the homoskedastic structure
+in which both contrasts share a comparator arm of variance $\sigma^2$ and have arm-level variance
+$\sigma^2$ in each non-comparator arm, show $\rho=\tfrac12$ and recover the variance of the within-study
+$A$-versus-$B$ contrast directly; reconcile your answer with @thm-re-nma-correlation.
+:::
+
+::: {#exr-bucher-transitivity-bias}
+**($\star$, interpretation) Quantifying a transitivity failure.** A binary effect modifier $Z$ acts on the
+$B$-versus-$C$ contrast so that the conditional log odds-ratios are $d_{BC}(Z=0)=0.2$ and $d_{BC}(Z=1)=0.8$
+(on the link scale, treating these conditional contrasts as collapsible for simplicity). Study $BC$ has
+$\Pr(Z=1)=0.7$, while the target population $\mathcal P_{AB}$ in which we wish to report $A$ versus $B$ has
+$\Pr(Z=1)=0.3$. The $A$-versus-$C$ contrast is unaffected by $Z$ and equals $d_{AC}=0.6$ in every
+population. Compute the marginal $d_{BC(\mathcal P_{BC})}$ and $d_{BC(\mathcal P_{AB})}$, the true target
+contrast $d_{AB}$, the Bucher estimand $d_{AC}-d_{BC(\mathcal P_{BC})}$, and hence the bias of the
+unadjusted indirect comparison. Identify which quantity an effect-modifier adjustment (Chapter 17 onward)
+must reweight to remove the bias, and explain why a prognostic variable that shifted only the baseline
+would have created no bias at all.
+:::

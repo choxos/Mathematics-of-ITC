@@ -1,0 +1,1868 @@
+---
+title: "Statistical Inference"
+---
+
+Every indirect treatment comparison reduces, in the end, to a statement about numbers we estimated from
+finite data and the uncertainty attached to them. A network meta-analysis combines log odds ratios, each
+of which is a nonlinear function of fitted model parameters; its credible or confidence intervals come
+from the curvature of a likelihood. A matching-adjusted indirect comparison (MAIC, [Notation](/notation.qmd)) solves
+a system of weighting equations and then reports a standard error that must remain valid even though the
+weighting model is almost certainly misspecified. Multilevel network meta-regression fits a likelihood
+over individual and aggregate data and inverts the Fisher information to quantify precision. None of
+these methods can be stated, let alone trusted, without the machinery of estimation theory: what an
+estimator is, when it is unbiased, how its variance behaves, what the likelihood and the score and the
+Fisher information are, and how an estimator behaves as the sample grows.
+
+This chapter builds that machinery from first principles. We define statistical models and estimators
+and the three numbers that summarize an estimator's accuracy (bias, variance, mean squared error). We
+introduce the likelihood, the score function, and the Fisher information, and prove the *information
+equality* that ties them together. We define the maximum likelihood estimator (MLE), prove its
+functional invariance, and then prove the two results on which all asymptotic inference rests: the MLE
+is *consistent* and *asymptotically normal*. We prove the Cramér-Rao lower bound, which says no unbiased
+estimator can beat the inverse Fisher information, and we show the MLE attains it asymptotically. We
+prove the three asymptotic tools used throughout the book: the continuous mapping theorem, Slutsky's
+theorem, and the delta method (catalogue results A.13, A.12, A.11). We then generalize from maximum
+likelihood to *M-estimation* and define the *sandwich variance estimator*, the robust standard error
+that Chapter 18 needs for MAIC. We close with the Wald, score, and likelihood-ratio tests and the
+confidence intervals obtained by inverting them.
+
+Throughout, the data are $X_1, \dots, X_n$, modeled as independent and identically distributed (iid)
+draws from a distribution indexed by a parameter $\boldsymbol\theta$. The reader should keep one picture
+in mind: the log-likelihood is a random function of $\boldsymbol\theta$; its slope (the score) vanishes
+at the MLE; its curvature (the information) determines how sharply the data pin down the parameter; and
+asymptotic normality is the statement that, viewed through a magnifying glass of width $1/\sqrt n$, this
+random function looks like a parabola whose vertex is Gaussian.
+
+That picture, drawn once, is worth carrying through the whole chapter:
+
+```
+   l_n(theta)   (the log-likelihood: how well a value of theta fits the data)
+       ^
+       |                 _______
+       |               /    |    \      <-- peak at theta_hat, the MLE:
+       |              /     |     \          the SLOPE here is zero (the score)
+       |             /      |      \
+       |            /       |       \    <-- the CURVATURE here is the information:
+       |          _/        |        \_      a sharper peak means more information
+       |       __/          |          \__     and a smaller standard error
+       +--------------------+-------------------> theta
+                         theta_hat
+```
+
+Everything that follows attaches a name and a theorem to one feature of this curve. The table below is a
+preview and a reference: each row is defined precisely in the section listed, and you can return to it
+whenever a symbol feels unfamiliar.
+
+| Quantity | Symbol | Plain meaning | Defined in |
+|---|---|---|---|
+| Log-likelihood | $\ell_n(\boldsymbol\theta)$ | how well a parameter value fits the observed data | @def-likelihood |
+| Score | $\mathbf s_n(\boldsymbol\theta)$ | the slope of the log-likelihood; zero at the MLE | @def-score |
+| MLE | $\hat{\boldsymbol\theta}_n$ | the parameter value that fits the data best | @def-mle |
+| Per-observation information | $\mathcal I(\boldsymbol\theta)$ | how much one observation tells you about $\boldsymbol\theta$ (curvature per data point) | @def-fisher-information |
+| Sample information | $\mathcal I_n(\boldsymbol\theta) = n\,\mathcal I(\boldsymbol\theta)$ | how much the whole sample tells you | @cor-information-additivity |
+| Observed information | $\mathbf J_n(\hat{\boldsymbol\theta}_n)$ | the actual curvature at the estimate (what software inverts) | @sec-asymptotic-normality |
+| Inverse information | $\mathcal I_n(\hat{\boldsymbol\theta}_n)^{-1}$ | approximate variance of the MLE; its square root is the standard error | @thm-mle-asymptotic-normality |
+
+A word on the data. We write the observations as $X_1, \dots, X_n$, but a single $X_i$ can be many things
+depending on the model: one yes/no outcome (did patient $i$ respond?), a covariate vector (age, sex,
+biomarker), or an entire patient record (covariates, treatment arm, and outcome together). The theory
+below never cares which; it only needs the $X_i$ to be iid draws from $f(\cdot\,;\boldsymbol\theta_0)$.
+
+## Statistical models, estimators, and risk {#sec-models}
+
+We work on a probability space $(\Omega, \mathcal F, P)$ in the sense of @def-probability-space. A
+*statistical model* is a family of candidate distributions for the data, indexed by a parameter.
+
+::: {#exm-running-trial}
+## A running example: a two-arm trial and an indirect comparison
+We return to one concrete study at every step. A randomized trial of a new treatment records, for each of
+$n = 25$ patients, whether the patient responded ($X_i = 1$) or not ($X_i = 0$):
+
+| Patient $i$ | 1 | 2 | 3 | 4 | $\cdots$ | 24 | 25 | total |
+|---|---|---|---|---|---|---|---|---|
+| Response $X_i$ | 1 | 0 | 1 | 0 | $\cdots$ | 1 | 0 | $\sum_i X_i = 10$ |
+
+Ten of the $25$ patients respond. The single number we want is the response probability $p$, together
+with an honest measure of how uncertain our estimate of $p$ is. Every tool in this chapter is, in the
+end, a way to answer one of two questions about this trial: *what is our best guess for $p$?*
+(estimation) and *how far off could that guess be?* (uncertainty).
+
+The destination is an *indirect treatment comparison*. Imagine a second trial of a different treatment
+against the same control, reporting its own response probabilities. Neither trial compares the two new
+treatments head to head, yet we will want the contrast between them on the log-odds scale, with a valid
+standard error. By the end we assemble exactly that (@exm-indirect-bucher), using the likelihood to
+estimate each $p$, the Fisher information for its precision, and the delta method to move to the log-odds
+scale and combine the two trials. $\blacktriangleleft$
+:::
+
+::: {#def-statistical-model}
+## Parametric statistical model
+Let $\mathcal X$ be a sample space carrying a $\sigma$-finite dominating measure $\nu$ (Lebesgue measure
+for continuous data, counting measure for discrete data). A *parametric statistical model* is a family
+$$
+\mathcal F = \bigl\{\, f(\cdot\,;\boldsymbol\theta) : \boldsymbol\theta \in \Theta \,\bigr\},
+\qquad \Theta \subseteq \mathbb R^{p},
+$$
+where each $f(\cdot\,;\boldsymbol\theta)$ is a probability density (or mass) function with respect to
+$\nu$. The set $\Theta$ is the *parameter space*. The model is *identifiable* if the map
+$\boldsymbol\theta \mapsto f(\cdot\,;\boldsymbol\theta)$ is injective, that is, if
+$\boldsymbol\theta \ne \boldsymbol\theta'$ implies $f(\cdot\,;\boldsymbol\theta) \ne
+f(\cdot\,;\boldsymbol\theta')$ on a set of positive $\nu$-measure.
+
+We observe $X_1, \dots, X_n$ iid with common density $f(\cdot\,;\boldsymbol\theta_0)$ for some unknown
+*true parameter* $\boldsymbol\theta_0 \in \Theta$, and write $\mathbb E_{\boldsymbol\theta}$,
+$\mathrm{Var}_{\boldsymbol\theta}$, $P_{\boldsymbol\theta}$ for expectation, variance, and probability
+computed under $f(\cdot\,;\boldsymbol\theta)$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** A statistical model is a *menu of candidate distributions* for the data, one for
+each value of $\boldsymbol\theta$; estimation is the job of picking the menu item that best matches what
+we saw. Two pieces of jargon in the definition:
+
+- A *$\sigma$-finite dominating measure* $\nu$ is just a fixed reference yardstick that lets the word
+"density" mean something. For continuous data it is ordinary length or area (Lebesgue measure), so a
+density is the height of a curve; for discrete data it is counting measure, so a "density" is simply a
+probability mass $P(X = x)$. You never have to choose $\nu$ in practice: it is Lebesgue for continuous
+outcomes and counting for counts or yes/no data.
+- *Identifiable* says the map $\boldsymbol\theta \mapsto f(\cdot\,;\boldsymbol\theta)$ is *injective*
+(different inputs give different outputs): no two parameter values produce the same distribution of
+observable data. If two did, no amount of data could ever tell them apart. For a non-identifiable
+example, suppose a model only ever affects the data through a product $\mu = \alpha\beta$ but carries
+$\alpha$ and $\beta$ separately; then $(\alpha,\beta) = (2,3)$ and $(6,1)$ give identical data
+distributions and are indistinguishable.
+
+A note on $\boldsymbol\theta_0$. Calling it the *true parameter* assumes the model is correctly
+specified, that the data really were generated by some member of the menu. Real outcome models are
+usually simplifications. We keep the clean "true parameter" language while developing maximum likelihood,
+and in @sec-m-estimation we drop it: there the target becomes whatever parameter our estimating equation
+aims at, whether or not any menu item is exactly right. $\blacktriangleleft$
+:::
+
+::: {#def-estimator}
+## Estimator, bias, variance, mean squared error
+An *estimator* of a quantity $g(\boldsymbol\theta) \in \mathbb R$ is a measurable function
+$T_n = T(X_1, \dots, X_n)$ of the data alone (it may not depend on $\boldsymbol\theta$). Its *bias*,
+*variance*, and *mean squared error* (MSE) at $\boldsymbol\theta$ are
+$$
+\mathrm{Bias}_{\boldsymbol\theta}(T_n) = \mathbb E_{\boldsymbol\theta}[T_n] - g(\boldsymbol\theta),
+\qquad
+\mathrm{Var}_{\boldsymbol\theta}(T_n),
+\qquad
+\mathrm{MSE}_{\boldsymbol\theta}(T_n) = \mathbb E_{\boldsymbol\theta}\!\bigl[(T_n - g(\boldsymbol\theta))^2\bigr].
+$$
+The estimator is *unbiased* if $\mathrm{Bias}_{\boldsymbol\theta}(T_n) = 0$ for every
+$\boldsymbol\theta \in \Theta$. For a vector estimator $\mathbf T_n$ of
+$g(\boldsymbol\theta) \in \mathbb R^q$, the variance is replaced by the covariance matrix
+$\mathrm{Cov}_{\boldsymbol\theta}(\mathbf T_n)$ and the MSE by the matrix
+$\mathbb E_{\boldsymbol\theta}[(\mathbf T_n - g)(\mathbf T_n - g)^\top]$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** An estimator is a *recipe* that turns the data into a guess, with no peeking at
+the unknown $\boldsymbol\theta$. In the running example the obvious estimator of $p$ is the sample
+proportion $\hat p = \tfrac1n\sum_i X_i = 10/25 = 0.40$. *Bias* is the systematic part of the error (does
+the recipe aim at the right target on average?), *variance* is the random scatter from sample to sample,
+and *mean squared error* combines the two. These three numbers are exactly how competing estimators are
+graded in the simulation studies of Chapter 29. $\blacktriangleleft$
+:::
+
+The bias and the variance measure two different failures: bias is a systematic offset, variance is
+random scatter. The MSE combines them, and the decomposition below shows exactly how.
+
+::: {#prp-bias-variance-decomposition}
+## Bias-variance decomposition
+For any estimator $T_n$ with $\mathbb E_{\boldsymbol\theta}[T_n^2] < \infty$,
+$$
+\mathrm{MSE}_{\boldsymbol\theta}(T_n)
+= \mathrm{Var}_{\boldsymbol\theta}(T_n) + \bigl(\mathrm{Bias}_{\boldsymbol\theta}(T_n)\bigr)^2 .
+$$ {#eq-bias-variance}
+For a vector estimator $\mathbf T_n$ of $g(\boldsymbol\theta)\in\mathbb R^q$, the matrix MSE equals
+$\mathrm{Cov}_{\boldsymbol\theta}(\mathbf T_n) + \mathbf b\,\mathbf b^\top$ with
+$\mathbf b = \mathrm{Bias}_{\boldsymbol\theta}(\mathbf T_n)$, and taking traces gives the scalar
+identity $\mathbb E_{\boldsymbol\theta}\|\mathbf T_n - g\|_2^2 = \mathrm{tr}\,\mathrm{Cov}_{\boldsymbol\theta}(\mathbf T_n) + \|\mathbf b\|_2^2$.
+:::
+
+::: {.proof}
+Write $m = \mathbb E_{\boldsymbol\theta}[T_n]$ and $b = m - g(\boldsymbol\theta)$. Then
+$$
+\mathrm{MSE}_{\boldsymbol\theta}(T_n)
+= \mathbb E_{\boldsymbol\theta}\bigl[(T_n - m + b)^2\bigr]
+= \mathbb E_{\boldsymbol\theta}\bigl[(T_n - m)^2\bigr] + 2 b\, \mathbb E_{\boldsymbol\theta}[T_n - m] + b^2 .
+$$
+The cross term vanishes because $\mathbb E_{\boldsymbol\theta}[T_n - m] = 0$, and the first term is
+$\mathrm{Var}_{\boldsymbol\theta}(T_n)$ by definition, giving @eq-bias-variance. The vector statement is
+identical with $\mathbf m = \mathbb E_{\boldsymbol\theta}[\mathbf T_n]$ and
+$\mathbf b = \mathbf m - g$: expand
+$(\mathbf T_n - g)(\mathbf T_n - g)^\top = (\mathbf T_n - \mathbf m)(\mathbf T_n - \mathbf m)^\top + (\mathbf T_n - \mathbf m)\mathbf b^\top + \mathbf b(\mathbf T_n - \mathbf m)^\top + \mathbf b\mathbf b^\top$
+and take $\mathbb E_{\boldsymbol\theta}$; the two middle terms vanish. The trace identity follows from
+$\mathrm{tr}(\mathbf b\mathbf b^\top) = \|\mathbf b\|_2^2$ and linearity of the trace. $\square$
+:::
+
+::: {.remark}
+**Why this matters.** The decomposition is the rule for trading bias against variance. A more complicated
+adjustment model (more covariates in a regression, a more flexible weighting model in MAIC) usually
+lowers bias but raises variance; @eq-bias-variance is the scoreboard on which that trade is settled, and
+it is why a slightly biased estimator can be the more accurate one (@exr-mse-shrinkage). $\blacktriangleleft$
+:::
+
+Two notions of "the estimator gets it right as data accumulate" recur throughout the book. The first is
+asymptotic and concerns a *sequence* of estimators.
+
+::: {#def-consistent-estimator}
+## Consistency
+A sequence of estimators $T_n$ is *(weakly) consistent* for $g(\boldsymbol\theta_0)$ if
+$T_n \xrightarrow{p} g(\boldsymbol\theta_0)$ as $n \to \infty$, that is, for every $\varepsilon > 0$,
+$P_{\boldsymbol\theta_0}\!\bigl(|T_n - g(\boldsymbol\theta_0)| > \varepsilon\bigr) \to 0$. It is *strongly
+consistent* if $T_n \xrightarrow{\text{a.s.}} g(\boldsymbol\theta_0)$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** Consistency is the promise that *with enough data the estimator lands on the
+truth*. Weak consistency (convergence in probability) is all we use in this book; strong consistency
+(almost-sure convergence, from Chapter 4) is the stronger statement that the estimator settles down for
+almost every possible infinite data stream, not merely with high probability at each $n$. For the running
+example, consistency is the guarantee that $\hat p \to p$ as the trial grows; in later chapters it is the
+guarantee that network meta-analysis and MAIC estimates stop being systematically wrong as studies get
+larger. $\blacktriangleleft$
+:::
+
+::: {.remark}
+Unbiasedness and consistency are logically independent. The sample mean $\bar X_n$ of iid data with mean
+$\mu$ and finite variance is both unbiased ($\mathbb E[\bar X_n] = \mu$) and consistent (by the weak law
+of large numbers below). But $T_n = X_1$ is unbiased for $\mu$ yet not consistent, and a biased
+estimator whose bias and variance both vanish (for example a shrunken mean
+$\tfrac{n}{n+1}\bar X_n$) is consistent: its bias is
+$\tfrac{n}{n+1}\mu - \mu = -\mu/(n+1) \to 0$ and its variance is
+$\bigl(\tfrac{n}{n+1}\bigr)^2 \sigma^2/n \to 0$, so by @eq-bias-variance its MSE vanishes. The MSE in @eq-bias-variance is the right single-number summary
+of finite-sample accuracy, because $\mathrm{MSE}_{\boldsymbol\theta}(T_n)\to 0$ is equivalent to
+$L^2$ convergence, which implies consistency by Chebyshev's inequality. $\blacktriangleleft$
+:::
+
+## Asymptotic tools: continuous mapping, Slutsky, and the delta method {#sec-asymptotic-tools}
+
+**Why this section, and why now.** Here is the concrete problem these three tools solve. In the running
+example we will estimate $p$, but a network meta-analysis never reports a probability; it reports a *log
+odds ratio*, a nonlinear function of fitted probabilities. So the real question is: given the uncertainty
+in $\hat p$, what is the uncertainty in $\log\frac{\hat p}{1 - \hat p}$, or in a contrast of two such
+quantities across trials? The *delta method* below is the machine that answers this, and it is the single
+most-used result of the chapter, because every effect measure in the book (log odds ratio, log hazard
+ratio, risk difference) is a smooth function of fitted parameters. The continuous mapping theorem and
+Slutsky's theorem are the two lemmas the delta method (and the later limit theory of the MLE) is built
+from. If you read this section for one thing, read it for the delta method and @exm-indirect-bucher. One
+honest word about ordering: we prove these tools before we have an estimator in hand because the
+consistency and normality proofs will call them repeatedly; keep the running example's $\hat p$ in mind as
+the thing they will eventually be applied to.
+
+Before we can analyze any estimator as $n \to \infty$ we need three theorems about how limits in
+distribution interact with continuous functions and with constants. We will use them constantly, so we
+prove them here, near the front. We take as given two classical results from probability, which belong
+to the foundations of Chapter 4 and which we cite rather than reprove; see @bingham2010regression and a
+standard graduate probability text for proofs.
+
+::: {.remark}
+## Prerequisites cited from probability
+We use the following standard facts about iid random vectors $X_1, X_2, \dots$ in $\mathbb R^p$.
+
+1. **Weak law of large numbers (WLLN).** If $\mathbb E\|X_1\| < \infty$ with mean $\boldsymbol\mu$, then
+$\bar X_n = n^{-1}\sum_{i=1}^n X_i \xrightarrow{p} \boldsymbol\mu$.
+
+2. **Multivariate central limit theorem (CLT).** If, in addition, $X_1$ has finite covariance matrix
+$\boldsymbol\Sigma$, then $\sqrt n\,(\bar X_n - \boldsymbol\mu) \xrightarrow{d} \mathcal N_p(\mathbf 0, \boldsymbol\Sigma)$.
+
+3. **Portmanteau theorem.** $X_n \xrightarrow{d} X$ if and only if
+$\mathbb E[h(X_n)] \to \mathbb E[h(X)]$ for every bounded continuous $h$; equivalently, if and only if
+$\mathbb E[h(X_n)] \to \mathbb E[h(X)]$ for every bounded function $h$ that is continuous at
+$P_X$-almost every point.
+
+4. **Cramér-Wold device.** $X_n \xrightarrow{d} X$ in $\mathbb R^p$ if and only if
+$\mathbf t^\top X_n \xrightarrow{d} \mathbf t^\top X$ in $\mathbb R$ for every $\mathbf t \in \mathbb R^p$.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+## The $O_p$ and $o_p$ shorthand (read once, use everywhere)
+Two of the proofs below use a compact notation for "stochastically small" and "stochastically bounded,"
+listed in [Notation](/notation.qmd). A sequence of random vectors $V_n$ is $o_p(1)$ if
+$V_n \xrightarrow{p} \mathbf 0$ (it vanishes), and $O_p(1)$ if it is *bounded in probability*: for every
+$\varepsilon > 0$ there is a constant $K$ with $\sup_n P(\|V_n\| > K) < \varepsilon$ (it does not run off
+to infinity). Three rules are all we need, and each is elementary:
+
+1. A sequence that converges in distribution is $O_p(1)$ (a convergent limit law cannot put mass at
+infinity).
+2. $o_p(1) \times O_p(1) = o_p(1)$: something vanishing times something bounded vanishes.
+3. $o_p(1) + o_p(1) = o_p(1)$ and $O_p(1) + O_p(1) = O_p(1)$.
+
+These are exactly the steps that let us discard remainder terms in the delta method and in Wilks'
+theorem. You do not need their proofs to follow the chapter; treat them as arithmetic for random
+sequences. $\blacktriangleleft$
+:::
+
+The first tool says continuous functions preserve convergence in distribution. It corresponds to A.13 in
+the proof catalogue.
+
+::: {#thm-continuous-mapping}
+## Continuous mapping theorem
+Let $X_n, X$ be random vectors in $\mathbb R^p$ and let $g : \mathbb R^p \to \mathbb R^q$ be measurable.
+Let $D_g$ be the set of discontinuity points of $g$ and suppose $P(X \in D_g) = 0$. Then:
+
+(i) $X_n \xrightarrow{d} X \;\Rightarrow\; g(X_n) \xrightarrow{d} g(X)$;
+
+(ii) $X_n \xrightarrow{p} X \;\Rightarrow\; g(X_n) \xrightarrow{p} g(X)$;
+
+(iii) $X_n \xrightarrow{\text{a.s.}} X \;\Rightarrow\; g(X_n) \xrightarrow{\text{a.s.}} g(X)$.
+:::
+
+::: {.proof}
+*(i)* Let $h : \mathbb R^q \to \mathbb R$ be bounded and continuous. The composition $h \circ g$ is
+bounded by $\|h\|_\infty$, and it is continuous at every point where $g$ is continuous, hence at every
+point of $\mathbb R^p \setminus D_g$, a set of $P_X$-probability one. By the second (almost-everywhere)
+form of the Portmanteau theorem, $\mathbb E[h(g(X_n))] = \mathbb E[(h\circ g)(X_n)] \to \mathbb E[(h\circ g)(X)] = \mathbb E[h(g(X))]$.
+As $h$ was an arbitrary bounded continuous function, the first form of Portmanteau gives
+$g(X_n) \xrightarrow{d} g(X)$.
+
+*(iii)* If $X_n(\omega) \to X(\omega)$ and $X(\omega) \notin D_g$, then $g(X_n(\omega)) \to g(X(\omega))$
+by continuity of $g$ at $X(\omega)$. This holds for all $\omega$ outside the union of the
+null set $\{X_n \not\to X\}$ and the null set $\{X \in D_g\}$, which is null; hence
+$g(X_n) \xrightarrow{\text{a.s.}} g(X)$.
+
+*(ii)* Suppose $g(X_n) \overset{p}{\nrightarrow} g(X)$. Then there exist $\varepsilon, \eta > 0$ and a
+subsequence along which $P(\|g(X_n) - g(X)\| > \varepsilon) > \eta$. Along that subsequence
+$X_n \xrightarrow{p} X$ still holds, so it has a further subsequence with
+$X_{n_k} \xrightarrow{\text{a.s.}} X$ (a standard fact: convergence in probability implies almost-sure
+convergence along a subsequence; see @bingham2010regression). Intuitively, a sequence converges in
+probability if and only if every subsequence contains a further subsequence that converges almost surely,
+and the contradiction we now derive exploits exactly that escape hatch. By part (iii),
+$g(X_{n_k}) \xrightarrow{\text{a.s.}} g(X)$, hence $g(X_{n_k}) \xrightarrow{p} g(X)$, contradicting
+$P(\|g(X_{n_k}) - g(X)\| > \varepsilon) > \eta$. $\square$
+:::
+
+::: {.remark}
+**Why this matters.** This is the "plug-in" theorem: if an estimate converges, a continuous
+transformation of it converges too. It is what lets us pass from a converging $\hat p$ to a converging
+odds $\hat p/(1 - \hat p)$, or from a converging log odds ratio to its converging exponential, the odds
+ratio. One-line example: if $\bar X_n \xrightarrow{p} \mu$ then $\bar X_n^2 \xrightarrow{p} \mu^2$. What
+to remember: continuity transfers convergence, provided the function is well behaved at the limit.
+$\blacktriangleleft$
+:::
+
+The second tool lets us combine a sequence that converges in distribution with one that converges to a
+constant. It corresponds to A.12.
+
+::: {#thm-slutsky}
+## Slutsky's theorem
+Let $X_n \xrightarrow{d} X$ in $\mathbb R^p$ and let $Y_n \xrightarrow{p} \mathbf c$ for a constant
+$\mathbf c \in \mathbb R^p$ (respectively a constant matrix $C_n \xrightarrow{p} C$). Then
+$$
+X_n + Y_n \xrightarrow{d} X + \mathbf c,
+\qquad
+Y_n^\top X_n \xrightarrow{d} \mathbf c^\top X,
+\qquad
+C_n X_n \xrightarrow{d} C\,X .
+$$
+If $p = 1$ and $\mathbf c \ne 0$, then $X_n / Y_n \xrightarrow{d} X/\mathbf c$.
+:::
+
+::: {.proof}
+The key step is that joint convergence holds: $(X_n, Y_n) \xrightarrow{d} (X, \mathbf c)$ in
+$\mathbb R^{2p}$. To see this, take a bounded uniformly continuous $h:\mathbb R^{2p}\to\mathbb R$ with
+modulus of continuity $\omega_h(\delta) = \sup\{|h(u)-h(v)| : \|u-v\|\le\delta\}$, which satisfies
+$\omega_h(\delta) \to 0$ as $\delta \downarrow 0$. For any $\delta > 0$,
+$$
+\bigl|\mathbb E[h(X_n, Y_n)] - \mathbb E[h(X_n, \mathbf c)]\bigr|
+\le \omega_h(\delta) + 2\|h\|_\infty\, P(\|Y_n - \mathbf c\| > \delta).
+$$
+This inequality splits the difference by where $Y_n$ lands. On the good event
+$\{\|Y_n - \mathbf c\| \le \delta\}$ the two points $(X_n, Y_n)$ and $(X_n, \mathbf c)$ are within
+$\delta$ of each other, so $h$ differs between them by at most the modulus $\omega_h(\delta)$. On the bad
+event $\{\|Y_n - \mathbf c\| > \delta\}$ we cannot control the difference, but $h$ is bounded by
+$\|h\|_\infty$, so the difference is at most $2\|h\|_\infty$, weighted by the probability
+$P(\|Y_n - \mathbf c\| > \delta)$ of that event. Letting $n \to \infty$ and using $Y_n \xrightarrow{p} \mathbf c$ kills the last term, leaving
+$\limsup_n |\mathbb E[h(X_n, Y_n)] - \mathbb E[h(X_n, \mathbf c)]| \le \omega_h(\delta)$; since
+$\delta$ is arbitrary, the limsup is zero. Meanwhile $\mathbb E[h(X_n, \mathbf c)] \to \mathbb E[h(X, \mathbf c)]$
+because $u \mapsto h(u, \mathbf c)$ is bounded and continuous and $X_n \xrightarrow d X$. Hence
+$\mathbb E[h(X_n, Y_n)] \to \mathbb E[h(X, \mathbf c)]$ for all bounded uniformly continuous $h$, which by
+the Portmanteau theorem (uniformly continuous test functions suffice) gives
+$(X_n, Y_n) \xrightarrow{d} (X, \mathbf c)$.
+
+Now apply the continuous mapping theorem (@thm-continuous-mapping). The maps
+$(x, y) \mapsto x + y$, $(x, y) \mapsto y^\top x$, and (matrix version) $(x, C) \mapsto C x$ are
+continuous everywhere, so $X_n + Y_n \xrightarrow{d} X + \mathbf c$, $Y_n^\top X_n \xrightarrow{d} \mathbf c^\top X$,
+and $C_n X_n \xrightarrow{d} C X$. The map $(x, y) \mapsto x/y$ is continuous on
+$\mathbb R \times (\mathbb R \setminus \{0\})$, and the limit $(X, \mathbf c)$ lands in that set with
+probability one when $\mathbf c \ne 0$, so $X_n/Y_n \xrightarrow{d} X/\mathbf c$. $\square$
+:::
+
+::: {.remark}
+**Why this matters.** Slutsky lets us replace an unknown constant by a consistent estimate without
+changing a limiting distribution. This is why a $z$- or $t$-statistic still works when we plug an
+*estimated* standard error into the denominator: the numerator has a central limit theorem, the
+denominator converges to a constant, and Slutsky glues them. One-line example: if
+$\sqrt n(\bar X_n - \mu) \xrightarrow{d} \mathcal N(0, \sigma^2)$ and $S_n \xrightarrow{p} \sigma$, then
+$\sqrt n(\bar X_n - \mu)/S_n \xrightarrow{d} \mathcal N(0, 1)$. $\blacktriangleleft$
+:::
+
+The third tool transfers a $\sqrt n$ central limit theorem through a smooth transformation. It is the
+single most-used result of this chapter in later applications, because every effect measure in the book
+(log odds ratio, log hazard ratio, risk difference) is a smooth function of fitted parameters. It
+corresponds to A.11.
+
+::: {#thm-delta-method}
+## Delta method
+Let $\mathbf T_n$ be a sequence of $\mathbb R^p$-valued estimators and $\boldsymbol\theta \in \mathbb R^p$
+a constant with
+$$
+\sqrt n\,(\mathbf T_n - \boldsymbol\theta) \xrightarrow{d} \mathcal N_p(\mathbf 0, \boldsymbol\Sigma).
+$$
+Let $g : \mathbb R^p \to \mathbb R^q$ be differentiable at $\boldsymbol\theta$ with Jacobian matrix
+$\mathbf D = \bigl[\partial g_a / \partial \theta_b\bigr]_{a,b}$ evaluated at $\boldsymbol\theta$. Then
+$$
+\sqrt n\,\bigl(g(\mathbf T_n) - g(\boldsymbol\theta)\bigr)
+\xrightarrow{d} \mathcal N_q\!\bigl(\mathbf 0,\; \mathbf D\,\boldsymbol\Sigma\,\mathbf D^\top\bigr).
+$$ {#eq-delta-variance}
+In the scalar case $p = q = 1$ this reads
+$\sqrt n\,(g(T_n) - g(\theta)) \xrightarrow{d} \mathcal N\!\bigl(0,\, g'(\theta)^2 \sigma^2\bigr)$.
+:::
+
+::: {.proof}
+First note that $\sqrt n\,(\mathbf T_n - \boldsymbol\theta) \xrightarrow{d} \mathcal N_p(\mathbf 0, \boldsymbol\Sigma)$
+implies $\mathbf T_n - \boldsymbol\theta = n^{-1/2}\bigl[\sqrt n(\mathbf T_n - \boldsymbol\theta)\bigr] \xrightarrow{p} \mathbf 0$
+by Slutsky (@thm-slutsky) with the constant sequence $n^{-1/2} \to 0$; hence
+$\mathbf T_n \xrightarrow{p} \boldsymbol\theta$.
+
+Differentiability of $g$ at $\boldsymbol\theta$ means
+$$
+g(\mathbf t) = g(\boldsymbol\theta) + \mathbf D\,(\mathbf t - \boldsymbol\theta) + R(\mathbf t),
+\qquad
+\frac{\|R(\mathbf t)\|}{\|\mathbf t - \boldsymbol\theta\|} \to 0 \ \text{ as } \mathbf t \to \boldsymbol\theta,
+$$
+with the convention $R(\boldsymbol\theta) = \mathbf 0$. Define the function
+$\rho(\mathbf t) = \|R(\mathbf t)\| / \|\mathbf t - \boldsymbol\theta\|$ for
+$\mathbf t \ne \boldsymbol\theta$ and $\rho(\boldsymbol\theta) = 0$; then $\rho$ is continuous at
+$\boldsymbol\theta$. Multiplying the expansion at $\mathbf t = \mathbf T_n$ by $\sqrt n$,
+$$
+\sqrt n\,\bigl(g(\mathbf T_n) - g(\boldsymbol\theta)\bigr)
+= \mathbf D\,\underbrace{\sqrt n\,(\mathbf T_n - \boldsymbol\theta)}_{=:\,\mathbf Z_n}
+\;+\; \sqrt n\, R(\mathbf T_n).
+$$
+The remainder is controlled by
+$\|\sqrt n\,R(\mathbf T_n)\| = \rho(\mathbf T_n)\,\|\mathbf Z_n\|$. Since $\mathbf T_n \xrightarrow{p} \boldsymbol\theta$
+and $\rho$ is continuous at $\boldsymbol\theta$ with $\rho(\boldsymbol\theta) = 0$, the continuous
+mapping theorem (@thm-continuous-mapping) gives $\rho(\mathbf T_n) \xrightarrow{p} 0$; and
+$\|\mathbf Z_n\| \xrightarrow{d} \|\mathbf Z\|$ where $\mathbf Z \sim \mathcal N_p(\mathbf 0, \boldsymbol\Sigma)$,
+so $\|\mathbf Z_n\| = O_p(1)$ (rule 1 of the $O_p/o_p$ remark above: a convergent-in-distribution
+sequence is bounded in probability). Hence
+$\sqrt n\,R(\mathbf T_n) = \rho(\mathbf T_n)\,\|\mathbf Z_n\| \xrightarrow{p} \mathbf 0$, the product of an
+$o_p(1)$ and an $O_p(1)$ sequence (rule 2). Applying Slutsky once more,
+$$
+\sqrt n\,\bigl(g(\mathbf T_n) - g(\boldsymbol\theta)\bigr)
+= \mathbf D\,\mathbf Z_n + o_p(1) \xrightarrow{d} \mathbf D\,\mathbf Z .
+$$
+Finally $\mathbf D \mathbf Z \sim \mathcal N_q(\mathbf 0, \mathbf D\boldsymbol\Sigma\mathbf D^\top)$ because
+an affine image of a Gaussian is Gaussian with the transformed covariance (@thm-mvn-linear). This is
+@eq-delta-variance. $\square$
+:::
+
+::: {.remark}
+The hypothesis $g'(\theta) \ne 0$ (more generally, $\mathbf D$ of full row rank) is what makes the limit
+*nondegenerate*. If $g'(\theta) = 0$ the first-order term vanishes and the correct rate is $n$ rather
+than $\sqrt n$, with a $\chi^2$-type limit driven by the second derivative; this *second-order delta
+method* underlies the asymptotics of the likelihood-ratio statistic in @sec-tests.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why this matters.** This is the result that produces a standard error for almost every effect measure
+you will report. When you fit a model and then transform a coefficient (a probability into a log odds, a
+rate into a log rate, two coefficients into a ratio), the delta-method formula @eq-delta-variance gives
+the variance of the transform: multiply the variance of the fitted parameter by the squared derivative
+(scalar case), or sandwich the covariance between the Jacobian $\mathbf D$ and its transpose (vector
+case). It is the source of the familiar "standard error of a log odds ratio" and, in
+@exm-indirect-bucher, of the standard error of an *indirect* comparison. $\blacktriangleleft$
+:::
+
+::: {#exm-delta-logodds}
+## Delta method for a log odds (a first taste)
+Anticipating the running example, the central limit theorem for a proportion gives
+$\sqrt n\,(\hat p - p) \xrightarrow{d} \mathcal N(0,\, p(1 - p))$. We want the uncertainty of the *log
+odds* $g(p) = \log\frac{p}{1 - p}$, whose derivative is $g'(p) = \frac{1}{p(1 - p)}$. The scalar delta
+method (@thm-delta-method) gives
+$$
+\sqrt n\,\bigl(g(\hat p) - g(p)\bigr) \xrightarrow{d} \mathcal N\!\Bigl(0,\; g'(p)^2\, p(1 - p)\Bigr)
+= \mathcal N\!\Bigl(0,\; \tfrac{1}{p(1 - p)}\Bigr),
+$$
+so $\widehat{\mathrm{Var}}\bigl(g(\hat p)\bigr) \approx \frac{1}{n\,\hat p(1 - \hat p)} = \frac{1}{n\hat p} + \frac{1}{n(1 - \hat p)} = \frac{1}{\#\text{responders}} + \frac{1}{\#\text{non-responders}}$.
+For our trial ($n = 25$, $10$ responders) this is $\tfrac1{10} + \tfrac1{15} = 0.1\overline 6$, so the log
+odds has standard error $\sqrt{0.1\overline 6} = 0.408$. The reading is concrete: a parameter on an
+awkward scale (a probability, bounded in $[0,1]$) is moved to a convenient unbounded scale (the log odds)
+and its standard error comes along for free. The full computation, with confidence intervals, returns in
+@exm-binomial-inference. $\blacktriangleleft$
+:::
+
+::: {#exm-indirect-bucher}
+## A toy indirect treatment comparison
+Here is the chapter's subject in miniature. Two randomized trials share a common control $A$. Trial 1
+compares a new treatment $B$ against $A$; trial 2 compares a different treatment $C$ against $A$. No trial
+compares $B$ with $C$, yet we want that contrast on the log-odds-ratio scale.
+
+| Trial | Arm | Responders | Non-responders |
+|---|---|---|---|
+| 1 | $B$ | 20 | 30 |
+| 1 | $A$ | 10 | 40 |
+| 2 | $C$ | 18 | 42 |
+| 2 | $A$ | 15 | 45 |
+
+Each arm gives a log odds $\log\frac{\hat p}{1 - \hat p}$ whose variance, by @exm-delta-logodds, is
+($1/\text{responders} + 1/\text{non-responders}$). A log odds *ratio* is a difference of two independent
+arm log odds, so its variance is the sum of the four reciprocals. For the direct contrasts,
+$$
+\begin{aligned}
+\widehat d_{BA} &= \log\tfrac{20/30}{10/40} = \log\tfrac{20\cdot 40}{30\cdot 10} = 0.9808, &
+\widehat{\mathrm{Var}}(\widehat d_{BA}) &= \tfrac1{20} + \tfrac1{30} + \tfrac1{10} + \tfrac1{40} = 0.20833,\\
+\widehat d_{CA} &= \log\tfrac{18/42}{15/45} = \log\tfrac{18\cdot 45}{42\cdot 15} = 0.2513, &
+\widehat{\mathrm{Var}}(\widehat d_{CA}) &= \tfrac1{18} + \tfrac1{42} + \tfrac1{15} + \tfrac1{45} = 0.16825.
+\end{aligned}
+$$
+The indirect contrast of $B$ versus $C$ is the difference
+$\widehat d_{BC} = \widehat d_{BA} - \widehat d_{CA} = 0.9808 - 0.2513 = 0.7295$. Because the two trials
+are independent, the variances add (there is no covariance term across independent studies in
+@eq-delta-variance): $\widehat{\mathrm{Var}}(\widehat d_{BC}) = 0.20833 + 0.16825 = 0.37658$, so the
+standard error is $\sqrt{0.37658} = 0.6137$. A 95% interval is
+$0.7295 \pm 1.96 \times 0.6137 = (-0.4733,\, 1.9323)$, and on the odds-ratio scale
+$(e^{-0.4733}, e^{1.9323}) = (0.62,\, 6.91)$. The interval covers $1$, so the indirect comparison is
+inconclusive; and note its standard error ($0.61$) exceeds either direct one ($0.46$ and $0.41$):
+combining two estimates *adds* uncertainty. This is the Bucher indirect comparison, developed in full in
+Chapter 14; every number above came from the delta method plus the independence of the two trials.
+$\blacktriangleleft$
+:::
+
+## Likelihood, score, and Fisher information {#sec-likelihood}
+
+The likelihood reverses the usual reading of a density. Where $f(x;\boldsymbol\theta)$ is, for fixed
+$\boldsymbol\theta$, a function of the data $x$, the likelihood fixes the observed data and varies the
+parameter.
+
+::: {#def-likelihood}
+## Likelihood and log-likelihood
+Given observed data $X_1, \dots, X_n$ from the model @def-statistical-model, the *likelihood function* is
+$$
+L_n(\boldsymbol\theta) = \prod_{i=1}^{n} f(X_i;\boldsymbol\theta),
+\qquad \boldsymbol\theta \in \Theta,
+$$
+viewed as a (random) function of $\boldsymbol\theta$. The *log-likelihood* is
+$$
+\ell_n(\boldsymbol\theta) = \log L_n(\boldsymbol\theta) = \sum_{i=1}^{n} \log f(X_i;\boldsymbol\theta).
+$$
+For a single observation we write $\ell(\boldsymbol\theta; x) = \log f(x;\boldsymbol\theta)$, so
+$\ell_n(\boldsymbol\theta) = \sum_i \ell(\boldsymbol\theta; X_i)$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** The likelihood asks, of each candidate $\boldsymbol\theta$, "how probable were
+the data we actually saw, if this were the parameter?" High likelihood means good fit. Taking logs turns
+the product over independent patients into a sum, which is why every formula below is additive over the
+sample. For the running example,
+$\ell_n(p) = \bigl(\textstyle\sum_i X_i\bigr)\log p + \bigl(n - \textstyle\sum_i X_i\bigr)\log(1 - p) = 10\log p + 15\log(1 - p)$,
+a function of $p$ alone once the data are in hand. $\blacktriangleleft$
+:::
+
+The slope of the log-likelihood in $\boldsymbol\theta$ is the score; the MLE is found by setting it to
+zero.
+
+::: {#def-score}
+## Score function
+The (per-observation) *score* is the gradient of the single-observation log-likelihood in the parameter,
+$$
+\mathbf s(\boldsymbol\theta; x) = \nabla_{\boldsymbol\theta}\,\log f(x;\boldsymbol\theta)
+= \frac{\nabla_{\boldsymbol\theta} f(x;\boldsymbol\theta)}{f(x;\boldsymbol\theta)} \in \mathbb R^{p},
+$$
+defined wherever $f(x;\boldsymbol\theta) > 0$. The *sample score* is
+$$
+\mathbf s_n(\boldsymbol\theta) = \nabla_{\boldsymbol\theta}\,\ell_n(\boldsymbol\theta)
+= \sum_{i=1}^{n} \mathbf s(\boldsymbol\theta; X_i).
+$$ {#eq-score-def}
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** The score $\mathbf s_n$ is the *slope* of the log-likelihood hill in the
+parameter ($\nabla_{\boldsymbol\theta}$ is the gradient, the vector of partial derivatives in each
+coordinate of $\boldsymbol\theta$). It points in the direction that would increase the fit, and it is zero
+exactly at the top of the hill, the MLE. Read it as "how strongly, and in which direction, the data push
+each parameter." We compute the Bernoulli score just below, in @lem-score-mean-zero. $\blacktriangleleft$
+:::
+
+All of the clean identities about the score require an interchange of differentiation and integration,
+which is not automatic. We isolate the needed conditions in one definition and refer back to it.
+
+::: {#def-regular-model}
+## Regularity conditions
+The model @def-statistical-model is *regular* at an interior point
+$\boldsymbol\theta \in \mathrm{int}\,\Theta$ if:
+
+(R1) **Common support.** The set $\{x : f(x;\boldsymbol\theta) > 0\}$ does not depend on
+$\boldsymbol\theta$.
+
+(R2) **Smoothness.** For $\nu$-almost every $x$, the map $\boldsymbol\theta \mapsto f(x;\boldsymbol\theta)$
+is twice continuously differentiable on a neighborhood of $\boldsymbol\theta$.
+
+(R3) **Differentiation under the integral.** The first two derivatives in $\boldsymbol\theta$ of
+$\int f(x;\boldsymbol\theta)\,d\nu(x) = 1$ may be taken inside the integral; concretely there are
+$\nu$-integrable envelopes dominating $\|\nabla_{\boldsymbol\theta} f(x;\boldsymbol\theta)\|$ and
+$\|\nabla^2_{\boldsymbol\theta} f(x;\boldsymbol\theta)\|$ uniformly in a neighborhood, so the dominated
+convergence theorem applies.
+
+(R4) **Finite, positive-definite information.** The Fisher information @def-fisher-information exists,
+is finite, and is positive definite at $\boldsymbol\theta$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation: what R1-R4 are for.** These are safety checks that make the log-likelihood smooth
+enough, and its tails light enough, for calculus to behave. R1 (common support) says the set of possible
+outcomes does not move as $\boldsymbol\theta$ changes: true for the Bernoulli, where outcomes are always
+$\{0, 1\}$, but *false* for Uniform$(0,\theta)$, whose range grows with $\theta$ (@exr-information-equality-fail).
+R2 (smoothness) says the log-likelihood has a well-defined slope and curvature. R3 (differentiation under
+the integral) is the license to swap a derivative with an integral, which is what every score identity
+below secretly uses; the "integrable envelopes" are a domination condition that makes the swap legal. R4
+(positive-definite information) says no direction of the parameter is left totally undetermined by the
+data. Read R1-R4 as "the curve is smooth, its tails are tame, and the parameter is locally pinned down";
+the rest is the machinery that turns those words into theorems. $\blacktriangleleft$
+:::
+
+Under (R1)-(R3) the score has mean zero. This is the cornerstone identity from which everything else
+(the information equality, the Cramér-Rao bound, the asymptotics of the MLE) follows.
+
+::: {#lem-score-mean-zero}
+## The score has mean zero
+If the model is regular (@def-regular-model) at $\boldsymbol\theta$, then
+$\mathbb E_{\boldsymbol\theta}\bigl[\mathbf s(\boldsymbol\theta; X)\bigr] = \mathbf 0$.
+:::
+
+::: {.proof}
+Because $f(\cdot;\boldsymbol\theta)$ integrates to $1$ for every $\boldsymbol\theta$, differentiating the
+identity $\int f(x;\boldsymbol\theta)\, d\nu(x) = 1$ and moving the gradient inside the integral
+(licensed by (R3)),
+$$
+\mathbf 0 = \nabla_{\boldsymbol\theta} \int f(x;\boldsymbol\theta)\, d\nu(x)
+= \int \nabla_{\boldsymbol\theta} f(x;\boldsymbol\theta)\, d\nu(x)
+= \int \frac{\nabla_{\boldsymbol\theta} f(x;\boldsymbol\theta)}{f(x;\boldsymbol\theta)}\, f(x;\boldsymbol\theta)\, d\nu(x)
+= \mathbb E_{\boldsymbol\theta}\bigl[\mathbf s(\boldsymbol\theta; X)\bigr],
+$$
+where the third equality multiplies and divides by $f$ on the set $\{f > 0\}$, which carries all the
+mass by (R1). Condition (R1) is doing real work here: because the support $\{f > 0\}$ does not move with
+$\boldsymbol\theta$, differentiating the integral produces no extra term from a $\boldsymbol\theta$-moving
+boundary, and the interchange of $\nabla_{\boldsymbol\theta}$ with the integral is clean. (When the
+support *does* move with $\boldsymbol\theta$, as for Uniform$(0,\theta)$ in
+@exr-information-equality-fail, this lemma fails.) $\square$
+:::
+
+::: {.remark}
+**What this means, and the Bernoulli score.** The score is the slope of the log-likelihood. Saying its
+average is zero at the truth means: *the true parameter is, on average, the value at which the data give
+no reason to nudge the estimate up or down.* That is exactly why the MLE, found by setting the score to
+zero, aims at the truth. For the running example the single-observation log-likelihood is
+$\ell(p; x) = x\log p + (1 - x)\log(1 - p)$, so the score is
+$$
+s(p; x) = \frac{x}{p} - \frac{1 - x}{1 - p} = \frac{x - p}{p(1 - p)},
+$$
+and since $\mathbb E[X] = p$ its mean is $\mathbb E[s(p; X)] = (p - p)/(p(1 - p)) = 0$, confirming
+@lem-score-mean-zero. The numerator $x - p$ shows the score is positive when a success pushes the estimate
+up and negative when a failure pulls it down. $\blacktriangleleft$
+:::
+
+Since the score has mean zero, its covariance is just its second moment. That second moment is the
+Fisher information.
+
+::: {#def-fisher-information}
+## Fisher information
+For a regular model the *Fisher information matrix* (in one observation) at $\boldsymbol\theta$ is the
+covariance of the score,
+$$
+\mathcal I(\boldsymbol\theta)
+= \mathrm{Cov}_{\boldsymbol\theta}\bigl(\mathbf s(\boldsymbol\theta; X)\bigr)
+= \mathbb E_{\boldsymbol\theta}\!\bigl[\mathbf s(\boldsymbol\theta; X)\,\mathbf s(\boldsymbol\theta; X)^\top\bigr]
+\in \mathbb R^{p\times p}.
+$$ {#eq-fisher-def}
+The information in the full sample of size $n$ is
+$\mathcal I_n(\boldsymbol\theta) = \mathrm{Cov}_{\boldsymbol\theta}(\mathbf s_n(\boldsymbol\theta))$.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** Fisher information measures *how much one observation tells you about*
+$\boldsymbol\theta$. There are two equivalent readings, made precise in @thm-information-equality below:
+it is the variance of the score (how much the slope of the log-likelihood jumps around from sample to
+sample) and it is the average curvature of the log-likelihood (how sharply peaked it is). A sharply peaked
+log-likelihood pins down the parameter tightly, so large information means small standard error. For the
+Bernoulli, $\mathcal I(p) = 1/[p(1 - p)]$, which is smallest at $p = 1/2$ (a 50/50 outcome is the least
+informative) and blows up near $0$ or $1$. $\blacktriangleleft$
+:::
+
+Fisher information is always positive semidefinite (it is a covariance matrix, @thm-cov-psd), and (R4)
+asks that it be strictly positive definite, which is the analytic statement that the parameter is
+locally identifiable: no nonzero direction leaves the log-likelihood flat in expectation.
+
+::: {#thm-information-equality}
+## Information equality
+If the model is regular (@def-regular-model) at $\boldsymbol\theta$, then the Fisher information equals
+minus the expected Hessian of the log-likelihood:
+$$
+\mathcal I(\boldsymbol\theta)
+= \mathbb E_{\boldsymbol\theta}\!\bigl[\mathbf s(\boldsymbol\theta; X)\,\mathbf s(\boldsymbol\theta; X)^\top\bigr]
+= -\,\mathbb E_{\boldsymbol\theta}\!\bigl[\nabla^2_{\boldsymbol\theta}\,\ell(\boldsymbol\theta; X)\bigr].
+$$ {#eq-info-equality}
+:::
+
+::: {.proof}
+The first equality is @eq-fisher-def together with @lem-score-mean-zero (mean-zero makes the second
+moment equal the covariance). For the second, start from
+$\mathbf s(\boldsymbol\theta; x) = \nabla f / f$ and compute the Hessian of
+$\ell(\boldsymbol\theta; x) = \log f(x;\boldsymbol\theta)$ by the quotient rule for gradients (the vector
+version of the scalar quotient rule; if it helps, read the display one component of $\boldsymbol\theta$ at
+a time, with $\nabla^2$ the Hessian, the matrix of second partial derivatives):
+$$
+\nabla^2_{\boldsymbol\theta}\,\ell(\boldsymbol\theta; x)
+= \nabla_{\boldsymbol\theta}\!\left(\frac{\nabla f}{f}\right)
+= \frac{\nabla^2 f}{f} - \frac{(\nabla f)(\nabla f)^\top}{f^2}
+= \frac{\nabla^2 f(x;\boldsymbol\theta)}{f(x;\boldsymbol\theta)} - \mathbf s(\boldsymbol\theta; x)\,\mathbf s(\boldsymbol\theta; x)^\top,
+$$
+using $\nabla f / f = \mathbf s$ in the last term. Take $\mathbb E_{\boldsymbol\theta}$ of both sides. The
+first term integrates to zero:
+$$
+\mathbb E_{\boldsymbol\theta}\!\left[\frac{\nabla^2 f(X;\boldsymbol\theta)}{f(X;\boldsymbol\theta)}\right]
+= \int \frac{\nabla^2 f(x;\boldsymbol\theta)}{f(x;\boldsymbol\theta)}\, f(x;\boldsymbol\theta)\, d\nu(x)
+= \int \nabla^2 f(x;\boldsymbol\theta)\, d\nu(x)
+= \nabla^2 \int f(x;\boldsymbol\theta)\, d\nu(x) = \nabla^2 (1) = \mathbf 0,
+$$
+where the second-derivative interchange is licensed by (R3). Therefore
+$\mathbb E_{\boldsymbol\theta}[\nabla^2 \ell(\boldsymbol\theta; X)] = \mathbf 0 - \mathbb E_{\boldsymbol\theta}[\mathbf s \mathbf s^\top] = -\mathcal I(\boldsymbol\theta)$,
+which rearranges to @eq-info-equality. $\square$
+:::
+
+::: {.remark}
+**Why this matters.** The information equality is a duality: *how variable the slope of the log-likelihood
+is across samples* (the score variance, left side) equals *how curved the log-likelihood is on average*
+(minus the expected Hessian, right side). This is the hinge of the whole chapter. It is why the same
+matrix $\mathcal I$ appears both as the variance in the central limit theorem for the score and as the
+curvature that converts that noise into estimator noise; it makes the MLE's variance equal to
+$\mathcal I^{-1}$ (@thm-mle-asymptotic-normality), it powers the Cramér-Rao bound, and its *failure* under
+misspecification is exactly what forces the sandwich variance of @sec-m-estimation. $\blacktriangleleft$
+:::
+
+The information in independent data adds. This additivity is why precision scales linearly with sample
+size, and it is the reason the per-observation information $\mathcal I(\boldsymbol\theta)$ is the natural
+unit.
+
+::: {#cor-information-additivity}
+## Additivity of information
+For iid data the sample score $\mathbf s_n(\boldsymbol\theta) = \sum_i \mathbf s(\boldsymbol\theta; X_i)$
+has mean zero and
+$$
+\mathcal I_n(\boldsymbol\theta) = \mathrm{Cov}_{\boldsymbol\theta}\bigl(\mathbf s_n(\boldsymbol\theta)\bigr)
+= n\,\mathcal I(\boldsymbol\theta).
+$$
+:::
+
+::: {.proof}
+By @lem-score-mean-zero each summand has mean zero, so $\mathbb E[\mathbf s_n] = \mathbf 0$. The summands
+are iid, hence uncorrelated, so the covariance of the sum is the sum of the covariances:
+$\mathrm{Cov}(\mathbf s_n) = \sum_{i=1}^n \mathrm{Cov}(\mathbf s(\boldsymbol\theta; X_i)) = n\,\mathcal I(\boldsymbol\theta)$
+by @def-fisher-information. $\square$
+:::
+
+::: {.remark}
+## Per-observation information versus sample information (a common source of confusion)
+Two informations are now in play, and standard errors depend on getting the factor of $n$ right. Keep
+them straight with this table.
+
+| Symbol | Name | Formula | Refers to |
+|---|---|---|---|
+| $\mathcal I(\boldsymbol\theta)$ | per-observation information | $\mathrm{Cov}(\mathbf s(\boldsymbol\theta; X))$ | a single observation |
+| $\mathcal I_n(\boldsymbol\theta)$ | sample information | $n\,\mathcal I(\boldsymbol\theta)$ | the whole sample of size $n$ |
+
+The variance of the MLE is governed by the *sample* information: in large samples
+$\mathrm{Var}(\hat{\boldsymbol\theta}_n) \approx \mathcal I_n(\boldsymbol\theta)^{-1} = \tfrac1n\,\mathcal I(\boldsymbol\theta)^{-1}$,
+and the standard error is the square root of a diagonal entry. The per-observation $\mathcal I$ is the
+fixed "information rate"; multiplying by $n$ and inverting is what makes the standard error shrink like
+$1/\sqrt n$. For the running example, $\mathcal I(p) = 1/[p(1 - p)]$, the sample information is
+$\mathcal I_n(p) = n/[p(1 - p)]$, and $\mathrm{Var}(\hat p) \approx p(1 - p)/n$. At $\hat p = 0.4$,
+$n = 25$: $\mathcal I_n(\hat p) = 25/0.24 = 104.17$ and $\widehat{\mathrm{Var}}(\hat p) = 0.24/25 = 0.0096$.
+A recurring novice slip is to invert $\mathcal I$ instead of $\mathcal I_n$, which inflates the standard
+error by a factor of $\sqrt n$. $\blacktriangleleft$
+:::
+
+## Maximum likelihood and its invariance {#sec-mle}
+
+::: {#def-mle}
+## Maximum likelihood estimator
+A *maximum likelihood estimator* (MLE) is any parameter value maximizing the likelihood, equivalently
+the log-likelihood,
+$$
+\hat{\boldsymbol\theta}_{\mathrm{MLE}} = \hat{\boldsymbol\theta}_n
+\in \operatorname*{arg\,max}_{\boldsymbol\theta \in \Theta} L_n(\boldsymbol\theta)
+= \operatorname*{arg\,max}_{\boldsymbol\theta \in \Theta} \ell_n(\boldsymbol\theta).
+$$
+When $\hat{\boldsymbol\theta}_n$ lies in the interior of $\Theta$ and $\ell_n$ is differentiable there,
+$\hat{\boldsymbol\theta}_n$ solves the *likelihood (score) equations*
+$\mathbf s_n(\hat{\boldsymbol\theta}_n) = \mathbf 0$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** The MLE is the parameter value under which the data we actually saw would have
+been *most probable*: the top of the log-likelihood hill, where the score (slope) is zero. For the
+running example this is just $\hat p = \bar X_n = 0.40$, the sample proportion. $\blacktriangleleft$
+:::
+
+Maximization is invariant under reparameterization, which is one of the most useful practical properties
+of the MLE: to estimate any function of the parameter by maximum likelihood, just plug in.
+
+::: {#prp-mle-invariance}
+## Invariance of the MLE
+Let $\hat{\boldsymbol\theta}_n$ be an MLE of $\boldsymbol\theta$.
+
+(i) If $h : \Theta \to \mathrm H$ is a bijection and the model is reparameterized by
+$\boldsymbol\eta = h(\boldsymbol\theta)$, then $h(\hat{\boldsymbol\theta}_n)$ is an MLE of
+$\boldsymbol\eta$.
+
+(ii) For an arbitrary (not necessarily injective) function $h : \Theta \to \mathrm H$, define the
+*induced (profile) likelihood* $L_n^{*}(\boldsymbol\eta) = \sup\{L_n(\boldsymbol\theta) : h(\boldsymbol\theta) = \boldsymbol\eta\}$.
+Then $h(\hat{\boldsymbol\theta}_n)$ maximizes $L_n^{*}$; we call $h(\hat{\boldsymbol\theta}_n)$ the MLE of
+$\boldsymbol\eta = h(\boldsymbol\theta)$.
+:::
+
+::: {.proof}
+*(i)* Write the likelihood in the new parameterization as
+$\tilde L_n(\boldsymbol\eta) = L_n(h^{-1}(\boldsymbol\eta))$. Since $h^{-1}$ is a bijection of
+$\mathrm H$ onto $\Theta$, ranging $\boldsymbol\eta$ over $\mathrm H$ ranges
+$h^{-1}(\boldsymbol\eta)$ over all of $\Theta$, so
+$\sup_{\boldsymbol\eta} \tilde L_n(\boldsymbol\eta) = \sup_{\boldsymbol\theta} L_n(\boldsymbol\theta) = L_n(\hat{\boldsymbol\theta}_n)$,
+and the supremum is attained at $\boldsymbol\eta = h(\hat{\boldsymbol\theta}_n)$ because
+$\tilde L_n(h(\hat{\boldsymbol\theta}_n)) = L_n(\hat{\boldsymbol\theta}_n)$.
+
+*(ii)* By construction $L_n^{*}(\boldsymbol\eta) \le \sup_{\boldsymbol\theta} L_n(\boldsymbol\theta) = L_n(\hat{\boldsymbol\theta}_n)$
+for every $\boldsymbol\eta$, since each $L_n^{*}(\boldsymbol\eta)$ is a supremum over a subset of
+$\Theta$. Evaluating at $\boldsymbol\eta^{*} = h(\hat{\boldsymbol\theta}_n)$, the defining set
+$\{\boldsymbol\theta : h(\boldsymbol\theta) = \boldsymbol\eta^{*}\}$ contains $\hat{\boldsymbol\theta}_n$,
+so $L_n^{*}(\boldsymbol\eta^{*}) \ge L_n(\hat{\boldsymbol\theta}_n)$. The two inequalities force
+$L_n^{*}(\boldsymbol\eta^{*}) = L_n(\hat{\boldsymbol\theta}_n) = \max_{\boldsymbol\eta} L_n^{*}(\boldsymbol\eta)$,
+so $\boldsymbol\eta^{*} = h(\hat{\boldsymbol\theta}_n)$ maximizes $L_n^{*}$. $\square$
+:::
+
+::: {.remark}
+**Why this matters, and what "profile" means.** Part (i) is the workhorse behind every transformed
+estimate in the book: to get the MLE of an odds ratio, a risk ratio, a hazard ratio, or a marginal
+effect, you fit the model once and *plug the MLE into the transformation*; no separate maximization is
+needed. Part (ii) handles the case where the transformation $h$ throws away some parameters (nuisance
+parameters). The *profile likelihood* $L_n^{*}(\boldsymbol\eta)$ is built by maximizing out everything
+except the target $\boldsymbol\eta$, tracing a one-dimensional ridge ("profile") across the full
+likelihood surface; it is the object inverted to get the profile-likelihood confidence intervals of
+@sec-tests, which is why we record it now even though we do not use it until then. $\blacktriangleleft$
+:::
+
+## Consistency of the MLE {#sec-consistency}
+
+**Why prove this?** As a practitioner you may take for granted that more data means a better estimate.
+Consistency is the theorem that makes that faith legitimate: it is the guarantee that, as trials grow, the
+MLE, and with it the network meta-analysis and MAIC estimates of later chapters, stops being
+systematically wrong and settles on the true value. Without it, none of the asymptotic standard errors
+below would describe anything real.
+
+We now prove that the MLE converges to the truth. The argument has three clean pieces: a population
+criterion uniquely maximized at $\boldsymbol\theta_0$ (the information inequality), a uniform law of large
+numbers transferring the sample criterion to the population one, and an argmax-continuity lemma. The
+first piece relies on Jensen's inequality (@thm-jensen).
+
+::: {#lem-kl-information-inequality}
+## Information inequality
+Let $\boldsymbol\theta_0$ be the true parameter and suppose the model is identifiable
+(@def-statistical-model). For every $\boldsymbol\theta \in \Theta$ with
+$\mathbb E_{\boldsymbol\theta_0}\bigl|\log f(X;\boldsymbol\theta)\bigr| < \infty$,
+$$
+\mathbb E_{\boldsymbol\theta_0}\!\bigl[\log f(X;\boldsymbol\theta_0)\bigr]
+\;\ge\;
+\mathbb E_{\boldsymbol\theta_0}\!\bigl[\log f(X;\boldsymbol\theta)\bigr],
+$$
+with equality if and only if $\boldsymbol\theta = \boldsymbol\theta_0$. Equivalently, the
+Kullback-Leibler divergence
+$\mathrm{KL}(f_{\boldsymbol\theta_0}\,\|\,f_{\boldsymbol\theta}) = \mathbb E_{\boldsymbol\theta_0}[\log(f(X;\boldsymbol\theta_0)/f(X;\boldsymbol\theta))]$
+is nonnegative and vanishes only at $\boldsymbol\theta_0$.
+:::
+
+::: {.proof}
+Consider the ratio $r(X) = f(X;\boldsymbol\theta) / f(X;\boldsymbol\theta_0)$, defined where
+$f(X;\boldsymbol\theta_0) > 0$. The function $\varphi(u) = -\log u$ is strictly convex on $(0,\infty)$.
+By Jensen's inequality (@thm-jensen),
+$$
+\mathbb E_{\boldsymbol\theta_0}\!\bigl[-\log r(X)\bigr]
+\;\ge\; -\log \mathbb E_{\boldsymbol\theta_0}[r(X)].
+$$
+The right-hand expectation is
+$$
+\mathbb E_{\boldsymbol\theta_0}[r(X)]
+= \int_{\{f_{\boldsymbol\theta_0} > 0\}} \frac{f(x;\boldsymbol\theta)}{f(x;\boldsymbol\theta_0)}\, f(x;\boldsymbol\theta_0)\, d\nu(x)
+= \int_{\{f_{\boldsymbol\theta_0} > 0\}} f(x;\boldsymbol\theta)\, d\nu(x) \le 1,
+$$
+so $-\log \mathbb E_{\boldsymbol\theta_0}[r(X)] \ge 0$. Therefore
+$\mathbb E_{\boldsymbol\theta_0}[-\log r(X)] = \mathbb E_{\boldsymbol\theta_0}[\log f(X;\boldsymbol\theta_0)] - \mathbb E_{\boldsymbol\theta_0}[\log f(X;\boldsymbol\theta)] \ge 0$,
+which is the claimed inequality and shows $\mathrm{KL} \ge 0$.
+
+For equality: strict convexity of $\varphi$ makes Jensen an equality only if $r(X)$ is
+$P_{\boldsymbol\theta_0}$-almost surely constant, say $r(X) = c$. Then
+$f(X;\boldsymbol\theta) = c\, f(X;\boldsymbol\theta_0)$ a.s., and integrating both sides forces $c = 1$
+(both are densities), so $f(\cdot;\boldsymbol\theta) = f(\cdot;\boldsymbol\theta_0)$ $\nu$-almost
+everywhere. By identifiability this means $\boldsymbol\theta = \boldsymbol\theta_0$. Conversely
+$\boldsymbol\theta = \boldsymbol\theta_0$ gives equality trivially. $\square$
+:::
+
+The population criterion is $M(\boldsymbol\theta) = \mathbb E_{\boldsymbol\theta_0}[\log f(X;\boldsymbol\theta)]$
+and the sample criterion is $M_n(\boldsymbol\theta) = \tfrac1n \ell_n(\boldsymbol\theta) = \tfrac1n \sum_i \log f(X_i;\boldsymbol\theta)$.
+For each fixed $\boldsymbol\theta$ the WLLN gives $M_n(\boldsymbol\theta) \xrightarrow{p} M(\boldsymbol\theta)$;
+to control the maximizer we need this uniformly in $\boldsymbol\theta$. We state the uniform law as a
+cited prerequisite.
+
+::: {#lem-uniform-lln}
+## Uniform law of large numbers
+Let $\Theta$ be compact, let $\boldsymbol\theta \mapsto \log f(x;\boldsymbol\theta)$ be continuous for
+$\nu$-almost every $x$, and suppose the *envelope condition*
+$\mathbb E_{\boldsymbol\theta_0}\bigl[\sup_{\boldsymbol\theta \in \Theta} |\log f(X;\boldsymbol\theta)|\bigr] < \infty$
+holds. Then $M$ is continuous on $\Theta$ and
+$$
+\sup_{\boldsymbol\theta \in \Theta} \bigl|M_n(\boldsymbol\theta) - M(\boldsymbol\theta)\bigr|
+\xrightarrow{p} 0 .
+$$
+:::
+
+::: {.proof}
+This is a standard consequence of compactness, almost-everywhere continuity, and the integrable envelope;
+the proof covers $\Theta$ by finitely many small balls, applies the pointwise WLLN at the centers, and
+controls the oscillation inside each ball with the envelope and dominated convergence. See
+@bingham2010regression and a standard text on asymptotic statistics; we take it as given. $\square$
+:::
+
+::: {#lem-argmax-consistency}
+## Argmax consistency
+Let $M : \Theta \to \mathbb R$ be continuous on a compact set $\Theta$ with a unique maximizer
+$\boldsymbol\theta_0$. Let $M_n$ be random functions with
+$\sup_{\boldsymbol\theta} |M_n(\boldsymbol\theta) - M(\boldsymbol\theta)| \xrightarrow{p} 0$, and let
+$\hat{\boldsymbol\theta}_n \in \arg\max_{\boldsymbol\theta} M_n(\boldsymbol\theta)$. Then
+$\hat{\boldsymbol\theta}_n \xrightarrow{p} \boldsymbol\theta_0$.
+:::
+
+::: {.proof}
+Fix $\varepsilon > 0$ and let $B_\varepsilon = \{\boldsymbol\theta \in \Theta : \|\boldsymbol\theta - \boldsymbol\theta_0\| \ge \varepsilon\}$.
+This set is closed, hence compact, so the continuous $M$ attains its maximum over $B_\varepsilon$ at some
+point; because $\boldsymbol\theta_0 \notin B_\varepsilon$ and $\boldsymbol\theta_0$ is the *unique*
+maximizer of $M$, this maximum is strictly below $M(\boldsymbol\theta_0)$. Set
+$$
+\delta = M(\boldsymbol\theta_0) - \sup_{\boldsymbol\theta \in B_\varepsilon} M(\boldsymbol\theta) > 0 .
+$$
+Let $U_n = \sup_{\boldsymbol\theta} |M_n(\boldsymbol\theta) - M(\boldsymbol\theta)|$ and work on the event
+$\{U_n < \delta/2\}$. On this event, for any $\boldsymbol\theta \in B_\varepsilon$,
+$$
+M_n(\hat{\boldsymbol\theta}_n) \ge M_n(\boldsymbol\theta_0) > M(\boldsymbol\theta_0) - \tfrac{\delta}{2}
+= \sup_{B_\varepsilon} M + \tfrac{\delta}{2} \ge M(\boldsymbol\theta) + \tfrac{\delta}{2} > M_n(\boldsymbol\theta),
+$$
+using, in order, that $\hat{\boldsymbol\theta}_n$ maximizes $M_n$, the bound $U_n < \delta/2$ at
+$\boldsymbol\theta_0$, the definition of $\delta$, and again $U_n < \delta/2$ at $\boldsymbol\theta$.
+Thus no point of $B_\varepsilon$ can be the maximizer of $M_n$, so
+$\hat{\boldsymbol\theta}_n \notin B_\varepsilon$, that is
+$\|\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0\| < \varepsilon$. Hence
+$$
+P\bigl(\|\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0\| \ge \varepsilon\bigr)
+\le P\bigl(U_n \ge \tfrac{\delta}{2}\bigr) \to 0 ,
+$$
+by the uniform convergence hypothesis. As $\varepsilon$ was arbitrary,
+$\hat{\boldsymbol\theta}_n \xrightarrow{p} \boldsymbol\theta_0$. $\square$
+:::
+
+::: {#thm-mle-consistency}
+## Consistency of the MLE
+Suppose $X_1, \dots, X_n$ are iid from $f(\cdot;\boldsymbol\theta_0)$ and:
+
+(C1) $\Theta \subseteq \mathbb R^p$ is compact and $\boldsymbol\theta_0 \in \Theta$;
+
+(C2) the model is identifiable (@def-statistical-model);
+
+(C3) $\boldsymbol\theta \mapsto \log f(x;\boldsymbol\theta)$ is continuous for $\nu$-almost every $x$;
+
+(C4) the envelope condition
+$\mathbb E_{\boldsymbol\theta_0}\bigl[\sup_{\boldsymbol\theta\in\Theta}|\log f(X;\boldsymbol\theta)|\bigr] < \infty$
+holds.
+
+Then any MLE sequence $\hat{\boldsymbol\theta}_n$ satisfies
+$\hat{\boldsymbol\theta}_n \xrightarrow{p} \boldsymbol\theta_0$.
+:::
+
+::: {.proof}
+The MLE maximizes $M_n(\boldsymbol\theta) = \tfrac1n \ell_n(\boldsymbol\theta)$ (dividing the
+log-likelihood by $n$ does not move the argmax). By @lem-kl-information-inequality and identifiability
+(C2), the population criterion
+$M(\boldsymbol\theta) = \mathbb E_{\boldsymbol\theta_0}[\log f(X;\boldsymbol\theta)]$ has a *unique*
+maximizer at $\boldsymbol\theta_0$; the envelope (C4) makes $M$ finite, and with (C3) it is continuous by
+@lem-uniform-lln, which simultaneously gives the uniform convergence
+$\sup_{\boldsymbol\theta}|M_n(\boldsymbol\theta) - M(\boldsymbol\theta)| \xrightarrow{p} 0$. Compactness
+(C1), continuity, the unique maximum, and uniform convergence are exactly the hypotheses of
+@lem-argmax-consistency, which yields $\hat{\boldsymbol\theta}_n \xrightarrow{p} \boldsymbol\theta_0$.
+$\square$
+:::
+
+::: {.remark}
+**Why this matters, with the running example.** For the Bernoulli the hypotheses are easy to check:
+$\Theta = [0, 1]$ is compact (C1), the model is identifiable since different $p$ give different
+distributions (C2), $\log f(x; p)$ is continuous in $p$ (C3), and the envelope holds, so the theorem gives
+$\hat p_n \xrightarrow{p} p_0$. In words, the trial's response rate converges to the true response rate.
+Translated to the book's subject, this is what guarantees that, with enough patients, an indirect
+comparison built from such estimates converges to the true contrast rather than to a biased value.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+Compactness of $\Theta$ (C1) is the only restrictive condition, and it can be relaxed. The standard
+device is to show the log-likelihood is eventually larger at $\boldsymbol\theta_0$ than outside a compact
+set (so the maximizer cannot escape to the boundary), then apply the theorem on the compact core.
+Alternatively, the *Cramér* approach abandons the global maximizer and proves that the score equation
+$\mathbf s_n(\boldsymbol\theta) = \mathbf 0$ has, with probability tending to one, a root within
+$O_p(n^{-1/2})$ of $\boldsymbol\theta_0$; that local root is consistent and asymptotically normal even
+when the global MLE is ill-behaved. We use the global form here for definiteness.
+$\blacktriangleleft$
+:::
+
+## Asymptotic normality of the MLE {#sec-asymptotic-normality}
+
+Consistency says the MLE lands near $\boldsymbol\theta_0$. Asymptotic normality describes the
+*distribution* of the residual error $\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0$, rescaled by
+$\sqrt n$. The proof is the canonical "Taylor-expand the score" argument: the score vanishes at the MLE,
+expand it about the truth, and read off a ratio of a central-limit term over an information term.
+
+::: {#thm-mle-asymptotic-normality}
+## Asymptotic normality of the MLE
+Suppose $\hat{\boldsymbol\theta}_n \xrightarrow{p} \boldsymbol\theta_0$ (for instance by
+@thm-mle-consistency), and in addition:
+
+(A1) $\boldsymbol\theta_0 \in \mathrm{int}\,\Theta$ and the model is regular (@def-regular-model) on a
+neighborhood of $\boldsymbol\theta_0$, so $\ell(\boldsymbol\theta; x)$ is twice continuously
+differentiable there;
+
+(A2) the Fisher information $\mathcal I(\boldsymbol\theta_0)$ is finite and positive definite;
+
+(A3) the Hessian satisfies a local uniform law of large numbers: there is a neighborhood
+$\mathcal U$ of $\boldsymbol\theta_0$ with
+$\mathbb E_{\boldsymbol\theta_0}\bigl[\sup_{\boldsymbol\theta\in\mathcal U}\|\nabla^2\ell(\boldsymbol\theta;X)\|\bigr] < \infty$,
+so that $\sup_{\boldsymbol\theta\in\mathcal U}\|\tfrac1n\sum_i \nabla^2\ell(\boldsymbol\theta;X_i) - \mathbb E_{\boldsymbol\theta_0}[\nabla^2\ell(\boldsymbol\theta;X)]\| \xrightarrow{p} 0$.
+
+Then, with probability tending to one $\hat{\boldsymbol\theta}_n$ solves
+$\mathbf s_n(\hat{\boldsymbol\theta}_n) = \mathbf 0$, and
+$$
+\sqrt n\,\bigl(\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0\bigr)
+\xrightarrow{d} \mathcal N_p\!\bigl(\mathbf 0,\; \mathcal I(\boldsymbol\theta_0)^{-1}\bigr).
+$$ {#eq-mle-asymptotic-normality}
+:::
+
+::: {.proof}
+**Step 1 (the estimator solves the score equation).** Since
+$\hat{\boldsymbol\theta}_n \xrightarrow{p} \boldsymbol\theta_0$ and $\boldsymbol\theta_0$ is interior
+(A1), with probability tending to one $\hat{\boldsymbol\theta}_n$ lies in the open neighborhood
+$\mathcal U$ where $\ell_n$ is differentiable and is an interior maximizer, so the first-order condition
+$\mathbf s_n(\hat{\boldsymbol\theta}_n) = \nabla\ell_n(\hat{\boldsymbol\theta}_n) = \mathbf 0$ holds. We
+work on this event henceforth.
+
+**Step 2 (exact first-order expansion with integral remainder).** Apply the fundamental theorem of
+calculus to the gradient field $\boldsymbol\theta \mapsto \mathbf s_n(\boldsymbol\theta)$ along the
+segment from $\boldsymbol\theta_0$ to $\hat{\boldsymbol\theta}_n$, both eventually in $\mathcal U$. (This
+is the fundamental theorem of calculus applied to each component of the vector field $\mathbf s_n$ along
+the path; the bracketed matrix $\bar{\mathbf H}_n$ is the Hessian averaged over the segment, playing the
+role of the mean-value remainder familiar from the scalar Taylor expansion.) With
+$\mathbf H_n(\boldsymbol\theta) = \nabla^2 \ell_n(\boldsymbol\theta) = \nabla \mathbf s_n(\boldsymbol\theta)$,
+$$
+\mathbf 0 = \mathbf s_n(\hat{\boldsymbol\theta}_n)
+= \mathbf s_n(\boldsymbol\theta_0) + \underbrace{\left[\int_0^1 \mathbf H_n\bigl(\boldsymbol\theta_0 + t(\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0)\bigr)\, dt\right]}_{=:\; \bar{\mathbf H}_n}\,(\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0).
+$$
+Define $\mathbf A_n = -\tfrac1n \bar{\mathbf H}_n$. Then, multiplying by $-1/n$ and rearranging,
+$$
+\mathbf A_n\,\sqrt n\,(\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0)
+= \tfrac{1}{\sqrt n}\,\mathbf s_n(\boldsymbol\theta_0).
+$$ {#eq-an-system}
+
+**Step 3 (the score term is asymptotically normal).** Write
+$\tfrac{1}{\sqrt n}\mathbf s_n(\boldsymbol\theta_0) = \sqrt n\,\bigl(\tfrac1n\sum_{i=1}^n \mathbf s(\boldsymbol\theta_0; X_i) - \mathbf 0\bigr)$.
+The per-observation scores $\mathbf s(\boldsymbol\theta_0; X_i)$ are iid with mean
+$\mathbf 0$ (@lem-score-mean-zero) and covariance $\mathcal I(\boldsymbol\theta_0)$
+(@def-fisher-information), finite by (A2). The multivariate CLT gives
+$$
+\tfrac{1}{\sqrt n}\,\mathbf s_n(\boldsymbol\theta_0) \xrightarrow{d} \mathbf Z, \qquad \mathbf Z \sim \mathcal N_p\bigl(\mathbf 0,\, \mathcal I(\boldsymbol\theta_0)\bigr).
+$$ {#eq-score-clt}
+
+**Step 4 (the averaged Hessian converges to the information).** Each intermediate point
+$\boldsymbol\theta_0 + t(\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0)$ lies between $\boldsymbol\theta_0$
+and $\hat{\boldsymbol\theta}_n$, hence converges in probability to $\boldsymbol\theta_0$ uniformly in
+$t \in [0,1]$. By the local uniform law (A3), the map
+$\boldsymbol\theta \mapsto -\tfrac1n\sum_i \nabla^2\ell(\boldsymbol\theta; X_i)$ converges in probability,
+uniformly over $\mathcal U$, to the continuous limit
+$\boldsymbol\theta \mapsto -\mathbb E_{\boldsymbol\theta_0}[\nabla^2\ell(\boldsymbol\theta; X)]$, which at
+$\boldsymbol\theta = \boldsymbol\theta_0$ equals $\mathcal I(\boldsymbol\theta_0)$ by the information
+equality (@thm-information-equality). Combining uniform convergence with
+$\hat{\boldsymbol\theta}_n \xrightarrow{p}\boldsymbol\theta_0$ and continuity of the limit,
+$$
+\mathbf A_n = -\tfrac1n \int_0^1 \mathbf H_n\bigl(\boldsymbol\theta_0 + t(\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0)\bigr)\, dt
+\xrightarrow{p} \mathcal I(\boldsymbol\theta_0).
+$$ {#eq-an-converges}
+
+**Step 5 (solve and apply Slutsky).** By (A2) the limit $\mathcal I(\boldsymbol\theta_0)$ is invertible.
+Matrix inversion is continuous at any nonsingular matrix, so the continuous mapping theorem
+(@thm-continuous-mapping) gives $\mathbf A_n^{-1} \xrightarrow{p} \mathcal I(\boldsymbol\theta_0)^{-1}$
+(in particular $\mathbf A_n$ is invertible with probability tending to one). Solving @eq-an-system and
+applying Slutsky (@thm-slutsky) to the product of the convergent-in-probability matrix
+$\mathbf A_n^{-1}$ and the convergent-in-distribution vector @eq-score-clt,
+$$
+\sqrt n\,(\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0)
+= \mathbf A_n^{-1}\, \tfrac{1}{\sqrt n}\mathbf s_n(\boldsymbol\theta_0)
+\xrightarrow{d} \mathcal I(\boldsymbol\theta_0)^{-1}\,\mathbf Z .
+$$
+Finally, the affine (here linear) image of a Gaussian is Gaussian (@thm-mvn-linear): with
+$\mathbf B = \mathcal I(\boldsymbol\theta_0)^{-1}$ and $\mathbf Z \sim \mathcal N_p(\mathbf 0, \mathcal I(\boldsymbol\theta_0))$,
+$$
+\mathbf B\mathbf Z \sim \mathcal N_p\bigl(\mathbf 0,\; \mathbf B\,\mathcal I(\boldsymbol\theta_0)\,\mathbf B^\top\bigr)
+= \mathcal N_p\bigl(\mathbf 0,\; \mathcal I(\boldsymbol\theta_0)^{-1}\,\mathcal I(\boldsymbol\theta_0)\,\mathcal I(\boldsymbol\theta_0)^{-1}\bigr)
+= \mathcal N_p\bigl(\mathbf 0,\; \mathcal I(\boldsymbol\theta_0)^{-1}\bigr),
+$$
+using the symmetry of $\mathcal I(\boldsymbol\theta_0)^{-1}$. This is @eq-mle-asymptotic-normality.
+$\square$
+:::
+
+::: {.remark}
+**Why this matters.** This theorem is the source of the ubiquitous "estimate $\pm 1.96$ standard errors"
+interval. It says the MLE is approximately
+$\mathcal N_p(\boldsymbol\theta_0,\, \tfrac1n\mathcal I(\boldsymbol\theta_0)^{-1})$ in large samples, so
+every Wald confidence interval and $z$-test in a regression printout is an application of
+@eq-mle-asymptotic-normality. The idea behind the proof, stripped of detail: at the maximum the slope
+(score) is zero; near the truth the slope is approximately linear, with slope equal to the curvature
+(information); solving that linear relation turns the central-limit noise in the score into Gaussian noise
+in the estimator, scaled by the inverse information. For the running example,
+$\sqrt n(\hat p - p) \xrightarrow{d} \mathcal N(0,\, p(1 - p))$ because $\mathcal I(p)^{-1} = p(1 - p)$.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+## Estimating the asymptotic variance
+@eq-mle-asymptotic-normality says $\hat{\boldsymbol\theta}_n$ is approximately
+$\mathcal N_p(\boldsymbol\theta_0,\, \tfrac1n \mathcal I(\boldsymbol\theta_0)^{-1})$ in large samples, so a
+standard error for the $b$-th coordinate is the square root of the $(b,b)$ entry of
+$\tfrac1n \mathcal I(\boldsymbol\theta_0)^{-1}$. In practice $\boldsymbol\theta_0$ is unknown, so one of two
+consistent plug-ins is used: the *expected information* evaluated at the estimate,
+$\mathcal I(\hat{\boldsymbol\theta}_n)$, or the *observed information*
+$\mathbf J_n(\hat{\boldsymbol\theta}_n) = -\nabla^2 \ell_n(\hat{\boldsymbol\theta}_n)$, which by Step 4
+satisfies $\tfrac1n \mathbf J_n(\hat{\boldsymbol\theta}_n) \xrightarrow{p} \mathcal I(\boldsymbol\theta_0)$.
+Either yields a valid asymptotic variance estimate by Slutsky; the observed information requires no
+expectation and is what most software reports. The two agree in large samples; they can differ in small
+samples or under departures from the model, where the observed form uses the *actual* curvature at your
+estimate while the expected form averages curvature over hypothetical datasets. Concretely, what software
+prints as a "standard error" is the square root of a diagonal entry of the inverted observed information
+$\mathbf J_n(\hat{\boldsymbol\theta}_n)^{-1}$. $\blacktriangleleft$
+:::
+
+## The Cramér-Rao lower bound and efficiency {#sec-cramer-rao}
+
+**Why a lower bound matters for indirect comparisons.** Every method in this book reports a standard
+error, and a natural question is whether it could have done better with the same data. The Cramér-Rao
+bound is the yardstick: it is the smallest variance any unbiased estimator can achieve under a correctly
+specified regular model, so when MAIC or a network meta-analysis reports a precision you can ask whether
+it is near this optimum or is leaving information on the table. It is a theoretical benchmark, not
+something you compute on each dataset, but it explains *why* the inverse Fisher information is the natural
+ideal variance.
+
+How small can the variance of an unbiased estimator be? The Cramér-Rao bound answers: no smaller than the
+inverse Fisher information. The proof is a single application of the Cauchy-Schwarz inequality
+(@thm-cauchy-schwarz-ip), using that the score has mean zero.
+
+::: {#thm-cramer-rao}
+## Cramér-Rao lower bound
+Let the model be regular (@def-regular-model) at $\boldsymbol\theta$, and let $T = T(X)$ be a
+statistic with $\mathrm{Var}_{\boldsymbol\theta}(T) < \infty$ whose mean
+$g(\boldsymbol\theta) = \mathbb E_{\boldsymbol\theta}[T]$ is differentiable with the differentiation
+passing under the integral sign.
+
+(i) **Scalar parameter** ($p = 1$). Then
+$$
+\mathrm{Var}_{\boldsymbol\theta}(T) \;\ge\; \frac{g'(\boldsymbol\theta)^2}{\mathcal I(\boldsymbol\theta)} .
+$$ {#eq-crlb-scalar}
+In particular, if $T$ is unbiased for $\boldsymbol\theta$ (so $g(\boldsymbol\theta) = \boldsymbol\theta$,
+$g' = 1$), then $\mathrm{Var}_{\boldsymbol\theta}(T) \ge 1/\mathcal I(\boldsymbol\theta)$. Equality holds
+if and only if $T - g(\boldsymbol\theta)$ is, almost surely, a (deterministic) multiple of the score
+$\mathbf s(\boldsymbol\theta; X)$.
+
+(ii) **Vector parameter.** If $\mathbf T$ is an unbiased estimator of $\boldsymbol\theta \in \mathbb R^p$,
+then in the Loewner (positive-semidefinite) order
+$$
+\mathrm{Cov}_{\boldsymbol\theta}(\mathbf T) \;\succeq\; \mathcal I(\boldsymbol\theta)^{-1} ,
+$$ {#eq-crlb-matrix}
+that is, $\mathrm{Cov}_{\boldsymbol\theta}(\mathbf T) - \mathcal I(\boldsymbol\theta)^{-1}$ is positive
+semidefinite. Here $A \succeq B$ (the *Loewner order*) means $A - B$ is positive semidefinite; concretely
+it says every scalar combination $\mathbf v^\top\mathbf T$ has variance at least
+$\mathbf v^\top\mathcal I(\boldsymbol\theta)^{-1}\mathbf v$, so the estimator beats the bound in no
+direction.
+:::
+
+::: {.proof}
+*(i)* Differentiate the identity $g(\boldsymbol\theta) = \mathbb E_{\boldsymbol\theta}[T] = \int T(x)\, f(x;\boldsymbol\theta)\, d\nu(x)$
+under the integral sign:
+$$
+g'(\boldsymbol\theta) = \int T(x)\, \frac{\partial}{\partial\boldsymbol\theta} f(x;\boldsymbol\theta)\, d\nu(x)
+= \int T(x)\, \mathbf s(\boldsymbol\theta; x)\, f(x;\boldsymbol\theta)\, d\nu(x)
+= \mathbb E_{\boldsymbol\theta}\bigl[T\,\mathbf s(\boldsymbol\theta; X)\bigr],
+$$
+using $\partial_{\boldsymbol\theta} f = \mathbf s\, f$. Because the score has mean zero
+(@lem-score-mean-zero), $\mathbb E_{\boldsymbol\theta}[T\,\mathbf s] = \mathrm{Cov}_{\boldsymbol\theta}(T, \mathbf s)$,
+so $g'(\boldsymbol\theta) = \mathrm{Cov}_{\boldsymbol\theta}(T, \mathbf s(\boldsymbol\theta; X))$. The space
+of mean-zero square-integrable random variables under $P_{\boldsymbol\theta}$ is an inner product space
+with $\langle U, V\rangle = \mathrm{Cov}_{\boldsymbol\theta}(U, V)$; applying the Cauchy-Schwarz
+inequality (@thm-cauchy-schwarz-ip) to $T - g(\boldsymbol\theta)$ and the score,
+$$
+g'(\boldsymbol\theta)^2 = \mathrm{Cov}_{\boldsymbol\theta}(T, \mathbf s)^2
+\le \mathrm{Var}_{\boldsymbol\theta}(T)\,\mathrm{Var}_{\boldsymbol\theta}(\mathbf s)
+= \mathrm{Var}_{\boldsymbol\theta}(T)\, \mathcal I(\boldsymbol\theta) .
+$$
+Dividing by $\mathcal I(\boldsymbol\theta) > 0$ gives @eq-crlb-scalar. Cauchy-Schwarz is an equality
+exactly when the two vectors are linearly dependent, that is when $T - g(\boldsymbol\theta) = a(\boldsymbol\theta)\,\mathbf s(\boldsymbol\theta; X)$
+almost surely for some constant $a(\boldsymbol\theta)$.
+
+*(ii)* Let $\mathbf s = \mathbf s(\boldsymbol\theta; X)$ and center $\mathbf U = \mathbf T - \boldsymbol\theta$
+(mean zero by unbiasedness). The componentwise version of the scalar computation gives, for each pair
+$(a, b)$, $\mathbb E_{\boldsymbol\theta}[U_a\, s_b] = \partial_{\theta_b}\mathbb E_{\boldsymbol\theta}[T_a] = \partial_{\theta_b}\theta_a = \mathbb 1\{a = b\}$,
+so the cross-covariance is the identity:
+$\mathrm{Cov}_{\boldsymbol\theta}(\mathbf T, \mathbf s) = \mathbb E_{\boldsymbol\theta}[\mathbf U \mathbf s^\top] = I_p$.
+Stack $\mathbf U$ and $\mathbf s$ into a $2p$-vector; its covariance matrix is positive semidefinite
+(@thm-cov-psd):
+$$
+\mathrm{Cov}_{\boldsymbol\theta}\!\begin{pmatrix}\mathbf U \\ \mathbf s\end{pmatrix}
+= \begin{pmatrix} \mathrm{Cov}_{\boldsymbol\theta}(\mathbf T) & I_p \\[2pt] I_p & \mathcal I(\boldsymbol\theta) \end{pmatrix}
+=: \begin{pmatrix} \Sigma_T & I_p \\ I_p & \mathcal I \end{pmatrix} \succeq 0 .
+$$
+Since $\mathcal I \succ 0$, evaluate the quadratic form of this block matrix on the cleverly chosen vector
+$(\,\mathbf v^\top,\; -(\mathcal I^{-1}\mathbf v)^\top)^\top$ for arbitrary $\mathbf v \in \mathbb R^p$.
+The second block $-\mathcal I^{-1}\mathbf v$ is engineered so that the identity cross-blocks cancel,
+leaving only the difference $\Sigma_T - \mathcal I^{-1}$; this cancellation is the algebraic content of
+the *Schur complement* of the $\mathcal I$ block:
+$$
+0 \le \begin{pmatrix} \mathbf v \\ -\mathcal I^{-1}\mathbf v\end{pmatrix}^{\!\top}\!
+\begin{pmatrix} \Sigma_T & I_p \\ I_p & \mathcal I \end{pmatrix}\!
+\begin{pmatrix} \mathbf v \\ -\mathcal I^{-1}\mathbf v\end{pmatrix}
+= \mathbf v^\top \Sigma_T \mathbf v - 2\,\mathbf v^\top \mathcal I^{-1}\mathbf v + \mathbf v^\top \mathcal I^{-1}\mathcal I\,\mathcal I^{-1}\mathbf v
+= \mathbf v^\top\bigl(\Sigma_T - \mathcal I^{-1}\bigr)\mathbf v .
+$$
+As $\mathbf v$ was arbitrary, $\Sigma_T - \mathcal I(\boldsymbol\theta)^{-1} \succeq 0$, which is
+@eq-crlb-matrix. (This is precisely the Schur-complement positivity of the block matrix.) $\square$
+:::
+
+::: {.remark}
+**Why this matters.** Read the scalar bound @eq-crlb-scalar as: precision is capped by information. You
+cannot make an unbiased estimator arbitrarily precise; the best achievable variance is
+$1/\mathcal I_n(\boldsymbol\theta) = 1/[n\,\mathcal I(\boldsymbol\theta)]$, which is why "more information"
+and "more data" both mean "smaller standard error." When a later method attains this bound (the MLE does,
+asymptotically), you know no regular competitor can do better with the same model and data.
+$\blacktriangleleft$
+:::
+
+The bound motivates a precise notion of "best possible" estimator.
+
+::: {#def-efficient-estimator}
+## Efficiency and asymptotic efficiency
+An unbiased estimator $T$ of a scalar $g(\boldsymbol\theta)$ is *(Cramér-Rao) efficient* if it attains the
+bound @eq-crlb-scalar with equality for all $\boldsymbol\theta$. A consistent estimator sequence
+$\hat{\boldsymbol\theta}_n$ with
+$\sqrt n(\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0) \xrightarrow{d} \mathcal N_p(\mathbf 0, \mathbf V(\boldsymbol\theta_0))$
+is *asymptotically efficient* if $\mathbf V(\boldsymbol\theta_0) = \mathcal I(\boldsymbol\theta_0)^{-1}$,
+the smallest asymptotic covariance permitted (in the Loewner order) for regular estimators. $\blacktriangleleft$
+:::
+
+::: {#cor-mle-efficient}
+## The MLE is asymptotically efficient
+Under the hypotheses of @thm-mle-asymptotic-normality, the MLE is asymptotically efficient: its
+asymptotic covariance $\mathcal I(\boldsymbol\theta_0)^{-1}$ equals the per-observation Cramér-Rao bound.
+:::
+
+::: {.proof}
+Immediate by comparing @eq-mle-asymptotic-normality with @def-efficient-estimator: the asymptotic
+covariance of $\sqrt n(\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0)$ is $\mathcal I(\boldsymbol\theta_0)^{-1}$.
+$\square$
+:::
+
+::: {.remark}
+**Why this matters.** Asymptotic efficiency is the precise sense in which maximum likelihood is "as good
+as it gets": no regular estimator can have a smaller asymptotic variance than the MLE's
+$\mathcal I(\boldsymbol\theta_0)^{-1}$. The practical payoff is reassurance: when a systematic review uses
+likelihood-based methods (most network meta-analyses, and ML-NMR), it is not leaving precision on the
+table relative to any competing regular estimator built from the same model. $\blacktriangleleft$
+:::
+
+::: {.remark}
+The matrix bound @eq-crlb-matrix is a *finite-sample* statement about unbiased estimators, while
+@def-efficient-estimator's asymptotic optimality is a statement about the limiting distribution of
+possibly biased estimators. The rigorous bridge that no regular estimator can have asymptotic covariance
+below $\mathcal I(\boldsymbol\theta_0)^{-1}$ is the Hájek-Le Cam convolution theorem and the local
+asymptotic minimax theorem; we cite these (see @bingham2010regression and the asymptotic-statistics
+literature) rather than prove them, as they require the local asymptotic normality framework beyond this
+chapter. $\blacktriangleleft$
+:::
+
+## M-estimation and the sandwich variance {#sec-m-estimation}
+
+Maximum likelihood is the special case, with $\boldsymbol\psi$ equal to the score, of a far more general
+construction: define an estimator as the solution of an *estimating equation*. This generality is exactly
+what later chapters need. A MAIC estimator (Chapter 18) solves a weighting equation that is not the score
+of any correctly specified likelihood, yet it is asymptotically normal, and its correct standard error is
+the *sandwich* variance defined below.
+
+::: {#def-m-estimator}
+## M-estimator and estimating equation
+Let $\boldsymbol\psi(x; \boldsymbol\theta) \in \mathbb R^p$ be a known *estimating function*. An
+*M-estimator* $\hat{\boldsymbol\theta}_n$ is a solution of the estimating equation
+$$
+\sum_{i=1}^{n} \boldsymbol\psi(X_i; \hat{\boldsymbol\theta}_n) = \mathbf 0 .
+$$ {#eq-estimating-equation}
+The *target* (or estimand) is the value $\boldsymbol\theta^{*}$ solving the population equation
+$\mathbb E_{P}[\boldsymbol\psi(X; \boldsymbol\theta^{*})] = \mathbf 0$, where $P$ is the *true*
+data-generating distribution, which need not belong to the working model. The MLE is the M-estimator with
+$\boldsymbol\psi = \mathbf s$, the score, in which case $\boldsymbol\theta^{*} = \boldsymbol\theta_0$ under
+correct specification. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** An M-estimator is defined not by maximizing something but by *solving an equation*
+$\sum_i \boldsymbol\psi(X_i; \hat{\boldsymbol\theta}_n) = \mathbf 0$. Choosing $\boldsymbol\psi$ to be the
+score recovers maximum likelihood, but $\boldsymbol\psi$ can be any sensible estimating function, even one
+with no likelihood behind it. The crucial shift is the *target* $\boldsymbol\theta^{*}$: it is whatever
+value the equation aims at in the real world $P$, which need not be the "true parameter" of any correct
+model. This is the honest setting for MAIC, whose weighting equation is a computational device, not a
+believed model. A one-covariate MAIC balancing equation has the schematic form
+$\sum_i w_i(\boldsymbol\theta)\,(x_i - \bar x^{*}) = 0$, "choose weights so the weighted covariate mean
+equals the target population mean $\bar x^{*}$"; Chapter 18 makes this precise. $\blacktriangleleft$
+:::
+
+The asymptotic distribution of an M-estimator follows the same Taylor expansion as the MLE, but the
+variance no longer collapses to a single information matrix; it is a sandwich of two matrices.
+
+::: {#thm-m-estimator-normal}
+## Asymptotic normality of M-estimators
+Let $X_1, \dots, X_n$ be iid from $P$, let $\hat{\boldsymbol\theta}_n$ solve @eq-estimating-equation, and
+suppose $\hat{\boldsymbol\theta}_n \xrightarrow{p} \boldsymbol\theta^{*}$, where
+$\mathbb E_P[\boldsymbol\psi(X; \boldsymbol\theta^{*})] = \mathbf 0$. Assume $\boldsymbol\psi(x; \cdot)$ is
+continuously differentiable near $\boldsymbol\theta^{*}$, the matrix
+$$
+\mathbf A(\boldsymbol\theta^{*}) = -\,\mathbb E_P\!\bigl[\nabla_{\boldsymbol\theta}\boldsymbol\psi(X; \boldsymbol\theta^{*})\bigr]
+\quad(\text{the ``bread''})
+$$
+is nonsingular, the matrix
+$\mathbf B(\boldsymbol\theta^{*}) = \mathbb E_P\!\bigl[\boldsymbol\psi(X; \boldsymbol\theta^{*})\,\boldsymbol\psi(X; \boldsymbol\theta^{*})^\top\bigr]$
+(the ``meat'') is finite, and $\nabla_{\boldsymbol\theta}\boldsymbol\psi$ obeys a local uniform law of
+large numbers near $\boldsymbol\theta^{*}$: there is a neighborhood $\mathcal U^{*}$ of
+$\boldsymbol\theta^{*}$ with
+$\mathbb E_P\bigl[\sup_{\boldsymbol\theta\in\mathcal U^{*}}\|\nabla_{\boldsymbol\theta}\boldsymbol\psi(X;\boldsymbol\theta)\|\bigr] < \infty$
+and
+$\sup_{\boldsymbol\theta\in\mathcal U^{*}}\bigl\|\tfrac1n\sum_i \nabla_{\boldsymbol\theta}\boldsymbol\psi(X_i;\boldsymbol\theta) - \mathbb E_P[\nabla_{\boldsymbol\theta}\boldsymbol\psi(X;\boldsymbol\theta)]\bigr\| \xrightarrow{p} 0$,
+exactly parallel to (A3) of @thm-mle-asymptotic-normality. Then
+$$
+\sqrt n\,\bigl(\hat{\boldsymbol\theta}_n - \boldsymbol\theta^{*}\bigr)
+\xrightarrow{d} \mathcal N_p\!\Bigl(\mathbf 0,\; \mathbf A(\boldsymbol\theta^{*})^{-1}\,\mathbf B(\boldsymbol\theta^{*})\,\mathbf A(\boldsymbol\theta^{*})^{-\top}\Bigr) ,
+$$ {#eq-sandwich-asymptotic}
+where $\mathbf A^{-\top}$ abbreviates $(\mathbf A^{-1})^\top = (\mathbf A^\top)^{-1}$.
+:::
+
+::: {.proof}
+Write $\boldsymbol\Psi_n(\boldsymbol\theta) = \sum_{i=1}^n \boldsymbol\psi(X_i; \boldsymbol\theta)$, so
+$\boldsymbol\Psi_n(\hat{\boldsymbol\theta}_n) = \mathbf 0$. As in Step 2 of
+@thm-mle-asymptotic-normality, the fundamental theorem of calculus along the segment from
+$\boldsymbol\theta^{*}$ to $\hat{\boldsymbol\theta}_n$ gives
+$$
+\mathbf 0 = \boldsymbol\Psi_n(\hat{\boldsymbol\theta}_n)
+= \boldsymbol\Psi_n(\boldsymbol\theta^{*}) + \Bigl[\textstyle\int_0^1 \nabla\boldsymbol\Psi_n\bigl(\boldsymbol\theta^{*} + t(\hat{\boldsymbol\theta}_n - \boldsymbol\theta^{*})\bigr)\, dt\Bigr](\hat{\boldsymbol\theta}_n - \boldsymbol\theta^{*}),
+$$
+hence with $\mathbf A_n = -\tfrac1n\int_0^1 \nabla\boldsymbol\Psi_n(\boldsymbol\theta^{*} + t(\hat{\boldsymbol\theta}_n - \boldsymbol\theta^{*}))\,dt$,
+$$
+\mathbf A_n\,\sqrt n\,(\hat{\boldsymbol\theta}_n - \boldsymbol\theta^{*}) = \tfrac{1}{\sqrt n}\,\boldsymbol\Psi_n(\boldsymbol\theta^{*}).
+$$
+The summands $\boldsymbol\psi(X_i; \boldsymbol\theta^{*})$ are iid with mean $\mathbf 0$ (by the definition
+of $\boldsymbol\theta^{*}$) and covariance $\mathbf B(\boldsymbol\theta^{*})$, so the multivariate CLT
+gives $\tfrac{1}{\sqrt n}\boldsymbol\Psi_n(\boldsymbol\theta^{*}) \xrightarrow{d} \mathcal N_p(\mathbf 0, \mathbf B(\boldsymbol\theta^{*}))$.
+By consistency, the local uniform law, and continuity (exactly as in Step 4 of
+@thm-mle-asymptotic-normality), $\mathbf A_n \xrightarrow{p} \mathbf A(\boldsymbol\theta^{*})$, which is
+nonsingular, so $\mathbf A_n^{-1} \xrightarrow{p} \mathbf A(\boldsymbol\theta^{*})^{-1}$ by continuous
+mapping (@thm-continuous-mapping). Slutsky (@thm-slutsky) and @thm-mvn-linear give
+$$
+\sqrt n(\hat{\boldsymbol\theta}_n - \boldsymbol\theta^{*}) = \mathbf A_n^{-1}\,\tfrac{1}{\sqrt n}\boldsymbol\Psi_n(\boldsymbol\theta^{*})
+\xrightarrow{d} \mathbf A^{-1}\mathcal N_p(\mathbf 0, \mathbf B)
+= \mathcal N_p\bigl(\mathbf 0, \mathbf A^{-1}\mathbf B\,\mathbf A^{-\top}\bigr),
+$$
+which is @eq-sandwich-asymptotic. $\square$
+:::
+
+::: {.remark}
+**Why this matters, and the "bread"/"meat" nicknames.** When the model may be wrong, the MLE variance
+$\mathcal I^{-1}$ is no longer correct; the right variance is the *sandwich*
+$\mathbf A^{-1}\mathbf B\,\mathbf A^{-\top}$. The names are conventional and purely mnemonic, not
+technical terms: $\mathbf A$ (the "bread") measures how *sensitive* the estimating equation is to the
+parameter (the average slope of $\boldsymbol\psi$), while $\mathbf B$ (the "meat") measures how *variable*
+the estimating equation itself is (the covariance of $\boldsymbol\psi$). The two outer copies of
+$\mathbf A^{-1}$ are the bread, the central $\mathbf B$ is the meat; together they describe the shape
+$\mathbf A^{-1}\,\mathbf B\,\mathbf A^{-\top}$. $\blacktriangleleft$
+:::
+
+::: {#def-sandwich-variance}
+## Sandwich (robust) variance estimator
+Under @thm-m-estimator-normal, the *sandwich variance estimator* of
+$\mathrm{Cov}(\hat{\boldsymbol\theta}_n)$ is the empirical plug-in of @eq-sandwich-asymptotic,
+$$
+\widehat{\mathbb V}(\hat{\boldsymbol\theta}_n)
+= \tfrac1n\,\widehat{\mathbf A}_n^{-1}\,\widehat{\mathbf B}_n\,\widehat{\mathbf A}_n^{-\top},
+$$ {#eq-sandwich-estimator}
+with
+$$
+\widehat{\mathbf A}_n = -\tfrac1n\sum_{i=1}^n \nabla_{\boldsymbol\theta}\boldsymbol\psi(X_i; \hat{\boldsymbol\theta}_n),
+\qquad
+\widehat{\mathbf B}_n = \tfrac1n\sum_{i=1}^n \boldsymbol\psi(X_i; \hat{\boldsymbol\theta}_n)\,\boldsymbol\psi(X_i; \hat{\boldsymbol\theta}_n)^\top .
+$$
+The name records the structure $\widehat{\mathbf A}_n^{-1}$ (bread), $\widehat{\mathbf B}_n$ (meat),
+$\widehat{\mathbf A}_n^{-\top}$ (bread). Under the regularity above, the law of large numbers and the
+continuous mapping theorem give $\widehat{\mathbf A}_n \xrightarrow{p}\mathbf A(\boldsymbol\theta^{*})$
+and $\widehat{\mathbf B}_n \xrightarrow{p}\mathbf B(\boldsymbol\theta^{*})$, so
+$n\,\widehat{\mathbb V}(\hat{\boldsymbol\theta}_n) \xrightarrow{p}\mathbf A^{-1}\mathbf B\,\mathbf A^{-\top}$:
+the sandwich estimator is consistent for the true asymptotic variance even when the working model is
+misspecified. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation, with a picture.** The estimator is three matrices multiplied in a row: plug in the
+empirical bread $\widehat{\mathbf A}_n$ and meat $\widehat{\mathbf B}_n$ computed from the data at the
+fitted $\hat{\boldsymbol\theta}_n$, and you get a standard error valid even when the working model is
+wrong.
+
+```
+                                A^{-1}        B          A^{-T}
+   Var-hat(theta_hat)  =  (1/n) [ bread ] [  meat  ] [  bread  ]
+                                sensitivity  variability  sensitivity
+                                of the eqn   of the eqn   of the eqn
+```
+
+When the model is *right*, the information equality forces bread $=$ meat $= \mathcal I$ and the sandwich
+collapses to $\mathcal I^{-1}$, the ordinary inverse-information variance (next corollary).
+$\blacktriangleleft$
+:::
+
+The information equality is exactly the statement that, under correct specification, the sandwich
+collapses to the familiar inverse-information variance.
+
+::: {#cor-sandwich-collapse}
+## Correct specification collapses the sandwich
+Suppose $\boldsymbol\psi = \mathbf s$ is the score of a correctly specified regular model, so
+$P = f(\cdot;\boldsymbol\theta_0)$ and $\boldsymbol\theta^{*} = \boldsymbol\theta_0$. Then
+$\mathbf A(\boldsymbol\theta_0) = \mathbf B(\boldsymbol\theta_0) = \mathcal I(\boldsymbol\theta_0)$, and the
+sandwich variance @eq-sandwich-asymptotic reduces to $\mathcal I(\boldsymbol\theta_0)^{-1}$, recovering
+@thm-mle-asymptotic-normality.
+:::
+
+::: {.proof}
+The meat is $\mathbf B(\boldsymbol\theta_0) = \mathbb E[\mathbf s\,\mathbf s^\top] = \mathcal I(\boldsymbol\theta_0)$
+by @def-fisher-information. The bread is
+$\mathbf A(\boldsymbol\theta_0) = -\mathbb E[\nabla\mathbf s] = -\mathbb E[\nabla^2 \ell] = \mathcal I(\boldsymbol\theta_0)$
+by the information equality (@thm-information-equality). Hence
+$\mathbf A^{-1}\mathbf B\,\mathbf A^{-\top} = \mathcal I^{-1}\mathcal I\,\mathcal I^{-1} = \mathcal I(\boldsymbol\theta_0)^{-1}$.
+$\square$
+:::
+
+::: {.remark}
+## The sandwich and MAIC
+When the model is misspecified, $\mathbf A \ne \mathbf B$ in general, and using the naive inverse-bread or
+inverse-information variance understates (or overstates) the truth. The sandwich @eq-sandwich-estimator is
+the universal fix.
+
+This is the precise reason Chapter 18 reports robust standard errors for MAIC. In a matching-adjusted
+indirect comparison the individual-level study fits weights
+$w_i = \exp(\alpha + \boldsymbol\beta^\top \mathbf x_i)$ by an estimating equation that forces the weighted
+covariate means to match the aggregate target population, schematically
+$\sum_i w_i(\boldsymbol\beta)\,(\mathbf x_i - \bar{\mathbf x}^{*}) = \mathbf 0$; the treatment effect is
+then estimated on the weighted sample. The "working model" here is the weighting scheme together with the
+outcome model on the reweighted data, and there is no reason for it to be correctly specified: the weights
+are a device for balancing covariates, not a belief about how the data arose. Maximum-likelihood
+(inverse-information) standard errors would therefore be wrong, and only the sandwich form, with
+$\boldsymbol\psi$ stacking the weighting equations and the outcome equation, is guaranteed consistent for
+the sampling variance of the population-adjusted effect. Carry this picture into Chapter 18: weights solve
+an estimating equation, the model is a working approximation, and the sandwich is the honest standard
+error. $\blacktriangleleft$
+:::
+
+## Tests and confidence intervals {#sec-tests}
+
+We close with the three classical large-sample tests of a null hypothesis
+$H_0 : \boldsymbol\theta = \boldsymbol\theta_0$ (or, after reparameterization, a value of a subvector),
+and the confidence intervals obtained by inverting them. All three statistics have the same limiting
+$\chi^2_p$ distribution and are first-order equivalent; they differ in whether they need the estimate, the
+null value, or both. Throughout, $\mathcal I_n(\boldsymbol\theta) = n\,\mathcal I(\boldsymbol\theta)$ is the
+sample information (@cor-information-additivity).
+
+In a health application the practical question is which test to report for an indirect comparison. The
+short answer: the three agree in large samples (@thm-wilks), but near a boundary or in small studies the
+likelihood-ratio and score versions are usually preferred (see the remark after @thm-wilks). The table
+contrasts what each test looks at.
+
+| Test | What it evaluates | Needs the MLE $\hat{\boldsymbol\theta}_n$? | Needs the null fit? | Intuitive question |
+|---|---|---|---|---|
+| Wald | distance of $\hat{\boldsymbol\theta}_n$ from $\boldsymbol\theta_0$, scaled by curvature at $\hat{\boldsymbol\theta}_n$ | yes | no | "How many standard errors is the estimate from the null?" |
+| Score (Rao) | slope of the log-likelihood evaluated at $\boldsymbol\theta_0$ | no | yes | "Is the log-likelihood still climbing steeply at the null?" |
+| Likelihood ratio | drop in log-likelihood from $\hat{\boldsymbol\theta}_n$ down to $\boldsymbol\theta_0$ | yes | yes | "How much worse does the null fit than the best fit?" |
+
+::: {#def-test-statistics}
+## Wald, score, and likelihood-ratio statistics
+For testing $H_0 : \boldsymbol\theta = \boldsymbol\theta_0$ with MLE $\hat{\boldsymbol\theta}_n$:
+
+- the **Wald statistic** is
+$$
+W_n = (\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0)^\top\, \mathcal I_n(\hat{\boldsymbol\theta}_n)\,(\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0);
+$$ {#eq-wald-stat}
+
+- the **score (Rao) statistic** is
+$$
+R_n = \mathbf s_n(\boldsymbol\theta_0)^\top\, \mathcal I_n(\boldsymbol\theta_0)^{-1}\, \mathbf s_n(\boldsymbol\theta_0);
+$$ {#eq-score-stat}
+
+- the **likelihood-ratio statistic** is
+$$
+\Lambda_n = 2\bigl[\ell_n(\hat{\boldsymbol\theta}_n) - \ell_n(\boldsymbol\theta_0)\bigr] .
+$$ {#eq-lr-stat}
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** All three compare a null value $\boldsymbol\theta_0$ to what the data prefer,
+using the geometry of the log-likelihood near its peak (recall the parabola picture from the start of the
+chapter). Wald measures the horizontal distance from the peak to the null; the score measures the slope at
+the null; the likelihood ratio measures the vertical drop in height. Near the peak a smooth function looks
+like a parabola, and for a parabola these three are the same measurement up to scaling, which is why
+@thm-wilks finds them asymptotically equal. $\blacktriangleleft$
+:::
+
+::: {#thm-wilks}
+## Limiting null distribution (Wilks)
+Under $H_0$ and the hypotheses of @thm-mle-asymptotic-normality, each of $W_n$, $R_n$, and $\Lambda_n$
+converges in distribution to $\chi^2_p$, and the three are asymptotically equivalent:
+$W_n - \Lambda_n \xrightarrow{p} 0$ and $R_n - \Lambda_n \xrightarrow{p} 0$.
+:::
+
+::: {.proof}
+Abbreviate $\mathcal I = \mathcal I(\boldsymbol\theta_0)$ and let
+$\mathbf Z_n = \tfrac{1}{\sqrt n}\mathbf s_n(\boldsymbol\theta_0) \xrightarrow{d} \mathbf Z \sim \mathcal N_p(\mathbf 0, \mathcal I)$
+by @eq-score-clt. From the proof of @thm-mle-asymptotic-normality,
+$$
+\sqrt n\,(\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0) = \mathcal I^{-1}\mathbf Z_n + o_p(1).
+$$ {#eq-mle-linearization}
+
+**Score statistic.** Directly,
+$R_n = \mathbf Z_n^\top (\tfrac1n \mathcal I_n(\boldsymbol\theta_0))^{-1}\mathbf Z_n = \mathbf Z_n^\top \mathcal I^{-1}\mathbf Z_n$,
+and by continuous mapping (@thm-continuous-mapping) applied to the continuous map
+$\mathbf z \mapsto \mathbf z^\top\mathcal I^{-1}\mathbf z$,
+$R_n \xrightarrow{d} \mathbf Z^\top \mathcal I^{-1}\mathbf Z$. Writing
+$\mathbf Z = \mathcal I^{1/2}\mathbf G$ with $\mathbf G \sim \mathcal N_p(\mathbf 0, I_p)$ (the symmetric
+PSD square root, @thm-cov-psd), $\mathbf Z^\top\mathcal I^{-1}\mathbf Z = \mathbf G^\top\mathbf G = \|\mathbf G\|_2^2 \sim \chi^2_p$.
+Hence $R_n \xrightarrow{d}\chi^2_p$.
+
+**Wald statistic.** Since $\tfrac1n\mathcal I_n(\hat{\boldsymbol\theta}_n) = \mathcal I(\hat{\boldsymbol\theta}_n) \xrightarrow{p}\mathcal I$
+(continuity of $\mathcal I$ and consistency), substituting @eq-mle-linearization,
+$$
+W_n = \bigl[\sqrt n(\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0)\bigr]^\top \mathcal I(\hat{\boldsymbol\theta}_n)\bigl[\sqrt n(\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0)\bigr]
+= (\mathcal I^{-1}\mathbf Z_n + o_p(1))^\top \mathcal I (\mathcal I^{-1}\mathbf Z_n + o_p(1)) = \mathbf Z_n^\top\mathcal I^{-1}\mathbf Z_n + o_p(1),
+$$
+using Slutsky to absorb the $o_p(1)$ terms (the leading factors are $O_p(1)$). Thus $W_n = R_n + o_p(1)$,
+so $W_n \xrightarrow{d}\chi^2_p$ and $W_n - R_n \xrightarrow{p} 0$.
+
+**Likelihood-ratio statistic.** Take a second-order Taylor expansion of $\ell_n$ about
+$\hat{\boldsymbol\theta}_n$, using $\mathbf s_n(\hat{\boldsymbol\theta}_n) = \mathbf 0$ and the integral
+form of the remainder:
+$$
+\ell_n(\boldsymbol\theta_0) = \ell_n(\hat{\boldsymbol\theta}_n) + \mathbf 0 + \tfrac12 (\boldsymbol\theta_0 - \hat{\boldsymbol\theta}_n)^\top \mathbf H_n(\tilde{\boldsymbol\theta}_n)(\boldsymbol\theta_0 - \hat{\boldsymbol\theta}_n),
+$$
+for $\tilde{\boldsymbol\theta}_n$ on the segment, so
+$$
+\Lambda_n = 2[\ell_n(\hat{\boldsymbol\theta}_n) - \ell_n(\boldsymbol\theta_0)]
+= (\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0)^\top\bigl[-\mathbf H_n(\tilde{\boldsymbol\theta}_n)\bigr](\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0).
+$$
+Now $-\tfrac1n \mathbf H_n(\tilde{\boldsymbol\theta}_n) \xrightarrow{p}\mathcal I$ (Step 4 of
+@thm-mle-asymptotic-normality, since $\tilde{\boldsymbol\theta}_n \xrightarrow{p}\boldsymbol\theta_0$),
+so $\Lambda_n = [\sqrt n(\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0)]^\top(-\tfrac1n\mathbf H_n)[\sqrt n(\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0)] = \mathbf Z_n^\top\mathcal I^{-1}\mathbf Z_n + o_p(1)$
+by the same substitution (both the averaged Hessian at $\tilde{\boldsymbol\theta}_n$ here and the one at
+$\hat{\boldsymbol\theta}_n$ in the Wald step converge in probability to the same $\mathcal I$, because
+$\tilde{\boldsymbol\theta}_n \xrightarrow{p}\boldsymbol\theta_0$ and
+$\hat{\boldsymbol\theta}_n \xrightarrow{p}\boldsymbol\theta_0$, and we substitute @eq-mle-linearization for
+$\sqrt n(\hat{\boldsymbol\theta}_n - \boldsymbol\theta_0)$). Therefore $\Lambda_n = R_n + o_p(1) \xrightarrow{d}\chi^2_p$, and
+$\Lambda_n - R_n \xrightarrow{p} 0$, $\Lambda_n - W_n \xrightarrow{p} 0$. $\square$
+:::
+
+::: {.remark}
+**Why this matters.** All three tests give the same answer in large samples, so for a single large
+indirect comparison it rarely matters which you quote. What to remember: they are the three natural ways
+to ask "is the effect different from the null," and a confidence interval is simply the set of null values
+that none of them rejects (next remark). The picture is the parabola: the distance, slope, and height of a
+parabola all encode the same curvature, which is why the statistics coincide. $\blacktriangleleft$
+:::
+
+::: {.remark}
+## Confidence intervals by inversion
+A level-$\alpha$ test of $H_0 : \boldsymbol\theta = \boldsymbol\theta_0$ rejects when the statistic
+exceeds the upper-$\alpha$ quantile $\chi^2_{p, 1-\alpha}$. The set of null values *not* rejected is a
+$(1-\alpha)$ confidence region. For a scalar parameter the Wald region is the familiar interval
+$$
+\hat\theta_n \pm z_{1 - \alpha/2}\,\widehat{\mathrm{se}}(\hat\theta_n),
+\qquad \widehat{\mathrm{se}}(\hat\theta_n) = \bigl(\mathcal I_n(\hat\theta_n)\bigr)^{-1/2},
+$$
+where $z_{1-\alpha/2} = \Phi^{-1}(1 - \alpha/2)$ and $\Phi$ is the standard normal distribution function
+([Notation](/notation.qmd)). Inverting the likelihood-ratio test instead gives the *profile-likelihood* interval
+$\{\theta : 2[\ell_n(\hat\theta_n) - \ell_n(\theta)] \le \chi^2_{1, 1-\alpha}\}$, which respects the shape
+of the log-likelihood and is not forced to be symmetric. The three intervals agree to first order by
+@thm-wilks but can differ markedly in small samples or near a boundary, where the likelihood-ratio and
+score intervals are generally preferred. Concretely, to build a confidence interval by hand you can sweep
+candidate null values $\theta_0$, run the test at each, and keep those it does *not* reject; the retained
+values form the interval. $\blacktriangleleft$
+:::
+
+## A fully worked example {#sec-worked-example}
+
+We tie the chapter together on the simplest nontrivial model, the Bernoulli, where every quantity can be
+computed by hand, and then illustrate the sandwich variance on a deliberately misspecified model. Most
+pieces have already appeared in context, threaded through the running example: the score in
+@lem-score-mean-zero, the information in @cor-information-additivity, the log-odds delta method in
+@exm-delta-logodds, and the indirect comparison in @exm-indirect-bucher. Here we assemble them on the one
+dataset $n = 25$, $\sum_i X_i = 10$.
+
+::: {#exm-binomial-inference}
+## Maximum likelihood for a Bernoulli proportion
+Let $X_1, \dots, X_n$ be iid $\mathrm{Ber}(p)$ with $\theta = p \in (0,1)$. Suppose we observe $n = 25$
+trials with $\sum_i X_i = 10$ successes.
+
+**Likelihood, score, MLE.** The single-observation density is $f(x; p) = p^x(1-p)^{1-x}$, so
+$$
+\ell_n(p) = \Bigl(\textstyle\sum_i X_i\Bigr)\log p + \Bigl(n - \textstyle\sum_i X_i\Bigr)\log(1-p) = 10\log p + 15\log(1-p)
+$$
+(dropping the constant binomial coefficient, which does not depend on $p$). The score is
+$$
+s_n(p) = \frac{10}{p} - \frac{15}{1-p}, \qquad s_n(p) = 0 \iff 10(1-p) = 15 p \iff \hat p = \tfrac{10}{25} = 0.40 .
+$$
+This matches @def-mle: $\hat p_{\mathrm{MLE}} = \bar X_n$.
+
+**Fisher information and standard error.** The per-observation score is $s(p; x) = x/p - (1-x)/(1-p)$,
+and by the information equality (@thm-information-equality), with
+$\partial_p^2 \log f = -x/p^2 - (1-x)/(1-p)^2$ and $\mathbb E[X] = p$,
+$$
+\mathcal I(p) = -\mathbb E_p\bigl[\partial_p^2 \log f\bigr] = \frac{p}{p^2} + \frac{1-p}{(1-p)^2} = \frac1p + \frac{1}{1-p} = \frac{1}{p(1-p)} .
+$$
+At $\hat p = 0.4$, $\mathcal I(\hat p) = 1/(0.4\cdot 0.6) = 1/0.24 = 4.1\overline{6}$, the sample
+information is $\mathcal I_n(\hat p) = 25 \times 4.1\overline 6 = 104.1\overline 6$, and the asymptotic
+variance of $\hat p$ is
+$$
+\widehat{\mathrm{Var}}(\hat p) = \frac{1}{\mathcal I_n(\hat p)} = \frac{\hat p(1 - \hat p)}{n} = \frac{0.24}{25} = 0.0096,
+\qquad \widehat{\mathrm{se}}(\hat p) = \sqrt{0.0096} = 0.09798 .
+$$
+The Wald 95% confidence interval (@sec-tests) is
+$0.40 \pm 1.96 \times 0.09798 = 0.40 \pm 0.19204 = (0.2080,\, 0.5920)$.
+
+**Delta method for the log-odds.** The log-odds is $g(p) = \log\!\frac{p}{1-p}$ with
+$g'(p) = \frac{1}{p(1-p)}$. By the delta method (@thm-delta-method),
+$$
+\widehat{\mathrm{Var}}\bigl(g(\hat p)\bigr) = g'(\hat p)^2\,\widehat{\mathrm{Var}}(\hat p)
+= \Bigl(\frac{1}{p(1-p)}\Bigr)^2 \cdot \frac{p(1-p)}{n} = \frac{1}{n\,p(1-p)}\Big|_{p = \hat p} = \frac{1}{25 \times 0.24} = \frac16 = 0.1\overline 6 .
+$$
+Notice the algebra collapses to $\tfrac{1}{n\hat p(1-\hat p)} = \tfrac{1}{n\hat p} + \tfrac{1}{n(1-\hat p)} = \tfrac{1}{\#\text{success}} + \tfrac{1}{\#\text{fail}} = \tfrac{1}{10} + \tfrac{1}{15} = 0.1\overline 6$,
+the textbook standard error of an empirical log-odds. Thus $g(\hat p) = \log(0.4/0.6) = -0.40546$ with
+$\widehat{\mathrm{se}} = \sqrt{1/6} = 0.40825$, giving a 95% interval for the log-odds of
+$-0.40546 \pm 1.96 \times 0.40825 = (-1.2056,\, 0.3947)$ and, exponentiating, an odds-ratio-scale
+interval $(e^{-1.2056}, e^{0.3947}) = (0.2995,\, 1.4830)$.
+
+**Three tests of $H_0 : p = 0.5$.** Using @def-test-statistics with $\boldsymbol\theta_0 = 0.5$:
+
+- *Score test.* $s_n(0.5) = 10/0.5 - 15/0.5 = -10$ and $\mathcal I_n(0.5) = 25/(0.5\cdot 0.5) = 100$, so
+$R_n = (-10)^2/100 = 1.000$.
+
+- *Wald test.* $W_n = (\hat p - 0.5)^2\,\mathcal I_n(\hat p) = (-0.1)^2 \times 104.1\overline 6 = 0.01/0.0096 = 1.0417$.
+
+- *Likelihood-ratio test.* $\ell_n(0.4) = 10\log 0.4 + 15\log 0.6 = -9.16291 - 7.66238 = -16.82529$ and
+$\ell_n(0.5) = 25\log 0.5 = -17.32868$, so
+$\Lambda_n = 2(-16.82529 + 17.32868) = 2 \times 0.50339 = 1.0068$.
+
+All three statistics cluster near $1.0$, confirming the first-order equivalence of @thm-wilks. Against
+the critical value $\chi^2_{1, 0.95} = 3.841$, none rejects $H_0 : p = 0.5$; equivalently, $0.5$ lies
+inside the Wald interval $(0.208, 0.592)$. $\blacktriangleleft$
+:::
+
+::: {#exm-sandwich-normal}
+## When the model is wrong: the sandwich earns its name
+Suppose we estimate a population mean $\mu$ by fitting a *working* model that treats the data as
+$\mathcal N(\mu, 1)$ with the variance fixed (incorrectly) at $1$, while the true distribution $P$ has
+mean $\mu_0$ and variance $\sigma_0^2 \ne 1$. The working score is
+$\psi(x; \mu) = \partial_\mu\bigl[-\tfrac12(x - \mu)^2\bigr] = x - \mu$, so the estimating equation
+$\sum_i (X_i - \hat\mu_n) = 0$ yields the M-estimator $\hat\mu_n = \bar X_n$, which targets
+$\mu^{*} = \mu_0$.
+
+By @thm-m-estimator-normal, the bread and meat are
+$$
+\mathbf A = -\mathbb E_P[\partial_\mu \psi] = -\mathbb E_P[-1] = 1,
+\qquad
+\mathbf B = \mathbb E_P[\psi^2] = \mathbb E_P[(X - \mu_0)^2] = \sigma_0^2,
+$$
+so the correct asymptotic variance is $\mathbf A^{-1}\mathbf B\,\mathbf A^{-1}/n = \sigma_0^2/n$, exactly
+the variance of $\bar X_n$. The naive model-based variance, which trusts the working model and uses the
+inverse working information $\mathbf A^{-1}/n = 1/n$, is wrong by the factor $\sigma_0^2$.
+
+**Concrete numbers.** Take $n = 40$ observations with sample mean $\bar X_n = 2.5$ and
+$\sum_i (X_i - \bar X_n)^2 = 160$. Then
+$\widehat{\mathbf A}_n = 1$, $\widehat{\mathbf B}_n = 160/40 = 4.0$, and the sandwich variance
+@eq-sandwich-estimator is
+$$
+\widehat{\mathbb V}(\hat\mu_n) = \tfrac1n\,\widehat{\mathbf A}_n^{-1}\,\widehat{\mathbf B}_n\,\widehat{\mathbf A}_n^{-1} = \frac{4.0}{40} = 0.10,
+\qquad \widehat{\mathrm{se}}_{\text{robust}} = \sqrt{0.10} = 0.3162,
+$$
+whereas the naive standard error is $\sqrt{1/40} = 0.1581$, understating the true uncertainty by a
+factor of $\sqrt{\widehat{\mathbf B}_n} = 2$. This is the mechanism, in miniature, that makes the
+sandwich estimator mandatory for MAIC in Chapter 18: the weighting "model" is a computational device, not
+a believed truth, and only the robust variance is consistent. $\blacktriangleleft$
+:::
+
+## Notes and references {#sec-notes}
+
+The estimation theory of this chapter is classical and is developed, with the regression emphasis this
+book shares, in @bingham2010regression; the worked Bernoulli example and the three-test comparison follow
+that source's treatment of likelihood inference. The notation for likelihood, score, Fisher information,
+the MLE, and the sandwich variance matches [Notation](/notation.qmd).
+
+The asymptotic tools of @sec-asymptotic-tools correspond to the proof catalogue: the delta method is
+A.11, Slutsky's theorem is A.12, and the continuous mapping theorem is A.13 (corresponds to A.11-A.13 in
+the proof catalogue). Our statements and proofs align with the companion manuscript's treatment in
+`manuscript/01_probability.md`; we have expanded the catalogue's one-line sketches into full proofs and
+have generalized the delta method and Slutsky's theorem to the multivariate case via the Cramér-Wold
+device. The continuous mapping and Slutsky proofs rest on the Portmanteau theorem, which we cite as a
+standard result of weak-convergence theory.
+
+The consistency proof (@thm-mle-consistency) is the Wald argmax argument: the Kullback-Leibler
+information inequality (@lem-kl-information-inequality, a consequence of Jensen's inequality
+@thm-jensen) identifies $\boldsymbol\theta_0$ as the unique maximizer of the population log-likelihood,
+a uniform law of large numbers (@lem-uniform-lln, cited) transfers this to the sample, and the
+argmax-continuity lemma (@lem-argmax-consistency, proved in full) concludes. The asymptotic-normality
+proof (@thm-mle-asymptotic-normality) is the standard Taylor expansion of the score, assembled from the
+information equality (@thm-information-equality), the multivariate central limit theorem, and Slutsky's
+theorem, with the affine-image property of the multivariate normal (@thm-mvn-linear from Chapter 4)
+delivering the Gaussian limit. The Cramér-Rao bound (@thm-cramer-rao) is proved via the covariance
+Cauchy-Schwarz inequality (@thm-cauchy-schwarz-ip), with the matrix version following from
+positive-semidefiniteness of a joint covariance (@thm-cov-psd) and a Schur-complement computation.
+
+M-estimation and the sandwich variance (@def-sandwich-variance) generalize maximum likelihood; the
+collapse of the sandwich to the inverse information under correct specification (@cor-sandwich-collapse)
+is a direct corollary of the information equality, and is the conceptual bridge to the robust variance
+used for MAIC in Chapter 18. The convolution-theorem justification of asymptotic efficiency is cited, not
+proved, as it requires the local asymptotic normality machinery outside the scope of a foundations
+chapter.
+
+No result in this chapter is tagged machine-checked. The companion Coq development depends on
+`mathcomp-analysis` for measure-theoretic foundations and, per the manuscript, treats the asymptotic
+results A.11-A.13 at the level of cited library facts rather than re-derived theorems; the
+pen-and-paper proofs here are the authoritative versions. Candidates for future formalization are the
+information equality and the M-estimator sandwich, both of which are purely algebraic given the
+differentiation-under-the-integral hypotheses.
+
+## Exercises {#sec-exercises}
+
+The exercises progress from warm-ups and interpretation to computation and proof. A starred exercise
+($\star$) has a full worked solution in Appendix F; the first warm-up below is solved inline so you can
+calibrate your approach before attempting the rest.
+
+::: {#exr-warmup-2x2}
+## Warm-up (solved): a log odds and its interval from one arm
+In a single-arm cohort, $20$ of $50$ patients respond. (a) Give the MLE $\hat p$. (b) Give the log odds
+$g(\hat p) = \log\frac{\hat p}{1 - \hat p}$ and its delta-method standard error. (c) Report a 95%
+confidence interval on the log-odds scale and on the odds scale.
+
+*Solution.* (a) $\hat p = 20/50 = 0.40$. (b) The log odds is
+$g(\hat p) = \log(0.40/0.60) = \log(0.6667) = -0.4055$. By @exm-delta-logodds the variance of an empirical
+log odds is $\tfrac{1}{\#\text{responders}} + \tfrac{1}{\#\text{non-responders}} = \tfrac1{20} + \tfrac1{30} = 0.08333$,
+so the standard error is $\sqrt{0.08333} = 0.2887$. (c) On the log-odds scale,
+$-0.4055 \pm 1.96 \times 0.2887 = (-0.9713,\, 0.1603)$; exponentiating gives the odds-scale interval
+$(e^{-0.9713}, e^{0.1603}) = (0.379,\, 1.174)$. The interval includes odds $1$ (probability $0.5$), so the
+data are consistent with a coin-flip response rate. $\blacktriangleleft$
+:::
+
+::: {#exr-interpret-information}
+## Warm-up (interpretation): where is a proportion hardest to estimate?
+Using $\mathcal I(p) = 1/[p(1 - p)]$ and $\mathrm{Var}(\hat p) \approx p(1 - p)/n$: (a) for fixed $n$, at
+what value of $p$ is $\hat p$ most variable, and where is it most precise? (b) A trial wants the standard
+error of $\hat p$ below $0.02$ when the true $p$ is near $0.5$; roughly how many patients are needed?
+(c) In one sentence, relate your answer to why the Fisher information is largest near $p = 0$ or $p = 1$.
+:::
+
+::: {#exr-indirect-se}
+## Interpretation: the cost of going indirect
+In @exm-indirect-bucher the direct contrasts had standard errors $0.456$ and $0.410$, while the indirect
+contrast of $B$ versus $C$ had standard error $0.614$. (a) Show that the indirect variance is the sum of
+the two direct variances and confirm the number. (b) Explain in one sentence why an indirect comparison is
+necessarily less precise than the direct comparisons it is built from. (c) If a third trial directly
+compared $B$ and $C$ with standard error $0.30$, which estimate would you trust more, and why?
+:::
+
+::: {#exr-poisson-mle}
+## Poisson information and efficiency
+Let $X_1, \dots, X_n$ be iid $\mathrm{Poi}(\lambda)$. (a) Derive the MLE $\hat\lambda_n$. (b) Compute the
+score, show it has mean zero, and compute the Fisher information $\mathcal I(\lambda)$ two ways (as the
+variance of the score and as minus the expected second derivative), confirming the information equality.
+(c) Show $\hat\lambda_n$ is unbiased and attains the Cramér-Rao bound exactly, hence is efficient.
+:::
+
+::: {#exr-exponential-rate}
+## Reparameterization and invariance
+Let $X_1, \dots, X_n$ be iid Exponential with rate $\lambda > 0$, density $f(x;\lambda) = \lambda e^{-\lambda x}$
+on $x > 0$. (a) Find the MLE of $\lambda$. (b) Using invariance (@prp-mle-invariance), write down the MLE
+of the mean $\eta = 1/\lambda$ and of the median $m = (\log 2)/\lambda$. (c) Use the delta method
+(@thm-delta-method) to give the asymptotic variance of $\hat\eta_n$, and verify it equals the Cramér-Rao
+bound for estimating $\eta$.
+:::
+
+::: {#exr-mse-shrinkage}
+## Bias can lower MSE
+For iid $\mathcal N(\mu, \sigma^2)$ data with known $\sigma^2$, consider the shrinkage estimator
+$\hat\mu_c = c\,\bar X_n$ for a constant $c \in [0,1]$. (a) Using @prp-bias-variance-decomposition, write
+$\mathrm{MSE}_\mu(\hat\mu_c)$ as a function of $c$. (b) Minimize over $c$ and show the optimal $c^{*}$ is
+strictly less than $1$ whenever $\mu \ne 0$, so a biased estimator strictly beats the unbiased
+$\bar X_n$ in MSE. (c) Explain why this does not contradict the Cramér-Rao bound.
+:::
+
+::: {#exr-score-test-binomial}
+## Score versus Wald in finite samples
+Repeat the three tests of @exm-binomial-inference for the data $n = 25$, $\sum_i X_i = 10$ against the
+null $H_0 : p = 0.3$. Report $W_n$, $R_n$, and $\Lambda_n$ to three decimals and state which (if any)
+reject at level $0.05$. Comment on the ordering $W_n$, $R_n$, $\Lambda_n$ you observe.
+:::
+
+::: {#exr-information-equality-fail}
+## Where the information equality fails ($\star$)
+The information equality (@thm-information-equality) requires regularity (@def-regular-model), in
+particular a common support not depending on the parameter. Let $X_1, \dots, X_n$ be iid
+Uniform$(0, \theta)$, whose support $(0, \theta)$ does depend on $\theta$. (a) Show that the naive score
+$\partial_\theta \log f = -1/\theta$ has nonzero expectation, so @lem-score-mean-zero fails. (b) Show the
+MLE is $\hat\theta_n = \max_i X_i$, that $n(\theta - \hat\theta_n)/\theta \xrightarrow{d} \mathrm{Exp}(1)$,
+and hence the rate is $n$ rather than $\sqrt n$ and the limit is not normal. (c) Explain precisely which
+hypotheses of @thm-mle-asymptotic-normality are violated. *(Solution in Appendix F.)*
+:::
+
+::: {#exr-sandwich-derivation}
+## Sandwich variance for a misspecified Poisson ($\star$)
+Suppose the true data are overdispersed counts with mean $\mu_0$ and variance
+$v_0 = \kappa\,\mu_0$ for some $\kappa > 1$ (so $\kappa = 1$ would be Poisson), but we fit a working
+Poisson model with log-likelihood contribution $x\log\mu - \mu$. (a) Show the working score is
+$\psi(x;\mu) = x/\mu - 1$ and the M-estimator is $\hat\mu_n = \bar X_n$, targeting $\mu^{*} = \mu_0$.
+(b) Compute the bread $\mathbf A(\mu_0)$ and meat $\mathbf B(\mu_0)$ and show the sandwich asymptotic
+variance is $\kappa\,\mu_0/n$, whereas the naive model-based variance is $\mu_0/n$. (c) Conclude that the
+naive Poisson standard error understates the truth by the factor $\sqrt\kappa$, and relate this to
+@cor-sandwich-collapse. *(Solution in Appendix F.)*
+:::
+
+::: {#exr-delta-multivariate}
+## Multivariate delta method for a ratio
+Let $(\hat\alpha_n, \hat\beta_n)$ be jointly asymptotically normal,
+$\sqrt n\bigl((\hat\alpha_n, \hat\beta_n) - (\alpha, \beta)\bigr) \xrightarrow{d} \mathcal N_2(\mathbf 0, \boldsymbol\Sigma)$
+with $\boldsymbol\Sigma = \bigl(\begin{smallmatrix} \sigma_\alpha^2 & \sigma_{\alpha\beta} \\ \sigma_{\alpha\beta} & \sigma_\beta^2\end{smallmatrix}\bigr)$
+and $\beta \ne 0$. Using @thm-delta-method, derive the asymptotic variance of the ratio
+$\hat\rho_n = \hat\alpha_n / \hat\beta_n$. Specialize to the independent case
+$\sigma_{\alpha\beta} = 0$ and comment on the well-known instability when $\beta$ is near zero.
+:::

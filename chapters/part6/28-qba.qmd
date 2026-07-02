@@ -1,0 +1,1430 @@
+---
+title: "Quantitative Bias Analysis for Indirect Comparisons"
+---
+
+## Introduction {#sec-qba-intro}
+
+When a health technology assessment (HTA) committee, for example a NICE appraisal panel or an FDA
+advisory committee, must decide whether to reimburse a new treatment against an established comparator,
+the pivotal evidence is frequently an indirect comparison rather than a head-to-head trial. The
+committee's sharpest question is seldom "what is the point estimate?" but "how confident are you that the
+estimate survives a covariate you were never able to adjust for?" This chapter develops the mathematics of
+answering that question honestly, so that a reimbursement dossier can report not merely an effect but a
+defensible statement about how fragile that effect is.
+
+Every method in this book up to now has removed bias by *measuring* the variable that causes it. The
+anchored Bucher comparison (@thm-bucher-unbiased) is exact when every effect modifier is shared and
+common; matching-adjusted indirect comparison (Chapter 18) reweights the individual patient data (IPD)
+until the imbalanced effect modifiers are balanced; simulated treatment comparison (Chapter 19) and
+multilevel network meta-regression (Chapter 20) model the same covariates inside an outcome regression.
+All of them adjust for a covariate by using it. What none of them can do is adjust for a covariate that
+was never measured, or, in the most common and most dangerous case for an unanchored indirect comparison,
+one that the comparator publication never reported.
+
+The distinction is worth a table, because it says precisely where this chapter begins. Each earlier method
+neutralizes a covariate only by having access to it in some form; QBA is what remains when even that access
+is gone.
+
+| Method | How it removes the covariate's bias | What it needs the covariate to be |
+|---|---|---|
+| Bucher (Chapter 14) | cancels it through a common comparator arm | shared and balanced across trials |
+| MAIC (Chapter 18) | reweights the IPD until it is balanced | measured in the IPD, summarized by the comparator |
+| STC (Chapter 19) | enters it in an outcome regression | measured in the IPD, summarized by the comparator |
+| ML-NMR (Chapter 20) | integrates the outcome model over it | measured in the IPD, summarized by the comparator |
+| QBA (this chapter) | quantifies what it *could* be doing | neither measured nor reported |
+
+The threat is sharpest in the unanchored setting. Chapter 17 showed that an unanchored
+population-adjusted indirect comparison (PAIC) is consistent only under conditional constancy of
+*absolute* effects and balance of every imbalanced *prognostic* variable, not merely the effect
+modifiers (@thm-unanchored-paic-consistency, @def-conditional-constancy-absolute), and Chapter 12 showed
+that the shared-effect-modifier assumption is by itself insufficient to identify the target-population
+contrast (@thm-sema-insufficient). The single covariate that escapes the analysis, an unmeasured effect
+modifier (@def-effect-modifier) whose distribution differs between the two trial populations, is residual
+bias that no reweighting and no outcome model can touch, because the quantity it depends on, the
+covariate's distribution in the comparator population, is simply unknown. The honest response is not to
+pretend the bias is zero but to *quantify* it: to ask how large the unmeasured mechanism would have to be
+to matter, and to report the answer alongside the point estimate. This is **quantitative bias analysis**
+(QBA), the subject of this chapter.
+
+::: {.remark}
+**Prognostic variable versus effect modifier, in one line.** Two kinds of covariate recur throughout the
+book, and the difference decides which comparisons they threaten. A **prognostic variable** shifts a
+patient's outcome risk regardless of which treatment they take; an **effect modifier** changes the *size of
+the treatment effect* itself, so the benefit of $B$ over $A$ differs across its levels (@def-effect-modifier).
+An *anchored* comparison, which subtracts a within-trial contrast, is undisturbed by a purely prognostic
+variable and needs only its effect modifiers balanced; an *unanchored* comparison has no such protection
+and needs balance of *every* imbalanced prognostic variable as well (@thm-unanchored-paic-consistency).
+That is why the unreported covariate is the sharpest threat exactly in the unanchored setting, and why the
+running example below places its unreported covariate there. $\blacktriangleleft$
+:::
+
+QBA originates in epidemiology, where the same three threats to validity recur in every observational
+study: uncontrolled confounding, selection of the study sample on exposure and outcome, and
+mismeasurement of variables. The canonical reference is the monograph of @lash2021qba, whose deterministic
+and probabilistic machinery we adapt. We develop four instruments, in increasing sophistication. First,
+the **E-value** of @vanderweele2017evalue: a single number, derived from the point estimate alone, giving
+the minimum strength of unmeasured confounding or effect modification, on the risk-ratio scale, that
+could explain the observed effect away. We give its full derivation, resting on a sharp bound for the
+confounding bias factor that we prove from scratch. Second, an **indirect-comparison-specific E-value**
+that exploits a structural feature unique to the unanchored ITC: the unmeasured covariate is observed in
+the analyst's own IPD, so half of the sensitivity problem is estimable rather than assumed, and the
+resulting E-value is sharper and can certify a result as provably robust. Third, the **NORTA**
+(normal-to-anything) construction, which imputes the unreported joint distribution of the comparator's
+covariates by gluing the reported margins to a dependence structure borrowed from the IPD through a
+Gaussian copula (@def-gaussian-copula, @thm-inverse-cdf); we prove that the construction reproduces the
+margins exactly and induces precisely the intended copula. Fourth, the **tipping-point** analysis and its
+probabilistic upgrade, which locate the assumed value of the unreported covariate at which the conclusion
+reverses and place a prior distribution over that value to propagate the uncertainty honestly.
+
+This material is new to the formal theory of indirect comparison; it is not in the proof catalogue, and
+it has no machine-checked counterpart in the companion Coq development. We therefore build it from first
+principles, proving every bound in full and grounding each tool in a fully worked, hand-checkable example
+at the end of the chapter.
+
+Throughout, $g$ is the link function on whose scale effects are reported and modeled, and $g^{-1}$ its
+inverse; for binary and count outcomes the analysis scale is the log odds ratio or log rate ratio, so
+the effects of interest live on the risk-ratio scale where the E-value is defined. We write $\mathrm{RR}$,
+$\mathrm{OR}$, $\mathrm{HR}$ for risk, odds, and hazard ratios as in [Notation](/notation.qmd). The
+symbol $U$ denotes the *unmeasured* (in the confounding sense) or *unreported* (in the ITC sense)
+covariate, distinguished from the measured covariate vector $\mathbf{x}$; $\mathbf{b}$ denotes a vector
+of **bias parameters**; and we reserve the plain italic $E$ for the E-value, distinct from the
+expectation operator $\mathbb{E}[\cdot]$.
+
+This chapter builds five instruments. They are not competitors but a toolkit: some answer *how robust is
+the estimate?*, one answers *what value would overturn it?*, one answers *how do I propagate my uncertainty
+about that value?*, and one is the machinery that builds the comparator population the others need. Keep
+the following map in view.
+
+| Instrument | Question it answers | Main input | Output |
+|---|---|---|---|
+| E-value (@sec-qba-evalue) | how strong must unmeasured confounding be to explain the estimate away? | the point estimate on the risk-ratio scale | one number $E$ |
+| ITC E-value (@sec-qba-itc-evalue) | the same, using the outcome association measured in the IPD | point estimate plus $\mathrm{RR}_{UD}$ from the IPD | $E_{\mathrm{ITC}}$, possibly $+\infty$ |
+| NORTA (@sec-qba-norta) | how do I build a comparator population to recompute the effect? | reported margins plus IPD dependence | a simulated covariate population |
+| Tipping point (@sec-qba-tipping) | what comparator value flips the conclusion? | a sensitivity curve and a threshold | a value $m^{\dagger}$ in covariate units |
+| Probabilistic bias analysis (@sec-qba-probabilistic) | how does uncertainty about that value propagate? | a prior on the bias parameter plus the sampling error | systematic and total intervals |
+
+We anchor all five to one concrete comparison, introduced now and computed in full in @sec-qba-example.
+
+::: {#exm-qba-running}
+## A running example: an unanchored COPD comparison
+A manufacturer seeks reimbursement for a new inhaled therapy $B$ for chronic obstructive pulmonary disease
+(COPD). Only a single-arm trial of $B$ is available, with full individual patient data (IPD); the
+established comparator $A$ has only a published summary. The outcome is a *severe exacerbation within 12
+months*, a bad event, so a risk ratio below $1$ favors $B$. Two baseline covariates matter. The first,
+$x_R$, is age (standardized), which the $A$ publication reports as a mean and standard deviation. The
+second, $u$, is baseline lung function $\mathrm{FEV}_1$ (forced expiratory volume in one second, in liters;
+higher is healthier, so it lowers exacerbation risk): the $A$ publication does *not* report it at all. An
+unanchored analysis that plugs the IPD value of $\mathrm{FEV}_1$ into the comparator population returns an
+adjusted risk ratio of about $\mathrm{RR}=0.50$ ($95\%$ confidence interval $0.30$ to $0.81$), so $B$ appears
+to roughly halve the exacerbation risk. The committee's question is the subject of this chapter: *how much
+of that apparent benefit could be an artifact of the unreported* $\mathrm{FEV}_1$?
+
+We carry this trial through every instrument below, previewing each result where the instrument is defined
+and computing all of it by hand in @sec-qba-example. The model fitted to the IPD, with a log link on the
+risk, is $\log P(Y=1\mid x_R,u)=\beta_0+\beta_R x_R+\beta_U u$ with $\beta_0=-1.0$, $\beta_R=0.4$ (older
+age raises risk), and $\beta_U=-0.5$ (higher $\mathrm{FEV}_1$ lowers risk); the comparator reports age mean
+$m_R=1.0$, standard deviation $\sigma_R=0.5$, and its own event risk $\mu_0=0.47$, and in the IPD the
+covariate $\mathrm{FEV}_1$ has mean $\bar{x}_U=2.0$ and standard deviation $\sigma_U=1.0$.
+$\blacktriangleleft$
+:::
+
+## The framework of bias analysis {#sec-qba-framework}
+
+Bias analysis begins by writing down, explicitly, the mechanism that links what we observe to what is
+true. An estimate is *valid* when the estimator converges to the estimand; it is *biased* by a systematic
+error when a structural feature of the data, distinct from sampling variability, drives a wedge between
+the two. Quantitative bias analysis makes that wedge a function of named, interpretable parameters and
+then explores it.
+
+A natural first reaction to a worrying covariate is to fit a richer model that includes it. The reason
+that does not work here is worth stating plainly: in an unanchored indirect comparison the covariate is
+*unreported by the comparator*, so there is no column for it in the comparator data and no likelihood can
+condition on it. Bayesian model expansion is the right tool when you hold the data and merely distrust a
+functional form; quantitative bias analysis is the right tool when the data themselves are missing and the
+best you can do is ask how bad the omission could be. QBA does not recover the missing information; it
+bounds the damage.
+
+::: {#def-quantitative-bias-analysis}
+## Quantitative bias analysis
+Let $\theta$ be a target estimand and $\hat\theta_{\mathrm{obs}}$ an estimator that is consistent for a
+biased surrogate $\theta_{\mathrm{obs}}=\theta\cdot B(\mathbf{b})$ (multiplicative scale) or
+$\theta_{\mathrm{obs}}=\theta + B(\mathbf{b})$ (additive scale), where the **bias function** $B$ depends
+on a vector of **bias parameters** $\mathbf{b}\in\mathcal{B}$ that index the unverified structural
+assumptions (the strength and imbalance of an unmeasured confounder, the selection probabilities of each
+cell, the sensitivity and specificity of a mismeasured variable, or the comparator distribution of an
+unreported covariate). A **quantitative bias analysis** is the map
+$$
+\mathbf{b}\;\longmapsto\;\hat\theta_{\mathrm{adj}}(\mathbf{b})
+\;=\;h\big(\hat\theta_{\mathrm{obs}},\mathbf{b}\big),
+$$ {#eq-qba-correction}
+where the **correction** $h$ inverts the bias model, returning the value of the target consistent with
+the observed estimate under the assumed $\mathbf{b}$. The analysis is **deterministic** when $\mathbf{b}$
+ranges over a fixed grid or a single value, and **probabilistic** when $\mathbf{b}$ carries a prior
+distribution $\pi$ that is propagated to a distribution over $\hat\theta_{\mathrm{adj}}$. The three
+classical threats, **uncontrolled confounding**, **selection bias**, and **misclassification**, are the
+corners of the *bias triangle* and each supplies its own $B$ and $h$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader's translation.** Read @def-quantitative-bias-analysis as a recipe with three moves: (i) *name* the
+unverified quantities as a parameter vector $\mathbf{b}$ (how imbalanced the missing covariate is, how
+strongly it acts, and so on); (ii) *write* the bias as an explicit function $B(\mathbf{b})$ of them; (iii)
+*invert* it to see what the honest estimate would have been. On the multiplicative scale the correction
+divides: $\hat\theta_{\mathrm{adj}}=\hat\theta_{\mathrm{obs}}/B(\mathbf{b})$, as in the risk-ratio
+confounding factor below. On the additive scale it subtracts: for a risk difference distorted by a
+selection or misclassification shift $B(\mathbf{b})$, the corrected estimate is
+$\hat\theta_{\mathrm{obs}}-B(\mathbf{b})$. The three corners of the bias triangle just supply three
+different shapes of $B$. $\blacktriangleleft$
+:::
+
+### A practical workflow {#sec-qba-workflow}
+
+Before the derivations, here is the applied procedure the rest of the chapter makes precise, written as a
+health researcher would run it for an unanchored indirect comparison.
+
+1. **Identify the threat.** Name the covariate that is imbalanced and unreported by the comparator, and
+decide whether it is prognostic, an effect modifier, or both.
+2. **Estimate what you can.** From the IPD, read off the covariate's association with the outcome,
+$\mathrm{RR}_{UD}=\exp(|\beta_U|)$ on a ratio scale, and its own IPD distribution.
+3. **Screen with an E-value.** Compute the E-value and, using $\mathrm{RR}_{UD}$, the sharper
+indirect-comparison E-value (@sec-qba-itc-evalue). If the latter is $+\infty$, stop: the result is certified
+robust to this covariate.
+4. **Choose plausible comparator values.** Fix a range or a prior for the covariate's comparator marginal
+from external evidence (registries, related trials, elicitation); this is a sensitivity assumption, not new
+data.
+5. **Build the comparator population.** If dependence with the reported covariates matters, use NORTA
+(@sec-qba-norta) to glue your assumed marginal to a dependence structure borrowed from the IPD; otherwise
+the marginal alone suffices.
+6. **Compute the sensitivity curve and its tipping point.** Marginalize the IPD outcome model over each
+assumed value to get $\Delta(m)$, and locate the value $m^{\dagger}$ at which the conclusion reverses
+(@sec-qba-tipping).
+7. **Propagate the uncertainty.** Place a prior on the comparator marginal and report the systematic and
+total intervals and the probability of benefit (@sec-qba-probabilistic).
+8. **Report honestly.** State the E-value, the tipping point in the covariate's own units, and whether a
+believable comparator value would overturn the conclusion.
+
+The sections below justify each step; the running example runs all eight. A handful of risk-ratio labels
+recur across those steps, so the following dictionary fixes them once.
+
+| Symbol | How to read it |
+|---|---|
+| $\mathrm{RR}_{\mathrm{crude}}$, $\mathrm{RR}_{\mathrm{obs}}$ | the confounded thing the data show, before removing bias (used interchangeably) |
+| $\mathrm{RR}_{\mathrm{adj}}$, $\mathrm{RR}_{\mathrm{true}}$ | the de-biased target you would see with the confounder controlled (likewise interchangeable) |
+| $B(\mathbf{b})$ | the general bias *function* of @def-quantitative-bias-analysis |
+| $B$ (no argument) | the specific confounding bias *factor* of @lem-qba-confounding-factor, one instance of $B(\mathbf{b})$ |
+| $\mathrm{RR}_{XY}$ | the risk ratio of $Y$ across levels of $X$ (so $\mathrm{RR}_{EU}$, $\mathrm{RR}_{UD}$ read off the roles $E$ = exposure, $U$ = unmeasured covariate, $D$ = disease) |
+| $E$ (italic), $\mathbb{E}$ | the E-value @eq-qba-evalue and the expectation operator: never the exposure, which we write $A$ |
+
+The simplest instance, and the one that motivates the E-value, is a single binary unmeasured confounder
+acting on a risk ratio. We derive its correction now, both because it is the prototype of
+@eq-qba-correction and because the E-value is exactly the question "how large must $\mathbf{b}$ be?" asked
+of this model.
+
+::: {#lem-qba-confounding-factor}
+## Confounding bias factor for a binary confounder
+Consider a binary exposure (treatment) $A\in\{0,1\}$, a binary outcome $D$, and a binary unmeasured
+confounder $U\in\{0,1\}$ with prevalence $p_1=P(U=1\mid A=1)$ among the exposed and $p_0=P(U=1\mid A=0)$
+among the unexposed. Suppose $U$ is the only confounder, so that within strata of $U$ the exposure is
+unconfounded, and suppose $U$ acts on the outcome with a constant risk ratio
+$\mathrm{RR}_{UD}=P(D=1\mid U=1,A=a)/P(D=1\mid U=0,A=a)$ that does not depend on $a$. Then the crude
+(confounded) risk ratio and the $U$-adjusted risk ratio differ by the multiplicative **bias factor**
+$$
+B \;=\; \frac{p_1\,(\mathrm{RR}_{UD}-1)+1}{p_0\,(\mathrm{RR}_{UD}-1)+1},
+\qquad
+\mathrm{RR}_{\mathrm{adj}}=\frac{\mathrm{RR}_{\mathrm{crude}}}{B}.
+$$ {#eq-qba-bias-factor}
+In particular $B=1$ when $p_1=p_0$ (the confounder is balanced) or $\mathrm{RR}_{UD}=1$ (the confounder
+is inert).
+:::
+
+::: {.proof}
+Write $r_a=P(D=1\mid A=a)$ for the marginal risk in arm $a$ and $q_a(u)=P(D=1\mid A=a,U=u)$ for the
+stratum risks. The lemma's constant-risk-ratio hypothesis says exactly that the within-arm outcome risk
+ratio across $U$ is $\mathrm{RR}_{UD}$, that is $q_a(1)/q_a(0)=\mathrm{RR}_{UD}$, so
+$q_a(1)=\mathrm{RR}_{UD}\,q_a(0)$. By the law of total probability,
+$r_a=q_a(0)\,(1-p_a)+q_a(1)\,p_a=q_a(0)\big[(1-p_a)+p_a\,\mathrm{RR}_{UD}\big]=q_a(0)\big[1+p_a(\mathrm{RR}_{UD}-1)\big]$.
+The crude risk ratio is therefore
+$$
+\mathrm{RR}_{\mathrm{crude}}=\frac{r_1}{r_0}
+=\frac{q_1(0)}{q_0(0)}\cdot\frac{1+p_1(\mathrm{RR}_{UD}-1)}{1+p_0(\mathrm{RR}_{UD}-1)}.
+$$
+Because $U$ is the only confounder, the ratio $q_1(0)/q_0(0)$ of the stratum-$U{=}0$ risks is the
+unconfounded, $U$-adjusted risk ratio $\mathrm{RR}_{\mathrm{adj}}$ (the within-stratum exposure effect,
+assumed constant across $U$). The remaining factor is exactly $B$ in @eq-qba-bias-factor, so
+$\mathrm{RR}_{\mathrm{crude}}=\mathrm{RR}_{\mathrm{adj}}\cdot B$, which rearranges to the stated
+correction. Setting $p_1=p_0$ makes numerator and denominator equal, $B=1$; setting $\mathrm{RR}_{UD}=1$
+makes both equal $1$, again $B=1$. $\square$
+:::
+
+::: {.remark}
+**What the bias factor says.** In words, the crude estimate you see equals the true effect times a factor
+that measures how differently the confounder is spread across the two arms. That factor is a product of two
+intuitions the formula makes exact: a confounder equally common in both arms ($p_1=p_0$) cannot bias
+anything, and a confounder unrelated to the outcome ($\mathrm{RR}_{UD}=1$) cannot either. Bias needs *both*
+an imbalance and an outcome link, which is exactly why an unreported covariate is dangerous only when it is
+both differently distributed across the trials and prognostic. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**The deterministic correction needs three numbers you rarely have.** Formula @eq-qba-bias-factor is the
+correction $h$ of @def-quantitative-bias-analysis with bias parameters
+$\mathbf{b}=(p_1,p_0,\mathrm{RR}_{UD})$. It is honest but demanding: it presumes the analyst can name the
+prevalence of the unmeasured confounder in each arm and its outcome association. Selection bias and
+misclassification have analogous corrections (the selection odds ratio divides out of the crude odds
+ratio; the classification correction inverts the sensitivity-specificity map cell by cell), each with its
+own $\mathbf{b}$; see @lash2021qba. The E-value of the next section sidesteps the need to specify
+$\mathbf{b}$ by turning the question around. $\blacktriangleleft$
+:::
+
+### The other two corners: selection and misclassification {#sec-qba-other-corners}
+
+The bias triangle has three vertices, and the rest of this chapter develops only the confounding vertex,
+because it is the one that maps directly onto the unreported effect modifier of an unanchored comparison.
+For completeness we record the other two corrections, both standard and both taken from @lash2021qba rather
+than re-derived here, so the reader can see the common shape: each names bias parameters, writes a $B$, and
+inverts it.
+
+**Selection bias.** When inclusion in the analysis depends on both exposure and outcome, let $s_{ad}$ be
+the probability that a subject with exposure $a\in\{0,1\}$ and outcome $d\in\{0,1\}$ enters the sample. The
+observed (selected-sample) odds ratio and the target-population odds ratio differ by the multiplicative
+selection bias factor
+$$
+B_{\mathrm{sel}}=\frac{s_{11}\,s_{00}}{s_{10}\,s_{01}},
+\qquad
+\mathrm{OR}_{\mathrm{adj}}=\frac{\mathrm{OR}_{\mathrm{obs}}}{B_{\mathrm{sel}}},
+$$ {#eq-qba-selection-factor}
+so selection is harmless exactly when the four selection probabilities factor into an exposure term times
+an outcome term (no exposure-by-outcome interaction in who gets in).
+
+**Misclassification.** When a binary exposure is measured with sensitivity $\mathrm{Se}=P(A^{*}=1\mid A=1)$
+and specificity $\mathrm{Sp}=P(A^{*}=0\mid A=0)$, where $A^{*}$ is the recorded and $A$ the true exposure,
+the true exposed count $N_1$ in a stratum of size $n$ with observed exposed count $N_1^{*}$ is recovered by
+inverting the classification map,
+$$
+N_1=\frac{N_1^{*}-(1-\mathrm{Sp})\,n}{\mathrm{Se}+\mathrm{Sp}-1},
+$$ {#eq-qba-misclass-correction}
+valid whenever $\mathrm{Se}+\mathrm{Sp}>1$ (the measurement is better than a coin flip); one applies it
+within outcome strata and recomputes the effect from the corrected counts. Both corrections have
+probabilistic upgrades, priors on $(s_{ad})$ or on $(\mathrm{Se},\mathrm{Sp})$, exactly as in
+@sec-qba-probabilistic. In an indirect comparison the confounding corner dominates, so from here on *bias*
+means residual imbalance in an unreported covariate unless stated otherwise.
+
+## The E-value {#sec-qba-evalue}
+
+The E-value asks not "what is the bias, given $\mathbf{b}$?" but "how strong must $\mathbf{b}$ be to
+overturn the conclusion?" To answer it we need a bound that holds for *any* unmeasured confounder, not
+just a binary one with a constant association, in terms of two scalar sensitivity parameters. The bound
+of @vanderweele2017evalue, building on the bias-factor analysis of Ding and VanderWeele, is sharp, and we
+prove it in full.
+
+Fix a binary exposure $A$ and binary outcome $D$, with an unmeasured confounder $U$ taking values in a
+finite set $\mathcal{U}$. Write $f_a(u)=P(U=u\mid A=a)$ for the confounder distribution in arm $a$ and
+$p_a(u)=P(D=1\mid A=a,U=u)$ for the stratum risks. Define the two **sensitivity parameters**
+$$
+\mathrm{RR}_{EU}\;=\;\max_{u\in\mathcal{U}}\frac{f_1(u)}{f_0(u)},
+\qquad
+\mathrm{RR}_{UD}\;=\;\frac{\max_{u}p_0(u)}{\min_{u}p_0(u)},
+$$ {#eq-qba-sensitivity-params}
+both at least $1$. A word on the subscripts, which follow the E-value literature and are unrelated to the
+italic E-value $E$ of @eq-qba-evalue or to the expectation $\mathbb{E}$: in $\mathrm{RR}_{XY}$ the pair
+$XY$ reads "the risk ratio of $Y$ across levels of $X$", with $E$ naming the exposure role (the treatment
+variable we write $A$), $U$ the unmeasured covariate, and $D$ the disease outcome. So $\mathrm{RR}_{EU}$
+measures how exposure shifts the confounder distribution and $\mathrm{RR}_{UD}$ how the confounder shifts
+outcome risk. In words, $\mathrm{RR}_{EU}$ is the largest factor by which any confounder level is
+over-represented in the exposed relative to the unexposed arm, and $\mathrm{RR}_{UD}$ is the widest spread
+of outcome risk across confounder levels within the unexposed arm.
+
+::: {.remark}
+**A number to hold onto.** Suppose a biomarker is twice as common in the exposed arm as in the unexposed
+arm, $\mathrm{RR}_{EU}=2$, and carries a threefold spread in outcome risk, $\mathrm{RR}_{UD}=3$. The bound
+below says the most these two facts can bias a risk ratio is
+$\mathrm{BF}_U=\dfrac{2\times 3}{2+3-1}=\dfrac{6}{4}=1.5$: no configuration of that confounder can inflate
+an observed risk ratio by more than a factor of $1.5$. The next lemma proves this formula and, crucially,
+that $1.5$ is *attained*, not merely an over-cautious ceiling. $\blacktriangleleft$
+:::
+
+::: {#lem-qba-sharp-bound}
+## Sharp bound on the confounding bias factor
+With the notation above, suppose $U$ carries all the confounding, so that within strata of $U$ the
+exposure is unconfounded. Then the confounding bias factor $B$ relating the observed risk ratio to the
+$U$-adjusted (causal) risk ratio standardized to the exposed (that is, averaging the stratum risks over the
+exposed arm's confounder distribution) satisfies
+$$
+B\;\le\;\mathrm{BF}_U\;:=\;\frac{\mathrm{RR}_{EU}\,\mathrm{RR}_{UD}}{\mathrm{RR}_{EU}+\mathrm{RR}_{UD}-1},
+$$ {#eq-qba-bf}
+and the bound is sharp: for every pair $(\mathrm{RR}_{EU},\mathrm{RR}_{UD})$ with both values at least $1$
+there is a confounder configuration attaining equality.
+:::
+
+::: {.proof}
+*The bias factor as a ratio of weighted averages.* Because $U$ carries all the confounding, the
+counterfactual risk had the exposed arm been left unexposed is, by standardization over the exposed
+confounder distribution, $\sum_u p_0(u)f_1(u)$. Hence the causal risk ratio for the effect on the exposed
+is $\big(\sum_u p_1(u)f_1(u)\big)\big/\big(\sum_u p_0(u)f_1(u)\big)$, while the observed risk ratio is
+$\big(\sum_u p_1(u)f_1(u)\big)\big/\big(\sum_u p_0(u)f_0(u)\big)$. Dividing, the common numerator
+cancels and
+$$
+B=\frac{\sum_{u}p_0(u)f_1(u)}{\sum_{u}p_0(u)f_0(u)}
+=\frac{\mathbb{E}_{f_1}[\,p_0(U)\,]}{\mathbb{E}_{f_0}[\,p_0(U)\,]}.
+$$ {#eq-qba-b-ratio}
+The bias factor is the ratio of the unexposed-risk function averaged over the two confounder
+distributions.
+
+*Reduction to a box.* Both $B$ and the constraints are invariant to multiplying $p_0(\cdot)$ by a positive
+constant, so normalize $\min_u p_0(u)=1$; then $p_0(u)\in[1,R]$ for all $u$, where $R:=\mathrm{RR}_{UD}$.
+Write $S:=\mathrm{RR}_{EU}$, so the constraint $\max_u f_1(u)/f_0(u)\le S$ reads $f_1(u)\le S f_0(u)$ for
+every $u$. We maximize @eq-qba-b-ratio over $p_0\in[1,R]^{\mathcal{U}}$ and over probability vectors
+$f_1,f_0$ obeying this pointwise constraint.
+
+*Maximizing over $p_0$: the optimum is at a vertex.* Fix $f_1,f_0$ and vary a single coordinate
+$t=p_0(u)\in[1,R]$, holding the others fixed. Writing $a,b>0$ for the partial sums over the other
+coordinates, $B(t)=\big(a+f_1(u)\,t\big)\big/\big(b+f_0(u)\,t\big)$, whose derivative
+$B'(t)=\big(f_1(u)\,b-f_0(u)\,a\big)\big/\big(b+f_0(u)\,t\big)^2$ has a sign independent of $t$: a ratio of
+two affine functions of $t$ is monotone across the whole interval, since the numerator of $B'(t)$ never
+changes sign. A function monotone in each coordinate separately attains its maximum over the box
+$[1,R]^{\mathcal{U}}$ at a vertex, because moving any single coordinate toward its better endpoint never
+lowers $B$, so no interior point can be optimal; hence the optimum has every $p_0(u)\in\{1,R\}$, and
+coordinate ascent reaches it.
+
+*The two-cell reduction.* At such a vertex, partition $\mathcal{U}=\mathcal{U}_R\sqcup\mathcal{U}_1$ with
+$p_0=R$ on $\mathcal{U}_R$ and $p_0=1$ on $\mathcal{U}_1$. Put $a=\sum_{u\in\mathcal{U}_R}f_1(u)$ and
+$b=\sum_{u\in\mathcal{U}_R}f_0(u)$, the masses the two confounder distributions place on the high-risk
+set. Then $\sum_u p_0(u)f_1(u)=R\,a+(1-a)=1+(R-1)a$ and likewise the denominator is $1+(R-1)b$, so
+$$
+B=\frac{1+(R-1)a}{1+(R-1)b}.
+$$ {#eq-qba-b-ab}
+This is increasing in $a$ and decreasing in $b$. The pointwise constraint gives
+$a=\sum_{\mathcal{U}_R}f_1\le S\sum_{\mathcal{U}_R}f_0=S\,b$, and of course $a\le 1$; so for fixed $b$ the
+largest feasible $a$ is $\min(1,S b)$.
+
+*Optimizing the two cells.* If $Sb\le 1$, set $a=Sb$; then
+$B=\big(1+(R-1)Sb\big)\big/\big(1+(R-1)b\big)=:g(b)$, and the numerator of $g'(b)$ is
+$$
+(R-1)S\big(1+(R-1)b\big)-\big(1+(R-1)Sb\big)(R-1)
+=(R-1)\big[S+S(R-1)b-1-(R-1)Sb\big]=(R-1)(S-1)\ge 0,
+$$
+where the two middle terms $S(R-1)b$ and $(R-1)Sb$ cancel; so $g$ increases and we push $b$ up to the
+regime boundary $Sb=1$, that is $b=1/S$ with $a=1$. If instead $Sb>1$, then $a=1$ and
+$B=R\big/\big(1+(R-1)b\big)$ decreases in $b$, so we push $b$ down to the same boundary $b=1/S$. Either
+way the maximum is at $a=1$, $b=1/S$, giving
+$$
+B^{\star}=\frac{1+(R-1)}{1+(R-1)/S}=\frac{R}{(S+R-1)/S}=\frac{RS}{R+S-1}
+=\frac{\mathrm{RR}_{EU}\,\mathrm{RR}_{UD}}{\mathrm{RR}_{EU}+\mathrm{RR}_{UD}-1}=\mathrm{BF}_U,
+$$
+which is @eq-qba-bf.
+
+*Sharpness.* The optimizing configuration is realizable with a two-point confounder
+$\mathcal{U}=\{0,1\}$: take $p_0(0)=1$, $p_0(1)=R$, put all of the exposed mass on the high-risk level,
+$f_1(1)=1$, and split the unexposed mass as $f_0(1)=1/S$, $f_0(0)=1-1/S$, which satisfies
+$f_1(1)/f_0(1)=S$ and $f_1(0)/f_0(0)=0\le S$. Substituting into @eq-qba-b-ratio returns $B=\mathrm{BF}_U$
+exactly, so no smaller bound is possible. $\square$
+:::
+
+::: {.remark}
+**Why sharpness, not just validity, matters.** Many sensitivity bounds are merely *valid*: the true bias is
+no larger than the bound. Sharpness says more, that the bound is *attained* by an actual confounder
+configuration, so it cannot be improved. This is what lets the E-value be an *exact* threshold rather than a
+conservative guess. A valid but loose bound would overstate how much confounding is needed and so overstate
+robustness; a bound that is attained means "an association of exactly the stated size on both legs is
+enough, and nothing weaker is", which is the precise claim a reader can act on. $\blacktriangleleft$
+:::
+
+The bound depends on the data only through the two sensitivity parameters, and it is symmetric in them:
+$\mathrm{BF}_U$ is unchanged under $\mathrm{RR}_{EU}\leftrightarrow\mathrm{RR}_{UD}$. The E-value is the
+point on the curve $\mathrm{BF}_U=\mathrm{RR}_{\mathrm{obs}}$ where the two parameters are equal.
+
+::: {#thm-evalue-derivation}
+## The E-value and its minimality
+Let $\mathrm{RR}_{\mathrm{obs}}>1$ be an observed risk ratio (for a protective effect
+$\mathrm{RR}_{\mathrm{obs}}<1$, replace it by $1/\mathrm{RR}_{\mathrm{obs}}$ throughout). Define the
+**E-value**
+$$
+E\;=\;\mathrm{RR}_{\mathrm{obs}}+\sqrt{\mathrm{RR}_{\mathrm{obs}}\,(\mathrm{RR}_{\mathrm{obs}}-1)}.
+$$ {#eq-qba-evalue}
+Then:
+
+1. Unmeasured confounding can fully explain the observed association away (reduce the true risk ratio to
+the null) only if the two sensitivity parameters satisfy
+$\mathrm{BF}_U=\mathrm{RR}_{EU}\mathrm{RR}_{UD}/(\mathrm{RR}_{EU}+\mathrm{RR}_{UD}-1)\ge\mathrm{RR}_{\mathrm{obs}}$.
+
+2. Setting $\mathrm{RR}_{EU}=\mathrm{RR}_{UD}=E$ achieves equality $\mathrm{BF}_U=\mathrm{RR}_{\mathrm{obs}}$,
+and $E$ is the smallest common value with this property.
+
+3. $E$ is minimal in the strong sense that if *both* sensitivity parameters are strictly below $E$ then
+$\mathrm{BF}_U<\mathrm{RR}_{\mathrm{obs}}$, so the result cannot be explained away: at least one of
+$\mathrm{RR}_{EU},\mathrm{RR}_{UD}$ must be at least $E$.
+
+Moreover $E\ge 1$, with $E=1$ iff $\mathrm{RR}_{\mathrm{obs}}=1$, and $E$ is strictly increasing in
+$\mathrm{RR}_{\mathrm{obs}}$, so a larger observed effect is harder to explain away.
+:::
+
+::: {.proof}
+*Part 1.* Write $\mathrm{RR}_{\mathrm{obs}}=\mathrm{RR}_{\mathrm{true}}\cdot B$ with $B$ the confounding
+bias factor. "Explaining away" means $\mathrm{RR}_{\mathrm{true}}\le 1$, i.e. $B\ge\mathrm{RR}_{\mathrm{obs}}$.
+By @lem-qba-sharp-bound the largest bias factor attainable with sensitivity parameters
+$(\mathrm{RR}_{EU},\mathrm{RR}_{UD})$ is $\mathrm{BF}_U$, so such a $B$ exists only if
+$\mathrm{BF}_U\ge\mathrm{RR}_{\mathrm{obs}}$.
+
+*Part 2.* On the diagonal $\mathrm{RR}_{EU}=\mathrm{RR}_{UD}=v\ge 1$,
+$\mathrm{BF}_U(v,v)=v^2/(2v-1)$. Setting this equal to $\mathrm{RR}_{\mathrm{obs}}=:\rho$ gives
+$v^2=\rho(2v-1)$, i.e. the quadratic $v^2-2\rho v+\rho=0$, whose roots are
+$v=\rho\pm\sqrt{\rho^2-\rho}=\rho\pm\sqrt{\rho(\rho-1)}$. The smaller root is below $1$ for $\rho>1$
+(at $\rho=2$ it equals $2-\sqrt2\approx0.586$), hence infeasible: $v$ is a common value of the two
+sensitivity parameters, which are risk ratios of associations and so are at least $1$ by construction
+(@eq-qba-sensitivity-params), forcing $v\ge1$; the admissible root is the
+larger one, $E=\rho+\sqrt{\rho(\rho-1)}$, which is @eq-qba-evalue. To see $E$ is the smallest common value
+giving $\mathrm{BF}_U\ge\rho$, note $\psi(v):=v^2/(2v-1)$ has derivative
+$\psi'(v)=\big(2v(2v-1)-2v^2\big)/(2v-1)^2=2v(v-1)/(2v-1)^2\ge 0$ for $v\ge1$, so $\psi$ is increasing;
+thus $\mathrm{BF}_U(v,v)=\psi(v)\ge\rho$ holds exactly for $v\ge E$.
+
+*Part 3.* The bias factor is increasing in each argument: with $x=\mathrm{RR}_{EU}$, $y=\mathrm{RR}_{UD}$,
+$$
+\frac{\partial}{\partial x}\frac{xy}{x+y-1}=\frac{y(x+y-1)-xy}{(x+y-1)^2}=\frac{y(y-1)}{(x+y-1)^2}\ge0,
+$$
+and symmetrically in $y$. Hence if $x<E$ and $y<E$ then
+$\mathrm{BF}_U(x,y)<\mathrm{BF}_U(E,E)=\rho=\mathrm{RR}_{\mathrm{obs}}$, contradicting Part 1; so at least
+one parameter is $\ge E$. Finally $E(\rho)=\rho+\sqrt{\rho(\rho-1)}$ has $E(1)=1$ and
+$E'(\rho)=1+\frac{2\rho-1}{2\sqrt{\rho(\rho-1)}}>0$ for $\rho>1$, so $E\ge1$ with equality iff $\rho=1$,
+and $E$ strictly increases in $\rho$. $\square$
+:::
+
+::: {.remark}
+**Why this matters, and a feel for the formula.** The E-value converts an estimate into a robustness score
+on the same scale a clinician already uses for risk ratios, which is why it travels well into an HTA report
+and why it now appears routinely alongside NMA and ITC estimates. A quick numerical anchor: for an observed
+$\mathrm{RR}_{\mathrm{obs}}=2$, $E=2+\sqrt{2\cdot 1}=2+\sqrt2\approx 3.41$, so confounding would need a
+risk-ratio strength above $3.4$ on *both* legs to erase a doubling of risk. The shape
+$E=\rho+\sqrt{\rho(\rho-1)}$ repays reading: near the null ($\rho\to 1^{+}$) it behaves like
+$1+\sqrt{\rho-1}$, rising as the *square root* of the excess, so a barely significant estimate has an
+E-value only a little above $1$ and is easy to explain away; for large $\rho$ it grows like $2\rho$, so
+strong estimates demand proportionally strong confounding. For our COPD running example the plug-in effect
+is $\mathrm{RR}=0.50$, giving $E\approx 3.44$ (computed in @sec-qba-example); an unreported prognostic
+difference weaker than a $3.4$-fold association on each leg cannot overturn it. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reading and reporting the E-value.** The E-value translates a point estimate into a single
+interpretable number: *an unmeasured confounder (or, in the ITC setting below, an unmeasured effect
+modifier) would have to be associated with both the treatment assignment and the outcome by a risk ratio
+of at least $E$, beyond the measured covariates, to explain the observed effect away; anything weaker
+cannot.* A large $E$ signals a robust finding, a small one a fragile finding. One also reports the E-value
+of the confidence-interval limit nearest the null, computed by @eq-qba-evalue with
+$\mathrm{RR}_{\mathrm{obs}}$ replaced by that limit (and equal to $1$ when the interval already includes
+the null): it is the strength of confounding needed to shift the interval to touch the null. The E-value
+is a property of the estimate alone, requiring no specification of the bias parameters; that economy is
+its appeal and also its limitation, since it is silent on whether confounding of strength $E$ is
+*plausible*. The general bound was established by Ding and VanderWeele and popularized as the E-value by
+@vanderweele2017evalue; the same $\mathrm{BF}_U$ bounds the bias for total-population standardization, not
+only the effect-on-treated standardization we proved. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Mind the scale: the E-value lives on the risk-ratio scale.** Formula @eq-qba-evalue takes a *risk ratio*.
+Feeding it a log odds ratio, or an odds ratio for a common outcome, is a common and consequential misuse.
+Convert first. The practical rules, with the approximate conversions of @vanderweele2017evalue, are
+collected here.
+
+| Reported effect | Convert to a risk ratio by | Then |
+|---|---|---|
+| risk ratio | nothing, it already is one | apply @eq-qba-evalue |
+| odds ratio, rare outcome | $\mathrm{RR}\approx\mathrm{OR}$ | apply @eq-qba-evalue to the OR |
+| odds ratio, common outcome | $\mathrm{RR}\approx\sqrt{\mathrm{OR}}$ | apply @eq-qba-evalue to $\sqrt{\mathrm{OR}}$ |
+| hazard ratio, rare outcome | $\mathrm{RR}\approx\mathrm{HR}$ | apply @eq-qba-evalue to the HR |
+| hazard ratio, common outcome | approximate conversion of @vanderweele2017evalue | apply @eq-qba-evalue to the converted value |
+| risk difference, mean difference, RMST difference | no ratio-scale E-value exists | use the tipping point (@sec-qba-tipping) instead |
+
+For a protective effect ($\mathrm{RR}<1$) convert to $1/\mathrm{RR}$ first, as in the theorem. The running
+example works on the log-risk-ratio scale, so no conversion is needed there; a survival endpoint reported
+as a hazard ratio would use one of the hazard-ratio rows. $\blacktriangleleft$
+:::
+
+## The indirect-comparison E-value {#sec-qba-itc-evalue}
+
+In a classical observational study both sensitivity parameters in @eq-qba-sensitivity-params are unknown,
+and the symmetric E-value is the natural summary. An unanchored indirect comparison is different in a way
+that can be exploited. The covariate that threatens the comparison, an effect modifier
+(@def-effect-modifier) that is imbalanced between the IPD and comparator populations and is *unreported*
+by the comparator, is nonetheless **observed in the analyst's own IPD**. Its association with the outcome
+is therefore estimable from the IPD outcome model, even though its distribution in the comparator
+population is not. One of the two arms of the bias factor becomes known data rather than an assumed
+sensitivity parameter, and the E-value sharpens accordingly.
+
+The map from the classical confounding picture to the indirect-comparison picture is worth pinning down,
+because every symbol in the E-value derivation keeps its algebra but changes its clinical referent.
+
+| Classical confounding (@sec-qba-evalue) | Unanchored ITC (this section) |
+|---|---|
+| exposure $A\in\{0,1\}$ | trial-population membership: IPD population versus comparator population |
+| the exposed arm | the IPD (index-treatment) population |
+| the unexposed arm | the comparator population |
+| unmeasured confounder $U$ | the covariate the comparator did not report |
+| $\mathrm{RR}_{EU}$, imbalance of $U$ across exposure | imbalance of the covariate across the two trial populations |
+| $\mathrm{RR}_{UD}$, association of $U$ with the outcome | covariate-outcome association, *estimable from the IPD model* |
+| both arms of the bias factor unknown | one arm ($\mathrm{RR}_{UD}$) is known data; only the imbalance is assumed |
+
+The last row is the whole point: half of the sensitivity problem is estimated rather than guessed.
+
+We set the stage with the unanchored estimand of Chapter 17. The IPD study fits an outcome model
+$g\big(\mathbb{E}[Y\mid \mathbf{x},u]\big)=\beta_0+\boldsymbol{\beta}_R^{\top}\mathbf{x}+\beta_U u$ on the
+reported covariates $\mathbf{x}$ and the unreported covariate $U$. The comparator-population effect of the
+index treatment against the comparator, on the analysis scale, is the g-computation contrast
+$$
+\Delta=g\!\left(\int g^{-1}\!\big(\beta_0+\boldsymbol{\beta}_R^{\top}\mathbf{x}+\beta_U u\big)\,
+dF_0(\mathbf{x},u)\right)-g(\mu_0),
+$$ {#eq-qba-unanchored-estimand}
+where $F_0$ is the comparator covariate distribution and $\mu_0$ its reported outcome under the comparator
+treatment. In words, reading @eq-qba-unanchored-estimand from the inside out: take the IPD outcome model,
+predict each comparator patient's risk *as if they had received the index treatment* from their covariates
+$(\mathbf{x},u)$, average those predicted risks over the comparator population $F_0$, transform that average
+back to the analysis scale with $g$, and subtract the comparator's own reported outcome $g(\mu_0)$. The
+result is what the index-versus-comparator contrast would be in the comparator population. The bias from
+omitting $U$ is the gap between $\Delta$ computed with $U$ held at the analyst's
+best guess (its IPD value) and $\Delta$ computed at $U$'s true, unknown comparator value. On the
+risk-ratio scale this bias is a bias factor, and the question of the E-value is how large the across-arm
+imbalance of $U$ must be to produce it, *given* that $U$'s outcome association is pinned down by the IPD.
+
+Two things need saying before the definition. First, what "$\mathrm{BF}_{\mathrm{obs}}$" means: it is not
+the treatment effect but the *amount of bias that would have to be present to nullify it*, read on the ratio
+scale. If the adjusted risk ratio is $0.50$, explaining it away means multiplying it back up to $1$, a
+factor of $2$; so $\mathrm{BF}_{\mathrm{obs}}=1/0.50=2.0$, and in general
+$\mathrm{BF}_{\mathrm{obs}}=\exp(|\Delta_{\mathrm{IPD}}|)$, where $\Delta_{\mathrm{IPD}}$ is the log-scale
+adjusted effect with the unreported covariate held at its IPD value. "Held at its IPD value" means the
+comparator population is given the covariate's IPD distribution as a best guess, so $\Delta_{\mathrm{IPD}}$
+is the plug-in adjusted effect, not the covariate's raw mean. Second, why the formula has three cases: with
+the outcome association fixed at $\mathrm{RR}_{UD}$, the bias factor can never exceed $\mathrm{RR}_{UD}$ no
+matter how extreme the imbalance (proved as @prp-itc-evalue below), so the equation
+$\mathrm{BF}_U=\mathrm{BF}_{\mathrm{obs}}$ has a finite solution only when
+$\mathrm{BF}_{\mathrm{obs}}<\mathrm{RR}_{UD}$; that ceiling is what splits the definition into its three
+branches.
+
+::: {#def-itc-evalue}
+## The indirect-comparison E-value
+Consider an unanchored indirect comparison on a ratio scale (binary or count outcome). Let
+$\mathrm{BF}_{\mathrm{obs}}\ge 1$ be the observed bias factor, the ratio-scale magnitude
+$\exp(|\Delta_{\mathrm{IPD}}|)$ of the adjusted effect @eq-qba-unanchored-estimand evaluated with the
+unreported covariate held at its IPD value, and let
+$\mathrm{RR}_{UD}=\exp(|\beta_U|)\ge 1$ be the IPD-estimated association of the unreported covariate $U$
+with the outcome, conditional on the reported covariates. The **indirect-comparison E-value** is the
+minimum across-arm association $\mathrm{RR}_{EU}$ that the unreported covariate must have, given
+$\mathrm{RR}_{UD}$, to produce a bias factor as large as $\mathrm{BF}_{\mathrm{obs}}$:
+$$
+E_{\mathrm{ITC}}=
+\begin{cases}
+1, & \mathrm{BF}_{\mathrm{obs}}\le 1,\\[2pt]
+\dfrac{\mathrm{BF}_{\mathrm{obs}}\,(\mathrm{RR}_{UD}-1)}{\mathrm{RR}_{UD}-\mathrm{BF}_{\mathrm{obs}}},
+& 1<\mathrm{BF}_{\mathrm{obs}}<\mathrm{RR}_{UD},\\[8pt]
++\infty, & \mathrm{RR}_{UD}\le\mathrm{BF}_{\mathrm{obs}}.
+\end{cases}
+$$ {#eq-qba-itc-evalue}
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reading the three cases.** The indirect-comparison E-value answers one question, "how imbalanced would the
+unreported covariate have to be, across the two trial populations, to overturn the result, given how
+strongly the IPD says it acts on the outcome?", and its three cases are three honest answers. If
+$\mathrm{BF}_{\mathrm{obs}}\le 1$ the estimate already sits at or past the null and no bias is needed, so
+$E_{\mathrm{ITC}}=1$. If $1<\mathrm{BF}_{\mathrm{obs}}<\mathrm{RR}_{UD}$ a finite imbalance suffices, and the
+formula returns exactly how much. If $\mathrm{RR}_{UD}\le\mathrm{BF}_{\mathrm{obs}}$ the covariate is too
+weakly prognostic to matter: *no* imbalance, however extreme, can manufacture enough bias, and
+$E_{\mathrm{ITC}}=+\infty$ certifies the result robust to this covariate. The word "infinite" here does not
+mean "no bias exists"; it means "no across-arm imbalance in *this one covariate* can explain the result
+away, under the single-covariate bias-factor model, with $\mathrm{RR}_{UD}$ treated as fixed." That
+narrower claim is exactly what a dossier can defend. For the running example the IPD gives
+$\mathrm{RR}_{UD}=1.65$, below the needed $\mathrm{BF}_{\mathrm{obs}}=2.01$, so we land in the third case and
+$E_{\mathrm{ITC}}=+\infty$ (computed in @sec-qba-example). $\blacktriangleleft$
+:::
+
+The three cases, and in particular the infinite case that the symmetric E-value can never deliver, follow
+from the same sharp bound.
+
+::: {#prp-itc-evalue}
+## Derivation and the robustness certificate
+With $\mathrm{BF}_{\mathrm{obs}}$ and $\mathrm{RR}_{UD}$ as in @def-itc-evalue:
+
+1. If $1<\mathrm{BF}_{\mathrm{obs}}<\mathrm{RR}_{UD}$, the value @eq-qba-itc-evalue is the unique
+$\mathrm{RR}_{EU}$ solving $\mathrm{BF}_U(\mathrm{RR}_{EU},\mathrm{RR}_{UD})=\mathrm{BF}_{\mathrm{obs}}$, and
+it exceeds $1$.
+
+2. The maximum bias factor achievable by *any* finite across-arm imbalance, with the outcome association
+fixed at $\mathrm{RR}_{UD}$, is $\mathrm{RR}_{UD}$ itself:
+$\lim_{\mathrm{RR}_{EU}\to\infty}\mathrm{BF}_U(\mathrm{RR}_{EU},\mathrm{RR}_{UD})=\mathrm{RR}_{UD}$, the
+limit being approached from below and monotonically. Consequently, if
+$\mathrm{RR}_{UD}\le\mathrm{BF}_{\mathrm{obs}}$, no across-arm imbalance can overturn the result under the
+single-covariate bias model, and $E_{\mathrm{ITC}}=+\infty$ is a provable robustness certificate.
+
+3. When the IPD-estimated outcome association happens to equal the symmetric E-value,
+$\mathrm{RR}_{UD}=E$ with $E$ from @eq-qba-evalue applied to $\mathrm{BF}_{\mathrm{obs}}$, the
+indirect-comparison E-value coincides with it, $E_{\mathrm{ITC}}=E$.
+:::
+
+::: {.proof}
+*Part 1.* Solve $\mathrm{BF}_U(x,y)=\dfrac{xy}{x+y-1}=\mathrm{BF}_{\mathrm{obs}}$ for $x=\mathrm{RR}_{EU}$
+with $y=\mathrm{RR}_{UD}$ fixed. Cross-multiplying, $xy=\mathrm{BF}_{\mathrm{obs}}(x+y-1)$, hence
+$x\,(y-\mathrm{BF}_{\mathrm{obs}})=\mathrm{BF}_{\mathrm{obs}}(y-1)$ and
+$x=\mathrm{BF}_{\mathrm{obs}}(y-1)/(y-\mathrm{BF}_{\mathrm{obs}})$, which is @eq-qba-itc-evalue. When
+$1<\mathrm{BF}_{\mathrm{obs}}<y$ the denominator is positive and $x>0$; moreover
+$x-1=\big(\mathrm{BF}_{\mathrm{obs}}(y-1)-(y-\mathrm{BF}_{\mathrm{obs}})\big)/(y-\mathrm{BF}_{\mathrm{obs}})
+=(y-1)(\mathrm{BF}_{\mathrm{obs}}-1)/(y-\mathrm{BF}_{\mathrm{obs}})>0$, so $x>1$. Uniqueness is immediate
+since $\mathrm{BF}_U(\cdot,y)$ is strictly increasing in its first argument (Part 3 of
+@thm-evalue-derivation).
+
+*Part 2.* For fixed $y>1$,
+$\mathrm{BF}_U(x,y)=\dfrac{xy}{x+y-1}=\dfrac{y}{1+(y-1)/x}\uparrow y$ as $x\to\infty$, monotonically since
+$(y-1)/x$ decreases. Thus the achievable bias factor is bounded above by $\mathrm{RR}_{UD}$. If
+$\mathrm{RR}_{UD}\le\mathrm{BF}_{\mathrm{obs}}$ the target is unreachable for every finite imbalance, so
+the minimal sufficient $\mathrm{RR}_{EU}$ is $+\infty$ by convention, and the result cannot be explained
+away by imbalance in $U$ alone no matter how extreme; this is the certificate. (Algebraically, the
+formula @eq-qba-itc-evalue has a nonpositive denominator here, confirming no finite solution.)
+
+*Part 3.* If $y=\mathrm{RR}_{UD}=E$ then, by Part 2 of @thm-evalue-derivation,
+$\mathrm{BF}_U(E,E)=\mathrm{BF}_{\mathrm{obs}}$, so $x=E$ already solves the equation; by uniqueness
+$E_{\mathrm{ITC}}=E$. $\square$
+:::
+
+::: {#cor-itc-evalue-monotone}
+## The indirect-comparison E-value against the symmetric one
+Fix an observed bias factor $\mathrm{BF}_{\mathrm{obs}}=\rho>1$ and regard $E_{\mathrm{ITC}}$ as a function
+of the IPD-estimated outcome association $\mathrm{RR}_{UD}=y$. On the finite range $y>\rho$ the map
+$y\mapsto E_{\mathrm{ITC}}(y)=\rho(y-1)/(y-\rho)$ is strictly decreasing, with $E_{\mathrm{ITC}}(y)\to+\infty$
+as $y\downarrow\rho$ and $E_{\mathrm{ITC}}(y)\to\rho$ as $y\to\infty$. It crosses the symmetric E-value
+$E=\rho+\sqrt{\rho(\rho-1)}$ exactly at $y=E$: for $\rho<y<E$ it exceeds $E$, and for $y>E$ it is smaller
+than $E$.
+:::
+
+::: {.proof}
+Differentiating,
+$$
+\frac{d}{dy}\,\frac{\rho(y-1)}{y-\rho}
+=\rho\,\frac{(y-\rho)-(y-1)}{(y-\rho)^2}
+=\frac{\rho(1-\rho)}{(y-\rho)^2}<0
+\quad\text{for }\rho>1,
+$$
+so $E_{\mathrm{ITC}}$ strictly decreases on $y>\rho$. The two limits are immediate from the rational form:
+as $y\downarrow\rho$ the denominator $\to 0^{+}$ with positive numerator, and as $y\to\infty$ the ratio
+$\rho(y-1)/(y-\rho)\to\rho$. By @prp-itc-evalue(3), $E_{\mathrm{ITC}}(E)=E$; strict monotonicity then forces
+$E_{\mathrm{ITC}}(y)>E$ for $\rho<y<E$ and $E_{\mathrm{ITC}}(y)<E$ for $y>E$. $\square$
+:::
+
+::: {.remark}
+**What "sharper" does and does not mean.** It is tempting to say the indirect-comparison E-value is "always
+larger because it uses more information"; @cor-itc-evalue-monotone shows that is false. The ITC E-value is
+*better calibrated*, not uniformly larger: by plugging in the known $\mathrm{RR}_{UD}$ it can land above or
+below the symmetric E-value. A weakly prognostic unreported covariate ($y<E$, and especially $y\le\rho$) is
+*harder or impossible* to weaponize, so more imbalance would be required and $E_{\mathrm{ITC}}>E$; a
+strongly prognostic one ($y>E$) needs *less* imbalance to do damage, so $E_{\mathrm{ITC}}<E$. Using the data
+can cut either way, and that honest calibration, not a guaranteed increase, is the gain. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why this is the honest summary for an unmeasured effect modifier.** The infinite case has no analogue
+in the classical E-value, where both arms are unknown and the bias factor can be pushed arbitrarily high
+by sending both to infinity. Here one arm is data. If the IPD says $U$ is only weakly prognostic
+($\mathrm{RR}_{UD}$ small), then even a wildly imbalanced $U$ cannot manufacture a large bias, and the
+unanchored comparison is robust to it whatever the comparator distribution turns out to be. This is
+exactly the residual-bias question raised by @thm-sema-insufficient, now answered quantitatively for one
+covariate at a time. Three caveats must travel with the number, all visible in the derivation: it treats
+the IPD-estimated $\mathrm{RR}_{UD}=\exp(|\beta_U|)$ as fixed, propagating none of that estimate's
+sampling uncertainty; it is a single-covariate bias-factor argument, so several jointly imbalanced
+covariates require the multivariate analysis of @sec-qba-norta; and it is a ratio-scale quantity, defined
+for binary and count outcomes, not for continuous or time-to-event effects, for which the tipping-point
+analysis of @sec-qba-tipping is the appropriate instrument. $\blacktriangleleft$
+:::
+
+## NORTA: imputing the unreported covariate distribution {#sec-qba-norta}
+
+Before any formulas, the practical problem NORTA solves. The comparator publication gives you a few
+*margins*: the distribution of each covariate on its own, usually just a mean and a standard deviation (age
+is $62\pm 9$ years, say) or a prevalence ($30\%$ are current smokers). A margin says nothing about how two
+covariates move *together* in that population, their *dependence* (do older patients tend to have worse lung
+function?). To recompute the adjusted effect you need the full joint distribution of all covariates in the
+comparator population, and you are missing two things: the margin of the *unreported* covariate, which you
+must assume, and *all* of the dependence, which the comparator never reports. NORTA fills both gaps in a
+disciplined way. You supply the assumed margins, and you borrow the dependence from the one place it is
+observed, your own IPD. The name is literal, *normal to anything*: start from correlated normal draws,
+which carry the borrowed dependence, then reshape each coordinate into the margin you want. The rest of this
+section makes "reshape" and "borrow the dependence" precise and flags that borrowing as the method's key
+assumption.
+
+The E-value summarizes the threat of a single unmeasured covariate without ever simulating it. To go
+further, to actually recompute the adjusted effect @eq-qba-unanchored-estimand under an assumption about
+the unreported covariate, we must construct a comparator-population covariate distribution that (i) honors
+every reported marginal summary, (ii) places a chosen marginal on the unreported covariate, and (iii)
+carries a credible dependence structure linking them. Aggregate comparator data fix the margins but say
+nothing about the dependence (Sklar's theorem, @thm-sklar, makes this precise: the margins and the copula
+are separately specifiable). The only place the dependence is observed is the IPD. The **NORTA**
+(normal-to-anything) construction supplies exactly this: it glues the target margins to a Gaussian copula
+(@def-gaussian-copula) whose correlation is borrowed from the IPD.
+
+::: {#thm-norta-copula}
+## The NORTA construction
+Let $F_1,\dots,F_d$ be target univariate distribution functions, with generalized inverses
+$F_j^{-1}$, and let $\boldsymbol{\Omega}\succeq 0$ be a correlation matrix (symmetric, unit diagonal).
+Draw $\mathbf{Z}=(Z_1,\dots,Z_d)\sim\mathcal{N}_d(\mathbf{0},\boldsymbol{\Omega})$ and set
+$$
+X_j\;=\;F_j^{-1}\!\big(\Phi(Z_j)\big),\qquad j=1,\dots,d,
+$$ {#eq-qba-norta}
+where $\Phi$ is the standard normal distribution function. Then:
+
+1. **(Exact margins.)** For every target $F_j$, discrete or continuous, $X_j\sim F_j$.
+
+2. **(Induced copula.)** If in addition every $F_j$ is continuous, the joint distribution function of
+$\mathbf{X}=(X_1,\dots,X_d)$ is
+$$
+F_{\mathbf{X}}(\mathbf{x})=C_{\boldsymbol{\Omega}}\big(F_1(x_1),\dots,F_d(x_d)\big),
+$$ {#eq-qba-norta-joint}
+so $\mathbf{X}$ has margins $F_1,\dots,F_d$ and Gaussian copula $C_{\boldsymbol{\Omega}}$; by uniqueness
+in Sklar's theorem $C_{\boldsymbol{\Omega}}$ is the unique copula of $\mathbf{X}$.
+:::
+
+::: {.proof}
+*Part 1.* Since $\boldsymbol{\Omega}$ has unit diagonal, each $Z_j\sim\mathcal{N}(0,1)$, and $\Phi$ is
+continuous, so by the probability integral transform (@thm-inverse-cdf, part 2) the variable
+$U_j:=\Phi(Z_j)$ is uniform on $(0,1)$. By the inverse-transform property (@thm-inverse-cdf, part 1),
+$F_j^{-1}(U_j)\sim F_j$ for any distribution function $F_j$. Hence $X_j=F_j^{-1}(\Phi(Z_j))\sim F_j$,
+with no continuity required.
+
+*Part 2.* Let $U_j=\Phi(Z_j)$ as above; by @prp-gaussian-copula-is-copula the vector
+$(U_1,\dots,U_d)$ has joint distribution function exactly the Gaussian copula
+$C_{\boldsymbol{\Omega}}$. The defining equivalence of a generalized inverse, $\{F_j^{-1}(u)\le x\}=\{u\le
+F_j(x)\}$ (the Galois inequality @eq-qmc-galois, used in @thm-inverse-cdf), gives for each coordinate
+$\{X_j\le x_j\}=\{F_j^{-1}(U_j)\le x_j\}=\{U_j\le F_j(x_j)\}$. Intersecting over $j$,
+$$
+F_{\mathbf{X}}(\mathbf{x})=P\Big(\bigcap_{j=1}^{d}\{X_j\le x_j\}\Big)
+=P\Big(\bigcap_{j=1}^{d}\{U_j\le F_j(x_j)\}\Big)
+=C_{\boldsymbol{\Omega}}\big(F_1(x_1),\dots,F_d(x_d)\big),
+$$
+which is @eq-qba-norta-joint. With continuous margins, Sklar's theorem (@thm-sklar) says the copula in the
+factorization $F_{\mathbf{X}}=C(F_1,\dots,F_d)$ is unique, and we have exhibited it as
+$C_{\boldsymbol{\Omega}}$. $\square$
+:::
+
+::: {.remark}
+**Reader's translation.** @thm-norta-copula is the guarantee that the recipe does what the introduction
+promised. Part 1 says the simulated covariates land on *exactly* the margins you asked for (the assumed
+prevalence or mean is honored, discrete or continuous). Part 2 says the dependence you wired in through
+$\boldsymbol{\Omega}$ comes out as *exactly* a Gaussian copula, with nothing sneaking in from the marginal
+reshaping. So you may choose margins and dependence separately and trust that both emerge as specified,
+which is what makes NORTA a reliable comparator-population generator. $\blacktriangleleft$
+:::
+
+The construction is exact for the margins but leaves one question open: how to choose $\boldsymbol{\Omega}$
+so that the simulated population reproduces the dependence seen in the IPD. The natural target is the rank
+correlation, because it is what survives the marginal transforms and because it is invariant to the choice
+of margins.
+
+::: {#lem-qba-spearman-matching}
+## Spearman matching for the Gaussian copula
+Let $(X_j,X_k)$ be constructed by @eq-qba-norta with continuous margins and Gaussian-copula correlation
+$\Omega_{jk}=\rho^{N}$. Then:
+
+1. Spearman's rank correlation $\rho^{S}(X_j,X_k)$ depends only on the copula $C_{\boldsymbol{\Omega}}$,
+not on the margins $F_j,F_k$; it equals $\rho^{S}(Z_j,Z_k)$.
+
+2. For the bivariate Gaussian copula, $\rho^{S}=\frac{6}{\pi}\arcsin(\rho^{N}/2)$. Hence choosing
+$$
+\rho^{N}=2\sin\!\big(\pi\,\rho^{S}_{\mathrm{IPD}}/6\big)
+$$ {#eq-qba-spearman-transform}
+makes the simulated Spearman correlation equal the IPD Spearman correlation $\rho^{S}_{\mathrm{IPD}}$
+exactly.
+:::
+
+::: {.proof}
+*Part 1.* Spearman's rho is the Pearson correlation of the probability-integral transforms,
+$\rho^{S}(X_j,X_k)=\operatorname{corr}\!\big(F_j(X_j),F_k(X_k)\big)$. For continuous margins,
+$F_j(X_j)=F_j\big(F_j^{-1}(\Phi(Z_j))\big)=\Phi(Z_j)$, since $F_j\circ F_j^{-1}$ is the identity on the
+range of a continuous $F_j$. The map $\Phi$ is strictly increasing, so
+$\operatorname{corr}(\Phi(Z_j),\Phi(Z_k))$ is a functional of the joint law of $(Z_j,Z_k)$ alone, hence
+of the copula; it does not involve $F_j,F_k$. This proves the invariance and the identity
+$\rho^{S}(X_j,X_k)=\rho^{S}(Z_j,Z_k)$.
+
+*Part 2.* The identity $\rho^{S}=\frac{6}{\pi}\arcsin(\rho^{N}/2)$ for a bivariate normal with correlation
+$\rho^{N}$ is the classical "arcsine law" for the grade correlation of the Gaussian copula; we take it as
+a known property of the bivariate normal (see the Notes). Inverting,
+$\rho^{N}=2\sin(\pi\rho^{S}/6)$, which is @eq-qba-spearman-transform; feeding the IPD value
+$\rho^{S}_{\mathrm{IPD}}$ on the right reproduces it as the simulated Spearman correlation by Part 1.
+$\square$
+:::
+
+::: {.remark}
+**Why rank correlation, and the discrete and definiteness caveats.** The Pearson correlation of
+$(X_j,X_k)$ produced by @eq-qba-norta is in general *not* $\Omega_{jk}$: the nonlinear marginal transforms
+$F_j^{-1}\circ\Phi$ distort linear correlation, and the distortion depends on the margins. Rank
+correlation is the right invariant precisely because, by @lem-qba-spearman-matching, it passes through the
+transforms untouched, which is why the implementation borrows the IPD's *Spearman* matrix and maps it by
+@eq-qba-spearman-transform. Two practical points. First, for a binary covariate (the unreported $U$ is
+often binary) the margin is discrete, so @lem-qba-spearman-matching is approximate: the transform
+$F_j(X_j)$ is no longer exactly uniform (@thm-inverse-cdf, part 2 fails for discrete $F$), and the
+induced copula in @thm-norta-copula is one of the many copulas Sklar's theorem allows rather than a unique
+one. The marginal-recovery guarantee (part 1) still holds exactly. Second, the element-wise transform
+@eq-qba-spearman-transform applied to an empirical Spearman matrix need not return a positive semidefinite
+matrix, so before constructing the copula one projects it onto the nearest correlation matrix (symmetrize,
+floor the eigenvalues at a small positive value, and rescale to unit diagonal). Both adjustments are
+benign and standard. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**What actually changes when $U$ is binary, and how much to trust the borrowed correlation.** Two applied
+points, since the unreported covariate is often a binary flag (a biomarker-positive indicator, a smoking
+status). First, the discrete caveat above is narrow in its consequences. Marginal recovery stays *exact*: if
+you assume a comparator prevalence of $30\%$, the simulated population has prevalence $30\%$, full stop. What
+becomes approximate is only the *dependence*: the Spearman match @eq-qba-spearman-transform no longer lands
+the simulated rank correlation exactly on the IPD value, and the copula is no longer unique. In practice
+this perturbs the induced covariate correlations slightly, and hence the adjusted effect slightly, but it
+never distorts the assumed prevalence, which is usually the very quantity the sensitivity analysis is
+sweeping. Second, borrowing the IPD dependence is a *substantive* assumption, not a technical convenience:
+it asserts that age and lung function (say) hang together in the comparator population the way they do in
+your trial. When that is doubtful, the honest move is to redo the analysis under a few alternative
+correlation matrices (including independence and a strong correlation of each sign) and report the range. If
+the conclusion is stable across them the borrowing did no harm; if it is not, the dependence itself has
+become a bias parameter deserving its own sensitivity sweep. $\blacktriangleleft$
+:::
+
+With the comparator covariate population in hand, the deterministic ITC bias analysis is a sweep:
+choose a grid of assumed marginals for the unreported covariate, and for each one simulate the comparator
+population by @eq-qba-norta, marginalize the IPD outcome model over it, and record the adjusted effect
+@eq-qba-unanchored-estimand. The resulting curve is the input to the tipping-point and probabilistic
+analyses.
+
+::: {#exm-qba-norta-correlated}
+## NORTA with a borrowed dependence, in closed form
+The worked example of @sec-qba-example takes the comparator covariates independent, which makes NORTA
+invisible; here we let NORTA do its job so the dependence is seen to bite. Keep the running COPD model
+$\log P(Y=1\mid x_R,u)=\beta_0+\beta_R x_R+\beta_U u$ with $\beta_R=0.4$, $\beta_U=-0.5$, normal margins
+$x_R\sim\mathcal{N}(1.0,0.5^2)$ (age) and $u\sim\mathcal{N}(2.0,1.0^2)$ ($\mathrm{FEV}_1$), and comparator
+risk $\mu_0=0.47$. Suppose the IPD reports a Spearman rank correlation between age and $\mathrm{FEV}_1$ of
+$\rho^{S}_{\mathrm{IPD}}=-0.3$ (older patients tend to have worse lung function). NORTA borrows it through
+@eq-qba-spearman-transform: the Gaussian-copula correlation is
+$$
+\rho^{N}=2\sin\!\big(\pi\,(-0.3)/6\big)=2\sin(-0.1571)=-0.313.
+$$
+For normal margins the copula correlation *is* the Pearson correlation, so
+$\operatorname{Cov}(x_R,u)=\rho^{N}\sigma_R\sigma_U=-0.313\times 0.5\times 1.0=-0.1564$. The linear
+predictor $W=\beta_0+\beta_R x_R+\beta_U u$ is then normal with variance
+$$
+\operatorname{Var}(W)=\beta_R^2\sigma_R^2+\beta_U^2\sigma_U^2+2\beta_R\beta_U\operatorname{Cov}(x_R,u)
+=0.04+0.25+2(0.4)(-0.5)(-0.1564)=0.29+0.0626=0.3526,
+$$
+against $\operatorname{Var}(W)=0.29$ under independence. By the log-normal mean
+$\mathbb{E}[e^{W}]=\exp\!\big(\mathbb{E}[W]+\tfrac12\operatorname{Var}(W)\big)$, the dependence adds
+$\tfrac12(0.3526-0.29)=0.0313$ to the log risk, so the adjusted log-risk-ratio moves from $-0.700$ (the
+independence value of @sec-qba-example) to $-0.700+0.0313=-0.669$, a risk ratio of $e^{-0.669}=0.512$
+instead of $0.497$. Borrowing a realistic negative age-lung-function dependence nudges the estimate about
+$3\%$ toward the null; a positive borrowed correlation would push it the other way. That shift, invisible to
+the margins alone, is exactly the information NORTA imports from the IPD. $\blacktriangleleft$
+:::
+
+## Tipping-point analysis {#sec-qba-tipping}
+
+A sensitivity curve answers "what if the unreported mean were such-and-such?" The tipping point distills
+the curve to its single decision-relevant value: the assumed marginal of the unreported covariate at
+which the conclusion changes.
+
+::: {#def-tipping-point}
+## Tipping point
+Let $m\mapsto\Delta(m)$ be the **sensitivity curve** that maps an assumed comparator marginal $m$ of the
+unreported covariate $U$ (its mean for a continuous covariate, its prevalence for a binary one) to the
+adjusted effect @eq-qba-unanchored-estimand on the analysis scale, all other inputs held fixed. Fix a
+**decision threshold** $c$ (the null value, $c=0$ on a log-ratio or difference scale, by default). A
+**tipping point** is a value $m^{\dagger}$ with
+$$
+\Delta(m^{\dagger})=c.
+$$ {#eq-qba-tipping}
+The **tipping gap** is $m^{\dagger}-\bar{x}_{U}$, the signed distance from the value $\bar{x}_U$ the
+covariate takes in the IPD. Given a **plausible range** $[m_{\mathrm{lo}},m_{\mathrm{hi}}]$ for the
+comparator marginal, the conclusion is flagged **fragile** if $m^{\dagger}\in[m_{\mathrm{lo}},m_{\mathrm{hi}}]$,
+since a believable comparator value would reverse it, and **robust** if $m^{\dagger}$ lies outside the
+range. One may report the tipping point of the confidence limit nearest the threshold in place of the
+point estimate. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader's translation.** The tipping point is the sensitivity analysis a clinician can argue about
+directly, because it speaks in the covariate's own units. It says: *the conclusion holds unless the
+comparator's true mean* $\mathrm{FEV}_1$ *(or prevalence, for a binary covariate) is as extreme as*
+$m^{\dagger}$. You then ask a subject-matter question, not a statistical one: is $m^{\dagger}$ inside the
+range of values the comparator population could plausibly have? If yes, the result is fragile; if no, it is
+robust. The tipping *gap* $m^{\dagger}-\bar{x}_U$ measures how far the comparator would have to differ from
+your IPD before the story changes. For the running example this comes out at $m^{\dagger}=0.6$ liters,
+against an IPD mean of $2.0$ (see @sec-qba-example). $\blacktriangleleft$
+:::
+
+For the tipping point to be a well-defined single number we need the sensitivity curve to be monotone, so
+that it crosses the threshold at most once. The next proposition shows monotonicity holds under the
+natural structural assumptions, via a coupling argument that fixes the copula draws and moves only the
+unreported margin.
+
+::: {#prp-qba-tipping-monotone}
+## Monotonicity and existence of the tipping point
+Suppose the unreported covariate enters the IPD outcome model through a single term $\beta_U u$ with
+$\beta_U\neq 0$, the link $g$ is continuous and strictly monotone (so $g^{-1}$ is monotone), and the
+assumed marginal family $\{F_{U,m}\}$ is ordered by first-order stochastic dominance in $m$ through a
+quantile function $F_{U,m}^{-1}(t)$ that is nondecreasing in $m$ for each $t\in(0,1)$ (as for a location
+family, where $F_{U,m}^{-1}(t)=m+\sigma\Phi^{-1}(t)$, or a Bernoulli family, where
+$F_{U,m}^{-1}(t)=\mathbf{1}\{t>1-m\}$). Construct the comparator population by NORTA @eq-qba-norta with a
+fixed correlation matrix and fixed reported margins. Then:
+
+1. The sensitivity curve $\Delta(m)$ is monotone in $m$, strictly so where $g^{-1}$ is strictly monotone;
+its direction is the sign of $\beta_U$ (composed with the monotonicity of $g$).
+
+2. If the threshold $c$ lies between $\Delta(m_{\mathrm{lo}})$ and $\Delta(m_{\mathrm{hi}})$, a tipping
+point $m^{\dagger}\in[m_{\mathrm{lo}},m_{\mathrm{hi}}]$ exists and is unique. If $c$ lies outside the
+interval spanned by $\Delta$ over the plausible range, there is no tipping point inside the range and the
+conclusion is robust on that range.
+:::
+
+The idea behind the proof is simpler than its machinery. If pushing the unreported covariate up always
+moves the predicted outcome the same way, because it enters the model through a single term $\beta_U u$ with
+a fixed sign, then the sensitivity curve can only go one direction and so crosses any threshold at most
+once. The one technical device is a *coupling*: use the *same* normal draws $\mathbf{Z}$ for every assumed
+value $m$, changing only the quantile function applied to the last coordinate, so that raising $m$ raises
+that covariate for every simulated patient at once and never touches the others. Monotonicity then survives
+the averaging over patients.
+
+::: {.proof}
+*Part 1.* Realize the comparator covariates by the common-$\mathbf{Z}$ coupling of @eq-qba-norta: draw
+$\mathbf{Z}\sim\mathcal{N}_d(\mathbf{0},\boldsymbol{\Omega})$ once, set the reported coordinates
+$X_{R,j}=F_{R,j}^{-1}(\Phi(Z_j))$ (independent of $m$) and the unreported coordinate
+$U(m)=F_{U,m}^{-1}(\Phi(Z_d))$. By hypothesis $F_{U,m}^{-1}(t)$ is nondecreasing in $m$ for each fixed
+$t=\Phi(Z_d)$, so for $m\le m'$ we have $U(m)\le U(m')$ pointwise in $\mathbf{Z}$, while $\mathbf{X}_R$ is
+unchanged. The linear predictor $\eta(m)=\beta_0+\boldsymbol{\beta}_R^{\top}\mathbf{X}_R+\beta_U U(m)$ is
+therefore monotone in $m$ with the sign of $\beta_U$, pointwise in $\mathbf{Z}$, and since $g^{-1}$ is
+monotone, the per-subject prediction $g^{-1}(\eta(m))$ is monotone in $m$ pointwise. Taking expectation
+over $\mathbf{Z}$ preserves the inequality, so the marginal mean
+$\mathbb{E}_{\mathbf{Z}}[g^{-1}(\eta(m))]$ is monotone in $m$; applying the monotone $g$ and subtracting
+the constant $g(\mu_0)$ leaves $\Delta(m)$ monotone, with strictness inherited wherever $g^{-1}$ is
+strictly monotone and $\beta_U\neq0$.
+
+*Part 2.* The curve $\Delta$ is continuous in $m$ (the integrand is continuous in $m$ and bounded by an
+integrable envelope, so dominated convergence makes the marginal mean continuous; $g$ is continuous).
+A continuous monotone function on $[m_{\mathrm{lo}},m_{\mathrm{hi}}]$ attains the value $c$ exactly once
+when $c$ lies between its endpoint values (intermediate value theorem plus injectivity from strict
+monotonicity), giving a unique $m^{\dagger}$ in the range; if $c$ is outside the endpoint interval, $\Delta-c$
+keeps a constant sign on the range, so no crossing occurs and the sign of the conclusion is constant,
+i.e. robust. $\square$
+:::
+
+::: {.remark}
+**Computation and the link to the E-value.** In practice the curve is evaluated on a grid by the NORTA
+marginalization of @sec-qba-norta, and the crossing is located by one-dimensional root-finding
+(interpolation plus a bracketed solver) on the grid. The tipping point and the indirect-comparison
+E-value are two windows onto the same residual bias: the tipping point speaks in the natural units of the
+covariate's comparator marginal, which is the most transparent scale for a clinician to judge
+plausibility, while $E_{\mathrm{ITC}}$ recasts the same threat as a ratio-scale association. They can give
+qualitatively different impressions, since a small tipping gap and a large $E_{\mathrm{ITC}}$ both occur,
+and reporting both is the cautious practice. $\blacktriangleleft$
+:::
+
+## Probabilistic bias analysis {#sec-qba-probabilistic}
+
+Deterministic analysis commits to a single bias parameter or sweeps a bare grid. Probabilistic bias
+analysis instead places a *prior distribution* over the bias parameters and propagates it, separating two
+kinds of uncertainty that a single confidence interval conflates: the **systematic** uncertainty from not
+knowing the bias parameter, and the ordinary **random** sampling uncertainty.
+
+::: {#def-probabilistic-bias-analysis}
+## Probabilistic bias analysis
+Let $\hat\theta_{\mathrm{adj}}(\mathbf{b})$ be the QBA correction @eq-qba-correction and let $\pi$ be a
+prior on the bias parameter $\mathbf{b}\in\mathcal{B}$, encoding external evidence about it. The
+**probabilistic bias analysis** draws $\mathbf{b}^{(s)}\stackrel{\text{iid}}{\sim}\pi$ for
+$s=1,\dots,S$, computes the adjusted effects $\theta^{(s)}=\hat\theta_{\mathrm{adj}}(\mathbf{b}^{(s)})$,
+and reports two intervals:
+
+- the **systematic interval**, the central $1-\alpha$ empirical quantiles of $\{\theta^{(s)}\}_{s=1}^{S}$,
+which captures bias-parameter uncertainty alone;
+- the **total interval**, the same quantiles of the *error-perturbed* draws
+$\theta_{\mathrm{tot}}^{(s)}=\theta^{(s)}+\varepsilon^{(s)}$ with
+$\varepsilon^{(s)}\sim\mathcal{N}(0,\mathrm{SE}^2)$ independent draws of the sampling error, which folds
+ordinary statistical uncertainty on top.
+
+Draws that violate a structural constraint (a negative reconstructed cell count, an out-of-range
+prevalence) are discarded, and the retained fraction is reported. The **probability of benefit** is the
+share of draws on the favorable side of the threshold,
+$\widehat{P}_{\mathrm{ben}}=S^{-1}\sum_s\mathbf{1}\{\theta^{(s)}\text{ favorable}\}$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Where the prior comes from, and which draws to throw away.** The prior $\pi$ is a sensitivity assumption,
+external evidence about the bias parameter, never new data from the trial, and it must be defensible in a
+report. Practical defaults: for a continuous comparator mean, center a normal or truncated normal prior at
+the IPD value and set its standard deviation to a fraction of the IPD standard deviation (a half or a
+third), widening it when the comparator population is known to differ; for a binary comparator prevalence,
+elicit a plausible interval from a clinician and fit a Beta prior whose central range matches it (for
+instance $\mathrm{Beta}(2,8)$ has mean $0.2$ and most of its mass in $[0.03,0.45]$). Registries, baseline
+tables of related trials, and epidemiologic cohorts are the usual sources; when nothing is known, a
+deliberately wide prior is the conservative choice. *Invalid draws* are those a prior can produce but the
+world cannot: a normal prior on a prevalence can wander below $0$ or above $1$, a drawn covariance can be
+incompatible with the fixed margins, a reconstructed cell count can go negative. These are discarded and the
+retained fraction reported; a large discard rate is itself a warning that the prior is misspecified. In the
+running example the prior is $\mathcal{N}(2.0,0.3^2)$, an IPD-centered normal whose standard deviation is
+about a third of the IPD's (see @sec-qba-example). $\blacktriangleleft$
+:::
+
+The two intervals estimate well-defined population quantities, and the Monte Carlo estimates converge to
+them; we record this so the procedure is not merely a heuristic.
+
+::: {#thm-qba-pba-convergence}
+## Consistency of the probabilistic-bias-analysis intervals
+Let $\theta=\hat\theta_{\mathrm{adj}}(\mathbf{b})$ with $\mathbf{b}\sim\pi$ have distribution function
+$G_{\mathrm{sys}}$ (the law of the correction under the prior, the *systematic* distribution), and let
+$G_{\mathrm{tot}}$ be the law of $\theta+\varepsilon$ with $\varepsilon\sim\mathcal{N}(0,\mathrm{SE}^2)$
+independent of $\theta$, that is the convolution
+$G_{\mathrm{tot}}(t)=\int\Phi\!\big((t-\hat\theta_{\mathrm{adj}}(\mathbf{b}))/\mathrm{SE}\big)\,d\pi(\mathbf{b})$.
+As the number of draws $S\to\infty$:
+
+1. The empirical quantiles of $\{\theta^{(s)}\}$ converge almost surely to the quantiles of
+$G_{\mathrm{sys}}$ at every continuity point of $G_{\mathrm{sys}}^{-1}$; likewise the error-perturbed
+quantiles converge to those of $G_{\mathrm{tot}}$.
+
+2. $\widehat{P}_{\mathrm{ben}}\to P(\theta\text{ favorable})$ almost surely.
+
+3. $G_{\mathrm{tot}}$ is continuous and strictly increasing wherever $\mathrm{SE}>0$, so its quantiles are
+unique and the total interval is well defined for every $\alpha$.
+:::
+
+::: {.proof}
+*Part 1.* The draws $\theta^{(s)}=\hat\theta_{\mathrm{adj}}(\mathbf{b}^{(s)})$ are independent and
+identically distributed with distribution function $G_{\mathrm{sys}}$, so by the Glivenko-Cantelli theorem
+the empirical distribution function $\widehat{G}_{S}$ converges to $G_{\mathrm{sys}}$ uniformly, almost
+surely. Uniform convergence of distribution functions implies convergence of the corresponding quantile
+(generalized inverse) functions at every point where $G_{\mathrm{sys}}^{-1}$ is continuous, which is the
+standard quantile-convergence consequence of Glivenko-Cantelli. For the total interval, note
+$\theta_{\mathrm{tot}}^{(s)}=\theta^{(s)}+\varepsilon^{(s)}$ are iid with distribution function
+$G_{\mathrm{tot}}$ (the independent sum has the stated convolution law), and apply Glivenko-Cantelli
+again.
+
+*Part 2.* The indicators $\mathbf{1}\{\theta^{(s)}\text{ favorable}\}$ are iid Bernoulli with mean
+$P(\theta\text{ favorable})$ and finite variance, so the strong law of large numbers gives
+$\widehat{P}_{\mathrm{ben}}\to P(\theta\text{ favorable})$ almost surely.
+
+*Part 3.* For $\mathrm{SE}>0$ the inner map $t\mapsto\Phi((t-\theta_0)/\mathrm{SE})$ is continuous and
+strictly increasing for each $\theta_0$, and these properties are preserved under the mixture
+$\int(\cdot)\,d\pi$: continuity by dominated convergence (the integrand is bounded by $1$), strict
+monotonicity because for $t<t'$ the integrand strictly increases for every $\theta_0$ and the prior
+integrates a strictly positive gap to a positive number. Hence $G_{\mathrm{tot}}$ is a continuous, strictly
+increasing distribution function, with unique quantiles. $\square$
+:::
+
+::: {.remark}
+**Interpretation.** The systematic interval answers "how much does my conclusion move as the unknown bias
+parameter ranges over its prior?"; the total interval answers "and what does ordinary sampling error add
+on top?" Their difference is the price of the missing information, isolated from statistical noise; that
+separation is the entire point of probabilistic bias analysis (@lash2021qba). In the unanchored ITC the
+bias parameter is the comparator marginal of the unreported covariate, the correction
+$\hat\theta_{\mathrm{adj}}$ is the NORTA marginalization, and a normal or beta prior on that marginal
+yields the two intervals directly. When the sensitivity curve is monotone (@prp-qba-tipping-monotone) the
+favorable fraction $\widehat{P}_{\mathrm{ben}}$ is a clean Monte Carlo estimate of the prior probability
+that the comparator marginal lies on the favorable side of the tipping point. In the language of the rest
+of the book this is the same random-effects logic as a Bayesian NMA (Chapter 15), except the "random"
+quantity is not a study effect drawn from a hierarchical prior but the unreported covariate value drawn from
+an external prior, and the total interval is its predictive spread folded together with sampling error.
+$\blacktriangleleft$
+:::
+
+## A worked E-value and tipping-point example {#sec-qba-example}
+
+We now carry the running COPD comparison of @exm-qba-running through every instrument of the chapter,
+choosing the numbers so that each quantity is exactly reproducible by hand. Recall the setup: the new
+inhaled therapy $B$ is compared, unanchored, against comparator $A$ on the binary outcome *severe
+exacerbation within 12 months*, analyzed on the log-risk-ratio scale. The IPD outcome model, fitted with a
+log link, is
+$$
+\log P(Y=1\mid x_R,u)=\beta_0+\beta_R\,x_R+\beta_U\,u,
+\qquad
+\beta_0=-1.0,\ \beta_R=0.4,\ \beta_U=-0.5,
+$$
+where $x_R$ is the one reported covariate (standardized age) and $u$ the one unreported covariate (baseline
+$\mathrm{FEV}_1$, a prognostic factor the comparator did not report). The comparator publication reports the
+marginal of $x_R$ as mean
+$m_R=1.0$, standard deviation $\sigma_R=0.5$, and its own event risk $\mu_0=0.47$; it does *not* report
+$u$. In the IPD, $u$ has mean $\bar{x}_U=2.0$ and standard deviation $\sigma_U=1.0$. For a hand-checkable
+marginalization we take $x_R$ and $u$ independent in the comparator population (Gaussian copula equal to
+the independence copula) and both normal.
+
+**The sensitivity curve in closed form.** Under independence and normality, the comparator-population risk
+of the index treatment is a product of normal moment generating functions. With
+$\mathbb{E}[e^{tX}]=e^{t\mu+t^2\sigma^2/2}$ for $X\sim\mathcal{N}(\mu,\sigma^2)$,
+$$
+r_B(m)=\mathbb{E}\!\big[e^{\beta_0+\beta_R X_R+\beta_U U}\big]
+=\exp\!\Big(\beta_0+\beta_R m_R+\tfrac12\beta_R^2\sigma_R^2+\beta_U m+\tfrac12\beta_U^2\sigma_U^2\Big),
+$$
+where $m$ is the assumed comparator mean of $U$. The unanchored log-risk-ratio against the comparator is
+$\Delta(m)=\log r_B(m)-\log\mu_0=K+\beta_U m$ with
+$$
+K=\beta_0+\beta_R m_R+\tfrac12\beta_R^2\sigma_R^2+\tfrac12\beta_U^2\sigma_U^2-\log\mu_0.
+$$
+Plugging in: $\beta_R m_R=0.4$, $\tfrac12\beta_R^2\sigma_R^2=\tfrac12(0.16)(0.25)=0.02$,
+$\tfrac12\beta_U^2\sigma_U^2=\tfrac12(0.25)(1)=0.125$, and $-\log(0.47)=0.755$, so
+$K=-1.0+0.4+0.02+0.125+0.755=0.300$. The sensitivity curve is the line
+$$
+\Delta(m)=0.300-0.5\,m,
+$$
+monotone decreasing in $m$ exactly as @prp-qba-tipping-monotone predicts (sign of $\beta_U=-0.5$).
+
+**(a) The standard E-value.** The natural plug-in for the unknown comparator mean of $U$ is the IPD value
+$\bar{x}_U=2.0$, giving the adjusted effect $\Delta(2.0)=0.300-1.0=-0.700$, that is a risk ratio
+$\mathrm{RR}=e^{-0.700}=0.497$: treatment $B$ roughly halves the risk. The corresponding bias factor to
+explain this away is $\mathrm{BF}_{\mathrm{obs}}=e^{0.700}=2.014$. The symmetric E-value @eq-qba-evalue is
+$$
+E=\mathrm{BF}_{\mathrm{obs}}+\sqrt{\mathrm{BF}_{\mathrm{obs}}(\mathrm{BF}_{\mathrm{obs}}-1)}
+=2.014+\sqrt{2.014\times1.014}=2.014+\sqrt{2.042}=2.014+1.429=3.443.
+$$
+An unmeasured effect modifier would need a risk-ratio association of at least $3.44$ with *both* the
+treatment-population membership and the outcome to nullify the result; an association of, say, $1.5$ on
+each arm could not. Had the analysis instead reported a confidence limit nearest the null of, for
+example, $\mathrm{RR}=1/1.3$ (i.e. bias factor $1.3$), its E-value would be
+$1.3+\sqrt{1.3\times0.3}=1.3+0.625=1.925$.
+
+**(b) The tipping point.** Solving $\Delta(m^{\dagger})=0$ gives $m^{\dagger}=0.300/0.5=0.600$. The tipping
+gap is $m^{\dagger}-\bar{x}_U=0.600-2.000=-1.400$: the comparator's true mean of $U$ would have to fall to
+$0.6$, far below the IPD value of $2.0$, before the conclusion reverses. If the plausible range for the
+comparator mean is, say, $[1.4,2.6]$ (the IPD value plus or minus $0.6$), then $m^{\dagger}=0.6$ lies
+*outside* it, and the conclusion is **robust** to the unreported covariate over the plausible range.
+
+The whole sensitivity analysis fits in one small table. Sweeping the assumed comparator mean $m$ of
+$\mathrm{FEV}_1$ through the affine curve $\Delta(m)=0.300-0.5\,m$ gives:
+
+| Assumed comparator mean $m$ | $\Delta(m)$ (log RR) | Risk ratio $e^{\Delta(m)}$ | Verdict |
+|---|---|---|---|
+| $0.0$ | $0.300$ | $1.35$ | favors $A$ |
+| $0.6$ | $0.000$ | $1.00$ | null (tipping point $m^{\dagger}$) |
+| $1.0$ | $-0.200$ | $0.82$ | favors $B$ |
+| $1.4$ | $-0.400$ | $0.67$ | favors $B$ (edge of plausible range) |
+| $2.0$ | $-0.700$ | $0.50$ | favors $B$ (IPD plug-in) |
+| $2.6$ | $-1.000$ | $0.37$ | favors $B$ (edge of plausible range) |
+| $3.0$ | $-1.200$ | $0.30$ | favors $B$ |
+
+The tipping point $m^{\dagger}=0.6$ sits well below the plausible range $[1.4,2.6]$, so every plausible
+comparator value leaves $B$ favored: a table restatement of the robustness verdict.
+
+**(c) The indirect-comparison E-value.** The IPD-estimated outcome association of $U$ is
+$\mathrm{RR}_{UD}=e^{|\beta_U|}=e^{0.5}=1.649$. Compare it to the observed bias factor
+$\mathrm{BF}_{\mathrm{obs}}=2.014$. Since $\mathrm{RR}_{UD}=1.649<2.014=\mathrm{BF}_{\mathrm{obs}}$, we are
+in the third case of @def-itc-evalue: by @prp-itc-evalue the maximal bias factor any imbalance in $U$ can
+produce, with its outcome association fixed at $1.649$, is $1.649$ itself, which is smaller than the
+$2.014$ needed. Hence
+$$
+E_{\mathrm{ITC}}=+\infty:
+$$
+no across-arm imbalance in $U$ can overturn the result, a robustness certificate the symmetric E-value of
+part (a) cannot provide. This is the sentence such a certificate puts in a dossier: *the unreported*
+$\mathrm{FEV}_1$*, estimated from the IPD to carry an outcome association of* $\mathrm{RR}_{UD}=1.65$*, is
+too weakly prognostic to matter; since no across-arm imbalance can produce a bias factor exceeding*
+$\mathrm{RR}_{UD}$*, while a factor of* $2.01$ *would be needed to nullify the result, the comparison is
+robust to* $\mathrm{FEV}_1$ *regardless of its comparator distribution.* To exhibit the finite formula,
+suppose instead the IPD had estimated a stronger prognostic covariate, $\mathrm{RR}_{UD}=3.0$. Then
+$$
+E_{\mathrm{ITC}}=\frac{\mathrm{BF}_{\mathrm{obs}}(\mathrm{RR}_{UD}-1)}{\mathrm{RR}_{UD}-\mathrm{BF}_{\mathrm{obs}}}
+=\frac{2.014\times(3.0-1)}{3.0-2.014}=\frac{4.028}{0.986}=4.085,
+$$
+so the across-arm association would need to reach $4.09$ to explain the result away. As a consistency
+check on @prp-itc-evalue(3), set $\mathrm{RR}_{UD}=E=3.443$ from part (a); the formula returns
+$2.014\times2.443/(3.443-2.014)=4.920/1.429=3.443=E$, recovering the symmetric E-value exactly, as it must
+when both arms are equal.
+
+**(d) Probabilistic bias analysis.** Suppose external evidence supports a normal prior on the comparator
+mean of $U$, $m\sim\mathcal{N}(2.0,\,0.3^2)$, centered at the IPD value with a standard deviation of
+$0.3$. Because the sensitivity curve is affine, $\Delta(m)=0.300-0.5\,m$, the adjusted effect is itself
+normal:
+$$
+\Delta\sim\mathcal{N}\!\big(0.300-0.5\times2.0,\ 0.5^2\times0.3^2\big)
+=\mathcal{N}(-0.700,\ 0.0225),\qquad \mathrm{sd}=0.150.
+$$
+The systematic $95\%$ interval is $-0.700\pm1.96\times0.150=(-0.994,\,-0.406)$, i.e. a risk ratio in
+$(0.370,\,0.666)$, entirely below $1$. Folding in a trial sampling standard error of, say,
+$\mathrm{SE}=0.25$, the total standard deviation is $\sqrt{0.150^2+0.25^2}=\sqrt{0.085}=0.292$, and the
+total $95\%$ interval is $-0.700\pm1.96\times0.292=(-1.271,\,-0.129)$, a risk ratio in
+$(0.281,\,0.879)$, still below $1$. The probability of benefit is
+$\widehat{P}_{\mathrm{ben}}=P(\Delta<0)$: systematically $\Phi(0.700/0.150)=\Phi(4.67)\approx1.000$, and
+in total $\Phi(0.700/0.292)=\Phi(2.40)=0.992$. Every instrument agrees: the unreported effect modifier is
+a real but, here, a manageable threat, and the conclusion that $B$ lowers risk survives it. The systematic
+interval, narrow because the prior is informative about the comparator mean, is exactly the "how much we
+do not know about $U$" component, cleanly separated from the wider total interval that adds sampling error.
+
+## Notes and references {#sec-qba-notes}
+
+The deterministic and probabilistic framework of @def-quantitative-bias-analysis and
+@def-probabilistic-bias-analysis follows the monograph of @lash2021qba (Fox, MacLehose, and Lash), which
+is the standard reference for the bias triangle, the confounding bias factor of
+@lem-qba-confounding-factor, the selection and misclassification corrections mentioned in passing, and
+the systematic-versus-total interval decomposition. The bias factor @eq-qba-bias-factor for a binary
+confounder goes back to Schlesselman; we have reproduced only the confounding corner in full because it is
+the one the E-value rests on.
+
+The E-value (@thm-evalue-derivation) and the sharp bias-factor bound (@lem-qba-sharp-bound) are due to
+VanderWeele and Ding; we cite @vanderweele2017evalue, the article that introduced the E-value and its
+interpretation. The vertex argument and the two-cell optimization in our proof of @lem-qba-sharp-bound
+follow the structure of the Ding-VanderWeele "sensitivity analysis without assumptions" result; the
+derivation here standardizes to the exposed (the effect-on-treated bias factor), and the same bound is
+known to hold for total-population standardization. The indirect-comparison E-value of @def-itc-evalue and
+the robustness certificate of @prp-itc-evalue specialize the bound to the unanchored ITC by treating the
+$U$-outcome association as estimable from the IPD; this exploitation of the IPD is, to our knowledge, due
+to the recent ITC bias-analysis literature (Ren and colleagues, 2025) and is implemented in the `uitc`
+and `mlumr` packages, whose lessons informed the worked example. The connection to the insufficiency of
+the shared-effect-modifier assumption is @thm-sema-insufficient, and the object being stress-tested is the
+effect modifier of @def-effect-modifier.
+
+The NORTA construction (@thm-norta-copula) is the normal-to-anything method of Cario and Nelson; it is the
+copula sampler of @prp-gaussian-copula-is-copula composed with the inverse-CDF transform
+(@thm-inverse-cdf), assembled into the Gaussian-copula joint law guaranteed by Sklar's theorem
+(@thm-sklar, @sklar1959). The same machinery underlies the ML-NMR integration of Chapter 22 and the
+ML-UMR pseudo-population of Chapter 26; here it is repurposed to impute an *unreported* comparator
+distribution rather than to integrate a reported one. The Spearman-matching transform
+@eq-qba-spearman-transform rests on the arcsine law $\rho^{S}=\frac{6}{\pi}\arcsin(\rho^{N}/2)$ for the
+grade correlation of the bivariate normal, a classical identity (Kruskal; see Nelsen's copula text); we
+used it rather than reproved it, since a full derivation of the arcsine law is a self-contained exercise
+in bivariate-normal geometry. The positive-definite projection noted after @lem-qba-spearman-matching is
+the standard nearest-correlation-matrix repair.
+
+This chapter has no counterpart in the proof catalogue and no machine-checked counterpart in the
+`ITC_Coq` development: quantitative bias analysis for indirect comparison is new material, built here from
+the cited primary sources. The tipping-point monotonicity proposition (@prp-qba-tipping-monotone) and the
+probabilistic-bias-analysis convergence theorem (@thm-qba-pba-convergence) are, as far as we know, folklore
+made precise; their proofs use only the coupling of @eq-qba-norta and the Glivenko-Cantelli theorem.
+
+For the reader who wants to go deeper, the essential sources sort cleanly by instrument.
+
+- **Quantitative bias analysis in general:** @lash2021qba (Fox, MacLehose, and Lash), the standard monograph, including the selection and misclassification corners of @sec-qba-other-corners that this chapter only sketches.
+- **The E-value:** @vanderweele2017evalue, for the definition, the interpretation, and the approximate scale conversions for odds and hazard ratios collected in @sec-qba-evalue.
+- **NORTA and copulas:** Cario and Nelson for the normal-to-anything construction, and Nelsen's copula text for Sklar's theorem and the arcsine law used in @lem-qba-spearman-matching.
+- **The ITC specialization:** the recent indirect-comparison bias-analysis literature, implemented in the `uitc` and `mlumr` packages, for the exploitation of the IPD that gives @def-itc-evalue its edge.
+
+## Exercises {#sec-qba-exercises}
+
+A star ($\star$) marks an exercise with a full solution in Appendix F. The first three are warm-ups on
+reading and interpretation; the later ones build to the proofs.
+
+::: {#exr-qba-interpret-evalue}
+## Reading an E-value (warm-up)
+A published unanchored comparison reports an adjusted hazard ratio of $\mathrm{HR}=0.62$ ($95\%$
+confidence interval $0.45$ to $0.85$) for a rare event, and states an E-value of $2.6$ for the point
+estimate and
+$1.7$ for the confidence limit nearest the null.
+
+(a) In one sentence, say what the number $2.6$ means to a committee, using the phrase "risk-ratio
+association on both legs".
+
+(b) A discussant claims an unmeasured prognostic difference between the trial populations could plausibly
+reach a risk-ratio association of $1.5$ on each leg. Does that threaten the result? What association would?
+
+(c) Why is the confidence-limit E-value ($1.7$) the more conservative number to report?
+:::
+
+::: {#exr-qba-tipping-plausible}
+## Judging a tipping point (interpretation)
+In the running COPD example the tipping point for the comparator mean of $\mathrm{FEV}_1$ is
+$m^{\dagger}=0.6$ liters, while the IPD mean is $2.0$ liters and the plausible comparator range is
+$[1.4,2.6]$.
+
+(a) State, in clinical language, what would have to be true of the comparator population for the conclusion
+to reverse.
+
+(b) Is the conclusion fragile or robust on this range, and why? What single piece of external evidence
+would most change your verdict?
+:::
+
+::: {#exr-qba-hta-writeup}
+## A dossier paragraph (interpretation)
+Using the running example's results (adjusted $\mathrm{RR}=0.50$, symmetric E-value $3.44$,
+indirect-comparison E-value $+\infty$ because $\mathrm{RR}_{UD}=1.65<2.01=\mathrm{BF}_{\mathrm{obs}}$, and
+tipping point $m^{\dagger}=0.6$ outside the plausible range), write a single honest paragraph for an HTA
+committee stating the estimate, the robustness verdict, and the one caveat that still travels with it (the
+single-covariate, fixed-$\mathrm{RR}_{UD}$ assumption).
+:::
+
+::: {#exr-qba-evalue-compute}
+## Computing E-values
+An unanchored comparison reports an adjusted risk ratio of $\mathrm{RR}_{\mathrm{obs}}=1.8$ with $95\%$
+confidence interval $(1.2,\,2.7)$.
+
+(a) Compute the E-value of the point estimate using @eq-qba-evalue.
+
+(b) Compute the E-value of the confidence limit nearest the null.
+
+(c) A reviewer notes that the measured covariates leave at most a residual association of risk ratio
+$1.4$ on each arm. Can unmeasured confounding of that strength explain the result away? Justify using
+@thm-evalue-derivation.
+:::
+
+::: {#exr-qba-protective}
+## Protective effects
+Show that for a protective observed effect $\mathrm{RR}_{\mathrm{obs}}<1$, applying @eq-qba-evalue to
+$1/\mathrm{RR}_{\mathrm{obs}}$ gives the same E-value as the following symmetric construction: the smallest
+$E\ge 1$ such that confounding with $\mathrm{RR}_{EU}=\mathrm{RR}_{UD}=E$ can raise the true risk ratio
+back up to the null. Compute the E-value for $\mathrm{RR}_{\mathrm{obs}}=0.5$.
+:::
+
+::: {#exr-qba-itc-evalue-star}
+## The indirect-comparison E-value and its certificate ($\star$)
+Use the worked example's model (same $\beta_0,\beta_R,m_R,\sigma_R,\sigma_U$, comparator risk
+$\mu_0=0.47$, IPD value $\bar{x}_U=2.0$), but now suppose the IPD estimates a stronger unreported
+covariate, $\beta_U=-0.8$.
+
+(a) Recompute the constant $K=\beta_0+\beta_R m_R+\tfrac12\beta_R^2\sigma_R^2+\tfrac12\beta_U^2\sigma_U^2
+-\log\mu_0$, the sensitivity curve $\Delta(m)=K+\beta_U m$, the adjusted effect $\Delta(2.0)$, the
+observed bias factor $\mathrm{BF}_{\mathrm{obs}}=\exp(|\Delta(2.0)|)$, and the outcome association
+$\mathrm{RR}_{UD}=e^{|\beta_U|}$. (Both $K$ and the slope change, since each depends on $\beta_U$.)
+
+(b) Decide whether $E_{\mathrm{ITC}}$ is finite or infinite using @prp-itc-evalue, and compute it if
+finite. Then verify the finite formula on the artificial pair $\mathrm{BF}_{\mathrm{obs}}=1.5$,
+$\mathrm{RR}_{UD}=2.5$.
+
+(c) Prove the general statement behind the certificate: for fixed $\mathrm{RR}_{UD}>1$, the bias factor
+$\mathrm{BF}_U(\mathrm{RR}_{EU},\mathrm{RR}_{UD})$ is strictly increasing in $\mathrm{RR}_{EU}$ and
+bounded above by $\mathrm{RR}_{UD}$, with the bound approached but never attained.
+:::
+
+::: {#exr-qba-sharp-bound-binary}
+## The sharp bound for a binary confounder
+Specialize @lem-qba-sharp-bound to a binary confounder $U\in\{0,1\}$ with unexposed-arm risks
+$p_0(0),p_0(1)$ and confounder distributions $f_1,f_0$. Starting from the exact bias factor
+@eq-qba-b-ratio, verify directly (without the vertex argument) that
+$B\le \mathrm{RR}_{EU}\mathrm{RR}_{UD}/(\mathrm{RR}_{EU}+\mathrm{RR}_{UD}-1)$, and identify the
+configuration of $(f_1,f_0,p_0)$ that attains equality. Confirm it matches the configuration in the proof
+of @lem-qba-sharp-bound.
+:::
+
+::: {#exr-qba-norta-margins-star}
+## NORTA recovers any margin ($\star$)
+Let $F$ be the Bernoulli$(\pi)$ distribution function and let $Z\sim\mathcal{N}(0,1)$.
+
+(a) Write down $F^{-1}$ (the generalized inverse) explicitly and show that $X=F^{-1}(\Phi(Z))$ is
+Bernoulli$(\pi)$, confirming @thm-norta-copula(1) for a discrete margin.
+
+(b) Show by counterexample that @thm-norta-copula(2) can fail for this discrete margin: exhibit two
+distinct correlation parameters $\rho^{N}$ that induce the *same* bivariate distribution of two such
+Bernoulli variables, so the copula is not unique. Explain why marginal recovery nonetheless still holds.
+
+(c) For a continuous margin, prove that the Pearson correlation of $(X_1,X_2)=\big(F_1^{-1}(\Phi(Z_1)),
+F_2^{-1}(\Phi(Z_2))\big)$ need not equal $\rho^{N}=\operatorname{corr}(Z_1,Z_2)$, by taking
+$F_1=F_2$ a lognormal margin and computing both correlations for $\rho^{N}=1$.
+:::
+
+::: {#exr-qba-tipping-monotone}
+## Tipping points for a nonmonotone curve
+Suppose an analyst balances two unreported covariates $U_1,U_2$ jointly, with the adjusted effect a
+function $\Delta(m_1,m_2)$ of both assumed means.
+
+(a) Give an example of an outcome model and margins for which the single-covariate sensitivity curve
+$m_1\mapsto\Delta(m_1,m_2^{0})$ (with $m_2$ fixed) is *not* monotone, so that @prp-qba-tipping-monotone
+does not apply. (Hint: let $U_1$ enter the outcome model nonlinearly, for example through $u_1^2$.)
+
+(b) Explain what "the tipping point" should mean when the sensitivity surface crosses the threshold on a
+curve rather than at a point, and how a plausible *region* (rather than a range) for $(m_1,m_2)$ enters
+the robust-versus-fragile verdict.
+:::
+
+::: {#exr-qba-pba-prior}
+## Probabilistic analysis with a beta prior
+The unreported covariate is binary with comparator prevalence $m\in(0,1)$, and the sensitivity curve is
+$\Delta(m)=0.2-1.5\,m$ on the log-odds-ratio scale (threshold $c=0$). Place a Beta$(2,8)$ prior on $m$
+(mean $0.2$).
+
+(a) Find the tipping prevalence $m^{\dagger}$ and decide robust-versus-fragile against the plausible range
+$[0.05,0.40]$.
+
+(b) Using that $\Delta$ is a decreasing affine function of $m$, express the probability of benefit
+$P(\Delta<0)=P(m>m^{\dagger})$ in terms of the Beta$(2,8)$ distribution function, and state whether the
+systematic interval for $\Delta$ excludes the null. (You may leave the Beta integral in closed form via
+its polynomial density.)
+:::

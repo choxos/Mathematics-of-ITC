@@ -1,0 +1,1789 @@
+---
+title: "Linear Regression from First Principles"
+---
+
+## Introduction {#sec-lr-intro}
+
+Every method in this book that adjusts an indirect comparison for differences between trial
+populations is, at its core, a regression. Simulated treatment comparison fits an outcome model on
+individual patient data and then evaluates it at a comparator population; multilevel network
+meta-regression writes the linear predictor of every arm as a regression on covariates; and
+matching-adjusted indirect comparison reweights individuals to balance covariates, a procedure we will
+see (Chapter 18) is closely tied to a weighted regression. Before any of that can be made rigorous we must
+understand the simplest and most important regression model completely: the linear model, fit by
+ordinary least squares. This chapter builds that theory from the ground up and proves every statement
+it makes.
+
+The questions we answer are the following. Given data, what does "the line of best fit" mean precisely,
+and what formula produces it? In what sense is that formula optimal, and under what assumptions? If we
+repeated the experiment, how would the estimate vary, and how do we quantify our uncertainty about it
+with a confidence interval or a test? Finally, the philosophical question that justifies the whole
+enterprise: why squares? Why minimize the sum of squared residuals rather than, say, the sum of absolute
+residuals? We preview the answer at once, so the reader does not spend the chapter wondering: under
+Gaussian errors, minimizing the sum of squares is exactly maximum likelihood (proved in @sec-lr-mle);
+minimizing the sum of absolute residuals would instead be maximum likelihood under a different,
+Laplace-shaped error model. The choice of squares is therefore a statement about the assumed shape of
+the noise, not an arbitrary convention.
+
+We will see that under the assumption of normal, homoskedastic (equal-variance), independent errors the
+least-squares estimator is selected by four different optimality principles at once:
+
+(i) **Projection (pure geometry).** The fitted vector is the point of the model space closest to the
+data. This uses only linear algebra, no probability (@sec-lr-ols).
+
+(ii) **Best linear unbiased estimator, BLUE (Gauss-Markov).** Among all estimators that are linear in
+the data and unbiased, ordinary least squares has the smallest variance. This uses only the first two
+moments of the errors, not their shape (@thm-ols-blue).
+
+(iii) **Maximum likelihood estimator, MLE.** Under Gaussian errors, least squares is the coefficient
+value that makes the observed data most probable (@thm-ols-mle-normal).
+
+(iv) **Uniformly minimum-variance unbiased estimator, UMVU (Cramér-Rao).** Under Gaussian errors, least
+squares beats every unbiased estimator, even nonlinear ones (@cor-ols-efficient-normal).
+
+These are four genuinely different statements: (i) is geometric, (ii) ranges over linear estimators
+assuming only two moments, (iii) is likelihood-based, and (iv) ranges over all unbiased estimators. That
+they select the same estimator is the reason linear regression is the workhorse of applied statistics,
+and it is the foundation on which the later chapters build.
+
+**How to read this chapter.** Every result is proved in full, because every later chapter leans on these
+facts and we want nothing downstream to be a black box. On a first reading you may take the formulas on
+trust and skip the proofs without losing the through-line; the prose around each result tells you what it
+means and why it matters for indirect comparison. The chapter is built in four layers, summarized here so
+you always know which layer you are in.
+
+| Layer | Where | What it delivers | Assumptions used |
+|---|---|---|---|
+| Geometry | @sec-lr-ols | the estimator, as a projection and as a formula | none (pure algebra) |
+| Optimality without normality | @sec-lr-gm | OLS is BLUE; an unbiased variance estimate | G1, G2 |
+| Exact inference | @sec-lr-normal, @sec-lr-inference | the $t$, $\chi^2$, and $F$ sampling distributions | G1, G2, G3 |
+| When coefficients are not unique | @sec-lr-rank | estimability and the pseudoinverse | none (pure algebra) |
+
+The development is self-contained but rests on the linear algebra of Chapters 1 to 3 (column spaces,
+@thm-projection-theorem, the @thm-spectral-theorem) and the probability and inference of Chapters 4 and
+5 (the multivariate normal, @def-mgf, @thm-cramer-rao). We recall what we use and prove everything that
+is specific to regression.
+
+## The linear model and its assumptions {#sec-lr-model}
+
+Before the abstractions arrive, here is the concrete example we will return to at every transition.
+
+::: {#exm-lr-running}
+## A running example: a small two-arm trial
+Six patients in a trial are randomized to a control arm or an active arm. For each patient we record the
+change in HbA1c (a continuous glycemic outcome, where a more negative change is better) together with the
+patient's baseline disease severity. To model the expected change we use three regressors: a constant
+term, a treatment indicator $T$ (equal to $1$ on the active arm and $0$ on control), and the
+mean-centered baseline severity $z$. In words,
+$$
+\mathbb{E}[\text{change}]=\beta_0\cdot 1+\beta_1\cdot T+\beta_2\cdot z .
+$$
+Each regressor is one column of the design matrix, and each carries a clinical role:
+
+| Column of $\mathbf{X}$ | Meaning | Coefficient | Clinical role |
+|---|---|---|---|
+| $\mathbf{1}$ | constant (intercept) | $\beta_0$ | mean outcome in the reference arm at average covariates |
+| $T$ | treatment indicator | $\beta_1$ | the adjusted treatment effect we care about |
+| $z$ | baseline severity, centered | $\beta_2$ | a prognostic-covariate adjustment |
+| ($\mathrm{age}$) | (a further covariate) | ($\beta_3$) | (a further adjustment, omitted below for hand arithmetic) |
+
+Taking three patients per arm at centered baseline values $z=-1,0,1$, the design matrix and response are
+$$
+\mathbf{X}=\begin{pmatrix}1&0&-1\\1&0&0\\1&0&1\\1&1&-1\\1&1&0\\1&1&1\end{pmatrix},
+\qquad
+\mathbf{y}=\begin{pmatrix}0\\1\\2\\-1\\0\\1\end{pmatrix},
+$$
+the first three rows being the control arm and the last three the active arm. We compute the fit in
+@exm-lr-betahat and reuse this design when we reach the Gauss-Markov theorem and the variance formulas.
+$\blacktriangleleft$
+:::
+
+We observe a response vector $\mathbf{y}\in\mathbb{R}^n$ and, for each of the $n$ units, the values of
+$p$ regressors collected as the rows of a known matrix $\mathbf{X}\in\mathbb{R}^{n\times p}$. The model
+asserts that, up to random error, $\mathbf{y}$ lies in the column space $\mathcal{C}(\mathbf{X})$.
+
+::: {#def-linear-model}
+## The linear model
+The **linear model** for a response $\mathbf{y}\in\mathbb{R}^n$ with design matrix
+$\mathbf{X}\in\mathbb{R}^{n\times p}$ ($p\le n$) is
+$$
+\mathbf{y} = \mathbf{X}\boldsymbol{\beta} + \boldsymbol{\varepsilon},
+$$ {#eq-linear-model}
+where $\boldsymbol{\beta}\in\mathbb{R}^p$ is an unknown vector of coefficients and
+$\boldsymbol{\varepsilon}\in\mathbb{R}^n$ is an unobserved random error vector. The **Gauss-Markov
+assumptions** are
+
+(G1) **zero mean**, $\mathbb{E}[\boldsymbol{\varepsilon}]=\mathbf{0}_n$;
+
+(G2) **homoskedasticity and no correlation**, $\mathrm{Cov}(\boldsymbol{\varepsilon})=\sigma^2 I_n$ for
+some unknown $\sigma^2>0$, that is, $\mathrm{Var}(\varepsilon_i)=\sigma^2$ for every $i$ and
+$\mathrm{Cov}(\varepsilon_i,\varepsilon_k)=0$ for $i\ne k$.
+
+The model has **full column rank** when $\mathrm{rank}(\mathbf{X})=p$. For the exact distributional
+theory of @sec-lr-normal onward we add
+
+(G3) **normality**, $\boldsymbol{\varepsilon}\sim\mathcal{N}_n(\mathbf{0}_n,\sigma^2 I_n)$,
+
+which (with G1, G2) is equivalent to $\mathbf{y}\sim\mathcal{N}_n(\mathbf{X}\boldsymbol{\beta},\sigma^2
+I_n)$. $\blacktriangleleft$
+:::
+
+**Reader translation.** The model says the response is a straight-line combination of the regressors,
+$\mathbf{X}\boldsymbol{\beta}$, plus random noise $\boldsymbol{\varepsilon}$ that on average is zero
+(G1), has the same spread for every patient and does not link patients together (G2), and, when we want
+exact tests, follows a bell curve (G3). In the running example $\mathbf{X}\boldsymbol{\beta}$ is the part
+of a patient's HbA1c change explained by their arm and baseline severity, and
+$\boldsymbol{\varepsilon}$ is everything else.
+
+A recurring source of confusion is the difference between the error and the residual. The table below
+fixes the roles of the symbols used throughout the chapter.
+
+| Symbol | Name | Observed? | Meaning |
+|---|---|---|---|
+| $\boldsymbol{\varepsilon}$ | error (disturbance) | no | the true random noise in @eq-linear-model; a property of nature |
+| $\mathbf{r}=\mathbf{y}-\hat{\mathbf{y}}$ | residual | yes | what is left after fitting; computed from the data |
+| $\boldsymbol{\beta}$ | coefficients | no | the true unknown effects |
+| $\hat{\boldsymbol{\beta}}$ | estimator | yes | our estimate of $\boldsymbol{\beta}$ from the data |
+| $\sigma^2$ | error variance | no | the true noise variance in G2 |
+| $s^2$ | variance estimate | yes | our estimate of $\sigma^2$ (@thm-sigma2-unbiased) |
+| $\hat{\mathbf{y}}=\mathbf{X}\hat{\boldsymbol{\beta}}$ | fitted values | yes | the model's prediction at each observed row |
+
+The left-hand quantities $\boldsymbol{\varepsilon},\boldsymbol{\beta},\sigma^2$ are unknown features of
+the population we never see; the right-hand quantities $\mathbf{r},\hat{\boldsymbol{\beta}},s^2$ are
+things we compute. Estimation is the act of guessing the first column from the second.
+
+A few words on the content of the assumptions. Assumption G1 says the regressors capture the systematic
+part of the response, so that the model $\mathbb{E}[\mathbf{y}]=\mathbf{X}\boldsymbol{\beta}$ is correct
+on average; it forces $\mathbb{E}[\mathbf{y}]\in\mathcal{C}(\mathbf{X})$. Assumption G2 is two
+assumptions in one: equal variances across units (homoskedasticity) and uncorrelated errors. It is what
+makes ordinary, unweighted least squares the right procedure; when it fails one uses weighted or
+generalized least squares, and the robust "sandwich" variance of @def-sandwich-variance repairs the
+inference. Assumption G3 is needed only for exact, finite-sample tests and intervals; the point
+estimator and the Gauss-Markov optimality of @sec-lr-gm require only G1 and G2.
+
+::: {.remark}
+**What homoskedasticity looks like, and when it fails.** Homoskedasticity (G2, first half) means every
+patient's outcome scatters around the regression line by the same amount. Picture the data points: under
+homoskedasticity they form a band of constant vertical thickness around the fitted line;
+heteroskedasticity is a band that fans out, for example wider scatter at higher baseline severity. A
+health researcher should expect G2 to fail when outcomes are recorded on different scales or in clusters:
+sicker patients often vary more than healthy ones, and patients within the same hospital are correlated
+(the second half of G2, no correlation, then also fails). When G2 fails, the point estimate
+$\hat{\boldsymbol{\beta}}$ is still unbiased, but its reported standard errors are wrong. Two standard
+repairs exist: weighted or generalized least squares (developed in @exr-lr-gm-weighted), which models the
+unequal variances directly, and the robust "sandwich" variance estimator of @def-sandwich-variance, which
+estimates the uncertainty of $\hat{\boldsymbol{\beta}}$ without assuming the tidy $\sigma^2 I_n$
+covariance structure at all. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reading the coefficients in health terms.** The coefficient $\beta_k$ is the conditional effect on
+$\mathbb{E}[y_i]$ of a one-unit change in the $k$-th regressor with all others held fixed. The three
+roles a column can play, which recur throughout the book, are visible already in the running example.
+
+- The coefficient on the **treatment indicator**, $\beta_1$, is the adjusted treatment effect: the
+  expected difference in outcome between the active and control arms for two patients with the same
+  baseline severity. This is the quantity every indirect comparison ultimately targets.
+- The coefficient on **baseline severity**, $\beta_2$, is a *prognostic* effect: severity predicts the
+  outcome regardless of treatment. A covariate that influences the outcome but not the treatment effect
+  is a prognostic variable (@def-prognostic-variable); you do not need the formal definition yet, only
+  the picture of a covariate that shifts everyone's outcome.
+- If we added a **treatment-by-severity product column**, its coefficient would measure how the treatment
+  effect itself changes with severity. A covariate that changes the treatment effect is an *effect
+  modifier* (@def-effect-modifier). Effect modifiers are the central obstacle in indirect comparison: two
+  trials with different severity mixes can report different treatment effects even when nothing else
+  differs. We meet them properly in Part II.
+
+On the identity link used here, this conditional reading is also the marginal (population-averaged) one,
+so the distinctions stay simple. For the nonlinear links of Chapter 7 the conditional and marginal
+effects diverge, a phenomenon named @def-non-collapsibility. The clean behavior of the identity-link
+linear model is exactly why it is the right place to learn the machinery before meeting its
+complications. $\blacktriangleleft$
+:::
+
+Throughout @sec-lr-ols to @sec-lr-anova we assume **full column rank**, $\mathrm{rank}(\mathbf{X})=p$.
+In plain terms this means no regressor column can be reconstructed as a combination of the others, so
+each coefficient is separately identifiable: the data can tell the columns apart. The assumption fails in
+familiar situations, for example when a categorical predictor is coded with an intercept *and* a separate
+indicator for every level, so that the indicators add up to the intercept column. We treat that
+rank-deficient case fully in @sec-lr-rank, where the geometry survives intact and only the coordinate
+vector $\boldsymbol{\beta}$ becomes non-unique; a reader who meets a coding problem of this kind in
+practice can jump ahead to that section without loss. The following small lemma is the algebraic hinge of
+the full-rank theory: it is what makes $\mathbf{X}^\top\mathbf{X}$ invertible.
+
+::: {#lem-gram-nullspace}
+## Null space of the Gram matrix
+For any $\mathbf{X}\in\mathbb{R}^{n\times p}$,
+$\mathcal{N}(\mathbf{X}^\top\mathbf{X})=\mathcal{N}(\mathbf{X})$ and
+$\mathcal{C}(\mathbf{X}^\top\mathbf{X})=\mathcal{C}(\mathbf{X}^\top)$; consequently
+$\mathrm{rank}(\mathbf{X}^\top\mathbf{X})=\mathrm{rank}(\mathbf{X})$. In particular
+$\mathbf{X}^\top\mathbf{X}$ is invertible if and only if $\mathrm{rank}(\mathbf{X})=p$, in which case it
+is positive definite.
+:::
+
+::: {.proof}
+We argue in four short steps.
+
+*Step 1 (the two null spaces are equal).* If $\mathbf{X}\mathbf{v}=\mathbf{0}$ then
+$\mathbf{X}^\top\mathbf{X}\mathbf{v}=\mathbf{0}$, so
+$\mathcal{N}(\mathbf{X})\subseteq\mathcal{N}(\mathbf{X}^\top\mathbf{X})$. Conversely, if
+$\mathbf{X}^\top\mathbf{X}\mathbf{v}=\mathbf{0}$ then
+$$
+0=\mathbf{v}^\top\mathbf{X}^\top\mathbf{X}\mathbf{v}=(\mathbf{X}\mathbf{v})^\top(\mathbf{X}\mathbf{v})
+=\|\mathbf{X}\mathbf{v}\|_2^2,
+$$
+whence $\mathbf{X}\mathbf{v}=\mathbf{0}$ (a vector of norm zero is the zero vector); thus
+$\mathcal{N}(\mathbf{X}^\top\mathbf{X})\subseteq\mathcal{N}(\mathbf{X})$ and the two null spaces are
+equal.
+
+*Step 2 (the ranks are equal).* Apply the rank-nullity theorem (@thm-rank-nullity) to the $p\times p$
+matrix $\mathbf{X}^\top\mathbf{X}$ and to $\mathbf{X}$, both of which have $p$ columns. Rank-nullity says
+(number of columns) $=$ rank $+$ nullity, so
+$$
+\mathrm{rank}(\mathbf{X}^\top\mathbf{X})=p-\dim\mathcal{N}(\mathbf{X}^\top\mathbf{X})
+=p-\dim\mathcal{N}(\mathbf{X})=\mathrm{rank}(\mathbf{X}),
+$$
+the middle equality being Step 1.
+
+*Step 3 (the column spaces are equal).* The inclusion
+$\mathcal{C}(\mathbf{X}^\top\mathbf{X})\subseteq\mathcal{C}(\mathbf{X}^\top)$ is immediate, because every
+column of $\mathbf{X}^\top\mathbf{X}=\mathbf{X}^\top(\mathbf{X})$ is $\mathbf{X}^\top$ times a column of
+$\mathbf{X}$. To upgrade this inclusion to equality it suffices to show the two spaces have the same
+dimension. The dimension of $\mathcal{C}(\mathbf{X}^\top\mathbf{X})$ is $\mathrm{rank}(\mathbf{X}^\top
+\mathbf{X})=\mathrm{rank}(\mathbf{X})$ by Step 2, while the dimension of $\mathcal{C}(\mathbf{X}^\top)$ is
+$\mathrm{rank}(\mathbf{X}^\top)$, and a basic fact of linear algebra is that a matrix and its transpose
+have the same rank, $\mathrm{rank}(\mathbf{X}^\top)=\mathrm{rank}(\mathbf{X})$ (this is part of the
+fundamental theorem of the four subspaces, @thm-four-subspaces; row rank equals column rank). The two
+dimensions match, so the inclusion is an equality.
+
+*Step 4 (definiteness and invertibility).* The matrix $\mathbf{X}^\top\mathbf{X}$ is symmetric with
+$\mathbf{v}^\top\mathbf{X}^\top\mathbf{X}\mathbf{v}=\|\mathbf{X}\mathbf{v}\|_2^2\ge 0$, so it is positive
+semidefinite. It is positive definite exactly when $\|\mathbf{X}\mathbf{v}\|_2^2>0$ for every
+$\mathbf{v}\ne\mathbf{0}$, that is, when $\mathcal{N}(\mathbf{X})=\{\mathbf{0}\}$, equivalently
+$\mathrm{rank}(\mathbf{X})=p$ (@thm-pd-characterization). A positive definite matrix is invertible. $\square$
+:::
+
+**Reader translation.** The Gram matrix $\mathbf{X}^\top\mathbf{X}$ inherits exactly the
+non-redundancy of $\mathbf{X}$: it is invertible if and only if the regressors are not redundant. This is
+the single fact that lets us write down the closed-form estimator @eq-betahat below; when it fails we are
+in the rank-deficient world of @sec-lr-rank.
+
+## Ordinary least squares: two derivations {#sec-lr-ols}
+
+We measure the fit of a candidate coefficient vector $\mathbf{b}$ by the sum of squared residuals.
+
+::: {#def-sums-of-squares}
+## Residual, total, and explained sums of squares
+For a candidate $\mathbf{b}\in\mathbb{R}^p$ the **objective function** is
+$$
+S(\mathbf{b}) = \|\mathbf{y}-\mathbf{X}\mathbf{b}\|_2^2
+= (\mathbf{y}-\mathbf{X}\mathbf{b})^\top(\mathbf{y}-\mathbf{X}\mathbf{b}).
+$$
+At a minimizer $\hat{\boldsymbol{\beta}}$ write the fitted values $\hat{\mathbf{y}}=\mathbf{X}\hat{\boldsymbol{\beta}}$
+and residuals $\mathbf{r}=\mathbf{y}-\hat{\mathbf{y}}$. The **residual sum of squares** is
+$\mathrm{RSS}=\|\mathbf{r}\|_2^2=S(\hat{\boldsymbol{\beta}})$. When the model contains an intercept
+(the vector $\mathbf{1}_n$ lies in $\mathcal{C}(\mathbf{X})$) the **total sum of squares** is
+$\mathrm{TSS}=\sum_{i=1}^n (y_i-\bar y)^2=\|\mathbf{y}-\bar y\,\mathbf{1}_n\|_2^2$ with $\bar
+y=\tfrac1n\sum_i y_i$, and the **explained sum of squares** is
+$\mathrm{ESS}_{\mathrm{reg}}=\|\hat{\mathbf{y}}-\bar y\,\mathbf{1}_n\|_2^2$. $\blacktriangleleft$
+:::
+
+**Reader translation.** $S(\mathbf{b})$ is the total squared miss if we used the coefficients
+$\mathbf{b}$; least squares picks the $\mathbf{b}$ that makes it smallest. Once we have the winner
+$\hat{\boldsymbol{\beta}}$, the RSS is the leftover squared error, the TSS is the total spread of the
+response around its mean, and the explained sum of squares is the part of that spread the regression
+accounts for.
+
+::: {.remark}
+**A notation trap.** The subscript on $\mathrm{ESS}_{\mathrm{reg}}$ is deliberate. Later chapters use the
+bare symbol $\mathrm{ESS}$ for the *effective sample size* of a weighted sample (central to MAIC in
+Chapter 18), an entirely different quantity. We always write the subscript here, $\mathrm{ESS}_{\mathrm{reg}}$,
+for the explained regression sum of squares, to keep the two apart. $\blacktriangleleft$
+:::
+
+### Derivation by calculus
+
+::: {#thm-ols-normal-equations}
+## Normal equations and the least-squares estimator
+A vector $\hat{\boldsymbol{\beta}}\in\mathbb{R}^p$ minimizes $S$ over $\mathbb{R}^p$ if and only if it
+solves the **normal equations**
+$$
+\mathbf{X}^\top\mathbf{X}\,\hat{\boldsymbol{\beta}}=\mathbf{X}^\top\mathbf{y}.
+$$ {#eq-normal-equations}
+The normal equations are always consistent. When $\mathrm{rank}(\mathbf{X})=p$ the minimizer is unique
+and equals
+$$
+\hat{\boldsymbol{\beta}}=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{y}.
+$$ {#eq-betahat}
+:::
+
+::: {.proof}
+Expand the objective, using $\mathbf{b}^\top\mathbf{X}^\top\mathbf{y}=\mathbf{y}^\top\mathbf{X}\mathbf{b}$
+(a scalar equals its transpose):
+$$
+S(\mathbf{b})=\mathbf{y}^\top\mathbf{y}-2\,\mathbf{b}^\top\mathbf{X}^\top\mathbf{y}
++\mathbf{b}^\top\mathbf{X}^\top\mathbf{X}\,\mathbf{b}.
+$$
+This is a quadratic form in $\mathbf{b}$ (a function built from the squared shape
+$\mathbf{b}^\top A\mathbf{b}$ for a symmetric matrix $A=\mathbf{X}^\top\mathbf{X}$; see
+@def-quadratic-form), with gradient and Hessian
+$$
+\nabla S(\mathbf{b})=-2\,\mathbf{X}^\top\mathbf{y}+2\,\mathbf{X}^\top\mathbf{X}\,\mathbf{b},
+\qquad
+\nabla^2 S(\mathbf{b})=2\,\mathbf{X}^\top\mathbf{X}.
+$$
+The gradient is the multivariable analogue of the single-variable derivative: setting it to zero is the
+same first-order condition as in one-variable calculus, $\tfrac{d}{db}\sum_i(y_i-b\,x_i)^2=0$, written
+once for all $p$ coordinates at once. By @lem-gram-nullspace the Hessian $2\mathbf{X}^\top\mathbf{X}$ is
+positive semidefinite everywhere, so
+$S$ is a convex function on $\mathbb{R}^p$; for a differentiable convex function a point is a global
+minimizer if and only if its gradient vanishes there (a fact we now verify directly so as not to lean on
+convex-analysis machinery). Setting $\nabla S(\mathbf{b})=\mathbf{0}$ gives exactly the normal equations
+@eq-normal-equations. We prove the two directions of the "if and only if" separately.
+
+*Forward direction (a solution of the normal equations is a global minimizer).* Let
+$\hat{\boldsymbol{\beta}}$ solve @eq-normal-equations and let $\mathbf{b}=\hat{\boldsymbol{\beta}}+\mathbf{d}$
+be arbitrary. Then
+$$
+S(\mathbf{b})-S(\hat{\boldsymbol{\beta}})
+=-2\,\mathbf{d}^\top\mathbf{X}^\top\mathbf{y}
++2\,\mathbf{d}^\top\mathbf{X}^\top\mathbf{X}\hat{\boldsymbol{\beta}}
++\mathbf{d}^\top\mathbf{X}^\top\mathbf{X}\mathbf{d}
+=2\,\mathbf{d}^\top\!\big(\mathbf{X}^\top\mathbf{X}\hat{\boldsymbol{\beta}}-\mathbf{X}^\top\mathbf{y}\big)
++\|\mathbf{X}\mathbf{d}\|_2^2
+=\|\mathbf{X}\mathbf{d}\|_2^2\ge 0,
+$$
+the linear term vanishing because $\hat{\boldsymbol{\beta}}$ solves @eq-normal-equations. Hence
+$S(\mathbf{b})\ge S(\hat{\boldsymbol{\beta}})$ for every $\mathbf{b}$, so every solution of the normal
+equations is a global minimizer.
+
+*Reverse direction (a minimizer solves the normal equations).* Conversely, if $\hat{\boldsymbol{\beta}}$
+is a minimizer then $\nabla S(\hat{\boldsymbol{\beta}})=\mathbf{0}$ (a necessary first-order condition for
+an interior minimum of a differentiable function on $\mathbb{R}^p$), which is @eq-normal-equations.
+
+Consistency holds because $\mathbf{X}^\top\mathbf{y}\in\mathcal{C}(\mathbf{X}^\top)
+=\mathcal{C}(\mathbf{X}^\top\mathbf{X})$ by @lem-gram-nullspace, so the right-hand side lies in the
+column space of the coefficient matrix. In plain terms: the normal equations always have at least one
+solution; they may simply fail to have a *unique* one when the design is rank deficient (the case of
+@sec-lr-rank). When $\mathrm{rank}(\mathbf{X})=p$, @lem-gram-nullspace makes
+$\mathbf{X}^\top\mathbf{X}$ invertible, so @eq-normal-equations has the unique solution
+@eq-betahat. $\square$
+:::
+
+::: {.remark}
+**Why "normal"?** Here "normal" is the geometric word for *perpendicular*. The equations
+$\mathbf{X}^\top(\mathbf{y}-\mathbf{X}\hat{\boldsymbol{\beta}})=\mathbf{0}$ say the residual is
+perpendicular to every column of $\mathbf{X}$. The projection derivation below makes this geometry
+explicit. $\blacktriangleleft$
+:::
+
+We make the formula concrete at once, rather than waiting for the end of the chapter.
+
+::: {#exm-lr-betahat}
+## The running example: computing the estimate
+For the trial design of @exm-lr-running, the Gram matrix is block structured because the centered
+baseline $z$ is balanced across arms (its column is orthogonal to both the intercept and the treatment
+column):
+$$
+\mathbf{X}^\top\mathbf{X}=\begin{pmatrix}6&3&0\\3&3&0\\0&0&4\end{pmatrix},
+\qquad
+(\mathbf{X}^\top\mathbf{X})^{-1}=\begin{pmatrix}\tfrac13&-\tfrac13&0\\[2pt]-\tfrac13&\tfrac23&0\\[2pt]0&0&\tfrac14\end{pmatrix}.
+$$
+With $\mathbf{X}^\top\mathbf{y}=(3,0,4)^\top$ (the column sums of $\mathbf{y}$, of $T y$, and of $z y$),
+$$
+\hat{\boldsymbol{\beta}}=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{y}
+=\begin{pmatrix}\tfrac13(3)-\tfrac13(0)\\[2pt]-\tfrac13(3)+\tfrac23(0)\\[2pt]\tfrac14(4)\end{pmatrix}
+=\begin{pmatrix}1\\-1\\1\end{pmatrix}.
+$$
+Reading the three numbers clinically: the control arm's expected HbA1c change at average baseline is
+$\hat\beta_0=1$; the **adjusted treatment effect** is $\hat\beta_1=-1$, so the active arm lowers the
+change by one unit (an improvement); and each one-unit rise in baseline severity adds
+$\hat\beta_2=1$ to the expected change. These illustrative values happen to fit exactly, so every residual
+is zero here; the worked example of @sec-lr-example carries a data set with genuine scatter through every
+variance and testing formula. $\blacktriangleleft$
+:::
+
+**Why this matters (ITC).** This predict-from-coefficients step is the engine of simulated treatment
+comparison (Chapter 19). There one fits exactly this kind of outcome model on individual patient data
+from one trial, then evaluates $\mathbf{x}^\top\hat{\boldsymbol{\beta}}$ at the *comparator* trial's mean
+covariates to predict how the treatment would have performed in the other population. The normal
+equations are precisely what make that prediction well-defined.
+
+### Derivation by projection
+
+The calculus derivation produces the formula but hides its meaning. The projection derivation reveals
+that least squares is geometry: $\hat{\mathbf{y}}$ is the point of $\mathcal{C}(\mathbf{X})$ closest to
+$\mathbf{y}$.
+
+::: {.proof}
+**(Projection derivation of @thm-ols-normal-equations.)** Minimizing
+$S(\mathbf{b})=\|\mathbf{y}-\mathbf{X}\mathbf{b}\|_2^2$ over $\mathbf{b}\in\mathbb{R}^p$ is the same as
+minimizing $\|\mathbf{y}-\mathbf{v}\|_2^2$ over $\mathbf{v}\in\mathcal{C}(\mathbf{X})$, because as
+$\mathbf{b}$ ranges over $\mathbb{R}^p$ the vector $\mathbf{v}=\mathbf{X}\mathbf{b}$ ranges over exactly
+$\mathcal{C}(\mathbf{X})$ (@def-column-space). The orthogonal projection theorem
+(@thm-projection-theorem) states that the closed subspace $\mathcal{C}(\mathbf{X})$ contains a unique
+closest point $\hat{\mathbf{y}}=P_{\mathcal{C}(\mathbf{X})}\mathbf{y}$ to $\mathbf{y}$, characterized by
+the orthogonality of the residual to the subspace:
+$\mathbf{y}-\hat{\mathbf{y}}\perp\mathcal{C}(\mathbf{X})$. Orthogonality to $\mathcal{C}(\mathbf{X})$
+means orthogonality to each column of $\mathbf{X}$, that is,
+$\mathbf{X}^\top(\mathbf{y}-\hat{\mathbf{y}})=\mathbf{0}$. Writing
+$\hat{\mathbf{y}}=\mathbf{X}\hat{\boldsymbol{\beta}}$ this is
+$\mathbf{X}^\top\mathbf{y}=\mathbf{X}^\top\mathbf{X}\hat{\boldsymbol{\beta}}$, the normal equations
+@eq-normal-equations once more. When $\mathrm{rank}(\mathbf{X})=p$ the representation
+$\hat{\mathbf{y}}=\mathbf{X}\hat{\boldsymbol{\beta}}$ is unique and @eq-betahat follows. $\square$
+:::
+
+The picture behind the projection derivation is the single most useful image in the chapter. The data
+$\mathbf{y}$ is a point in $\mathbb{R}^n$; the model space $\mathcal{C}(\mathbf{X})$ is a flat subspace
+(a line, a plane, or higher); and the fitted vector $\hat{\mathbf{y}}$ is the foot of the perpendicular
+dropped from $\mathbf{y}$ onto that subspace, with the residual $\mathbf{r}$ as the perpendicular itself.
+
+```
+        y      (the data: a point in R^n)
+        |\
+        | \    r = y - yhat   (residual: perpendicular to the model space)
+        |  \
+        |   \
+   -----+----*--------------------------  C(X): the model space {Xb : b in R^p}
+             yhat = Hy
+             (fitted values: the closest point of C(X) to y; right angle at yhat)
+```
+
+**Reader translation.** "Line of best fit" is made exact: among all predictions the model can produce
+(every point of $\mathcal{C}(\mathbf{X})$), the fitted values are the unique one nearest the data, and
+"nearest" forces the leftover error to be perpendicular to the model. Everything else in the chapter is
+a consequence of this right angle.
+
+::: {.remark}
+The two derivations are the same computation read in two directions. The vanishing gradient
+$\mathbf{X}^\top(\mathbf{y}-\mathbf{X}\mathbf{b})=\mathbf{0}$ *is* the statement that the residual is
+orthogonal to every column of $\mathbf{X}$. Calculus supplies the formula and convexity certifies it is
+a global minimum; projection supplies the picture and explains why the minimum is unique on the level of
+fitted values even when it is not unique on the level of coefficients (the theme of @sec-lr-rank).
+Numerically one rarely forms $\mathbf{X}^\top\mathbf{X}$ and inverts it; the orthogonal factorization
+$\mathbf{X}=QR$ from Gram-Schmidt (@thm-gram-schmidt) gives the more stable solution of
+$R\hat{\boldsymbol{\beta}}=Q^\top\mathbf{y}$. This is what statistical software actually does: the `lm()`
+routine in R, and its equivalents, never form $\mathbf{X}^\top\mathbf{X}$ explicitly but factor
+$\mathbf{X}$ directly, which is numerically more accurate. The closed form @eq-betahat is for
+understanding and proof, not for computation. $\blacktriangleleft$
+:::
+
+### The hat matrix and the residual maker
+
+::: {#def-hat-matrix}
+## Hat matrix and residual maker
+Under $\mathrm{rank}(\mathbf{X})=p$ the **hat matrix** is
+$$
+H=\mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\in\mathbb{R}^{n\times n},
+$$ {#eq-hat-matrix}
+so that the fitted values are $\hat{\mathbf{y}}=H\mathbf{y}$ (it "puts the hat on $\mathbf{y}$"). The
+**residual maker** is $M=I_n-H$, so that the residuals are $\mathbf{r}=M\mathbf{y}$. $\blacktriangleleft$
+:::
+
+**Reader translation.** $H$ is the single matrix that turns data into fitted values, $\hat{\mathbf{y}}=H
+\mathbf{y}$, and $M=I_n-H$ turns data into residuals, $\mathbf{r}=M\mathbf{y}$. They do all the work of
+fitting in one multiplication each.
+
+::: {.remark}
+**Why you should care about $H$: diagnostics.** The hat matrix is not a mere bookkeeping device. Its
+$i$-th diagonal entry $h_{ii}$, called the **leverage** of observation $i$, measures how strongly that
+observation pulls its own fitted value toward itself; a high-leverage patient (one with unusual covariate
+values) can dominate the fit. Leverage is the basis of every regression diagnostic an applied researcher
+meets, including Cook's distance for influential points. We develop the formal properties of leverage in
+@exr-lr-leverage. The idempotence $H^2=H$ proved next also has a plain meaning: fitting is a projection,
+so once you have projected onto the model space, projecting again changes nothing. $\blacktriangleleft$
+:::
+
+::: {#lem-hat-properties}
+## Properties of H and M
+With $H$ and $M$ as in @def-hat-matrix:
+
+1. $H$ and $M$ are symmetric and idempotent: $H^\top=H$, $H^2=H$, $M^\top=M$, $M^2=M$.
+2. $HM=MH=0$.
+3. $H\mathbf{X}=\mathbf{X}$ and $M\mathbf{X}=0$; equivalently $\mathbf{X}^\top H=\mathbf{X}^\top$ and
+   $\mathbf{X}^\top M=0$.
+4. $H$ is the orthogonal projection onto $\mathcal{C}(\mathbf{X})$ and $M$ the orthogonal projection
+   onto $\mathcal{C}(\mathbf{X})^\perp=\mathcal{N}(\mathbf{X}^\top)$.
+5. $\mathrm{tr}(H)=p$ and $\mathrm{tr}(M)=n-p$.
+:::
+
+::: {.proof}
+(1) Symmetry of $H$: since $(\mathbf{X}^\top\mathbf{X})^{-1}$ is symmetric (the inverse of a symmetric
+matrix is symmetric),
+$H^\top=\mathbf{X}\big((\mathbf{X}^\top\mathbf{X})^{-1}\big)^\top\mathbf{X}^\top
+=\mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top=H$. Idempotence:
+$$
+H^2=\mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\underbrace{\mathbf{X}^\top\mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}}_{=I_p}\mathbf{X}^\top
+=\mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top=H.
+$$
+Then $M^\top=(I-H)^\top=I-H=M$ and $M^2=(I-H)^2=I-2H+H^2=I-2H+H=I-H=M$.
+
+(2) $HM=H(I-H)=H-H^2=H-H=0$, and $MH=(I-H)H=H-H^2=0$.
+
+(3) $H\mathbf{X}=\mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{X}=\mathbf{X}I_p=\mathbf{X}$,
+hence $M\mathbf{X}=\mathbf{X}-H\mathbf{X}=0$. Transposing and using symmetry gives
+$\mathbf{X}^\top H=\mathbf{X}^\top$ and $\mathbf{X}^\top M=0$.
+
+(4) A symmetric idempotent matrix is the orthogonal projection onto its column space
+(@def-projection-matrix). By (3), $\mathcal{C}(\mathbf{X})\subseteq\mathcal{C}(H)$; conversely every
+column of $H$ is $\mathbf{X}$ times a vector, so $\mathcal{C}(H)\subseteq\mathcal{C}(\mathbf{X})$; thus
+$\mathcal{C}(H)=\mathcal{C}(\mathbf{X})$ and $H=P_{\mathcal{C}(\mathbf{X})}$. Since
+$M\mathbf{v}=\mathbf{v}$ exactly when $H\mathbf{v}=\mathbf{0}$, that is when
+$\mathbf{v}\in\mathcal{C}(\mathbf{X})^\perp$, and $M=P^{\perp}_{\mathcal{C}(\mathbf{X})}$. The identity
+$\mathcal{C}(\mathbf{X})^\perp=\mathcal{N}(\mathbf{X}^\top)$ is the fundamental theorem of the four
+subspaces (@thm-four-subspaces).
+
+(5) Using the cyclic property of the trace,
+$\mathrm{tr}(H)=\mathrm{tr}\big(\mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\big)
+=\mathrm{tr}\big((\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{X}\big)=\mathrm{tr}(I_p)=p$,
+and $\mathrm{tr}(M)=\mathrm{tr}(I_n)-\mathrm{tr}(H)=n-p$. $\square$
+:::
+
+**Why this matters.** These five properties are the algebraic toolkit reused in almost every proof that
+follows: idempotence and symmetry drive the distribution of the residual sum of squares (@thm-rss-chisq),
+$HM=0$ drives the independence of the estimate and the variance estimate (@thm-betahat-s2-independence),
+and $\mathrm{tr}(M)=n-p$ is the source of the degrees-of-freedom divisor.
+
+::: {#prp-fitted-residual-geometry}
+## Geometry of fitted values and residuals
+The fitted values and residuals satisfy $\hat{\mathbf{y}}\in\mathcal{C}(\mathbf{X})$,
+$\mathbf{r}\in\mathcal{C}(\mathbf{X})^\perp$, and $\hat{\mathbf{y}}^\top\mathbf{r}=0$. Consequently
+$\mathbf{y}=\hat{\mathbf{y}}+\mathbf{r}$ is the orthogonal decomposition of $\mathbf{y}$ into its
+component in the model space and its component orthogonal to it, and
+$$
+\|\mathbf{y}\|_2^2=\|\hat{\mathbf{y}}\|_2^2+\|\mathbf{r}\|_2^2 .
+$$
+If the model contains an intercept then in addition $\sum_{i=1}^n r_i=0$, so the residuals have mean
+zero and $\overline{\hat y}=\bar y$.
+:::
+
+::: {.proof}
+$\hat{\mathbf{y}}=H\mathbf{y}\in\mathcal{C}(H)=\mathcal{C}(\mathbf{X})$ and $\mathbf{r}=M\mathbf{y}\in
+\mathcal{C}(M)=\mathcal{C}(\mathbf{X})^\perp$ by parts (3) and (4) of @lem-hat-properties. Their inner
+product is $\hat{\mathbf{y}}^\top\mathbf{r}=(H\mathbf{y})^\top(M\mathbf{y})
+=\mathbf{y}^\top H M\mathbf{y}=0$ by part (2). Since $\hat{\mathbf{y}}\perp\mathbf{r}$, the Pythagorean
+theorem gives
+$\|\mathbf{y}\|_2^2=\|\hat{\mathbf{y}}+\mathbf{r}\|_2^2=\|\hat{\mathbf{y}}\|_2^2+\|\mathbf{r}\|_2^2$.
+If $\mathbf{1}_n\in\mathcal{C}(\mathbf{X})$ then $H\mathbf{1}_n=\mathbf{1}_n$, so $M\mathbf{1}_n=\mathbf{0}$
+and $\sum_i r_i=\mathbf{1}_n^\top\mathbf{r}=\mathbf{1}_n^\top M\mathbf{y}=(M\mathbf{1}_n)^\top\mathbf{y}=0$.
+Then $\overline{\hat y}=\bar y-\tfrac1n\sum_i r_i=\bar y$. $\square$
+:::
+
+**Reader translation.** The data splits cleanly into "what the model captured" ($\hat{\mathbf{y}}$) and
+"what it missed" ($\mathbf{r}$), and these two parts are at right angles, so their squared lengths add
+(Pythagoras). When the model has an intercept the residuals also sum to zero, which is why the fitted
+line passes through the average point $(\bar x,\bar y)$. This orthogonal split is what the
+analysis-of-variance decomposition (@sec-lr-anova) and $R^2$ will measure.
+
+## The Gauss-Markov theorem {#sec-lr-gm}
+
+We now bring in the assumptions G1 and G2 and study $\hat{\boldsymbol{\beta}}$ as a random vector. We use
+repeatedly the two rules of linear transformation of moments: for a fixed matrix $A$ and random vector
+$\mathbf{z}$, $\mathbb{E}[A\mathbf{z}]=A\,\mathbb{E}[\mathbf{z}]$ and
+$\mathrm{Cov}(A\mathbf{z})=A\,\mathrm{Cov}(\mathbf{z})\,A^\top$. The second follows from the definition:
+$\mathrm{Cov}(A\mathbf{z})=\mathbb{E}\big[A(\mathbf{z}-\mathbb{E}\mathbf{z})(\mathbf{z}-\mathbb{E}\mathbf{z})^\top
+A^\top\big]=A\,\mathrm{Cov}(\mathbf{z})\,A^\top$.
+
+::: {#thm-ols-moments}
+## Mean and covariance of the OLS estimator
+Under @def-linear-model with G1, G2 and $\mathrm{rank}(\mathbf{X})=p$, the estimator @eq-betahat is
+unbiased and has covariance
+$$
+\mathbb{E}[\hat{\boldsymbol{\beta}}]=\boldsymbol{\beta},
+\qquad
+\mathrm{Cov}(\hat{\boldsymbol{\beta}})=\sigma^2(\mathbf{X}^\top\mathbf{X})^{-1}.
+$$ {#eq-cov-betahat}
+:::
+
+::: {.proof}
+Substitute @eq-linear-model into @eq-betahat and set $A=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$:
+$$
+\hat{\boldsymbol{\beta}}=A(\mathbf{X}\boldsymbol{\beta}+\boldsymbol{\varepsilon})
+=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{X}\,\boldsymbol{\beta}
++A\boldsymbol{\varepsilon}
+=\boldsymbol{\beta}+A\boldsymbol{\varepsilon}.
+$$ {#eq-betahat-error}
+Taking expectations and using G1, $\mathbb{E}[\hat{\boldsymbol{\beta}}]
+=\boldsymbol{\beta}+A\,\mathbb{E}[\boldsymbol{\varepsilon}]=\boldsymbol{\beta}$. For the covariance,
+$\hat{\boldsymbol{\beta}}-\boldsymbol{\beta}=A\boldsymbol{\varepsilon}$, so by G2,
+$$
+\mathrm{Cov}(\hat{\boldsymbol{\beta}})=A\,\mathrm{Cov}(\boldsymbol{\varepsilon})\,A^\top
+=A(\sigma^2 I_n)A^\top
+=\sigma^2(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}
+=\sigma^2(\mathbf{X}^\top\mathbf{X})^{-1},
+$$
+where we used the symmetry of $(\mathbf{X}^\top\mathbf{X})^{-1}$. $\square$
+:::
+
+**Reader translation.** On average the estimator hits the true coefficients (unbiased), and its
+uncertainty is governed entirely by $\sigma^2(\mathbf{X}^\top\mathbf{X})^{-1}$, which depends on the
+design but not on the data values $\mathbf{y}$. In the running example
+(@exm-lr-betahat), the $(T,T)$ entry of $(\mathbf{X}^\top\mathbf{X})^{-1}$ is $\tfrac23$, so the variance
+of the estimated treatment effect is $\sigma^2\cdot\tfrac23$ and its standard error is $\sigma\sqrt{2/3}$.
+A design that estimates the treatment effect more precisely is one that makes this diagonal entry small.
+
+Among unbiased estimators that are linear in $\mathbf{y}$, none has a smaller variance than OLS. This is
+the Gauss-Markov theorem, the central optimality result of the chapter. "Best" is meant in the strong
+matrix sense made precise next.
+
+::: {#def-loewner-order}
+## Loewner order
+For symmetric matrices $A$ and $B$ of the same size, write $A\succeq B$, and say $A$ dominates $B$ in the
+**Loewner order**, when the difference $A-B$ is positive semidefinite, that is $\mathbf{z}^\top(A-B)
+\mathbf{z}\ge 0$ for every vector $\mathbf{z}$. $\blacktriangleleft$
+:::
+
+**Reader translation.** When $A$ and $B$ are the covariance matrices of two estimators, $A\succeq B$ is a
+strong statement. Taking $\mathbf{z}=\mathbf{c}$ it gives $\mathbf{c}^\top A\mathbf{c}\ge\mathbf{c}^\top B
+\mathbf{c}$, that is, *every* linear combination $\mathbf{c}^\top\hat{\boldsymbol{\beta}}$ of the
+coefficients has at least as large a variance under $A$ as under $B$. A single matrix inequality
+therefore compares the two estimators on every question at once, not one coefficient at a time.
+
+::: {#thm-ols-blue}
+## Gauss-Markov
+Assume @def-linear-model with G1, G2 and $\mathrm{rank}(\mathbf{X})=p$. Let
+$\tilde{\boldsymbol{\beta}}=C\mathbf{y}$ be any estimator linear in $\mathbf{y}$ that is unbiased for
+$\boldsymbol{\beta}$ for every value of $\boldsymbol{\beta}$. Then
+$$
+\mathrm{Cov}(\tilde{\boldsymbol{\beta}})-\mathrm{Cov}(\hat{\boldsymbol{\beta}})\succeq 0,
+$$
+with equality if and only if $\tilde{\boldsymbol{\beta}}=\hat{\boldsymbol{\beta}}$ almost surely.
+In particular, for every fixed $\mathbf{c}\in\mathbb{R}^p$ the OLS estimator $\mathbf{c}^\top
+\hat{\boldsymbol{\beta}}$ has the smallest variance among all linear unbiased estimators of
+$\mathbf{c}^\top\boldsymbol{\beta}$: $\hat{\boldsymbol{\beta}}$ is the **best linear unbiased estimator**
+(BLUE).
+:::
+
+**Roadmap of the proof.** Write any rival linear unbiased estimator as $C\mathbf{y}$. Unbiasedness forces
+$C\mathbf{X}=I_p$. We split $C=A+D$ into the OLS map $A=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$
+plus a remainder $D$; read $D$ as whatever extra linear operation the rival performs on top of OLS.
+Unbiasedness forces that extra operation to ignore the model space, $D\mathbf{X}=0$, and this single fact
+makes the cross terms vanish, leaving the rival's covariance equal to the OLS covariance plus a
+nonnegative piece $\sigma^2 DD^\top$. Hence the rival can never beat OLS, and ties it only when $D=0$.
+
+::: {.proof}
+Unbiasedness of $C\mathbf{y}$ for all $\boldsymbol{\beta}$ means
+$\mathbb{E}[C\mathbf{y}]=C\mathbf{X}\boldsymbol{\beta}=\boldsymbol{\beta}$ for every
+$\boldsymbol{\beta}\in\mathbb{R}^p$, which forces
+$$
+C\mathbf{X}=I_p.
+$$
+Write $C=A+D$ with $A=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$ the OLS map, so $D=C-A$. From
+$C\mathbf{X}=I_p$ and $A\mathbf{X}=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{X}=I_p$ we get
+$$
+D\mathbf{X}=C\mathbf{X}-A\mathbf{X}=I_p-I_p=0 .
+$$
+Now compute the covariance of $\tilde{\boldsymbol{\beta}}=C\mathbf{y}$ using $\mathrm{Cov}(\mathbf{y})
+=\sigma^2 I_n$:
+$$
+\mathrm{Cov}(\tilde{\boldsymbol{\beta}})=\sigma^2 C C^\top=\sigma^2 (A+D)(A+D)^\top
+=\sigma^2\big(AA^\top+AD^\top+DA^\top+DD^\top\big).
+$$
+The cross terms vanish: $AD^\top=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top D^\top
+=(\mathbf{X}^\top\mathbf{X})^{-1}(D\mathbf{X})^\top=0$, and $DA^\top=(AD^\top)^\top=0$. Since
+$AA^\top=(\mathbf{X}^\top\mathbf{X})^{-1}=\sigma^{-2}\mathrm{Cov}(\hat{\boldsymbol{\beta}})$, we obtain
+$$
+\mathrm{Cov}(\tilde{\boldsymbol{\beta}})
+=\sigma^2(\mathbf{X}^\top\mathbf{X})^{-1}+\sigma^2 DD^\top
+=\mathrm{Cov}(\hat{\boldsymbol{\beta}})+\sigma^2 DD^\top .
+$$ {#eq-gm-decomp}
+For any $\mathbf{z}\in\mathbb{R}^p$, $\mathbf{z}^\top DD^\top\mathbf{z}=\|D^\top\mathbf{z}\|_2^2\ge 0$,
+so $DD^\top\succeq 0$ and the difference of covariance matrices is positive semidefinite. Taking
+$\mathbf{z}=\mathbf{c}$ gives the scalar conclusion
+$\mathrm{Var}(\mathbf{c}^\top\tilde{\boldsymbol{\beta}})
+=\mathrm{Var}(\mathbf{c}^\top\hat{\boldsymbol{\beta}})+\sigma^2\|D^\top\mathbf{c}\|_2^2
+\ge\mathrm{Var}(\mathbf{c}^\top\hat{\boldsymbol{\beta}})$.
+
+Equality in the Loewner order means $\mathbf{z}^\top DD^\top\mathbf{z}=\|D^\top\mathbf{z}\|_2^2=0$ for
+all $\mathbf{z}$, hence $D^\top=0$, hence $D=0$ and $C=A$, so
+$\tilde{\boldsymbol{\beta}}=A\mathbf{y}=\hat{\boldsymbol{\beta}}$. $\square$
+:::
+
+**Why this matters (ITC).** In plain terms, when you fit `lm(y ~ x)` and read off the standard errors,
+Gauss-Markov says you are getting the best you can do among linear unbiased estimators using only the
+two assumptions G1 and G2, with no appeal to normality. The result also travels: matching-adjusted
+indirect comparison (Chapter 18) replaces $\mathbf{X}^\top\mathbf{X}$ with a *weighted* version, and the
+same Gauss-Markov logic, applied to the weighted (generalized least squares) estimator of
+@exr-lr-gm-weighted, is what certifies that the reweighted estimator is optimal under its own assumptions.
+
+::: {.remark}
+The proof uses only G1 and G2. Normality (G3) is not needed for Gauss-Markov optimality. The price of
+the restriction to *linear* estimators is real: under non-normal errors there can be nonlinear unbiased
+estimators that beat OLS. Under normality, however, no such estimator exists, even nonlinear ones; we
+prove this stronger statement in @cor-ols-efficient-normal. $\blacktriangleleft$
+:::
+
+To use @eq-cov-betahat in practice we must estimate the unknown $\sigma^2$. The natural estimator
+divides the residual sum of squares not by $n$ but by $n-p$, the dimension of the residual space; this
+exact divisor makes the estimator unbiased.
+
+::: {.remark}
+**The trace trick.** Two facts from Chapter 1 are used repeatedly below. First, a $1\times 1$ matrix
+equals its own trace, so any scalar can be written $a=\mathrm{tr}(a)$. Second, the trace is linear and
+*cyclic*: $\mathrm{tr}(BC)=\mathrm{tr}(CB)$ whenever both products are defined. Together they let us pull
+a random vector out of a quadratic form and replace the expectation by a covariance matrix, which is the
+key maneuver in the next proof and again in @thm-rss-chisq. $\blacktriangleleft$
+:::
+
+::: {#thm-sigma2-unbiased}
+## Unbiased estimation of the error variance
+Under @def-linear-model with G1, G2 and $\mathrm{rank}(\mathbf{X})=p$ (and $n>p$), the statistic
+$$
+s^2=\frac{\mathrm{RSS}}{n-p}=\frac{\|\mathbf{r}\|_2^2}{n-p}=\frac{\mathbf{y}^\top M\mathbf{y}}{n-p}
+$$
+is unbiased for $\sigma^2$: $\mathbb{E}[s^2]=\sigma^2$.
+:::
+
+::: {.proof}
+First, $\mathrm{RSS}=\mathbf{r}^\top\mathbf{r}=(M\mathbf{y})^\top(M\mathbf{y})
+=\mathbf{y}^\top M^\top M\mathbf{y}=\mathbf{y}^\top M\mathbf{y}$ by the symmetry and idempotence of $M$
+(@lem-hat-properties). Substitute $\mathbf{y}=\mathbf{X}\boldsymbol{\beta}+\boldsymbol{\varepsilon}$ and
+use $M\mathbf{X}=0$:
+$$
+\mathbf{y}^\top M\mathbf{y}
+=(\mathbf{X}\boldsymbol{\beta}+\boldsymbol{\varepsilon})^\top M(\mathbf{X}\boldsymbol{\beta}+\boldsymbol{\varepsilon})
+=\boldsymbol{\varepsilon}^\top M\boldsymbol{\varepsilon},
+$$
+the terms involving $\mathbf{X}\boldsymbol{\beta}$ vanishing because
+$M\mathbf{X}\boldsymbol{\beta}=\mathbf{0}$ and
+$(\mathbf{X}\boldsymbol{\beta})^\top M=(M\mathbf{X}\boldsymbol{\beta})^\top=\mathbf{0}^\top$. Now take the
+expectation of the scalar $\boldsymbol{\varepsilon}^\top M\boldsymbol{\varepsilon}$ using the trace
+trick: a scalar equals its own trace, and the trace is linear and cyclic, so
+$$
+\mathbb{E}[\boldsymbol{\varepsilon}^\top M\boldsymbol{\varepsilon}]
+=\mathbb{E}\big[\mathrm{tr}(\boldsymbol{\varepsilon}^\top M\boldsymbol{\varepsilon})\big]
+=\mathbb{E}\big[\mathrm{tr}(M\boldsymbol{\varepsilon}\boldsymbol{\varepsilon}^\top)\big]
+=\mathrm{tr}\big(M\,\mathbb{E}[\boldsymbol{\varepsilon}\boldsymbol{\varepsilon}^\top]\big)
+=\mathrm{tr}(M\,\sigma^2 I_n)=\sigma^2\,\mathrm{tr}(M)=\sigma^2(n-p),
+$$
+using $\mathbb{E}[\boldsymbol{\varepsilon}\boldsymbol{\varepsilon}^\top]
+=\mathrm{Cov}(\boldsymbol{\varepsilon})=\sigma^2 I_n$ from G1, G2 and $\mathrm{tr}(M)=n-p$ from
+@lem-hat-properties. Dividing by $n-p$ gives $\mathbb{E}[s^2]=\sigma^2$. $\square$
+:::
+
+**Why this matters.** $s^2$ is the number reported as the residual variance (its square root, the
+residual standard error, appears in every regression printout), and it feeds every standard error and
+every $t$ and $F$ statistic later in the chapter. Getting its expectation exactly right, via the divisor
+$n-p$ rather than $n$, is what makes those downstream tests unbiased.
+
+::: {.remark}
+The divisor $n-p$ has a clean geometric reading: the residual lives in the $(n-p)$-dimensional space
+$\mathcal{C}(\mathbf{X})^\perp$, so although there are $n$ residuals they satisfy $p$ linear constraints
+(the normal equations), leaving $n-p$ free coordinates. Each contributes one "degree of freedom" of
+variance. We make this exact in @thm-rss-chisq. $\blacktriangleleft$
+:::
+
+## Normal-theory distribution results {#sec-lr-normal}
+
+To build confidence intervals and tests we need the full sampling distribution of
+$\hat{\boldsymbol{\beta}}$ and $s^2$, not only their first two moments. Here we invoke G3. We first
+record two facts about the multivariate normal that we use repeatedly; both are proved with the moment
+generating function (@def-mgf), whose value for $\mathbf{z}\sim\mathcal{N}_n(\boldsymbol{\mu},\Sigma)$ is
+$M_{\mathbf{z}}(\mathbf{t})=\exp\!\big(\mathbf{t}^\top\boldsymbol{\mu}+\tfrac12\mathbf{t}^\top\Sigma
+\mathbf{t}\big)$, and which determines the distribution uniquely (both facts are established in
+Chapter 4).
+
+Treat the moment generating function as a fingerprint of a distribution. Two facts from Chapter 4 are all
+we need, and we do not reprove them. First, the fingerprint determines the distribution: if a random
+vector's moment generating function matches that of a known normal, then it *is* that normal. Second, the
+joint fingerprint factors into a product of separate fingerprints exactly when the pieces are
+independent. These are the only two properties of the moment generating function we exploit below.
+
+### Two facts about the multivariate normal we will reuse
+
+::: {#lem-mvn-affine-closure}
+## Affine closure of the multivariate normal
+If $\mathbf{z}\sim\mathcal{N}_n(\boldsymbol{\mu},\Sigma)$, $A\in\mathbb{R}^{m\times n}$ and
+$\mathbf{b}\in\mathbb{R}^m$, then
+$A\mathbf{z}+\mathbf{b}\sim\mathcal{N}_m(A\boldsymbol{\mu}+\mathbf{b},A\Sigma A^\top)$.
+:::
+
+::: {.proof}
+Let $\mathbf{w}=A\mathbf{z}+\mathbf{b}$. For $\mathbf{s}\in\mathbb{R}^m$,
+$$
+M_{\mathbf{w}}(\mathbf{s})=\mathbb{E}\big[e^{\mathbf{s}^\top(A\mathbf{z}+\mathbf{b})}\big]
+=e^{\mathbf{s}^\top\mathbf{b}}\,\mathbb{E}\big[e^{(A^\top\mathbf{s})^\top\mathbf{z}}\big]
+=e^{\mathbf{s}^\top\mathbf{b}}\,M_{\mathbf{z}}(A^\top\mathbf{s})
+=e^{\mathbf{s}^\top\mathbf{b}}\exp\!\Big((A^\top\mathbf{s})^\top\boldsymbol{\mu}
++\tfrac12(A^\top\mathbf{s})^\top\Sigma(A^\top\mathbf{s})\Big).
+$$
+Collecting terms, the exponent equals $\mathbf{s}^\top(A\boldsymbol{\mu}+\mathbf{b})
++\tfrac12\mathbf{s}^\top(A\Sigma A^\top)\mathbf{s}$, so
+$M_{\mathbf{w}}(\mathbf{s})=\exp\!\big(\mathbf{s}^\top(A\boldsymbol{\mu}+\mathbf{b})
++\tfrac12\mathbf{s}^\top(A\Sigma A^\top)\mathbf{s}\big)$, which is the moment generating function of
+$\mathcal{N}_m(A\boldsymbol{\mu}+\mathbf{b},A\Sigma A^\top)$. By uniqueness of the moment generating
+function, $\mathbf{w}$ has that distribution. $\square$
+:::
+
+::: {#lem-gaussian-block-independence}
+## Uncorrelated Gaussian blocks are independent
+Partition $\mathbf{u}=(\mathbf{u}_1,\mathbf{u}_2)$ jointly multivariate normal. If
+$\mathrm{Cov}(\mathbf{u}_1,\mathbf{u}_2)=0$ then $\mathbf{u}_1$ and $\mathbf{u}_2$ are independent.
+Consequently, measurable functions $f(\mathbf{u}_1)$ and $g(\mathbf{u}_2)$ are independent.
+:::
+
+::: {.proof}
+Write $\mathbf{u}\sim\mathcal{N}(\boldsymbol{\mu},\Sigma)$ with
+$\boldsymbol{\mu}=(\boldsymbol{\mu}_1,\boldsymbol{\mu}_2)$ and, because the cross-covariance is zero,
+the block-diagonal $\Sigma=\mathrm{diag}(\Sigma_{11},\Sigma_{22})$. For $\mathbf{t}=(\mathbf{t}_1,\mathbf{t}_2)$,
+$$
+M_{\mathbf{u}}(\mathbf{t})
+=\exp\!\Big(\mathbf{t}_1^\top\boldsymbol{\mu}_1+\mathbf{t}_2^\top\boldsymbol{\mu}_2
++\tfrac12\mathbf{t}_1^\top\Sigma_{11}\mathbf{t}_1+\tfrac12\mathbf{t}_2^\top\Sigma_{22}\mathbf{t}_2\Big)
+=M_{\mathbf{u}_1}(\mathbf{t}_1)\,M_{\mathbf{u}_2}(\mathbf{t}_2),
+$$
+the joint moment generating function factoring into the product of the marginal ones (each marginal is
+normal by @lem-mvn-affine-closure with $A$ the appropriate coordinate projection). Factorization of the
+joint moment generating function into the product of the marginals is equivalent to independence
+(Chapter 4). Independence of $\mathbf{u}_1,\mathbf{u}_2$ implies independence of any measurable functions
+$f(\mathbf{u}_1),g(\mathbf{u}_2)$. $\square$
+:::
+
+### The three distributional pillars
+
+We can now read off the three pillars of normal regression theory. They are: $\hat{\boldsymbol{\beta}}$
+is itself normal (the *location* information), the scaled residual sum of squares is chi-squared (the
+*scale* information), and the two are independent (they do not interfere). Each is one line once the two
+facts above are in hand.
+
+::: {#thm-betahat-normal}
+## Normality of the OLS estimator
+Under @def-linear-model with G1, G2, G3 and $\mathrm{rank}(\mathbf{X})=p$,
+$$
+\hat{\boldsymbol{\beta}}\sim\mathcal{N}_p\big(\boldsymbol{\beta},\,\sigma^2(\mathbf{X}^\top\mathbf{X})^{-1}\big).
+$$
+:::
+
+::: {.proof}
+By G3, $\mathbf{y}\sim\mathcal{N}_n(\mathbf{X}\boldsymbol{\beta},\sigma^2 I_n)$. The estimator
+$\hat{\boldsymbol{\beta}}=A\mathbf{y}$ with $A=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$ is an
+affine (here, linear) function of $\mathbf{y}$. By @lem-mvn-affine-closure,
+$$
+\hat{\boldsymbol{\beta}}\sim\mathcal{N}_p\big(A\mathbf{X}\boldsymbol{\beta},\,\sigma^2 A A^\top\big).
+$$
+We computed $A\mathbf{X}=I_p$ and $\sigma^2 AA^\top=\sigma^2(\mathbf{X}^\top\mathbf{X})^{-1}$ in
+@thm-ols-moments, giving the claim. The mean and covariance agree with @eq-cov-betahat, as they must;
+normality is the new information. $\square$
+:::
+
+**Why this matters.** Knowing $\hat{\boldsymbol{\beta}}$ is exactly normal (not merely approximately) is
+what lets us attach a confidence interval to a treatment effect from a single trial of finite size,
+without appealing to large-sample approximation. It is the first ingredient of the $t$ statistic in
+@thm-ttest.
+
+The next theorem is the distributional heart of the chapter. Before stating it we isolate the
+linear-algebra fact that is its true crux, so it has a name we can point to.
+
+::: {#lem-idempotent-rank-trace}
+## Rank of a symmetric idempotent equals its trace
+Let $K\in\mathbb{R}^{n\times n}$ be symmetric and idempotent, $K=K^\top$ and $K^2=K$. Then every
+eigenvalue of $K$ is $0$ or $1$, and the number of unit eigenvalues equals both $\mathrm{rank}(K)$ and
+$\mathrm{tr}(K)$; in particular $\mathrm{rank}(K)=\mathrm{tr}(K)$.
+:::
+
+::: {.proof}
+By the spectral theorem (@thm-spectral-theorem), $K=Q\Lambda Q^\top$ for an orthogonal $Q$ and a diagonal
+$\Lambda$ holding the eigenvalues. Idempotence gives $Q\Lambda Q^\top=K=K^2=Q\Lambda^2 Q^\top$, so
+$\Lambda^2=\Lambda$; entry by entry $\lambda_i^2=\lambda_i$, forcing $\lambda_i\in\{0,1\}$. The rank of
+$K$ equals the number of nonzero eigenvalues (an orthogonal change of basis is invertible and preserves
+rank), which is the number of ones; the trace is basis-independent and equals the sum of the eigenvalues,
+again the number of ones. Hence $\mathrm{rank}(K)=\mathrm{tr}(K)$. $\square$
+:::
+
+**Reader translation.** For a projection matrix, counting dimensions and summing diagonal entries give
+the same number. This is why $\mathrm{tr}(M)=n-p$ already told us the residual space has dimension $n-p$,
+and it is exactly what fixes the chi-squared degrees of freedom below.
+
+The argument now diagonalizes the residual maker by the spectral theorem and reduces the residual sum of
+squares to a sum of independent squared standard normals.
+
+**Roadmap of the proof.** The plan has four moves. (1) Write $\mathrm{RSS}=\boldsymbol{\varepsilon}^\top
+M\boldsymbol{\varepsilon}$. (2) Diagonalize the symmetric idempotent $M$, whose eigenvalues are $0$ or $1$
+with exactly $n-p$ ones (@lem-idempotent-rank-trace). (3) Rotate the noise by the orthogonal eigenvector
+matrix; rotation keeps isotropic Gaussian noise standard normal. (4) In the rotated coordinates the
+residual sum of squares is just the sum of the $n-p$ squared coordinates along the unit eigenvalues,
+which is by definition a $\chi^2_{n-p}$.
+
+::: {#thm-rss-chisq}
+## Chi-squared distribution of the scaled residual sum of squares
+Under @def-linear-model with G1, G2, G3 and $\mathrm{rank}(\mathbf{X})=p$ (and $n>p$),
+$$
+\frac{\mathrm{RSS}}{\sigma^2}=\frac{(n-p)s^2}{\sigma^2}\sim\chi^2_{\,n-p}.
+$$
+:::
+
+::: {.proof}
+As in @thm-sigma2-unbiased, $\mathrm{RSS}=\boldsymbol{\varepsilon}^\top M\boldsymbol{\varepsilon}$. The
+matrix $M$ is symmetric, so by the spectral theorem (@thm-spectral-theorem) there is an orthogonal
+matrix $Q$ ($Q^\top Q=QQ^\top=I_n$) and a diagonal matrix $\Lambda=\mathrm{diag}(\lambda_1,\dots,\lambda_n)$
+with $M=Q\Lambda Q^\top$. By @lem-idempotent-rank-trace each eigenvalue is $0$ or $1$, and the number of
+unit eigenvalues equals $\mathrm{rank}(M)=\mathrm{tr}(M)=n-p$. This is precisely *why* there are exactly
+$n-p$ ones: the residual maker projects onto the $(n-p)$-dimensional residual space. Reorder the
+eigenvalues so that $\Lambda=\mathrm{diag}(I_{n-p},0)$, with the $n-p$ ones first.
+
+Define $\mathbf{z}=\sigma^{-1}Q^\top\boldsymbol{\varepsilon}$. Since
+$\boldsymbol{\varepsilon}\sim\mathcal{N}_n(\mathbf{0},\sigma^2 I_n)$, @lem-mvn-affine-closure gives
+$$
+\mathbf{z}\sim\mathcal{N}_n\big(\mathbf{0},\,\sigma^{-2}Q^\top(\sigma^2 I_n)Q\big)
+=\mathcal{N}_n(\mathbf{0},Q^\top Q)=\mathcal{N}_n(\mathbf{0},I_n),
+$$
+so the coordinates $z_1,\dots,z_n$ are independent standard normal. From the definition of $\mathbf{z}$
+we have $Q^\top\boldsymbol{\varepsilon}=\sigma\mathbf{z}$, so substituting $M=Q\Lambda Q^\top$,
+$$
+\frac{\mathrm{RSS}}{\sigma^2}
+=\frac{\boldsymbol{\varepsilon}^\top M\boldsymbol{\varepsilon}}{\sigma^2}
+=\frac{(Q^\top\boldsymbol{\varepsilon})^\top\Lambda(Q^\top\boldsymbol{\varepsilon})}{\sigma^2}
+=\frac{(\sigma\mathbf{z})^\top\Lambda(\sigma\mathbf{z})}{\sigma^2}
+=\mathbf{z}^\top\Lambda\mathbf{z}=\sum_{i=1}^{n-p} z_i^2 .
+$$
+A sum of $n-p$ independent squared standard normal variables has, by definition, the chi-squared
+distribution on $n-p$ degrees of freedom (Chapter 4). $\square$
+:::
+
+**Recap.** The rotation $Q$ turns the noise into $n$ independent standard-normal coordinates and turns
+$M$ into a "keep the first $n-p$ directions, discard the other $p$" operator. The residual sum of squares
+keeps only the kept coordinates, so it is a sum of $n-p$ squared independent standard normals.
+
+```
+   R^n  =  C(X)               +   C(X)^perp
+           p directions            n-p directions
+           (fitted lives here)     (residual lives here)
+
+   rotate by Q:   noise -> n independent N(0,1) coordinates
+   RSS / sigma^2  =  sum of the n-p squared coordinates in C(X)^perp  ->  chi^2_{n-p}
+```
+
+**Why this matters.** This theorem supplies the reference distribution for every variance-based test: the
+$n-p$ denominator degrees of freedom in every $t$ and $F$ statistic later in the chapter trace back to
+the dimension of the residual space counted here.
+
+::: {#thm-betahat-s2-independence}
+## Independence of the estimator and the variance estimate
+Under @def-linear-model with G1, G2, G3 and $\mathrm{rank}(\mathbf{X})=p$, the random vector
+$\hat{\boldsymbol{\beta}}$ and the statistic $s^2$ are independent. More generally
+$\hat{\boldsymbol{\beta}}$ is independent of the entire residual vector $\mathbf{r}$.
+:::
+
+::: {.proof}
+Stack the fitted values and residuals into one affine function of $\mathbf{y}$:
+$$
+\begin{pmatrix}\hat{\mathbf{y}}\\ \mathbf{r}\end{pmatrix}
+=\begin{pmatrix}H\\ M\end{pmatrix}\mathbf{y}.
+$$
+Since $\mathbf{y}$ is multivariate normal, @lem-mvn-affine-closure makes $(\hat{\mathbf{y}},\mathbf{r})$
+jointly multivariate normal. Their cross-covariance is
+$$
+\mathrm{Cov}(\hat{\mathbf{y}},\mathbf{r})
+=H\,\mathrm{Cov}(\mathbf{y})\,M^\top
+=\sigma^2 H M=\sigma^2 H(I_n-H)=\sigma^2(H-H^2)=0,
+$$
+using $\mathrm{Cov}(\mathbf{y})=\sigma^2 I_n$ and $H^2=H$ (@lem-hat-properties). By
+@lem-gaussian-block-independence, $\hat{\mathbf{y}}$ and $\mathbf{r}$ are independent. Now
+$\hat{\boldsymbol{\beta}}=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{y}
+=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top H\mathbf{y}
+=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\hat{\mathbf{y}}$, using
+$\mathbf{X}^\top H=\mathbf{X}^\top$, so $\hat{\boldsymbol{\beta}}$ is a function of $\hat{\mathbf{y}}$
+alone; and $s^2=\|\mathbf{r}\|_2^2/(n-p)$ is a function of $\mathbf{r}$ alone. Functions of independent
+random vectors are independent (@lem-gaussian-block-independence), so $\hat{\boldsymbol{\beta}}$ and
+$s^2$ are independent, as is $\hat{\boldsymbol{\beta}}$ from all of $\mathbf{r}$. $\square$
+:::
+
+::: {.remark}
+The independence is special to the Gaussian case and is what makes exact finite-sample inference
+possible. Geometrically, the orthogonal decomposition $\mathbf{y}=\hat{\mathbf{y}}+\mathbf{r}$ splits the
+isotropic Gaussian noise into its components in $\mathcal{C}(\mathbf{X})$ and
+$\mathcal{C}(\mathbf{X})^\perp$; the rotational symmetry of the isotropic normal makes those components
+independent. The location information ($\hat{\boldsymbol{\beta}}$) and the scale information ($s^2$) do
+not interfere. $\blacktriangleleft$
+:::
+
+## Exact inference: the t and F tests {#sec-lr-inference}
+
+We assemble the pieces into *pivotal quantities*: functions of the data and one parameter whose sampling
+distribution is completely known, free of every unknown parameter. A pivot is what turns an estimate into
+a test or an interval, because we can tabulate its quantiles once and for all.
+Recall from Chapter 4 the two constructions: if $Z\sim\mathcal{N}(0,1)$ and $W\sim\chi^2_m$ are
+independent then $Z/\sqrt{W/m}\sim t_m$ (Student's $t$ on $m$ degrees of freedom); and if
+$W_1\sim\chi^2_{m_1}$ and $W_2\sim\chi^2_{m_2}$ are independent then
+$(W_1/m_1)/(W_2/m_2)\sim F_{m_1,m_2}$ (Snedecor's $F$).
+
+::: {#thm-ttest}
+## The t statistic for a linear contrast
+Assume @def-linear-model with G1, G2, G3 and $\mathrm{rank}(\mathbf{X})=p$, $n>p$. Fix
+$\mathbf{c}\in\mathbb{R}^p\setminus\{\mathbf{0}\}$. Then
+$$
+T=\frac{\mathbf{c}^\top\hat{\boldsymbol{\beta}}-\mathbf{c}^\top\boldsymbol{\beta}}
+{s\sqrt{\mathbf{c}^\top(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{c}}}\sim t_{\,n-p}.
+$$ {#eq-ttest}
+In particular, taking $\mathbf{c}=\mathbf{e}_j$ gives the per-coefficient statistic
+$T_j=(\hat\beta_j-\beta_j)/\big(s\sqrt{[(\mathbf{X}^\top\mathbf{X})^{-1}]_{jj}}\big)\sim t_{\,n-p}$, and a
+level $1-\alpha$ confidence interval for $\beta_j$ is
+$\hat\beta_j\pm t_{n-p,1-\alpha/2}\,s\sqrt{[(\mathbf{X}^\top\mathbf{X})^{-1}]_{jj}}$.
+:::
+
+::: {.proof}
+By @thm-betahat-normal and the linear-image rule for the normal (the scalar case of
+@lem-mvn-affine-closure), $\mathbf{c}^\top\hat{\boldsymbol{\beta}}\sim
+\mathcal{N}\big(\mathbf{c}^\top\boldsymbol{\beta},\sigma^2\mathbf{c}^\top(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{c}\big)$.
+The denominator variance is positive because $(\mathbf{X}^\top\mathbf{X})^{-1}$ is positive definite
+(@lem-gram-nullspace) and $\mathbf{c}\ne\mathbf{0}$. Standardize:
+$$
+Z=\frac{\mathbf{c}^\top\hat{\boldsymbol{\beta}}-\mathbf{c}^\top\boldsymbol{\beta}}
+{\sigma\sqrt{\mathbf{c}^\top(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{c}}}\sim\mathcal{N}(0,1).
+$$
+By @thm-rss-chisq, $W=\mathrm{RSS}/\sigma^2=(n-p)s^2/\sigma^2\sim\chi^2_{n-p}$. By
+@thm-betahat-s2-independence, $Z$ (a function of $\hat{\boldsymbol{\beta}}$) is independent of $W$ (a
+function of $s^2$). Therefore
+$$
+\frac{Z}{\sqrt{W/(n-p)}}\sim t_{\,n-p}.
+$$
+Substituting $W/(n-p)=s^2/\sigma^2$, the unknown $\sigma$ cancels:
+$$
+\frac{Z}{\sqrt{W/(n-p)}}
+=\frac{(\mathbf{c}^\top\hat{\boldsymbol{\beta}}-\mathbf{c}^\top\boldsymbol{\beta})\big/
+\big(\sigma\sqrt{\mathbf{c}^\top(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{c}}\big)}{s/\sigma}
+=\frac{\mathbf{c}^\top\hat{\boldsymbol{\beta}}-\mathbf{c}^\top\boldsymbol{\beta}}
+{s\sqrt{\mathbf{c}^\top(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{c}}}=T,
+$$
+which is @eq-ttest. The confidence interval is the set of $\beta_j$ for which $|T_j|\le t_{n-p,1-\alpha/2}$,
+obtained by inverting the two-sided test. $\square$
+:::
+
+::: {.remark}
+**Reading the quantile notation.** The symbol $t_{n-p,1-\alpha/2}$ is the number with probability
+$1-\alpha/2$ to its left under the $t_{n-p}$ curve; for a $95\%$ interval ($\alpha=0.05$) it cuts off the
+top $2.5\%$ of the curve, so the interval misses the truth at most $5\%$ of the time. It is the
+`qt(1 - alpha/2, n - p)` of statistical software. $\blacktriangleleft$
+:::
+
+**Why this matters (health reading).** The per-coefficient statistic $T_j$ is exactly the $t$ value a
+regression table prints for each covariate, and
+$\hat\beta_j\pm t_{n-p,1-\alpha/2}\,s\sqrt{[(\mathbf{X}^\top\mathbf{X})^{-1}]_{jj}}$ is its confidence
+interval. Choosing $\mathbf{c}=\mathbf{e}_T$, the treatment column, gives the test and interval for the
+adjusted treatment effect, the headline number of a trial analysis.
+
+For testing several coefficients at once we compare nested models. Let $\mathcal{C}(\mathbf{X}_0)\subseteq
+\mathcal{C}(\mathbf{X}_1)$ be the column spaces of a reduced design $\mathbf{X}_0$ (with $p_0$ columns,
+full rank) and a full design $\mathbf{X}_1$ (with $p_1>p_0$ columns, full rank, $n>p_1$), with hat
+matrices $H_0,H_1$, residual makers $M_0,M_1$, and residual sums of squares $\mathrm{RSS}_0,\mathrm{RSS}_1$.
+
+::: {#thm-ftest}
+## The F statistic for nested models
+Assume G1, G2, G3 and that the reduced model holds, that is,
+$\mathbb{E}[\mathbf{y}]\in\mathcal{C}(\mathbf{X}_0)$. With $q=p_1-p_0$,
+$$
+F=\frac{(\mathrm{RSS}_0-\mathrm{RSS}_1)/q}{\mathrm{RSS}_1/(n-p_1)}\sim F_{\,q,\;n-p_1}.
+$$ {#eq-fstat}
+:::
+
+**Roadmap of the proof.** Two nested models differ by $q=p_1-p_0$ extra columns. The drop in residual
+sum of squares, $\mathrm{RSS}_0-\mathrm{RSS}_1$, measures what those extra columns explain. We show this
+drop equals $\boldsymbol{\varepsilon}^\top P\boldsymbol{\varepsilon}$ for a projection $P$ of rank $q$
+onto the "extra" directions, that $\mathrm{RSS}_1=\boldsymbol{\varepsilon}^\top M_1
+\boldsymbol{\varepsilon}$ lives on the orthogonal residual directions, and that the two are independent
+chi-squares; their scaled ratio is then an $F$ by construction.
+
+::: {.proof}
+Because $\mathcal{C}(\mathbf{X}_0)\subseteq\mathcal{C}(\mathbf{X}_1)$, projecting onto the smaller space
+and then the larger leaves the smaller projection unchanged: $H_1H_0=H_0H_1=H_0$. (Indeed
+$H_1H_0$ projects each column of $H_0$, which already lies in $\mathcal{C}(\mathbf{X}_0)\subseteq
+\mathcal{C}(\mathbf{X}_1)$, onto $\mathcal{C}(\mathbf{X}_1)$, returning it unchanged; symmetry gives the
+other equality.) Define the difference $P=H_1-H_0$. Then $P$ is symmetric and
+$$
+P^2=(H_1-H_0)^2=H_1-H_1H_0-H_0H_1+H_0=H_1-H_0-H_0+H_0=H_1-H_0=P,
+$$
+where the four-term expansion used $H_1^2=H_1$, $H_0^2=H_0$, and the identity $H_1H_0=H_0H_1=H_0$ just
+established. So $P$ is symmetric and idempotent, hence an orthogonal projection, and by
+@lem-idempotent-rank-trace its rank equals its trace,
+$\mathrm{rank}(P)=\mathrm{tr}(P)=\mathrm{tr}(H_1)-\mathrm{tr}(H_0)=p_1-p_0=q$. Moreover $P$ and
+$M_1=I-H_1$ are orthogonal projections whose product is zero:
+$$
+PM_1=(H_1-H_0)(I-H_1)=H_1-H_1^2-H_0+H_0H_1=H_1-H_1-H_0+H_0=0 .
+$$
+Because $P$ and $M_1$ are symmetric projections with $PM_1=0$, their ranges are orthogonal subspaces of
+$\mathbb{R}^n$; this orthogonality is exactly the condition that, applied to Gaussian noise, will make
+the two pieces $P\boldsymbol{\varepsilon}$ and $M_1\boldsymbol{\varepsilon}$ independent below. Now
+decompose the numerator. Using $\mathrm{RSS}_k=\mathbf{y}^\top M_k\mathbf{y}$,
+$$
+\mathrm{RSS}_0-\mathrm{RSS}_1=\mathbf{y}^\top(M_0-M_1)\mathbf{y}=\mathbf{y}^\top(H_1-H_0)\mathbf{y}
+=\mathbf{y}^\top P\mathbf{y}.
+$$
+Write $\mathbf{y}=\mathbf{X}_0\boldsymbol{\beta}_0+\boldsymbol{\varepsilon}$ under the reduced model.
+Because $P\mathbf{X}_0=H_1\mathbf{X}_0-H_0\mathbf{X}_0=\mathbf{X}_0-\mathbf{X}_0=0$ (both projections fix
+$\mathcal{C}(\mathbf{X}_0)$), we get $P\mathbf{y}=P\boldsymbol{\varepsilon}$ and likewise
+$M_1\mathbf{y}=M_1\boldsymbol{\varepsilon}$. Hence
+$$
+\mathrm{RSS}_0-\mathrm{RSS}_1=\boldsymbol{\varepsilon}^\top P\boldsymbol{\varepsilon},
+\qquad
+\mathrm{RSS}_1=\boldsymbol{\varepsilon}^\top M_1\boldsymbol{\varepsilon}.
+$$
+By the spectral argument of @thm-rss-chisq applied to the idempotent $P$ of rank $q$ and to $M_1$ of
+rank $n-p_1$,
+$$
+\frac{\boldsymbol{\varepsilon}^\top P\boldsymbol{\varepsilon}}{\sigma^2}\sim\chi^2_q,
+\qquad
+\frac{\boldsymbol{\varepsilon}^\top M_1\boldsymbol{\varepsilon}}{\sigma^2}\sim\chi^2_{n-p_1}.
+$$
+For independence, stack $P\boldsymbol{\varepsilon}$ and $M_1\boldsymbol{\varepsilon}$; they are jointly
+normal (@lem-mvn-affine-closure) with cross-covariance
+$\mathrm{Cov}(P\boldsymbol{\varepsilon},M_1\boldsymbol{\varepsilon})=\sigma^2 PM_1=0$, so by
+@lem-gaussian-block-independence the two random vectors are independent, and therefore so are the
+quadratic forms $\boldsymbol{\varepsilon}^\top P\boldsymbol{\varepsilon}$ and
+$\boldsymbol{\varepsilon}^\top M_1\boldsymbol{\varepsilon}$ built from them. The ratio of independent
+chi-squared variables, each divided by its degrees of freedom, is
+$$
+F=\frac{(\boldsymbol{\varepsilon}^\top P\boldsymbol{\varepsilon}/\sigma^2)/q}
+{(\boldsymbol{\varepsilon}^\top M_1\boldsymbol{\varepsilon}/\sigma^2)/(n-p_1)}
+=\frac{(\mathrm{RSS}_0-\mathrm{RSS}_1)/q}{\mathrm{RSS}_1/(n-p_1)}\sim F_{\,q,\;n-p_1},
+$$
+the unknown $\sigma^2$ cancelling. $\square$
+:::
+
+::: {.remark}
+Taking $\mathbf{X}_0=\mathbf{1}_n$ (intercept only, $p_0=1$) tests the global null that all slopes are
+zero. Then $H_0\mathbf{y}=\bar y\,\mathbf{1}_n$, $H_1\mathbf{y}=\hat{\mathbf{y}}$, and the numerator
+quadratic form is $\|(H_1-H_0)\mathbf{y}\|_2^2=\|\hat{\mathbf{y}}-\bar y\mathbf{1}_n\|_2^2
+=\mathrm{ESS}_{\mathrm{reg}}$, so
+$$
+F=\frac{\mathrm{ESS}_{\mathrm{reg}}/(p-1)}{\mathrm{RSS}/(n-p)}\sim F_{\,p-1,\;n-p}
+$$
+under the null. When $q=1$ the $F$ statistic equals the square of the corresponding $t$ statistic,
+$F=T^2$, and $F_{1,m}$ is the law of the square of a $t_m$ variable; the two tests then agree. The
+general linear hypothesis $H_0:R\boldsymbol{\beta}=\mathbf{q}$ for a full-row-rank $R\in\mathbb{R}^{q\times p}$
+gives an algebraically equivalent statistic, which we state and prove as @thm-general-linear-hypothesis
+below because it is the form practitioners actually use. $\blacktriangleleft$
+:::
+
+**Why this matters (health reading).** The global-null $F$ asks whether the regressors together explain
+more than chance: in the running trial, whether treatment and baseline severity jointly beat an
+intercept-only model. The "F-statistic" line of a regression printout is exactly this test. The
+nested-model view also matches how covariates are added to a model one block at a time, each block tested
+by the drop in residual sum of squares it produces.
+
+The nested-model $F$ test of @thm-ftest is often more convenient to express directly in terms of a
+restriction on the coefficients. The next theorem gives that form. It is worth a full statement, not a
+passing remark, because it is the test computed by routines such as `linearHypothesis()` in R.
+
+::: {#thm-general-linear-hypothesis}
+## The general linear hypothesis
+Assume @def-linear-model with G1, G2, G3 and $\mathrm{rank}(\mathbf{X})=p$, $n>p$. Let
+$R\in\mathbb{R}^{q\times p}$ have full row rank $q\le p$, and let $\mathbf{q}\in\mathbb{R}^q$. Under the
+null hypothesis $H_0:R\boldsymbol{\beta}=\mathbf{q}$,
+$$
+F=\frac{(R\hat{\boldsymbol{\beta}}-\mathbf{q})^\top\big[R(\mathbf{X}^\top\mathbf{X})^{-1}R^\top\big]^{-1}
+(R\hat{\boldsymbol{\beta}}-\mathbf{q})}{q\,s^2}\sim F_{q,\,n-p}.
+$$ {#eq-glh-stat}
+:::
+
+::: {.proof}
+Write $A=R(\mathbf{X}^\top\mathbf{X})^{-1}R^\top$. Since $R$ has full row rank and
+$(\mathbf{X}^\top\mathbf{X})^{-1}$ is positive definite (@lem-gram-nullspace), $A$ is a $q\times q$
+positive definite, hence invertible, matrix. By @thm-betahat-normal and affine closure
+(@lem-mvn-affine-closure), $R\hat{\boldsymbol{\beta}}\sim\mathcal{N}_q(R\boldsymbol{\beta},\sigma^2 A)$, so
+under $H_0$ the vector $\mathbf{v}:=R\hat{\boldsymbol{\beta}}-\mathbf{q}\sim\mathcal{N}_q(\mathbf{0},
+\sigma^2 A)$.
+
+We now *whiten* $\mathbf{v}$, that is, transform it to have the identity covariance. Factor $A=LL^\top$
+(for example the Cholesky factor, or $A^{1/2}$ from the spectral theorem, @thm-spectral-theorem) and set
+$\mathbf{u}=\sigma^{-1}L^{-1}\mathbf{v}$. By @lem-mvn-affine-closure,
+$$
+\mathbf{u}\sim\mathcal{N}_q\big(\mathbf{0},\,\sigma^{-2}L^{-1}(\sigma^2 A)L^{-\top}\big)
+=\mathcal{N}_q\big(\mathbf{0},\,L^{-1}LL^\top L^{-\top}\big)=\mathcal{N}_q(\mathbf{0},I_q),
+$$
+so the coordinates of $\mathbf{u}$ are independent standard normals and
+$$
+\frac{\mathbf{v}^\top A^{-1}\mathbf{v}}{\sigma^2}=\mathbf{u}^\top\mathbf{u}
+=\sum_{i=1}^q u_i^2\sim\chi^2_q .
+$$
+By @thm-rss-chisq, $W:=(n-p)s^2/\sigma^2\sim\chi^2_{n-p}$, and by @thm-betahat-s2-independence the
+numerator (a function of $\hat{\boldsymbol{\beta}}$) is independent of $s^2$. Hence
+$$
+\frac{\big(\mathbf{v}^\top A^{-1}\mathbf{v}/\sigma^2\big)/q}{W/(n-p)}
+=\frac{\mathbf{v}^\top A^{-1}\mathbf{v}}{q\,s^2}
+=\frac{(R\hat{\boldsymbol{\beta}}-\mathbf{q})^\top A^{-1}(R\hat{\boldsymbol{\beta}}-\mathbf{q})}{q\,s^2}
+\sim F_{q,\,n-p},
+$$
+the unknown $\sigma^2$ cancelling. This is @eq-glh-stat. $\square$
+:::
+
+**Why this matters (ITC).** This statistic tests any set of $q$ linear restrictions at once, for example
+"treatment has no effect at any dose" or "two treatment contrasts are equal." In network meta-analysis,
+joint restrictions on treatment contrasts are exactly the hypotheses of interest. @exr-lr-general-hypothesis
+asks you to check that @eq-glh-stat coincides with the nested-model statistic @eq-fstat.
+
+## Decomposition of variance and the coefficient of determination {#sec-lr-anova}
+
+The Pythagorean identity of @prp-fitted-residual-geometry, applied to the *centered* response, splits
+the total variability of $\mathbf{y}$ into a part explained by the regression and a residual part. This
+is the analysis of variance, and it gives the most-quoted summary of fit.
+
+::: {#prp-anova-decomposition}
+## Analysis-of-variance decomposition
+Assume the model contains an intercept, $\mathbf{1}_n\in\mathcal{C}(\mathbf{X})$. Then the fitted values
+and residuals are orthogonal after centering, and
+$$
+\underbrace{\sum_{i=1}^n (y_i-\bar y)^2}_{\mathrm{TSS}}
+=\underbrace{\sum_{i=1}^n (\hat y_i-\bar y)^2}_{\mathrm{ESS}_{\mathrm{reg}}}
++\underbrace{\sum_{i=1}^n (y_i-\hat y_i)^2}_{\mathrm{RSS}} .
+$$ {#eq-anova}
+:::
+
+::: {.proof}
+Center the identity $\mathbf{y}=\hat{\mathbf{y}}+\mathbf{r}$ by subtracting $\bar y\mathbf{1}_n$:
+$$
+\mathbf{y}-\bar y\mathbf{1}_n=(\hat{\mathbf{y}}-\bar y\mathbf{1}_n)+\mathbf{r},
+$$
+where we used $\overline{\hat y}=\bar y$, valid because the model has an intercept
+(@prp-fitted-residual-geometry). The two summands on the right are orthogonal: the residual
+$\mathbf{r}=M\mathbf{y}\in\mathcal{C}(\mathbf{X})^\perp$, while
+$\hat{\mathbf{y}}-\bar y\mathbf{1}_n\in\mathcal{C}(\mathbf{X})$ because both $\hat{\mathbf{y}}=H\mathbf{y}$
+and $\mathbf{1}_n$ lie in $\mathcal{C}(\mathbf{X})$. Hence
+$(\hat{\mathbf{y}}-\bar y\mathbf{1}_n)^\top\mathbf{r}=0$, and the Pythagorean theorem yields
+$$
+\|\mathbf{y}-\bar y\mathbf{1}_n\|_2^2
+=\|\hat{\mathbf{y}}-\bar y\mathbf{1}_n\|_2^2+\|\mathbf{r}\|_2^2,
+$$
+which is @eq-anova in vector form. $\square$
+:::
+
+The decomposition is a right triangle on the centered vectors, with the right angle at $\hat{\mathbf{y}}$.
+
+```
+              y
+             /|
+            / |
+   TSS    /   |  RSS            TSS     = squared length of the hypotenuse
+  (hyp)  /    |  (leg)          ESS_reg = squared length of the horizontal leg
+        /     |                 RSS     = squared length of the vertical leg
+       /______|
+   ybar*1   yhat
+       ESS_reg (leg)
+
+   right angle at yhat:   TSS = ESS_reg + RSS
+```
+
+**Reader translation.** Total variation in the response splits into the part the model explains
+($\mathrm{ESS}_{\mathrm{reg}}$) plus the part it cannot ($\mathrm{RSS}$), and because the two are at right
+angles, the split is exact (no cross term). $R^2$, defined next, is simply the explained fraction of the
+hypotenuse, so a larger $R^2$ means the explained leg is the longer share of the triangle.
+
+::: {#def-r-squared}
+## Coefficient of determination
+For a model with intercept and $\mathrm{TSS}>0$, the **coefficient of determination** is
+$$
+R^2=\frac{\mathrm{ESS}_{\mathrm{reg}}}{\mathrm{TSS}}=1-\frac{\mathrm{RSS}}{\mathrm{TSS}},
+$$
+the fraction of the total (centered) variability of the response explained by the regression. The two
+expressions are equal by @prp-anova-decomposition. $\blacktriangleleft$
+:::
+
+**Reader translation.** $R^2$ is the share of the response's spread the model accounts for: $R^2=0.64$
+means the regressors explain $64\%$ of the variability and $36\%$ is residual scatter. It measures fit,
+not correctness or causation; a high $R^2$ does not make a treatment-effect estimate unbiased, and a low
+one does not make it wrong.
+
+::: {#cor-rsquared-range}
+## Range and correlation interpretation of R squared
+For a model with intercept, $0\le R^2\le 1$. The value $R^2=1$ occurs exactly when all residuals vanish
+($\mathbf{y}\in\mathcal{C}(\mathbf{X})$) and $R^2=0$ exactly when $\hat{\mathbf{y}}=\bar y\mathbf{1}_n$
+(the regressors add nothing beyond the intercept). In simple linear regression
+($\mathbf{X}=[\mathbf{1}_n\ \mathbf{x}]$, $p=2$), $R^2=\rho_{xy}^2$, the square of the sample
+correlation $\rho_{xy}=\sum_i(x_i-\bar x)(y_i-\bar y)\big/\sqrt{\sum_i(x_i-\bar x)^2\sum_i(y_i-\bar y)^2}$.
+:::
+
+::: {.proof}
+From @eq-anova, $\mathrm{TSS}=\mathrm{ESS}_{\mathrm{reg}}+\mathrm{RSS}$ with both summands nonnegative,
+so $0\le\mathrm{ESS}_{\mathrm{reg}}\le\mathrm{TSS}$ and dividing by $\mathrm{TSS}>0$ gives $0\le R^2\le1$.
+The boundary cases are read directly from $R^2=1-\mathrm{RSS}/\mathrm{TSS}$ and
+$R^2=\mathrm{ESS}_{\mathrm{reg}}/\mathrm{TSS}$.
+
+For simple linear regression, the slope estimator is
+$\hat\beta_1=S_{xy}/S_{xx}$ with $S_{xy}=\sum_i(x_i-\bar x)(y_i-\bar y)$ and
+$S_{xx}=\sum_i(x_i-\bar x)^2$ (the specialization of @eq-normal-equations to $p=2$; see
+@exr-lr-simple-formulas). Since $\hat y_i-\bar y=\hat\beta_1(x_i-\bar x)$,
+$$
+\mathrm{ESS}_{\mathrm{reg}}=\sum_i(\hat y_i-\bar y)^2=\hat\beta_1^2 S_{xx}=\frac{S_{xy}^2}{S_{xx}},
+\qquad
+R^2=\frac{\mathrm{ESS}_{\mathrm{reg}}}{\mathrm{TSS}}=\frac{S_{xy}^2}{S_{xx}S_{yy}}=\rho_{xy}^2,
+$$
+with $S_{yy}=\mathrm{TSS}=\sum_i(y_i-\bar y)^2$. The Cauchy-Schwarz inequality (@thm-cauchy-schwarz-ip)
+applied to the centered vectors $\mathbf{x}-\bar x\mathbf{1}_n$ and $\mathbf{y}-\bar y\mathbf{1}_n$ gives
+$S_{xy}^2\le S_{xx}S_{yy}$, confirming $0\le\rho_{xy}^2\le 1$ once more. $\square$
+:::
+
+## Least squares is maximum likelihood {#sec-lr-mle}
+
+We have introduced least squares as a geometric and decision-theoretic object, and shown it is best in
+two senses (closest point; BLUE). Under normal errors there is a third, statistical justification that
+many find the most compelling: minimizing the sum of squares is exactly maximizing the likelihood. This
+is the answer to "why squares" promised in the introduction: squaring is the price of assuming the noise
+is Gaussian. Had we instead assumed Laplace-shaped (double-exponential) noise, the likelihood would
+reward *absolute* residuals, and the estimator would minimize the sum of absolute deviations. The squared
+criterion is thus a modeling choice about the shape of the noise, now made explicit.
+
+### Ordinary least squares is the maximum likelihood estimator
+
+::: {#thm-ols-mle-normal}
+## Least squares is maximum likelihood under normal errors
+Assume @def-linear-model with G1, G2, G3 and $\mathrm{rank}(\mathbf{X})=p$, $n>p$, treating
+$(\boldsymbol{\beta},\sigma^2)$ as unknown parameters. The maximum likelihood estimators are
+$$
+\hat{\boldsymbol{\beta}}_{\mathrm{MLE}}=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{y}
+=\hat{\boldsymbol{\beta}}_{\mathrm{OLS}},
+\qquad
+\hat\sigma^2_{\mathrm{MLE}}=\frac{\mathrm{RSS}}{n}.
+$$
+That is, the maximum likelihood estimator of $\boldsymbol{\beta}$ is precisely the ordinary
+least-squares estimator. (The maximum likelihood estimator of $\sigma^2$ uses divisor $n$, not $n-p$,
+and is therefore biased downward; compare @thm-sigma2-unbiased.)
+:::
+
+::: {.proof}
+Under G3 the density of $\mathbf{y}\sim\mathcal{N}_n(\mathbf{X}\boldsymbol{\beta},\sigma^2 I_n)$ is
+$(2\pi\sigma^2)^{-n/2}\exp\!\big(-\|\mathbf{y}-\mathbf{X}\boldsymbol{\beta}\|_2^2/(2\sigma^2)\big)$, so
+the log-likelihood is
+$$
+\ell(\boldsymbol{\beta},\sigma^2)
+=-\frac{n}{2}\log(2\pi)-\frac{n}{2}\log\sigma^2
+-\frac{1}{2\sigma^2}\,\|\mathbf{y}-\mathbf{X}\boldsymbol{\beta}\|_2^2 .
+$$ {#eq-loglik}
+For any fixed $\sigma^2>0$, the only place $\boldsymbol{\beta}$ enters @eq-loglik is through the term
+$-\|\mathbf{y}-\mathbf{X}\boldsymbol{\beta}\|_2^2/(2\sigma^2)$, which is increasing in
+$-S(\boldsymbol{\beta})$. Maximizing $\ell$ over $\boldsymbol{\beta}$ is therefore identical to
+minimizing $S(\boldsymbol{\beta})=\|\mathbf{y}-\mathbf{X}\boldsymbol{\beta}\|_2^2$, whose unique
+minimizer is the OLS estimator $\hat{\boldsymbol{\beta}}=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top
+\mathbf{y}$ by @thm-ols-normal-equations. Crucially, this minimizing $\hat{\boldsymbol{\beta}}$ is the
+*same* for every fixed $\sigma^2>0$: the factor $1/(2\sigma^2)$ only rescales the term it multiplies and
+does not move the location of the minimum. Because the best $\boldsymbol{\beta}$ is the same whatever
+$\sigma^2$ is, that same $\hat{\boldsymbol{\beta}}$ must be the $\boldsymbol{\beta}$-coordinate of the
+joint maximizer over $(\boldsymbol{\beta},\sigma^2)$. Substituting $\boldsymbol{\beta}=\hat{\boldsymbol{\beta}}$
+back into $\ell$ leaves a function of $\sigma^2$ alone, the **profile log-likelihood** (the likelihood
+with the other parameter concentrated out at its optimal value),
+$$
+\ell(\hat{\boldsymbol{\beta}},\sigma^2)
+=-\frac{n}{2}\log(2\pi)-\frac{n}{2}\log\sigma^2-\frac{\mathrm{RSS}}{2\sigma^2},
+$$
+where $\mathrm{RSS}=\|\mathbf{y}-\mathbf{X}\hat{\boldsymbol{\beta}}\|_2^2>0$ almost surely (it is zero only
+on the measure-zero event $\mathbf{y}\in\mathcal{C}(\mathbf{X})$). Differentiate in $\sigma^2$:
+$$
+\frac{\partial}{\partial\sigma^2}\,\ell(\hat{\boldsymbol{\beta}},\sigma^2)
+=-\frac{n}{2\sigma^2}+\frac{\mathrm{RSS}}{2\sigma^4}
+=\frac{1}{2\sigma^4}\big(\mathrm{RSS}-n\sigma^2\big),
+$$
+which is positive for $\sigma^2<\mathrm{RSS}/n$, zero at $\sigma^2=\mathrm{RSS}/n$, and negative for
+$\sigma^2>\mathrm{RSS}/n$. Hence $\sigma^2\mapsto\ell(\hat{\boldsymbol{\beta}},\sigma^2)$ increases then
+decreases, with a unique global maximum at $\hat\sigma^2_{\mathrm{MLE}}=\mathrm{RSS}/n$. Therefore
+$(\hat{\boldsymbol{\beta}},\mathrm{RSS}/n)$ maximizes $\ell$ jointly. $\square$
+:::
+
+**Why this matters.** This is the third of the four optimality principles from the introduction, and the
+one that justifies the squared-error criterion by name: under Gaussian errors, least squares is the
+maximum likelihood estimator, not an arbitrary choice. It also hooks regression into the general
+machinery of Chapter 5, so the large-sample guarantees of maximum likelihood apply to
+$\hat{\boldsymbol{\beta}}$ automatically.
+
+### Cramér-Rao efficiency
+
+Under normality we can say more than Gauss-Markov: $\hat{\boldsymbol{\beta}}$ is optimal not merely among
+linear unbiased estimators but among *all* unbiased estimators, because it attains the Cramér-Rao lower
+bound (@thm-cramer-rao).
+
+::: {#cor-ols-efficient-normal}
+## OLS attains the Cramér-Rao bound under normality
+Assume G1, G2, G3 and $\mathrm{rank}(\mathbf{X})=p$, with $\sigma^2$ known. The Fisher information
+(@def-fisher-information) for $\boldsymbol{\beta}$ is
+$\mathcal{I}(\boldsymbol{\beta})=\mathbf{X}^\top\mathbf{X}/\sigma^2$. Consequently, for every fixed
+$\mathbf{c}\in\mathbb{R}^p$, any unbiased estimator $T$ of $\mathbf{c}^\top\boldsymbol{\beta}$ satisfies
+$\mathrm{Var}(T)\ge\sigma^2\mathbf{c}^\top(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{c}
+=\mathrm{Var}(\mathbf{c}^\top\hat{\boldsymbol{\beta}})$. The OLS estimator
+$\mathbf{c}^\top\hat{\boldsymbol{\beta}}$ is therefore the uniformly minimum variance unbiased estimator
+of $\mathbf{c}^\top\boldsymbol{\beta}$.
+:::
+
+::: {.proof}
+With $\sigma^2$ known, drop the additive constants in @eq-loglik that do not involve
+$\boldsymbol{\beta}$; the score is
+$$
+\mathbf{s}(\boldsymbol{\beta})=\nabla_{\boldsymbol{\beta}}\,\ell
+=\frac{1}{\sigma^2}\mathbf{X}^\top(\mathbf{y}-\mathbf{X}\boldsymbol{\beta}),
+$$
+with Hessian $\nabla^2_{\boldsymbol{\beta}}\ell=-\mathbf{X}^\top\mathbf{X}/\sigma^2$, a constant matrix.
+The Fisher information is minus the expected Hessian, so
+$\mathcal{I}(\boldsymbol{\beta})=\mathbf{X}^\top\mathbf{X}/\sigma^2$. The Cramér-Rao inequality
+(@thm-cramer-rao), in its form for a smooth scalar functional $\psi(\boldsymbol{\beta})
+=\mathbf{c}^\top\boldsymbol{\beta}$ with gradient $\mathbf{c}$, gives for any unbiased $T$
+$$
+\mathrm{Var}(T)\ge\mathbf{c}^\top\mathcal{I}(\boldsymbol{\beta})^{-1}\mathbf{c}
+=\sigma^2\,\mathbf{c}^\top(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{c}.
+$$
+By @thm-ols-moments the right-hand side equals $\mathrm{Var}(\mathbf{c}^\top\hat{\boldsymbol{\beta}})$,
+so the bound is attained by OLS, which is unbiased; no unbiased estimator can do better. The same
+conclusion holds when $\sigma^2$ is unknown: the information matrix for $(\boldsymbol{\beta},\sigma^2)$ is
+block diagonal, because $\partial^2\ell/\partial\boldsymbol{\beta}\,\partial\sigma^2
+=-\sigma^{-4}\mathbf{X}^\top(\mathbf{y}-\mathbf{X}\boldsymbol{\beta})$ has expectation $\mathbf{0}$ under
+G1. A block-diagonal matrix is inverted block by block, so the $\boldsymbol{\beta}$-block of the inverse
+information is simply the inverse of the $\boldsymbol{\beta}$-block of the information, namely
+$\sigma^2(\mathbf{X}^\top\mathbf{X})^{-1}$. In words: not knowing $\sigma^2$ costs nothing for estimating
+$\boldsymbol{\beta}$, so the same lower bound persists. $\square$
+:::
+
+**Why this matters.** This is the strongest optimality statement in the chapter, the fourth principle of
+the introduction. Gauss-Markov ruled out only *linear* rivals; Cramér-Rao rules out *all* unbiased
+rivals, even nonlinear ones, once we assume normality. For a health researcher the practical reading is
+that under its assumptions there is no cleverer unbiased way to estimate a treatment effect than ordinary
+least squares; effort is better spent checking the assumptions than seeking a better estimator.
+
+::: {.remark}
+Three optimality theorems now point to the same estimator. Gauss-Markov (@thm-ols-blue) selects OLS
+among linear unbiased estimators using only the first two moments; the projection theorem selects it as
+the closest point in the model space using only geometry; @cor-ols-efficient-normal selects it among all
+unbiased estimators under the added assumption of normality. When the errors are heavy-tailed or the
+model is misspecified these justifications weaken, and the robust sandwich variance of
+@def-sandwich-variance, or estimators based on other loss functions, become relevant. The large-sample
+guarantees of @thm-mle-asymptotic-normality apply to $\hat{\boldsymbol{\beta}}$ as a maximum likelihood
+estimator and extend the normal-theory exact results to settings where G3 holds only approximately.
+$\blacktriangleleft$
+:::
+
+## Rank deficiency and the pseudoinverse {#sec-lr-rank}
+
+When the columns of $\mathbf{X}$ are linearly dependent, for example because a categorical predictor is
+coded with one indicator per level together with an intercept, $\mathrm{rank}(\mathbf{X})=q<p$ and
+$\mathbf{X}^\top\mathbf{X}$ is singular. The formula @eq-betahat no longer applies, but the geometry
+survives intact: the fitted values are still the unique projection of $\mathbf{y}$ onto
+$\mathcal{C}(\mathbf{X})$, and only the coordinate representation $\boldsymbol{\beta}$ is
+non-unique. The clean device for selecting a canonical representative is the Moore-Penrose pseudoinverse
+$\mathbf{X}^{+}$ (@def-pseudoinverse), built from the singular value decomposition (@thm-svd).
+
+The four fundamental subspaces (@thm-four-subspaces) each acquire a regression meaning, summarized here.
+The two on the left of the table live in observation space $\mathbb{R}^n$; the two on the right live in
+coefficient space $\mathbb{R}^p$ and govern identifiability.
+
+| Subspace | Where | Dimension | Regression meaning |
+|---|---|---|---|
+| $\mathcal{C}(\mathbf{X})$, column space | $\mathbb{R}^n$ | $\mathrm{rank}(\mathbf{X})$ | where fitted values $\hat{\mathbf{y}}$ live (the model space) |
+| $\mathcal{C}(\mathbf{X})^\perp=\mathcal{N}(\mathbf{X}^\top)$ | $\mathbb{R}^n$ | $n-\mathrm{rank}(\mathbf{X})$ | where residuals $\mathbf{r}$ live |
+| $\mathcal{N}(\mathbf{X})$, null space | $\mathbb{R}^p$ | $p-\mathrm{rank}(\mathbf{X})$ | directions in which $\boldsymbol{\beta}$ is undetermined (non-identifiable) |
+| $\mathcal{C}(\mathbf{X}^\top)$, row space | $\mathbb{R}^p$ | $\mathrm{rank}(\mathbf{X})$ | directions $\mathbf{c}$ along which $\mathbf{c}^\top\boldsymbol{\beta}$ is estimable |
+
+The last row gives a name to the central concept of this section.
+
+::: {#def-estimable}
+## Estimable functional
+A linear functional $\mathbf{c}^\top\boldsymbol{\beta}$ is **estimable** if it takes the same value for
+every least-squares solution $\hat{\boldsymbol{\beta}}$ of the normal equations @eq-normal-equations.
+$\blacktriangleleft$
+:::
+
+**Reader translation.** When the design is rank deficient, infinitely many coefficient vectors fit the
+data equally well, so an individual coefficient can be meaningless on its own: it changes from one
+solution to another. An estimable functional is a combination that *does* have a single well-defined
+value, whichever solution the software returns. @prp-rank-deficient-pseudoinverse shows these are exactly
+the combinations $\mathbf{c}^\top\boldsymbol{\beta}$ with $\mathbf{c}\in\mathcal{C}(\mathbf{X}^\top)$. A
+treatment contrast is typically estimable even when the separate arm intercepts are not, which is why a
+difference between treatments is reportable from a design that cannot pin down each arm's absolute level.
+
+::: {#prp-rank-deficient-pseudoinverse}
+## Rank deficiency and the minimum-norm solution
+Let $\mathrm{rank}(\mathbf{X})=q\le p$. Then:
+
+1. The normal equations @eq-normal-equations are consistent, and their solution set is the affine
+   subspace $\{\hat{\boldsymbol{\beta}}_0+\mathbf{v}:\mathbf{v}\in\mathcal{N}(\mathbf{X})\}$ for any
+   particular solution $\hat{\boldsymbol{\beta}}_0$.
+2. The fitted values $\hat{\mathbf{y}}=\mathbf{X}\hat{\boldsymbol{\beta}}=P_{\mathcal{C}(\mathbf{X})}\mathbf{y}$
+   and the residual $\mathbf{r}$ are the same for every solution; hence so is $\mathrm{RSS}$, and a
+   linear functional $\mathbf{c}^\top\boldsymbol{\beta}$ is invariant across solutions if and only if
+   $\mathbf{c}\in\mathcal{C}(\mathbf{X}^\top)$ (these are exactly the **estimable** functionals of
+   @def-estimable).
+3. Among all minimizers, the one of smallest Euclidean norm is unique and equals
+   $\hat{\boldsymbol{\beta}}^{+}=\mathbf{X}^{+}\mathbf{y}$.
+:::
+
+::: {.proof}
+(1) Consistency was shown in @thm-ols-normal-equations: $\mathbf{X}^\top\mathbf{y}\in
+\mathcal{C}(\mathbf{X}^\top)=\mathcal{C}(\mathbf{X}^\top\mathbf{X})$ by @lem-gram-nullspace, so a solution
+exists. If $\hat{\boldsymbol{\beta}}_0$ and $\hat{\boldsymbol{\beta}}_1$ both solve the normal equations
+then $\mathbf{X}^\top\mathbf{X}(\hat{\boldsymbol{\beta}}_1-\hat{\boldsymbol{\beta}}_0)=\mathbf{0}$, so
+$\hat{\boldsymbol{\beta}}_1-\hat{\boldsymbol{\beta}}_0\in\mathcal{N}(\mathbf{X}^\top\mathbf{X})
+=\mathcal{N}(\mathbf{X})$ (@lem-gram-nullspace); conversely adding any
+$\mathbf{v}\in\mathcal{N}(\mathbf{X})$ to a solution gives another solution. This is the stated affine
+subspace.
+
+(2) The projection theorem (@thm-projection-theorem) gives a *unique* closest point $\hat{\mathbf{y}}
+=P_{\mathcal{C}(\mathbf{X})}\mathbf{y}\in\mathcal{C}(\mathbf{X})$ regardless of coordinates; any solution
+$\hat{\boldsymbol{\beta}}$ satisfies $\mathbf{X}\hat{\boldsymbol{\beta}}=\hat{\mathbf{y}}$ because
+solving the normal equations is equivalent to $\mathbf{X}\hat{\boldsymbol{\beta}}$ being that projection
+(the orthogonality $\mathbf{X}^\top(\mathbf{y}-\mathbf{X}\hat{\boldsymbol{\beta}})=\mathbf{0}$). Hence
+$\hat{\mathbf{y}}$, $\mathbf{r}=\mathbf{y}-\hat{\mathbf{y}}$ and $\mathrm{RSS}=\|\mathbf{r}\|_2^2$ are
+solution-independent. For a functional, $\mathbf{c}^\top\hat{\boldsymbol{\beta}}$ is invariant across
+solutions iff $\mathbf{c}^\top\mathbf{v}=0$ for all $\mathbf{v}\in\mathcal{N}(\mathbf{X})$, that is iff
+$\mathbf{c}\in\mathcal{N}(\mathbf{X})^\perp=\mathcal{C}(\mathbf{X}^\top)$ (@thm-four-subspaces).
+
+(3) Take a (thin) singular value decomposition $\mathbf{X}=U\Sigma V^\top$ (@thm-svd) with $U\in
+\mathbb{R}^{n\times q}$, $V\in\mathbb{R}^{p\times q}$ having orthonormal columns and
+$\Sigma=\mathrm{diag}(\sigma_1,\dots,\sigma_q)$, $\sigma_i>0$. The pseudoinverse is
+$\mathbf{X}^{+}=V\Sigma^{-1}U^\top$, and $\hat{\boldsymbol{\beta}}^{+}=\mathbf{X}^{+}\mathbf{y}=V\Sigma^{-1}U^\top\mathbf{y}
+\in\mathcal{C}(V)=\mathcal{C}(\mathbf{X}^\top)=\mathcal{N}(\mathbf{X})^\perp$. One checks
+$\hat{\boldsymbol{\beta}}^{+}$ solves the normal equations: $\mathbf{X}^\top\mathbf{X}
+\hat{\boldsymbol{\beta}}^{+}=V\Sigma^2 V^\top V\Sigma^{-1}U^\top\mathbf{y}=V\Sigma U^\top\mathbf{y}
+=\mathbf{X}^\top\mathbf{y}$. Any other solution is $\hat{\boldsymbol{\beta}}^{+}+\mathbf{v}$ with
+$\mathbf{v}\in\mathcal{N}(\mathbf{X})$ by part (1); since
+$\hat{\boldsymbol{\beta}}^{+}\in\mathcal{N}(\mathbf{X})^\perp\perp\mathbf{v}$, Pythagoras gives
+$\|\hat{\boldsymbol{\beta}}^{+}+\mathbf{v}\|_2^2=\|\hat{\boldsymbol{\beta}}^{+}\|_2^2+\|\mathbf{v}\|_2^2
+\ge\|\hat{\boldsymbol{\beta}}^{+}\|_2^2$, with equality only at $\mathbf{v}=\mathbf{0}$. So
+$\hat{\boldsymbol{\beta}}^{+}$ is the unique minimum-norm minimizer. $\square$
+:::
+
+**Why this matters (ITC).** Estimability is the linear-algebra skeleton of identification in indirect
+comparison. A network of trials defines a design on the treatment contrasts, and which contrasts the
+network can estimate is exactly the estimability question of part (2). We return to it for network
+meta-analysis and population adjustment in Part III.
+
+::: {.remark}
+In the full-rank case $q=p$ the null space is trivial, every functional is estimable, the affine
+solution set collapses to the single point @eq-betahat, and $\mathbf{X}^{+}=(\mathbf{X}^\top\mathbf{X})^{-1}
+\mathbf{X}^\top$, so @prp-rank-deficient-pseudoinverse reduces to the earlier theory. The estimability
+criterion in part (2) is the rigorous statement of which contrasts a rank-deficient design can identify;
+in network meta-analysis and population adjustment the analogous question, which treatment contrasts a
+design renders estimable, is central, and reappears in Part III. $\blacktriangleleft$
+:::
+
+## A fully worked example {#sec-lr-example}
+
+We carry a small data set through every formula so the reader can verify each number by hand. To give it
+a clinical reading, interpret $x$ as a patient's **baseline disease severity score** and $y$ as the
+**change in a continuous symptom outcome** over follow-up, for $n=5$ patients, fit with intercept
+($p=2$):
+$$
+\mathbf{x}=(1,2,3,4,5)^\top,\qquad \mathbf{y}=(1,3,2,5,4)^\top,\qquad
+\mathbf{X}=\begin{pmatrix}1&1\\1&2\\1&3\\1&4\\1&5\end{pmatrix}.
+$$
+
+**Summary statistics.** We have $\sum x_i=15$, $\sum x_i^2=55$, $\sum y_i=15$, $\sum x_iy_i=53$, hence
+$\bar x=\bar y=3$, $S_{xx}=\sum(x_i-\bar x)^2=10$, $S_{yy}=\sum(y_i-\bar y)^2=10$, and
+$S_{xy}=\sum(x_i-\bar x)(y_i-\bar y)=8$.
+
+**The Gram matrix and its inverse.**
+$$
+\mathbf{X}^\top\mathbf{X}=\begin{pmatrix}n&\sum x_i\\ \sum x_i&\sum x_i^2\end{pmatrix}
+=\begin{pmatrix}5&15\\15&55\end{pmatrix},\quad
+\det(\mathbf{X}^\top\mathbf{X})=5\cdot55-15^2=50,\quad
+(\mathbf{X}^\top\mathbf{X})^{-1}=\frac{1}{50}\begin{pmatrix}55&-15\\-15&5\end{pmatrix}
+=\begin{pmatrix}1.1&-0.3\\-0.3&0.1\end{pmatrix}.
+$$
+
+**The estimate.** With $\mathbf{X}^\top\mathbf{y}=(\sum y_i,\sum x_iy_i)^\top=(15,53)^\top$,
+$$
+\hat{\boldsymbol{\beta}}=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{y}
+=\begin{pmatrix}1.1&-0.3\\-0.3&0.1\end{pmatrix}\begin{pmatrix}15\\53\end{pmatrix}
+=\begin{pmatrix}1.1(15)-0.3(53)\\-0.3(15)+0.1(53)\end{pmatrix}
+=\begin{pmatrix}16.5-15.9\\-4.5+5.3\end{pmatrix}=\begin{pmatrix}0.6\\0.8\end{pmatrix}.
+$$
+Equivalently, by the simple-regression formulas, $\hat\beta_1=S_{xy}/S_{xx}=8/10=0.8$ and
+$\hat\beta_0=\bar y-\hat\beta_1\bar x=3-0.8\cdot3=0.6$. The fitted line is $\hat y=0.6+0.8x$. Clinically,
+the slope $\hat\beta_1=0.8$ says each additional point of baseline severity is associated with a
+$0.8$-unit larger change in the outcome, and the intercept $\hat\beta_0=0.6$ is the predicted change at a
+(hypothetical) severity of zero.
+
+**Fitted values and residuals.**
+$$
+\hat{\mathbf{y}}=(1.4,\,2.2,\,3.0,\,3.8,\,4.6)^\top,\qquad
+\mathbf{r}=\mathbf{y}-\hat{\mathbf{y}}=(-0.4,\,0.8,\,-1.0,\,1.2,\,-0.6)^\top.
+$$
+As @prp-fitted-residual-geometry predicts, $\sum_i r_i=0$ and $\sum_i x_i r_i=0$ (the two normal
+equations); the reader can check both sums are exactly zero. A residual such as $r_4=1.2$ means patient
+$4$'s observed change exceeded the model's prediction by $1.2$ units.
+
+**Sums of squares and $R^2$.**
+$$
+\mathrm{RSS}=\sum r_i^2=0.16+0.64+1.00+1.44+0.36=3.6,\quad
+\mathrm{TSS}=S_{yy}=10,\quad
+\mathrm{ESS}_{\mathrm{reg}}=10-3.6=6.4,
+$$
+in agreement with $\mathrm{ESS}_{\mathrm{reg}}=\hat\beta_1^2 S_{xx}=0.64\cdot10=6.4$ and the ANOVA
+identity @eq-anova: $10=6.4+3.6$. Hence $R^2=6.4/10=0.64$, equal to $\rho_{xy}^2=(8/\sqrt{10\cdot10})^2
+=0.8^2=0.64$ as @cor-rsquared-range requires.
+
+**Variance estimates.** With $n-p=3$,
+$$
+s^2=\frac{\mathrm{RSS}}{n-p}=\frac{3.6}{3}=1.2,\qquad s=\sqrt{1.2}\approx1.0954,
+$$
+and the estimated covariance of $\hat{\boldsymbol{\beta}}$ is
+$$
+\widehat{\mathrm{Cov}}(\hat{\boldsymbol{\beta}})=s^2(\mathbf{X}^\top\mathbf{X})^{-1}
+=1.2\begin{pmatrix}1.1&-0.3\\-0.3&0.1\end{pmatrix}
+=\begin{pmatrix}1.32&-0.36\\-0.36&0.12\end{pmatrix}.
+$$
+Thus the standard errors are $\mathrm{SE}(\hat\beta_0)=\sqrt{1.32}\approx1.1489$ and
+$\mathrm{SE}(\hat\beta_1)=\sqrt{0.12}\approx0.3464$.
+
+**The t tests.** By @thm-ttest, under $H_0:\beta_1=0$,
+$$
+T_1=\frac{\hat\beta_1}{\mathrm{SE}(\hat\beta_1)}=\frac{0.8}{0.3464}\approx2.309\sim t_3 .
+$$
+The two-sided $p$-value is $2P(t_3>2.309)\approx0.104$, and the critical value is
+$t_{3,0.975}\approx3.182$, so at level $0.05$ the slope is not significant. A $95\%$ confidence interval
+for $\beta_1$ is $0.8\pm3.182\cdot0.3464=0.8\pm1.102=[-0.302,\,1.902]$. For the intercept,
+$T_0=0.6/1.1489\approx0.522$, $p\approx0.638$. In clinical terms, with only five patients the data are
+consistent with no association between baseline severity and outcome change: the confidence interval for
+the slope includes zero, even though the point estimate is positive. The study is simply too small to be
+conclusive, which is exactly what a nonsignificant $t$ test reports.
+
+**The overall F test.** By the remark following @thm-ftest, testing $H_0:\beta_1=0$ against the full
+model,
+$$
+F=\frac{\mathrm{ESS}_{\mathrm{reg}}/(p-1)}{\mathrm{RSS}/(n-p)}=\frac{6.4/1}{3.6/3}=\frac{6.4}{1.2}
+=5.333\sim F_{1,3}.
+$$
+As promised by the $q=1$ remark, $F=T_1^2$: indeed $2.309^2\approx5.33$. The critical value is
+$F_{1,3;0.95}\approx10.13$, so the regression is not significant at the $0.05$ level, consistent with the
+$t$ test (the $p$-values agree, both $\approx0.104$).
+
+**Checking the residual maker.** The hat matrix $H=\mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$
+has $\mathrm{tr}(H)=2=p$, and $M=I_5-H$ has $\mathrm{tr}(M)=3=n-p$. Numerically the eigenvalues of $M$
+are $\{0,0,1,1,1\}$, exactly two zeros (the dimension of $\mathcal{C}(\mathbf{X})$) and three ones (the
+dimension of $\mathcal{C}(\mathbf{X})^\perp$), illustrating the spectral structure used in
+@thm-rss-chisq: $\mathrm{RSS}/\sigma^2$ is a sum of three independent squared standard normals when G3
+holds. This is why the divisor is $n-p=3$ and the reference distribution has $3$ degrees of freedom.
+
+**Tying it back.** The same arithmetic, with the treatment-and-baseline design of @exm-lr-running in place
+of a single severity column, is what an analyst runs on individual patient data before transporting the
+fit to another population. Every population-adjustment method of Parts IV and V rests on exactly this
+pipeline: fit a regression, read its coefficients and their uncertainty, and evaluate the fitted model at
+a new covariate distribution.
+
+## Notes and references {#sec-lr-notes}
+
+The linear model and its least-squares theory are classical; the treatment here follows the
+matrix-geometric viewpoint of @strang2016 for the projection and rank arguments and
+@bingham2010regression for the distributional theory (the $t$, $\chi^2$, and $F$ results and the
+Gauss-Markov theorem). The two derivations of the normal equations, by calculus and by orthogonal
+projection, are the two faces of least squares emphasized throughout @strang2016. The proof that the
+scaled residual sum of squares is chi-squared via the spectral decomposition of the idempotent residual
+maker, and the proof of the independence of $\hat{\boldsymbol{\beta}}$ and $s^2$ via uncorrelatedness of
+jointly Gaussian blocks, are standard and are given in full in @bingham2010regression; we have supplied
+complete proofs of the supporting multivariate-normal lemmas (@lem-mvn-affine-closure,
+@lem-gaussian-block-independence) using the moment generating function established in Chapter 4. The
+identification of least squares with maximum likelihood under normal errors (@thm-ols-mle-normal) is the
+classical justification of the squared-error criterion and is discussed in @bingham2010regression; the
+Cramér-Rao efficiency statement (@cor-ols-efficient-normal) connects this chapter to the inference
+theory of Chapter 5 (@thm-cramer-rao, @def-fisher-information).
+
+These results recur throughout the book. Simulated treatment comparison (Part IV) fits a linear or
+generalized-linear outcome regression on individual patient data and evaluates it at an aggregate
+comparator population; multilevel network meta-regression (Part V) writes each arm's linear predictor as
+a regression and is, on the identity link, exactly the model of this chapter. The conditional reading of
+the coefficients (the remark in @sec-lr-model) is benign here but becomes the subtle issue of
+@def-non-collapsibility once a nonlinear @def-link-function is introduced in Chapter 7. The robust
+sandwich variance (@def-sandwich-variance) is the standard repair when homoskedasticity (G2) fails.
+
+This chapter has no counterpart in the `ITC_Coq` formalization, whose `OutcomeRegression.v` formalizes
+the causal outcome-regression estimator rather than the linear-algebraic least-squares theory developed
+here; the results above are pen-and-paper proofs.
+
+## Exercises {#sec-lr-exercises}
+
+A starred exercise, marked $\star$, has a full worked solution in Appendix F. The first three are
+accessible warm-ups and interpretation questions; the computation and proof exercises follow.
+
+### Warm-ups and interpretation
+
+::: {#exr-lr-warmup-design}
+**(Warm-up) Building a design matrix.** A four-patient trial randomizes patients $1,2$ to control and
+$3,4$ to active treatment, with baseline ages $50,60,55,65$. Write the design matrix $\mathbf{X}$ for the
+model $\mathbb{E}[y_i]=\beta_0+\beta_1 T_i+\beta_2\,\mathrm{age}_i$, and say which column goes with which
+coefficient. Which single entry of $\mathbf{X}$ would change if patient $3$ were instead on the control
+arm?
+:::
+
+::: {#exr-lr-interpret-coef}
+**(Interpretation) Reading coefficients.** In the running example @exm-lr-betahat the fit is
+$\hat{\boldsymbol{\beta}}=(1,-1,1)^\top$ for (intercept, treatment, centered baseline severity). State in
+one plain sentence each what $\hat\beta_0$, $\hat\beta_1$, and $\hat\beta_2$ mean clinically. If a larger
+outcome is worse, is the treatment helping or harming? Which coefficient is the treatment effect that an
+indirect comparison would carry forward to another population?
+:::
+
+::: {#exr-lr-warmup-compute}
+**(Warm-up) A two-point fit.** For $n=2$ with $\mathbf{x}=(0,2)^\top$, $\mathbf{y}=(1,5)^\top$ and an
+intercept ($p=2$), compute $\hat{\boldsymbol{\beta}}$ by hand, the fitted values, and the residuals.
+Confirm the line passes through both points, and explain why $\mathrm{RSS}=0$ and why $s^2$ is undefined
+here. (Hint: $n-p=0$, so there is no residual degree of freedom.)
+:::
+
+### Computation and proof
+
+::: {#exr-lr-simple-formulas}
+**Simple linear regression formulas.** For $\mathbf{X}=[\mathbf{1}_n\ \mathbf{x}]$ with $p=2$, solve the
+normal equations by hand to show $\hat\beta_1=S_{xy}/S_{xx}$ and $\hat\beta_0=\bar y-\hat\beta_1\bar x$,
+and derive $\mathrm{Var}(\hat\beta_1)=\sigma^2/S_{xx}$ and
+$\mathrm{Var}(\hat\beta_0)=\sigma^2\big(\tfrac1n+\tfrac{\bar x^2}{S_{xx}}\big)$ from @eq-cov-betahat.
+Verify all four against the worked example of @sec-lr-example.
+:::
+
+::: {#exr-lr-centering}
+**Centering and the intercept.** Let $\mathbf{X}=[\mathbf{1}_n\ \mathbf{Z}]$ where $\mathbf{Z}$ has
+columns with arbitrary means. Show that the slope estimates are unchanged if each column of $\mathbf{Z}$
+is centered to mean zero, and that after centering $\hat\beta_0=\bar y$. Interpret this through the
+orthogonality of $\mathbf{1}_n$ to the centered columns.
+:::
+
+::: {#exr-lr-leverage}
+**Leverage.** The diagonal entries $h_{ii}=H_{ii}$ of the hat matrix are the **leverages**. Prove
+$0\le h_{ii}\le 1$ for each $i$ and $\sum_i h_{ii}=p$. (Hint: $h_{ii}=\mathbf{e}_i^\top H\mathbf{e}_i$ and
+$H$ is a projection, so $h_{ii}=\|H\mathbf{e}_i\|_2^2$; relate this to $\mathbf{e}_i^\top H\mathbf{e}_i$
+using $H^2=H$.)
+:::
+
+::: {#exr-lr-anova-noint}
+**Sums of squares without an intercept.** Show by counterexample that the ANOVA identity @eq-anova can
+fail when $\mathbf{1}_n\notin\mathcal{C}(\mathbf{X})$, and identify exactly which step of the proof of
+@prp-anova-decomposition breaks.
+:::
+
+::: {#exr-lr-gm-weighted}
+**($\star$) Weighted least squares and generalized Gauss-Markov.** Replace G2 by
+$\mathrm{Cov}(\boldsymbol{\varepsilon})=\sigma^2 V$ for a known positive definite $V$. Define the
+weighted estimator $\hat{\boldsymbol{\beta}}_V=(\mathbf{X}^\top V^{-1}\mathbf{X})^{-1}\mathbf{X}^\top
+V^{-1}\mathbf{y}$. Prove it is unbiased with covariance $\sigma^2(\mathbf{X}^\top V^{-1}\mathbf{X})^{-1}$,
+and that it is the best linear unbiased estimator under the new assumption, generalizing @thm-ols-blue.
+(Hint: factor $V^{-1}=W^\top W$ via the spectral theorem (@thm-spectral-theorem) and transform to
+$\tilde{\mathbf{y}}=W\mathbf{y}$, reducing to the ordinary case.) This generalization is the bridge to
+population adjustment: the matching-adjusted estimator of Chapter 18 is a weighted least squares of
+exactly this kind, and the conclusion here is what tells us it is optimal under its own assumptions.
+:::
+
+::: {#exr-lr-general-hypothesis}
+**($\star$) The general linear hypothesis equals a nested-model test.** The sampling distribution of the
+statistic @eq-glh-stat is established in @thm-general-linear-hypothesis. Complete the picture by showing
+that this statistic is identical to the nested-model statistic @eq-fstat, where the reduced model is the
+least-squares fit subject to the constraint $R\boldsymbol{\beta}=\mathbf{q}$. (Hint: the constrained fit
+minimizes $S(\boldsymbol{\beta})$ over the affine set $\{\boldsymbol{\beta}:R\boldsymbol{\beta}=\mathbf{q}\}$;
+solve it with a Lagrange multiplier and compare the two residual sums of squares. The whitening identity
+used in the text, that $\mathbf{v}\sim\mathcal{N}_q(\mathbf{0},\sigma^2 A)$ with $A\succ0$ implies
+$\mathbf{v}^\top A^{-1}\mathbf{v}/\sigma^2\sim\chi^2_q$, may be quoted.)
+:::
+
+::: {#exr-lr-prediction}
+**Prediction interval.** For a new unit with regressor row $\mathbf{x}_*^\top$, the point prediction is
+$\hat y_*=\mathbf{x}_*^\top\hat{\boldsymbol{\beta}}$. Assuming the new error is independent of the fitting
+sample, show that $y_*-\hat y_*\sim\mathcal{N}\big(0,\sigma^2(1+\mathbf{x}_*^\top(\mathbf{X}^\top
+\mathbf{X})^{-1}\mathbf{x}_*)\big)$ and derive the $1-\alpha$ prediction interval
+$\hat y_*\pm t_{n-p,1-\alpha/2}\,s\sqrt{1+\mathbf{x}_*^\top(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{x}_*}$.
+Contrast it with the confidence interval for the mean response $\mathbf{x}_*^\top\boldsymbol{\beta}$,
+which omits the $1$.
+:::
+
+::: {#exr-lr-mle-sigma-bias}
+**Bias of the maximum likelihood variance.** Using @thm-ols-mle-normal and @thm-sigma2-unbiased, compute
+$\mathbb{E}[\hat\sigma^2_{\mathrm{MLE}}]$ and confirm it equals $\frac{n-p}{n}\sigma^2<\sigma^2$. Explain
+why the maximum likelihood estimator is biased while $s^2$ is not, in terms of degrees of freedom.
+:::
+
+::: {#exr-lr-rank-example}
+**A rank-deficient design.** Let a binary group indicator be coded with both a column of ones and two
+group dummies $\mathbf{d}_A,\mathbf{d}_B$ with $\mathbf{d}_A+\mathbf{d}_B=\mathbf{1}_n$, so
+$\mathbf{X}=[\mathbf{1}_n\ \mathbf{d}_A\ \mathbf{d}_B]$ has rank $2<3$. Exhibit the one-dimensional null
+space $\mathcal{N}(\mathbf{X})$, give two distinct coefficient vectors with identical fitted values, and
+identify which contrasts are estimable in the sense of @prp-rank-deficient-pseudoinverse.
+:::

@@ -1,0 +1,1610 @@
+---
+title: "Bayesian Computation and Diagnostics"
+---
+
+## Introduction {#sec-comp-intro}
+
+The three preceding chapters built the multilevel network meta-regression (ML-NMR) model and showed how
+its aggregate-data likelihood is an integral of an individual-level integrand against a covariate
+distribution (the aggregation theorem, @thm-aggregation), how that integral is computed by quasi-Monte
+Carlo (QMC) on the unit hypercube (@thm-hypercube-integration), and how the resulting model is identified
+and estimated (@thm-target-population-integral, @thm-mlnmr-generalizes-nma). Nothing in that development
+told us how to actually *fit* the model, nor how to know whether the fit can be trusted. That is the
+business of this chapter.
+
+ML-NMR and its unanchored extension are estimated by Markov chain Monte Carlo (MCMC), specifically by
+Hamiltonian Monte Carlo (HMC) and its adaptive form the No-U-Turn Sampler, the engine of the Stan
+probabilistic programming language (@carpenter2017stan) on which the reference software is built. We
+proved in Chapter 8 that HMC (@def-hmc) leaves the target posterior invariant, by way of the
+Metropolis-Hastings detailed-balance argument (@thm-mh-stationarity). Invariance is a statement about the
+limiting behavior of an idealized chain. A real analysis runs a finite number of finite chains, and faces
+two distinct and additive sources of error that a responsible report must certify are small.
+
+The first is the **Monte Carlo error** of the sampler itself: the chains may not have reached the
+stationary distribution (lack of convergence), and even at stationarity their draws are autocorrelated, so
+a run of length $N$ carries less information than $N$ independent draws. The hierarchical structure of
+ML-NMR makes this acute. Random effects on study baselines and on treatment contrasts (@def-random-effects,
+@def-exchangeability) introduce a variance parameter $\tau$ whose joint posterior with the effects it
+governs has a pathological "funnel" geometry that defeats a naive sampler. Section @sec-comp-param shows
+how to remove the funnel by reparameterization, and proves precisely why it works in terms of the leapfrog
+geometry of @def-hmc. Sections @sec-comp-rhat and @sec-comp-ess give the two workhorse convergence
+diagnostics, the Gelman-Rubin potential scale reduction statistic $\hat R$ and the effective sample size,
+and derive both from first principles.
+
+The second source is unique to ML-NMR among the methods in this book: a **numerical-integration error**
+nested *inside* the likelihood. Every evaluation of the aggregate likelihood approximates an integral by a
+finite QMC sum, so the model the sampler actually targets is a perturbation of the intended one. Section
+@sec-comp-integration turns the Koksma-Hlawka bound of Chapter 22 (@thm-koksma-hlawka) into an operational
+diagnostic and proves the doubling rule that certifies the integration grid is fine enough.
+
+The chapter closes with model comparison. Sections @sec-comp-ic and @sec-comp-psis develop the deviance
+information criterion (DIC), the widely applicable information criterion (WAIC), and leave-one-out
+cross-validation (LOO-CV), prove the relationships among them as estimates of the same expected predictive
+density, and give the Pareto-smoothed importance sampling (PSIS) algorithm that makes LOO-CV computable
+without refitting the model. A fully worked diagnostic example, every number checkable by hand, ties the
+pieces together in @sec-comp-example. The chapter corresponds to results I.1 to I.6 of the proof catalogue.
+
+Throughout, $\boldsymbol{\xi}$ denotes the full parameter vector, $\mathbf y$ the observed data,
+$\pi(\boldsymbol{\xi})$ the prior, $p(\mathbf y \mid \boldsymbol{\xi})$ the likelihood, and
+$\pi(\boldsymbol{\xi}\mid\mathbf y)\propto p(\mathbf y\mid\boldsymbol{\xi})\pi(\boldsymbol{\xi})$ the
+posterior, as in [Notation](/notation.qmd) and Chapter 8. We write a generic scalar quantity of interest as
+$\theta=h(\boldsymbol{\xi})$, for instance a treatment contrast $d_{ab}$ or a marginal probability
+$\theta_{\bullet jk}$.
+
+::: {.remark}
+**A note on two effective sample sizes.** The symbol $\mathrm{ESS}$ of [Notation](/notation.qmd) is the
+effective sample size of a *weighted* sample, $\mathrm{ESS}=(\sum_i w_i)^2/\sum_i w_i^2$, which governed the
+variance inflation of MAIC in Chapter 18. The effective sample size of an *autocorrelated MCMC chain*,
+developed in @sec-comp-ess, is a different quantity with a different formula, and to keep them apart we
+write it $N_{\mathrm{eff}}$. Both answer the same kind of question, "how many independent draws is this
+sample worth," but one loses efficiency to unequal weights and the other to serial correlation.
+$\blacktriangleleft$
+:::
+
+## The sampler in one page: HMC, NUTS, warmup, and divergences {#sec-comp-hmc-primer}
+
+Before the diagnostics, a page on the machine they diagnose, for the reader who has fit a model in Stan
+but never looked under the hood. None of this is proved here; it recaps Chapter 8 and fixes the
+vocabulary the practical remarks below depend on.
+
+*What a Markov chain Monte Carlo sampler does.* We cannot write the posterior
+$\pi(\boldsymbol\xi\mid\mathbf y)$ down in closed form for an ML-NMR model, but we can draw a long
+sequence of parameter vectors $\boldsymbol\xi^{(1)},\boldsymbol\xi^{(2)},\dots$ whose histogram
+reproduces it. Each draw is proposed from the current one and then accepted or rejected; the accepted
+draws are our sample, and any posterior summary, a mean or a credible interval for the contrast
+$d_{AC}$, is just an average over them. That is Markov chain Monte Carlo (MCMC).
+
+*Why Hamiltonian Monte Carlo.* A random-walk proposal (as in random-walk Metropolis or Gibbs sampling)
+staggers blindly, and in the tens of correlated dimensions of an ML-NMR fit almost every proposed step
+is rejected, so the sampler barely moves. Hamiltonian Monte Carlo (HMC) instead treats the negative log
+posterior $U(\boldsymbol\xi)=-\log\pi(\boldsymbol\xi\mid\mathbf y)$ as a landscape and rolls a
+frictionless puck across it, using the gradient $\nabla U$ to steer. A single HMC move can travel a long
+way across the posterior while rarely being rejected, which is why HMC, not random-walk Metropolis, is
+the sampler that makes ML-NMR feasible: random-walk methods die in high dimensions, and HMC uses
+gradient information to take long, directed steps.
+
+*How the puck moves: the leapfrog integrator.* The puck's path obeys Newtonian mechanics, which the
+computer solves in small time steps of size $\epsilon$, the *step size*, using the leapfrog integrator
+of @def-hmc. Each leapfrog step gives the puck's momentum a half-kick from the gradient, drifts its
+position, then completes the kick; we write $r$ for that momentum. The single number $\epsilon$ controls
+how large each step is, and getting it wrong is the source of the trouble in @sec-comp-param.
+
+*What the No-U-Turn Sampler adds.* Plain HMC needs the user to choose how many leapfrog steps to take
+per move. The No-U-Turn Sampler (NUTS) chooses automatically: it keeps stepping until the trajectory
+starts to double back on itself (a "U-turn"), so no trajectory-length tuning is required. NUTS is the
+algorithm Stan actually runs.
+
+*Warmup versus sampling.* A run has two phases. During *warmup* the sampler is both moving from its
+arbitrary starting point toward the region where the posterior mass actually lives (the *typical set*,
+which for a high-dimensional posterior is a thin shell away from the mode, so finding the mode and
+sampling the posterior are different tasks) and tuning two knobs: the step size $\epsilon$ and a *mass
+matrix*, a linear rescaling of the parameters that makes the landscape rounder. Warmup draws are
+tuned-away and discarded; only the *post-warmup* draws, taken with the knobs frozen, are kept.
+Everything called "$N$ draws" below means post-warmup draws.
+
+*Divergent transitions.* When the landscape has a region of very sharp curvature, a fixed step size
+$\epsilon$ is too coarse to follow it: the leapfrog puck flies off, the simulated energy jumps by more
+than a set threshold, and Stan records a *divergent transition*. A divergence is not a rounding
+nuisance; it flags a part of the posterior the sampler could not enter, so that region is under-sampled
+and any summary that depends on it, often the heterogeneity $\tau$ and the effects tied to it, can be
+biased. Even a handful of divergences after warmup must be explained, not ignored. The rest of
+@sec-comp-param is, at bottom, the story of where these divergences come from and how a change of
+coordinates removes them.
+
+The vocabulary in one place:
+
+| Term | One-line meaning |
+|---|---|
+| MCMC | draw a dependent sequence whose histogram is the posterior |
+| HMC | gradient-guided proposals that move far with few rejections |
+| NUTS | HMC that picks its own trajectory length; the Stan default |
+| step size $\epsilon$ | how large each leapfrog step is; too large diverges, too small crawls |
+| mass matrix | a rescaling of parameters learned in warmup to round out the geometry |
+| warmup | the discarded tuning phase; the rest are post-warmup draws |
+| typical set | the region carrying the posterior mass, where the sampler should live |
+| divergent transition | a step the integrator could not follow; a flag of unexplored geometry |
+
+## A running example: a two-study evidence network {#sec-comp-running}
+
+Every diagnostic below is illustrated on one small network, carried from section to section so that the
+abstractions attach to something concrete. It is the smallest network that still has all the features
+that make ML-NMR computation delicate.
+
+*The data.* Two randomized trials inform a plaque psoriasis indirect comparison with a binary outcome,
+achieving a $75\%$ reduction in the Psoriasis Area and Severity Index (a "PASI 75 response").
+
+- **Study $AB$** compares treatment $A$ (control) with treatment $B$ and reports **individual patient
+  data (IPD)**: for each of its patients we have the treatment arm, the outcome, and two baseline
+  covariates, age and disease severity, each centered and scaled.
+- **Study $BC$** compares $B$ with $C$ and reports only **aggregate data (AgD)**: per arm, the number of
+  responders out of the arm total, plus the arm's mean age and mean severity.
+
+The network is the chain from $A$ to $B$ to $C$: $B$ is the common comparator, so the $A$-versus-$C$ contrast
+$d_{AC}$ is estimated only *indirectly*, by combining the within-study contrasts. This is exactly the
+ITC problem of Parts III and IV, now fit as one ML-NMR model.
+
+*The model.* On the log-odds (logit) scale the linear predictor for a patient with covariates $\mathbf
+x$ on arm $k$ in study $j$ is, as in [Notation](/notation.qmd),
+$$
+\eta_{jk}(\mathbf x)=\mu_j+\boldsymbol\beta_1^\top\mathbf x+\gamma_k+\boldsymbol\beta_{2,k}^\top\mathbf x,
+$$
+with the convention $\gamma_k=0$ and $\boldsymbol\beta_{2,k}=\mathbf 0$ on the reference arm, study
+baselines $\mu_{AB},\mu_{BC}$, prognostic effects $\boldsymbol\beta_1$, a treatment main effect
+$\gamma_k$, and age-and-severity effect modifiers $\boldsymbol\beta_{2,k}$. Because $B$ appears in both
+studies, its relative effect is treated as *exchangeable* across studies with a random-effects
+heterogeneity scale $\tau$ (the NMA layer of @def-random-effects-ma).
+
+*Why this network stresses every diagnostic.* It has exactly **one study per contrast**. That single
+fact drives the whole chapter:
+
+- $\tau$ is estimated from a single pair of contrasts, so it is **weakly identified**; its posterior
+  reaches toward $0$, which is the funnel of @sec-comp-param, so the fit needs the non-centered
+  parameterization.
+- The **aggregate** study $BC$ contributes to the likelihood only through an integral of the
+  individual-level response over its covariate distribution, a two-dimensional integral over age and
+  severity that must be done by QMC (@sec-comp-integration).
+- With so few studies, one of them can dominate: the $\widehat k$ diagnostic of PSIS-LOO
+  (@sec-comp-psis) will tell us whether $d_{AC}$ rests on a single study.
+- And we will want to compare models, for instance with and without the age effect modifier
+  $\boldsymbol\beta_{2}$, which is the job of WAIC and LOO (@sec-comp-ic).
+
+Keep this network in mind: at each transition we return to it and read the diagnostic in its terms.
+
+## Centered and non-centered parameterizations {#sec-comp-param}
+
+The random-effects layer of an ML-NMR model is, at its core, the normal hierarchy of Chapter 8: a vector
+of study- or contrast-level effects drawn from a common population distribution whose scale $\tau$ is itself
+estimated. We isolate that layer and study how the *algebraic form* in which it is written to the sampler
+changes the geometry HMC must traverse, even though it cannot change the posterior distribution. This is
+the content of catalogue result I.1.
+
+Here is the problem in one picture, before any algebra. In our running network $\tau$ is the scale of
+the random treatment contrast, estimated from a single pair of studies, so the posterior lets $\tau$
+wander close to $0$. Plot the draws of a study effect $\theta_j$ against $\log\tau$. The cloud is shaped
+like a trumpet bell, or a funnel: wide at the top, where $\tau$ is large and the effects $\theta_j$
+range freely, and pinched to a needle at the bottom, where $\tau$ is small and every $\theta_j$ is
+forced close to the common mean $\mu$. A sampler exploring this shape must take large steps in the wide
+mouth and minute steps in the narrow neck. A single step size cannot do both: tuned for the mouth it
+flies out of the neck and diverges; tuned for the neck it crawls hopelessly in the mouth. That mismatch
+is the whole pathology, and the fix is to change coordinates so the funnel becomes a cylinder. The two
+coordinate systems are the centered and non-centered parameterizations.
+
+::: {#def-centered-noncentered}
+## Centered and non-centered parameterization
+Consider the normal hierarchy for effects $\theta_1,\dots,\theta_J$ with population mean $\mu$ and scale
+$\tau>0$,
+$$
+\theta_j \mid \mu,\tau \sim \mathcal N(\mu,\tau^2), \qquad j=1,\dots,J,
+$$ {#eq-comp-hier}
+embedded in a model whose remaining likelihood depends on the $\theta_j$ through data terms.
+
+- The **centered parameterization** (CP) takes the unknowns to be $(\mu,\tau,\theta_1,\dots,\theta_J)$
+  themselves, so that @eq-comp-hier enters the prior directly.
+- The **non-centered parameterization** (NCP) takes the unknowns to be $(\mu,\tau,\tilde\theta_1,\dots,
+  \tilde\theta_J)$ with standardized effects
+  $$
+  \tilde\theta_j \sim \mathcal N(0,1)\ \text{ a priori}, \qquad
+  \theta_j := \mu + \tau\,\tilde\theta_j,
+  $$ {#eq-comp-ncp}
+  and the data terms are written as functions of the deterministic transform $\mu+\tau\tilde\theta_j$.
+  $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** Both parameterizations describe the identical statistical model and give the
+identical answer; they differ only in *what the sampler is asked to move around in*. The centered form
+(CP) samples the effects $\theta_j$ directly. The non-centered form (NCP) samples standardized shocks
+$\tilde\theta_j$ of fixed unit scale and *reconstructs* $\theta_j=\mu+\tau\tilde\theta_j$ afterward, so
+the width of the effect is carried by $\tau$ rather than baked into the coordinate. The point of the
+section is that this cosmetic-looking choice decides whether HMC sees a funnel or a cylinder.
+$\blacktriangleleft$
+:::
+
+The two are the *same model*: @eq-comp-ncp is an invertible change of variables that carries the standard
+normal prior on $\tilde\theta_j$ to the $\mathcal N(\mu,\tau^2)$ prior on $\theta_j$. We record this
+precisely, because the equivalence is what licenses choosing between them on purely computational grounds.
+
+::: {#lem-comp-reparam}
+## The two parameterizations define one posterior
+Fix $(\mu,\tau)$ with $\tau>0$. The map $T_{\mu,\tau}:\tilde{\boldsymbol\theta}\mapsto\boldsymbol\theta$
+defined by $\theta_j=\mu+\tau\tilde\theta_j$ is a diffeomorphism of $\mathbb R^J$ with constant Jacobian
+determinant $\tau^{J}$. The CP joint density in $(\mu,\tau,\boldsymbol\theta)$ and the NCP joint density in
+$(\mu,\tau,\tilde{\boldsymbol\theta})$ are related by this change of variables, and the two analyses return
+identical posteriors for every quantity $h(\mu,\tau,\boldsymbol\theta)$.
+:::
+
+::: {.proof}
+For fixed $(\mu,\tau)$ the map is affine with linear part $\tau I_J$, hence a bijection of $\mathbb R^J$
+with Jacobian matrix $\tau I_J$ and determinant $\tau^J\neq 0$; it is its own smooth inverse
+$\tilde\theta_j=(\theta_j-\mu)/\tau$, so it is a diffeomorphism. Writing $\varphi$ for the standard normal
+density, the NCP prior on $\tilde{\boldsymbol\theta}$ is $\prod_j\varphi(\tilde\theta_j)$. Pushing it
+forward through $T_{\mu,\tau}$ by the change-of-variables formula gives, at $\boldsymbol\theta=
+T_{\mu,\tau}(\tilde{\boldsymbol\theta})$,
+$$
+\prod_{j}\varphi(\tilde\theta_j)\cdot\left|\det \tfrac{\partial\tilde{\boldsymbol\theta}}{\partial
+\boldsymbol\theta}\right|
+=\prod_{j}\varphi\!\Big(\tfrac{\theta_j-\mu}{\tau}\Big)\cdot\tau^{-J}
+=\prod_{j}\mathcal N(\theta_j;\mu,\tau^2),
+$$
+which is exactly the CP prior. Because the likelihood is written in both as a function of the same
+numbers $\theta_j=\mu+\tau\tilde\theta_j$, and the priors on $(\mu,\tau)$ are shared, the joint densities
+agree under the transform. A diffeomorphic reparameterization leaves all integrals, hence all posterior
+expectations and quantiles of any $h$, invariant. $\square$
+:::
+
+::: {.remark}
+**What the proof is saying, in words.** A *diffeomorphism* is just a change of variables that is smooth
+and smoothly invertible, so no information is lost or created by switching between $\boldsymbol\theta$
+and $\tilde{\boldsymbol\theta}$. The *change-of-variables formula* is the multivariable version of the
+$u$-substitution from calculus: when you rewrite a density in new coordinates you must multiply by the
+*Jacobian* factor (here the constant $\tau^{-J}$) to keep total probability equal to one. Because that
+bookkeeping is exact, every probability, mean, and credible interval is identical in the two
+coordinates. This is the license we need: we may pick the parameterization purely for how well the
+sampler moves, with no effect on the reported treatment contrast.
+$\blacktriangleleft$
+:::
+
+If the posteriors are identical, why does the choice matter? Because HMC does not sample the posterior
+directly; it simulates Hamiltonian trajectories whose stability and step size are dictated by the local
+*curvature* of the negative log density, and curvature is not invariant under reparameterization. We make
+this quantitative. Recall from @def-hmc that HMC sets $U(\boldsymbol\xi)=-\log\pi(\boldsymbol\xi\mid\mathbf
+y)$ (the "potential energy") and advances the state by the leapfrog integrator with a single global step
+size $\epsilon$. The behavior of the leapfrog integrator on a quadratic potential is the whole story, and
+it is governed by one number.
+
+To keep the section self-contained, recall the leapfrog integrator explicitly. It advances a position
+$x$ and its momentum $r$ by a step of size $\epsilon$ in three substeps: a half-kick of the momentum by
+the gradient, $r^{+}=r-\tfrac{\epsilon}{2}U'(x)$; a full drift of the position, $x'=x+\epsilon r^{+}$;
+and a second half-kick, $r'=r^{+}-\tfrac{\epsilon}{2}U'(x')$. The momentum $r$ is the auxiliary
+"velocity" HMC gives the puck, and $\epsilon$ is the same step size the sampler tunes in warmup. The next
+lemma analyzes this map on the simplest possible landscape, a parabola, because near any smooth mode the
+landscape *is* a parabola to second order; the one inequality it produces, the largest step the
+integrator can survive, is what governs both the funnel pathology and its non-centered cure. That is why
+a page on a harmonic oscillator earns its place: it is the single fact the entire section turns on.
+
+::: {#lem-comp-leapfrog-stability}
+## Linear stability of the leapfrog integrator
+Let $U(x)=\tfrac12\omega^2 x^2$ be a one-dimensional harmonic potential with frequency $\omega>0$ and unit
+mass. One leapfrog step of size $\epsilon$ (as in @def-hmc) acts on the state $(x,r)$ as the linear map
+$(x',r')^\top=A(x,r)^\top$ with
+$$
+A=\begin{pmatrix} 1-\tfrac12\epsilon^2\omega^2 & \epsilon \\[2pt]
+-\epsilon\omega^2\big(1-\tfrac14\epsilon^2\omega^2\big) & 1-\tfrac12\epsilon^2\omega^2 \end{pmatrix},
+\qquad \det A=1 .
+$$ {#eq-comp-leapfrog-matrix}
+The iterates $A^n$ remain bounded (the integrator is *stable*) if and only if $\epsilon\omega\le 2$; for
+$\epsilon\omega>2$ they grow geometrically, and the simulated trajectory diverges.
+:::
+
+::: {.proof}
+With $U'(x)=\omega^2 x$, the three leapfrog substeps of @def-hmc read
+$r^{+}=r-\tfrac{\epsilon}{2}\omega^2 x$, then $x'=x+\epsilon r^{+}=(1-\tfrac12\epsilon^2\omega^2)x+
+\epsilon r$, then $r'=r^{+}-\tfrac{\epsilon}{2}\omega^2 x'$. Substituting $x'$ into the last line,
+$$
+r'=r-\tfrac{\epsilon}{2}\omega^2 x-\tfrac{\epsilon}{2}\omega^2\big[(1-\tfrac12\epsilon^2\omega^2)x+\epsilon
+r\big]
+=\big(1-\tfrac12\epsilon^2\omega^2\big)r-\epsilon\omega^2\big(1-\tfrac14\epsilon^2\omega^2\big)x,
+$$
+which is @eq-comp-leapfrog-matrix. Its determinant is
+$(1-\tfrac12\epsilon^2\omega^2)^2+\epsilon\cdot\epsilon\omega^2(1-\tfrac14\epsilon^2\omega^2)
+=1-\epsilon^2\omega^2+\tfrac14\epsilon^4\omega^4+\epsilon^2\omega^2-\tfrac14\epsilon^4\omega^4=1$,
+confirming the volume preservation of @def-hmc. Writing $s=\epsilon\omega$, the trace is $2-s^2$, so the
+eigenvalues of $A$ solve $\lambda^2-(2-s^2)\lambda+1=0$ with discriminant $(2-s^2)^2-4=s^2(s^2-4)$. If
+$s<2$ the discriminant is negative, the eigenvalues are complex conjugates, and since their product is
+$\det A=1$ they have modulus $1$; the powers $A^n$ are then conjugate to a rotation and stay bounded. If
+$s>2$ the discriminant is positive, the eigenvalues are real with product $1$, so one exceeds $1$ in
+modulus and $A^n$ grows like that eigenvalue to the $n$; the trajectory diverges. At $s=2$ the matrix has a
+defective double eigenvalue $-1$ and $\|A^n\|$ grows linearly. Hence stability holds exactly for
+$\epsilon\omega\le 2$. $\square$
+:::
+
+The frequency $\omega$ in @lem-comp-leapfrog-stability is $\sqrt{U''(x)}$, the square root of the local
+curvature of the potential. The lemma therefore says: the largest usable leapfrog step at a point is
+$\epsilon\lesssim 2/\sqrt{\lambda_{\max}}$, where $\lambda_{\max}$ is the largest eigenvalue of the Hessian
+$\nabla^2 U$ there. A *single* global $\epsilon$ can be efficient only if this curvature is roughly
+constant across the region the chain must visit. The next lemma computes the curvature in the two
+parameterizations and exposes the funnel.
+
+::: {#lem-comp-funnel}
+## Funnel curvature of the centered hierarchy
+Consider @eq-comp-hier with a single weakly-informed effect $\theta_j$ whose data term contributes
+curvature $c_j\ge 0$ in $\theta_j$ (so $c_j$ is the negative second derivative of the data log-likelihood
+in $\theta_j$, a measure of how firmly the data pin down $\theta_j$; when the data are weakly
+informative the likelihood is nearly flat in $\theta_j$, its second derivative is near zero, and
+$c_j\to 0$, the prior-dominated limit). Holding $(\mu,\tau)$ fixed:
+
+1. In the centered parameterization the curvature of $U$ in the $\theta_j$ direction is
+   $$
+   \frac{\partial^2 U}{\partial\theta_j^2}=\frac{1}{\tau^2}+c_j .
+   $$ {#eq-comp-cp-curv}
+2. In the non-centered parameterization the curvature of $U$ in the $\tilde\theta_j$ direction is
+   $$
+   \frac{\partial^2 U}{\partial\tilde\theta_j^2}=1+\tau^2 c_j .
+   $$ {#eq-comp-ncp-curv}
+:::
+
+::: {.proof}
+The potential is $U=-\log\pi(\boldsymbol\xi\mid\mathbf y)=-\log(\text{prior})-\log(\text{likelihood})+
+\text{const}$. In CP the prior term involving $\theta_j$ is $-\log\mathcal N(\theta_j;\mu,\tau^2)=
+\frac{(\theta_j-\mu)^2}{2\tau^2}+\text{const}$, whose second derivative in $\theta_j$ is $1/\tau^2$; the
+data term adds $c_j$ by definition, giving @eq-comp-cp-curv. In NCP the prior term involving
+$\tilde\theta_j$ is $-\log\mathcal N(\tilde\theta_j;0,1)=\tfrac12\tilde\theta_j^2+\text{const}$, second
+derivative $1$; the data term is the same function of $\theta_j=\mu+\tau\tilde\theta_j$, and by the chain
+rule its second derivative in $\tilde\theta_j$ is $(\partial\theta_j/\partial\tilde\theta_j)^2$ times its
+second derivative in $\theta_j$, that is $\tau^2 c_j$. Summing gives @eq-comp-ncp-curv. $\square$
+:::
+
+::: {#thm-comp-param}
+## Why the parameterization changes HMC geometry
+In the prior-dominated regime $c_j\to 0$ (a study or contrast about which the data are weakly informative):
+
+1. **(Centered funnels.)** The CP curvature @eq-comp-cp-curv is $1/\tau^2$, so by
+   @lem-comp-leapfrog-stability the largest stable leapfrog step in the $\theta_j$ direction is
+   $\epsilon_{\max}(\tau)=2\tau$, which tends to $0$ as $\tau\to 0$. The posterior of $(\theta_j,\log\tau)$
+   is a "funnel," narrowing without bound as $\tau\downarrow 0$; no single global $\epsilon$ is both stable
+   in the neck of the funnel and efficient in its mouth.
+2. **(Non-centered uniformizes.)** The NCP curvature @eq-comp-ncp-curv is $1$, independent of $\tau$, so the
+   largest stable step is $\epsilon_{\max}=2$ for every $\tau$. The funnel is removed and a single step
+   size suffices.
+
+In the data-dominated regime $\tau^2 c_j\gg 1$ (many informative studies, well-identified $\tau$) the
+roles reverse: NCP couples $\tilde\theta_j$ to $\tau$ through the data term @eq-comp-ncp-curv and can mix
+worse than CP, whose curvature @eq-comp-cp-curv is then the well-conditioned $c_j$. The practical rule is
+to use NCP when $\tau$ is weakly identified (few studies) and CP when it is strongly identified.
+:::
+
+::: {.proof}
+Both claims are immediate from substituting the limiting curvatures of @lem-comp-funnel into the stability
+threshold $\epsilon_{\max}=2/\omega=2/\sqrt{\text{curvature}}$ of @lem-comp-leapfrog-stability. For (1),
+curvature $1/\tau^2$ gives $\omega=1/\tau$ and $\epsilon_{\max}=2\tau\to 0$; because $\tau$ itself ranges
+over an interval reaching toward $0$ under the posterior, the step size that is stable at the smallest
+visited $\tau$ is far smaller than the step size that is efficient at typical $\tau$, and HMC with one
+$\epsilon$ must compromise. The Metropolis correction of @thm-mh-stationarity guards correctness by
+rejecting the divergent proposals that an over-large step produces in the neck, but at the cost of a
+collapse in acceptance and in distance traveled, which is observed in practice as "divergent transitions."
+For (2), curvature $1$ gives $\epsilon_{\max}=2$ for all $\tau$, so stability is uniform over the funnel.
+The reversal in the data-dominated regime is the same computation read in the other direction: when
+$\tau^2 c_j\gg 1$ the NCP curvature @eq-comp-ncp-curv grows with $\tau$ while the CP curvature
+@eq-comp-cp-curv approaches the constant $c_j$, so CP is the better-conditioned coordinate. $\square$
+:::
+
+::: {.remark}
+**Why this matters, and a map of the two regimes.** The theorem is the rigorous version of "change
+coordinates so the funnel becomes a cylinder," and it also warns that the cure can become the disease
+when the data are strong. The table records both regimes; "curvature" is the second derivative of $U$
+that @lem-comp-leapfrog-stability turns into a maximum stable step $\epsilon_{\max}=2/\sqrt{\text{curv}}$.
+
+| Regime | Centered curvature | Non-centered curvature | Better coordinate |
+|---|---|---|---|
+| Weak data ($c_j\to 0$), $\tau$ near $0$ (the neck) | $1/\tau^2$, blows up | $1$, constant | non-centered |
+| Weak data, $\tau$ large (the mouth) | $1/\tau^2$, tiny | $1$, constant | either |
+| Strong data ($\tau^2 c_j\gg 1$) | $c_j$, well conditioned | $\tau^2 c_j$, grows | centered |
+
+For an indirect comparison this reads directly off the evidence network. Our running network has one
+study per contrast, so $\tau$ is weakly identified and its posterior reaches into the neck: it is a
+non-centered problem, and fitting it centered would produce divergences clustered at small $\tau$ and an
+untrustworthy heterogeneity estimate. A dense network with many studies per contrast identifies $\tau$
+strongly and belongs in the bottom row, where the centered form mixes better.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**The funnel in ML-NMR.** In ML-NMR the effects $\theta_j$ are study baselines $\mu_j$ and random
+treatment contrasts $\delta_{j,1k}$ (the random-effects NMA layer, @def-random-effects-ma). Networks with
+few studies per contrast, the norm in health-technology-assessment submissions, sit squarely in the
+prior-dominated regime, where @thm-comp-param prescribes the non-centered form. The reference software
+implements the non-centered parameterization by default for exactly this reason; the diagnostic signature
+of a residual funnel is a cluster of divergent transitions concentrated at small $\tau$, visible in a
+scatter plot of any $\theta_j$ against $\log\tau$. $\blacktriangleleft$
+:::
+
+This development corresponds to I.1 in the proof catalogue.
+
+## The Gelman-Rubin potential scale reduction statistic {#sec-comp-rhat}
+
+Reparameterization makes the chains mix; diagnostics tell us whether they have. The first question is
+convergence: have the chains forgotten their starting points and settled to a common stationary
+distribution? The standard answer compares the spread of several independently started chains to the
+spread within each. If the chains agree, the between-chain spread is no larger than the within; if they
+have not converged, the between-chain spread is inflated. The Gelman-Rubin statistic makes this a number.
+This is catalogue result I.2, which we derive in full.
+
+**The bottom line first.** The statistic is $\widehat R=\sqrt{\widehat V/W}$, the ratio of a pooled,
+all-chains-together estimate of the posterior spread $\widehat V$ to the average within-chain spread $W$.
+Read it as a single question: *are the separate chains telling the same posterior story?* If they are,
+the two spreads agree and $\widehat R$ sits at $1$; if the chains have settled in different places or are
+still drifting, the pooled spread is inflated and $\widehat R$ rises above $1$. The working rule is to
+require $\widehat R\le 1.01$ for every reported quantity. In the running example that means checking it
+not only on the headline contrast $d_{AC}$ but on $\tau$, the study baselines $\mu_{AB},\mu_{BC}$, the
+effect modifier $\boldsymbol\beta_2$, and the transformed marginal probabilities you report; the
+heterogeneity $\tau$ is usually the last to converge and the one to watch. The rest of this section
+proves why this ratio has exactly that behavior; a reader who trusts the rule can skim to @sec-comp-ess
+on a first pass.
+
+Throughout this section we have $M\ge 2$ chains, each of post-warmup length $N$, with draws
+$\theta^{(m,t)}$ for chain $m=1,\dots,M$ and iteration $t=1,\dots,N$, of a scalar quantity
+$\theta=h(\boldsymbol\xi)$.
+
+::: {#def-comp-rhat-pieces}
+## Within-chain, between-chain, and pooled variance estimators
+With chain means $\bar\theta^{(m)}=\frac1N\sum_t\theta^{(m,t)}$ and grand mean
+$\bar{\bar\theta}=\frac1M\sum_m\bar\theta^{(m)}$, define
+$$
+W=\frac1M\sum_{m=1}^{M}s_m^2,\quad s_m^2=\frac{1}{N-1}\sum_{t=1}^{N}\big(\theta^{(m,t)}-\bar\theta^{(m)}
+\big)^2;\qquad
+B=\frac{N}{M-1}\sum_{m=1}^{M}\big(\bar\theta^{(m)}-\bar{\bar\theta}\big)^2 ;
+$$ {#eq-comp-wb}
+the **within-chain variance** $W$ (the average of the per-chain sample variances) and the **between-chain
+variance** $B$ (the sample variance of the chain means, scaled by $N$). The **pooled marginal-variance
+estimator** is
+$$
+\widehat V=\Big(1-\tfrac1N\Big)W+\tfrac1N B .
+$$ {#eq-comp-vhat}
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** $W$ asks how much a *single* chain wiggles around its own average; $B$ asks how
+far the *chain averages* sit from one another. If the chains have converged to the same distribution
+these measure the same spread, so their combination $\widehat V$ neither over- nor under-states the
+posterior variance. If the chains disagree, $B$ is inflated by the disagreement while $W$ is not, and the
+ratio $\widehat V/W$ climbs above $1$. The scaling by $N$ in $B$ is what puts the between-chain and
+within-chain pieces on the same footing.
+$\blacktriangleleft$
+:::
+
+The rationale for these particular combinations is not obvious from the formulas. We supply it with two
+exact expectation identities, valid under an explicit idealization of what "converged" means, and then
+read off the behavior of the statistic.
+
+::: {#lem-comp-within}
+## Expectation of the within-chain variance
+Suppose each chain is *second-order stationary*, meaning its mean is constant along the chain and the
+covariance between two draws depends only on how many iterations separate them, not on where in the
+chain they sit, with marginal variance $\sigma^2=\mathrm{Var}(\theta)$, and
+let $v_N=\mathrm{Var}(\bar\theta^{(m)})$ be the variance of a single chain mean. Then $\mathbb E[s_m^2]=
+\frac{N}{N-1}(\sigma^2-v_N)$, and hence
+$$
+\mathbb E[W]=\frac{N}{N-1}\big(\sigma^2-v_N\big).
+$$ {#eq-comp-ew}
+:::
+
+::: {.proof}
+Let $m_0=\mathbb E[\theta^{(m,t)}]$, constant in $t$ by stationarity. Using
+$\sum_t(\theta^{(m,t)}-\bar\theta^{(m)})^2=\sum_t\theta^{(m,t)2}-N\bar\theta^{(m)2}$ and taking
+expectations,
+$$
+\mathbb E\!\Big[\textstyle\sum_t(\theta^{(m,t)}-\bar\theta^{(m)})^2\Big]
+=\sum_t\big(\sigma^2+m_0^2\big)-N\big(v_N+m_0^2\big)
+=N\sigma^2-Nv_N ,
+$$
+because $\mathbb E[\theta^{(m,t)2}]=\mathrm{Var}(\theta^{(m,t)})+m_0^2=\sigma^2+m_0^2$ and
+$\mathbb E[\bar\theta^{(m)2}]=v_N+m_0^2$. Dividing by $N-1$ gives $\mathbb E[s_m^2]=\frac{N}{N-1}
+(\sigma^2-v_N)$, and averaging over the $M$ chains gives @eq-comp-ew. $\square$
+:::
+
+::: {#lem-comp-between}
+## Expectation of the between-chain variance
+Suppose in addition that the $M$ chains are mutually independent and share the common stationary
+distribution (in particular a common mean). Then
+$$
+\mathbb E[B]=N v_N .
+$$ {#eq-comp-eb}
+:::
+
+::: {.proof}
+Under the stated assumptions the chain means $\bar\theta^{(1)},\dots,\bar\theta^{(M)}$ are independent and
+identically distributed with common variance $v_N$. The quantity $\frac{1}{M-1}\sum_m(\bar\theta^{(m)}-
+\bar{\bar\theta})^2$ is the ordinary sample variance of these $M$ numbers, which is an unbiased estimator
+of their common variance $v_N$. Multiplying by $N$, as in the definition @eq-comp-wb of $B$, gives
+$\mathbb E[B]=Nv_N$. $\square$
+:::
+
+::: {#thm-gelman-rubin}
+## Gelman-Rubin potential scale reduction
+Define the **potential scale reduction factor**
+$$
+\widehat R=\sqrt{\widehat V/W}.
+$$ {#eq-comp-rhat}
+
+1. **(Unbiasedness of $\widehat V$ at stationarity.)** Under the idealization of @lem-comp-within and
+   @lem-comp-between (independent chains sharing one stationary law of finite variance $\sigma^2$), the
+   pooled estimator is exactly unbiased for the marginal posterior variance,
+   $$
+   \mathbb E[\widehat V]=\sigma^2 ,
+   $$
+   for every $N$ and every within-chain autocorrelation structure.
+
+2. **(One-sided bias and the limit.)** For chains with non-negative autocorrelations,
+   $\mathbb E[\widehat V]\ge\mathbb E[W]$, with
+   $$
+   \mathbb E[\widehat V]-\mathbb E[W]=\frac{N v_N-\sigma^2}{N-1}\ge 0 ,
+   $$ {#eq-comp-gap}
+   so $\widehat R$ is centered at or above $1$; and if the chains are ergodic, so that $v_N\to 0$ and
+   $Nv_N\to\sigma^2\big(1+2\sum_{k\ge1}\rho_k\big)$ as $N\to\infty$, then $\mathbb E[W]\to\sigma^2$ and
+   $\widehat R\xrightarrow{p}1$.
+
+3. **(Detection of non-convergence.)** If the chains are stationary but with *different* means
+   $m_1,\dots,m_M$ (over-dispersed starting points not yet forgotten, or distinct posterior modes), then
+   $$
+   \mathbb E[\widehat V]=\sigma^2+\frac{1}{M-1}\sum_{m}\big(m_m-\bar m\big)^2,
+   \qquad \bar m=\tfrac1M\textstyle\sum_m m_m ,
+   $$
+   while $\mathbb E[W]$ is unchanged at $\frac{N}{N-1}(\sigma^2-v_N)$; the extra between-mean dispersion
+   inflates $\widehat V/W$ above $1$ and does not vanish as $N\to\infty$ unless the means coincide.
+:::
+
+::: {.proof}
+*Part 1.* By @eq-comp-vhat and linearity of expectation,
+$$
+\mathbb E[\widehat V]=\Big(1-\tfrac1N\Big)\mathbb E[W]+\tfrac1N\mathbb E[B]
+=\frac{N-1}{N}\cdot\frac{N}{N-1}\big(\sigma^2-v_N\big)+\frac1N\cdot N v_N
+=\big(\sigma^2-v_N\big)+v_N=\sigma^2,
+$$
+using @eq-comp-ew and @eq-comp-eb. The cancellation is exact and uses no assumption on the
+autocorrelations beyond second-order stationarity.
+
+*Part 2.* Subtracting @eq-comp-ew from $\mathbb E[\widehat V]=\sigma^2$,
+$$
+\mathbb E[\widehat V]-\mathbb E[W]=\sigma^2-\frac{N}{N-1}\big(\sigma^2-v_N\big)
+=\frac{(N-1)\sigma^2-N\sigma^2+Nv_N}{N-1}=\frac{Nv_N-\sigma^2}{N-1}.
+$$
+Now $v_N=\mathrm{Var}(\bar\theta^{(m)})=\frac{\sigma^2}{N}\big(1+2\sum_{k=1}^{N-1}(1-\tfrac kN)\rho_k\big)$
+by the variance-of-the-mean identity @prp-comp-acf-variance (proved independently in @sec-comp-ess,
+using nothing from this section, so there is no circular dependence), so
+$Nv_N=\sigma^2\big(1+2\sum_{k=1}^{N-1}(1-\tfrac kN)\rho_k\big)\ge
+\sigma^2$ whenever every $\rho_k\ge 0$; the gap @eq-comp-gap is therefore non-negative, and since
+$\widehat V$ and $W$ are non-negative this gives $\mathbb E[\widehat V]\ge\mathbb E[W]$, so $\widehat R$ is
+centered at or above $1$. For the limit, ergodicity makes $v_N\to 0$, so $\mathbb E[\widehat V]=\sigma^2$
+forces $\mathbb E[W]=\sigma^2-\frac{N-1}{N}^{-1}\!\cdots\to\sigma^2$ as well (equivalently, the gap
+@eq-comp-gap is $\frac{\sigma^2\cdot 2\sum_k(1-k/N)\rho_k}{N-1}\to 0$ because the bracket converges to the
+finite constant $\sum_k\rho_k$); both $\widehat V$ and $W$ converge to $\sigma^2$ and their ratio to $1$.
+
+*Part 3.* When the chains have different means, the chain means $\bar\theta^{(m)}$ are independent with
+$\mathbb E[\bar\theta^{(m)}]=m_m$ and variance $v_N$. The sample variance of independent variables with
+unequal means decomposes into the average variance plus the sample variance of the means: taking
+expectations in $\frac{1}{M-1}\sum_m(\bar\theta^{(m)}-\bar{\bar\theta})^2$ gives $v_N+\frac{1}{M-1}\sum_m
+(m_m-\bar m)^2$. Hence $\mathbb E[B]=Nv_N+\frac{N}{M-1}\sum_m(m_m-\bar m)^2$, and
+$$
+\mathbb E[\widehat V]=\frac{N-1}{N}\mathbb E[W]+\frac1N\mathbb E[B]
+=\sigma^2+\frac{1}{M-1}\sum_m\big(m_m-\bar m\big)^2 .
+$$
+The within-chain expectation @eq-comp-ew is untouched because it never references the cross-chain means.
+The extra term is a fixed positive constant independent of $N$, so $\widehat V/W$ stays bounded away from
+$1$ as $N$ grows, which is the diagnostic firing. $\square$
+:::
+
+::: {.remark}
+**Why this matters, and the three ways $\widehat R$ fails.** For an indirect comparison, a large
+$\widehat R$ on the contrast $d_{AC}$ means the estimate is not yet stable: rerun the analysis with a
+different seed and you could get a materially different number, which is indefensible in a reimbursement
+submission. Part 3 of the theorem is the precise reason, and it fires in three recognizable patterns.
+(i) *Different modes*: the chains settle in genuinely different places, for example a bimodal posterior
+for an effect modifier, so the chain means $m_m$ differ and the extra term in Part 3 never vanishes.
+(ii) *Slow drift*: a chain has not reached the typical set and is still trending, which split-$\widehat
+R$ (below) is designed to catch by comparing each chain's two halves. (iii) *One rogue chain*: a single
+chain stuck in the funnel neck while the others mix, dragging one $m_m$ away from the rest. In all three
+the action is the same: do not read the posterior yet. Diagnose which parameter is bad and treat the
+cause, usually more warmup, the non-centered parameterization of @sec-comp-param, or a tighter prior on
+$\tau$, rather than simply running longer.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reading $\widehat R$, and modern refinements.** Part 1 is the classical fact that $\widehat V$
+*overestimates* the posterior variance when the chains start over-dispersed (Part 3) and is unbiased once
+they have mixed (Part 1), while $W$ *underestimates* it until each chain has explored the whole support
+(Part 2); $\widehat R$ compresses both failures into a single number that descends to $1$. The widely used
+threshold is $\widehat R\le 1.01$ for every reported quantity. Two refinements are now standard: *split-
+$\widehat R$* divides each chain into two halves and treats them as separate chains, so that within-chain
+non-stationarity (a slow trend) inflates the between-chain term and is detected; and *rank-normalized*
+$\widehat R$ applies the statistic to the normal scores of the pooled ranks, which makes it well defined
+for heavy-tailed or infinite-variance targets where $\sigma^2$ in @thm-gelman-rubin would not exist. Both
+are due to a modern reassessment of the diagnostic and are the defaults in current software.
+$\blacktriangleleft$
+:::
+
+This development corresponds to I.2 in the proof catalogue.
+
+## Effective sample size for autocorrelated chains {#sec-comp-ess}
+
+A chain can be perfectly converged ($\widehat R=1$) and still nearly useless if its draws are highly
+correlated, because correlated draws carry redundant information. The effective sample size quantifies
+exactly how many independent draws the chain is worth for estimating a posterior expectation. This is
+catalogue result I.3. The development rests on one exact variance identity for the mean of a stationary
+sequence, which we also used in @thm-gelman-rubin.
+
+::: {#prp-comp-acf-variance}
+## Variance of the mean of a stationary chain
+Let $\theta^{(1)},\dots,\theta^{(N)}$ be second-order stationary with variance $\sigma^2$ and lag-$k$
+autocorrelation $\rho_k=\mathrm{Corr}(\theta^{(t)},\theta^{(t+k)})$. Then
+$$
+\mathrm{Var}\big(\bar\theta_N\big)=\frac{\sigma^2}{N}\Big(1+2\sum_{k=1}^{N-1}\Big(1-\frac kN\Big)\rho_k
+\Big),\qquad \bar\theta_N=\frac1N\sum_{t=1}^N\theta^{(t)} .
+$$ {#eq-comp-var-mean}
+If moreover $\sum_{k=1}^\infty|\rho_k|<\infty$, then $N\,\mathrm{Var}(\bar\theta_N)\to\sigma^2\,
+\tau_{\mathrm{int}}$ as $N\to\infty$, where $\tau_{\mathrm{int}}=1+2\sum_{k=1}^\infty\rho_k$ is the
+**integrated autocorrelation time**.
+:::
+
+::: {.proof}
+Expanding the variance of the sum and using stationarity, $\mathrm{Cov}(\theta^{(s)},\theta^{(t)})=
+\sigma^2\rho_{|s-t|}$, so
+$$
+\mathrm{Var}(\bar\theta_N)=\frac{1}{N^2}\sum_{s=1}^N\sum_{t=1}^N\sigma^2\rho_{|s-t|}
+=\frac{\sigma^2}{N^2}\Big(N+2\sum_{k=1}^{N-1}(N-k)\rho_k\Big),
+$$
+because the lag $|s-t|=0$ occurs for the $N$ diagonal pairs and each lag $k\in\{1,\dots,N-1\}$ occurs for
+$2(N-k)$ ordered pairs. Factoring $N$ out of the bracket gives @eq-comp-var-mean. For the limit, each
+summand $(1-\tfrac kN)\rho_k\to\rho_k$ pointwise as $N\to\infty$ and is dominated by $|\rho_k|$, which is
+summable by hypothesis; dominated convergence gives $\sum_{k=1}^{N-1}(1-\tfrac kN)\rho_k\to\sum_{k\ge1}
+\rho_k$, hence $N\,\mathrm{Var}(\bar\theta_N)=\sigma^2(1+2\sum_{k=1}^{N-1}(1-\tfrac kN)\rho_k)\to\sigma^2
+\tau_{\mathrm{int}}$. $\square$
+:::
+
+::: {#def-mcmc-ess}
+## Effective sample size of an MCMC chain
+For a second-order stationary chain with integrated autocorrelation time $\tau_{\mathrm{int}}=1+2\sum_{k
+\ge1}\rho_k$, the **effective sample size** for the posterior mean is
+$$
+N_{\mathrm{eff}}=\frac{N}{\tau_{\mathrm{int}}}=\frac{N}{1+2\sum_{k=1}^{\infty}\rho_k}.
+$$ {#eq-comp-ess}
+With $M$ chains of length $N$ the total is $N_{\mathrm{eff}}=MN/\tau_{\mathrm{int}}$. The ratio
+$N_{\mathrm{eff}}/N\in(0,1]$ is the chain's **efficiency**. In practice the infinite sum is truncated at
+the first lag where the estimated autocorrelations cease to be reliably positive (for example by Geyer's
+initial-monotone-sequence rule), because sample autocorrelations at large lags are dominated by noise.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** $N_{\mathrm{eff}}$ answers "how many truly independent draws is this correlated
+chain worth?" A run of $4000$ draws with $N_{\mathrm{eff}}=4000$ is as good as $4000$ coin flips; one
+with $N_{\mathrm{eff}}=200$ carries the information of only $200$. The integrated autocorrelation time
+$\tau_{\mathrm{int}}$ is the exchange rate: each draw is worth $1/\tau_{\mathrm{int}}$ of an independent
+draw. A low $N_{\mathrm{eff}}$ does not bias the estimate; it makes it *noisy*, which for an ITC shows up
+as jittery credible-interval endpoints on the contrast.
+$\blacktriangleleft$
+:::
+
+The definition is justified by the property that gives it its name: $N_{\mathrm{eff}}$ is the number of
+independent draws that would estimate the posterior mean with the same Monte Carlo variance.
+
+::: {#cor-comp-ess-variance}
+## $N_{\mathrm{eff}}$ equalizes Monte Carlo variance
+Under the summability hypothesis of @prp-comp-acf-variance, the asymptotic Monte Carlo variance of the
+chain mean is
+$$
+\mathrm{Var}(\bar\theta_N)\sim\frac{\sigma^2}{N_{\mathrm{eff}}}\qquad(N\to\infty),
+$$
+the same as the variance $\sigma^2/n$ of a mean of $n=N_{\mathrm{eff}}$ independent draws. The Monte Carlo
+standard error of $\bar\theta_N$ is therefore $\sigma/\sqrt{N_{\mathrm{eff}}}$.
+:::
+
+::: {.proof}
+By @prp-comp-acf-variance, $\mathrm{Var}(\bar\theta_N)\sim\sigma^2\tau_{\mathrm{int}}/N=\sigma^2/(N/
+\tau_{\mathrm{int}})=\sigma^2/N_{\mathrm{eff}}$ from the definition @eq-comp-ess. Equating to the iid
+variance $\sigma^2/n$ gives $n=N_{\mathrm{eff}}$, and the standard error is the square root. $\square$
+:::
+
+::: {#exm-comp-ar1}
+## Effective sample size of an AR(1) chain
+The first-order autoregressive process $\theta^{(t)}=\phi\,\theta^{(t-1)}+\varepsilon_t$ with $|\phi|<1$
+and white-noise $\varepsilon_t$ is the canonical model for a sticky MCMC chain; its lag-$k$
+autocorrelation is $\rho_k=\phi^{k}$. Summing the geometric series,
+$$
+\tau_{\mathrm{int}}=1+2\sum_{k=1}^\infty\phi^k=1+\frac{2\phi}{1-\phi}=\frac{1+\phi}{1-\phi},
+\qquad N_{\mathrm{eff}}=N\,\frac{1-\phi}{1+\phi}.
+$$
+A mildly autocorrelated chain with $\phi=\tfrac13$ has $\tau_{\mathrm{int}}=2$ and efficiency $\tfrac12$:
+$N=4000$ draws are worth $N_{\mathrm{eff}}=2000$. A sticky chain with $\phi=0.9$ has
+$\tau_{\mathrm{int}}=19$ and efficiency $1/19$: the same $4000$ draws are worth only $N_{\mathrm{eff}}
+\approx 210$, a twentyfold loss. $\blacktriangleleft$
+:::
+
+The same formula, tabulated across stickiness, shows how fast efficiency collapses:
+
+| lag-1 correlation $\phi$ | $\tau_{\mathrm{int}}=\tfrac{1+\phi}{1-\phi}$ | efficiency $N_{\mathrm{eff}}/N$ | $N_{\mathrm{eff}}$ from $N=4000$ |
+|---|---|---|---|
+| $0$ (independent) | $1$ | $1$ | $4000$ |
+| $1/3$ | $2$ | $0.50$ | $2000$ |
+| $0.6$ | $4$ | $0.25$ | $1000$ |
+| $0.9$ | $19$ | $0.053$ | $210$ |
+| $0.95$ | $39$ | $0.026$ | $103$ |
+
+The message for an indirect comparison: a chain can pass $\widehat R\le 1.01$ and still be nearly useless
+if it is sticky, so $\widehat R$ and $N_{\mathrm{eff}}$ must be read together. In the running example a
+small $N_{\mathrm{eff}}$ on $d_{AC}$ warns that its posterior mean is imprecisely pinned down by Monte
+Carlo, and a small *tail* $N_{\mathrm{eff}}$ (defined next) warns specifically that the $95\%$
+credible-interval endpoints reported to the payer are noisy.
+
+::: {.remark}
+**Bulk and tail effective sample size.** The estimate @eq-comp-ess targets the posterior *mean*. Posterior
+*quantiles*, which determine credible intervals, are governed by the autocorrelation of indicator
+functions $\mathbf 1\{\theta^{(t)}\le q\}$ rather than of $\theta^{(t)}$ itself, and can mix far worse,
+especially deep in the tails. Current software therefore reports a *bulk* $N_{\mathrm{eff}}$ (from the
+rank-normalized draws, for the center of the distribution) and a *tail* $N_{\mathrm{eff}}$ (the minimum of
+the effective sizes for the $5\%$ and $95\%$ quantile indicators). A common standard is bulk and tail
+$N_{\mathrm{eff}}\ge 400$ across chains for inference, with larger tail $N_{\mathrm{eff}}$ demanded when
+extreme quantiles are reported. A small tail $N_{\mathrm{eff}}$ beside a healthy bulk $N_{\mathrm{eff}}$ is
+the signature of a chain that estimates the posterior mean well but its interval endpoints poorly.
+$\blacktriangleleft$
+:::
+
+This development corresponds to I.3 in the proof catalogue.
+
+## Monitoring the numerical-integration error {#sec-comp-integration}
+
+We turn to the error peculiar to ML-NMR. Each aggregate-data study contributes to the likelihood through
+an integral of the individual-level integrand $g^{-1}(\eta_{jk}(\mathbf x))$ over the study's covariate
+distribution (the aggregation theorem, @thm-aggregation), and that integral is replaced in computation by
+a QMC average over $N$ points on the unit hypercube (@thm-hypercube-integration). The sampler therefore
+targets not the exact posterior but its QMC approximation, and we must certify that the substitution is
+harmless. This is catalogue result I.4.
+
+Write the exact aggregate-cell quantity as $\theta=\int_{[0,1]^d}f(\mathbf u)\,d\mathbf u$, where the
+integrand $f=g^{-1}\!\circ\eta_{jk}\circ\Psi$ folds the inverse link, the linear predictor, and the
+copula-plus-inverse-CDF transform $\Psi$ of Chapter 22 (@thm-inverse-cdf, @def-gaussian-copula) into a
+function on the cube; write $\widehat\theta^{(N)}=\frac1N\sum_{i=1}^N f(\mathbf u_i)$ for its QMC estimate
+on the first $N$ points of a Sobol' sequence (@def-sobol-net). The error is *deterministic* given the
+point set, and is controlled by the Koksma-Hlawka inequality of Chapter 22.
+
+In words, and tied to the running network: the aggregate study $BC$ never shows us its patients, only
+arm summaries, so to evaluate its likelihood we must average the individual response over the covariate
+mix in that arm. The transform $\Psi$ is the recipe that turns a uniform grid point $\mathbf
+u\in[0,1]^d$ into a plausible patient's covariate vector (age, severity) drawn from the arm's fitted
+distribution; $\eta_{jk}$ then gives that synthetic patient's linear predictor, $g^{-1}$ converts it to
+an event probability, and the QMC sum averages over a grid of such patients. So $\theta$ is the arm's
+expected event probability and $\widehat\theta^{(N)}$ is our $N$-patient numerical approximation to it.
+Two glosses for the symbols carried over from Chapter 22: the *Hardy-Krause variation* $V_{\mathrm{HK}}
+(f)$ is a multivariable generalization of total variation, a measure of how much the integrand wiggles
+(its room to be mis-sampled by a finite grid), and the *star discrepancy* $D_N^{*}$ measures how
+unevenly the $N$ points fill the cube (small discrepancy means they cover it evenly). The Koksma-Hlawka
+bound below simply multiplies the two.
+
+::: {.remark}
+**The error is bounded, not random.** By @thm-koksma-hlawka, for $f$ of finite Hardy-Krause variation,
+$$
+\big|\widehat\theta^{(N)}-\theta\big|\le V_{\mathrm{HK}}(f)\,D_N^{*}(P_N),
+$$ {#eq-comp-kh}
+the product of the integrand's variation and the star discrepancy $D_N^{*}$ of the point set $P_N$, which
+for a Sobol' net is $O\big((\log N)^d/N\big)$. Unlike the $O(N^{-1/2})$ root-mean-square error of plain
+Monte Carlo (@thm-mc-rmse), @eq-comp-kh is a worst-case bound with no probability attached. The
+difficulty is that $V_{\mathrm{HK}}(f)$ is unknown and usually uncomputable, so @eq-comp-kh certifies a
+rate but not a usable constant. The operational diagnostic below sidesteps it by measuring convergence
+empirically. $\blacktriangleleft$
+:::
+
+::: {#def-integration-error-monitoring}
+## Doubling diagnostic for integration error
+Let $\widehat\theta^{(N)}$ and $\widehat\theta^{(N/2)}$ be the QMC estimates of an aggregate-cell
+quantity using the first $N$ and the first $N/2$ points of the same Sobol' sequence. The estimate is
+declared **converged at tolerance $\epsilon$** when the relative doubling increment satisfies
+$$
+\frac{\big|\widehat\theta^{(N)}-\widehat\theta^{(N/2)}\big|}{\big|\widehat\theta^{(N)}\big|}<\epsilon
+$$ {#eq-comp-doubling}
+for every aggregate cell, for a small tolerance such as $\epsilon=0.005$. If the criterion fails for any
+cell, $N$ is doubled and the test repeated. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation, and a caution on the denominator.** The rule is the numerical analyst's oldest
+trick: if halving the grid barely changes the answer, the answer has stopped moving, so you can stop
+refining. The relative form divides by $|\widehat\theta^{(N)}|$ so that "small" means small *compared to
+the quantity itself*. That is exactly wrong when the quantity is near zero (a rare-event probability) or
+naturally lives on a transformed scale that passes through zero (a log-odds or log-hazard): there the
+relative increment blows up for no real reason, and one should switch to an absolute tolerance on the
+quantity, or run the test on the probability scale where the target is bounded in $[0,1]$. In the
+running example the $BC$ arm's event probability sits comfortably away from $0$ and $1$, so the relative
+test is safe; a sparse-outcome cell would call for the absolute version.
+$\blacktriangleleft$
+:::
+
+The diagnostic measures the *observable* increment $\widehat\theta^{(N)}-\widehat\theta^{(N/2)}$, whereas
+what we care about is the *unobservable* error $\widehat\theta^{(N)}-\theta$. The following proposition
+shows that, whenever the error decays at a definite rate, the observable increment controls the
+unobservable error up to a known constant, which is what makes @eq-comp-doubling a valid stopping rule.
+
+::: {#prp-comp-doubling}
+## The increment bounds the error under geometric decay
+Write $e_N=\widehat\theta^{(N)}-\theta$ for the error and $\Delta_N=\widehat\theta^{(N)}-
+\widehat\theta^{(N/2)}=e_N-e_{N/2}$ for the observable increment. Suppose there is a contraction factor
+$\rho\in[0,1)$ with $|e_N|\le\rho\,|e_{N/2}|$ along the doubling sequence (a definite convergence rate).
+Then
+$$
+|e_{N/2}|\le\frac{|\Delta_N|}{1-\rho}\qquad\text{and}\qquad |e_N|\le\frac{\rho\,|\Delta_N|}{1-\rho}.
+$$ {#eq-comp-error-bound}
+Consequently, passing the relative test @eq-comp-doubling certifies a relative integration error of at
+most $\tfrac{\rho}{1-\rho}\,\epsilon$ in $\widehat\theta^{(N)}$, to leading order.
+:::
+
+::: {.proof}
+From $\Delta_N=e_N-e_{N/2}$ and the triangle inequality, $|e_{N/2}|=|e_N-\Delta_N|\le|e_N|+|\Delta_N|\le
+\rho|e_{N/2}|+|\Delta_N|$. Rearranging, $(1-\rho)|e_{N/2}|\le|\Delta_N|$, which is the first bound in
+@eq-comp-error-bound since $\rho<1$; the second follows from $|e_N|\le\rho|e_{N/2}|$. Dividing by
+$|\theta|\approx|\widehat\theta^{(N)}|$ and using @eq-comp-doubling, the relative error is at most
+$\tfrac{\rho}{1-\rho}\,\epsilon$ to leading order in the small quantities. $\square$
+:::
+
+::: {.remark}
+**What $\rho$ is for QMC and for Monte Carlo.** For a QMC rule with error envelope $a_N=(\log N)^d/N$, the
+ratio of successive errors is $a_N/a_{N/2}=\tfrac12\cdot\big(\tfrac{\log N}{\log N-\log 2}\big)^{d}\to
+\tfrac12$ as $N\to\infty$, so $\rho\approx\tfrac12$ in the regime where the logarithmic factor is slowly
+varying, and @eq-comp-error-bound gives $|e_N|\lesssim|\Delta_N|$: the increment is itself a good error
+estimate. For plain Monte Carlo, $a_N=N^{-1/2}$ gives $a_N/a_{N/2}=1/\sqrt2\approx0.707$, so $\rho\approx
+0.707$ and the true error can be roughly $2.4$ times the observed increment, a reminder that the doubling
+rule is sharper for QMC than for Monte Carlo. The logarithmic factor means $\rho$ is only asymptotically
+$\tfrac12$; in the pre-asymptotic regime one should keep $\epsilon$ conservative, which is why the
+recommended tolerances are small. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Practical grid sizes and the combined budget.** Empirically, $N\in\{64,128,256\}$ Sobol' points suffice
+for ML-NMR with two to four covariates, and the reference software defaults to $N=64$; high-dimensional
+covariate sets ($d>6$) call for $N=256$ or for an Owen-scrambled Sobol' rule, a randomized QMC variant
+whose error has better behavior on non-smooth integrands. The total error in a posterior summary is the
+sum of the two contributions of this chapter,
+$$
+\text{total error}\ \approx\ \underbrace{O\big(1/\sqrt{N_{\mathrm{eff}}}\big)}_{\text{MCMC error}}
+\ +\ \underbrace{O\big((\log N)^d/N\big)}_{\text{QMC error}},
+$$
+and a credible analysis drives both below the precision required of the reported contrast. The two are
+controlled by different levers: longer or better-mixed chains for the first, more integration points for
+the second. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why not just use a huge grid?** Because the QMC sum sits *inside* the likelihood. Every one of the
+millions of likelihood evaluations that HMC performs, at every leapfrog step of every draw, re-runs the
+$N$-point sum for every aggregate cell, so the wall-clock cost of the entire fit scales linearly in $N$:
+doubling the grid doubles the run time. The doubling diagnostic exists precisely to find the *smallest*
+$N$ that is accurate enough, rather than paying for a large grid everywhere out of caution. For the
+running network, with $d=2$ covariates in the $BC$ arm, $N=64$ Sobol' points typically pass the test at
+$\epsilon=0.005$; a submission with six or more effect modifiers is where one must check the doubling
+rule seriously and may need $N=256$ or an Owen-scrambled rule.
+$\blacktriangleleft$
+:::
+
+This development corresponds to I.4 in the proof catalogue.
+
+## Information criteria: DIC, WAIC, and leave-one-out cross-validation {#sec-comp-ic}
+
+We now turn from certifying a single fit to comparing fits. The right currency for Bayesian model
+comparison is *out-of-sample predictive accuracy*: how well would the fitted model predict a fresh
+observation? All three criteria of this section estimate the same target, the expected log pointwise
+predictive density, and the point of the section is to derive how they are related, why two of them
+(WAIC and LOO-CV) are nearly identical, and where the third (DIC) sits. This is catalogue result I.5.
+
+Fix the data $\mathbf y=(y_1,\dots,y_n)$ with a likelihood that factors across observations,
+$p(\mathbf y\mid\boldsymbol\xi)=\prod_{i=1}^n p(y_i\mid\boldsymbol\xi)$.
+
+::: {.remark}
+**What is an observation in ML-NMR?** The index $i$ ranges over whatever units the likelihood factorizes
+into, and in a mixed IPD-plus-AgD model these are of two kinds. For the IPD study $AB$ each *individual
+patient* is one factor, with $p(y_i\mid\boldsymbol\xi)$ a Bernoulli response probability. For the
+aggregate study $BC$ the factor is one *arm's summary*, with $p(y_i\mid\boldsymbol\xi)$ the binomial
+probability of that arm's responder count given its integrated (QMC-averaged) event probability. So $n$
+counts individual patients from $AB$ plus arm-cells from $BC$, not studies and not contrasts. This choice
+of unit is not cosmetic: WAIC's penalty, LOO's held-out density, PSIS's $\widehat k$, and the standard
+error of a model-comparison difference are all computed *per factor*, so leaving out unit $i$ means
+leaving out one patient (fine-grained, low influence) or one whole aggregate arm (coarse, high
+influence). When you read a large $\widehat k$ in this model, first ask whether the flagged unit is a
+single patient or an entire aggregate arm.
+$\blacktriangleleft$
+:::
+
+Write the per-observation log
+likelihood as $\ell_i(\boldsymbol\xi)=\log p(y_i\mid\boldsymbol\xi)$ and its posterior mean and variance
+as
+$$
+m_i=\mathbb E_{\boldsymbol\xi\mid\mathbf y}[\ell_i(\boldsymbol\xi)],
+\qquad
+v_i=\mathrm{Var}_{\boldsymbol\xi\mid\mathbf y}[\ell_i(\boldsymbol\xi)].
+$$
+The posterior predictive density of a held-out replicate is $p(\,\cdot\mid\mathbf y)=\mathbb
+E_{\boldsymbol\xi\mid\mathbf y}[p(\,\cdot\mid\boldsymbol\xi)]$ (the posterior predictive distribution of
+Chapter 8). The **expected log pointwise predictive density** (elpd) is the target,
+$$
+\mathrm{elpd}=\sum_{i=1}^n\mathbb E_{\tilde y_i}\big[\log p(\tilde y_i\mid\mathbf y)\big],
+$$
+where $\tilde y_i$ is a new observation from the true data-generating process at the $i$-th design point;
+larger elpd means better prediction. Its naive in-sample estimate, evaluating the predictive density at the
+observed data, is the **log pointwise predictive density**
+$$
+\mathrm{lppd}=\sum_{i=1}^n\log p(y_i\mid\mathbf y)
+=\sum_{i=1}^n\log\mathbb E_{\boldsymbol\xi\mid\mathbf y}\big[p(y_i\mid\boldsymbol\xi)\big].
+$$ {#eq-comp-lppd}
+The lppd is optimistic, because each $y_i$ was used both to form the posterior and to test it. The criteria
+differ in how they correct that optimism.
+
+The engine of the section is one exact identity that re-expresses the leave-one-out predictive density as a
+posterior expectation under the *full* posterior, so that it can be computed from a single fit.
+
+::: {#lem-comp-loo-identity}
+## Leave-one-out importance-sampling identity
+Let $\pi(\boldsymbol\xi\mid\mathbf y_{-i})$ denote the posterior with the $i$-th observation removed. Then
+the leave-one-out predictive density is the posterior harmonic mean of the $i$-th likelihood,
+$$
+p(y_i\mid\mathbf y_{-i})=\frac{1}{\mathbb E_{\boldsymbol\xi\mid\mathbf y}\big[\,1/p(y_i\mid\boldsymbol\xi)
+\,\big]},
+$$ {#eq-comp-loo-identity}
+and more generally, for any integrable $\psi$,
+$$
+\mathbb E_{\boldsymbol\xi\mid\mathbf y_{-i}}[\psi(\boldsymbol\xi)]
+=\frac{\mathbb E_{\boldsymbol\xi\mid\mathbf y}\big[\psi(\boldsymbol\xi)\,r_i(\boldsymbol\xi)\big]}
+{\mathbb E_{\boldsymbol\xi\mid\mathbf y}\big[r_i(\boldsymbol\xi)\big]},
+\qquad r_i(\boldsymbol\xi)=\frac{1}{p(y_i\mid\boldsymbol\xi)} .
+$$ {#eq-comp-is}
+:::
+
+::: {.proof}
+*Strategy.* We relate the leave-one-out posterior to the full posterior by a single importance ratio,
+then read off the harmonic-mean form by choosing the test function $\psi$ cleverly. Every step is one
+line of Bayes' theorem; there is no hidden machinery.
+
+Because the likelihood factors, removing $y_i$ divides the full likelihood by the $i$-th factor, so
+$$
+\pi(\boldsymbol\xi\mid\mathbf y_{-i})
+=\frac{p(\mathbf y_{-i}\mid\boldsymbol\xi)\,\pi(\boldsymbol\xi)}{p(\mathbf y_{-i})}
+=\frac{p(\mathbf y\mid\boldsymbol\xi)\,\pi(\boldsymbol\xi)}{p(y_i\mid\boldsymbol\xi)\,p(\mathbf y_{-i})}
+=\frac{p(\mathbf y)}{p(\mathbf y_{-i})}\cdot\frac{\pi(\boldsymbol\xi\mid\mathbf y)}{p(y_i\mid
+\boldsymbol\xi)},
+$$
+using Bayes' theorem (@thm-conjugate-normal is the conjugate special case; here we use only the
+proportionality $\pi(\boldsymbol\xi\mid\mathbf y)\propto p(\mathbf y\mid\boldsymbol\xi)\pi(\boldsymbol
+\xi)$). Thus the importance ratio of the leave-one-out posterior to the full posterior is
+$\pi(\boldsymbol\xi\mid\mathbf y_{-i})/\pi(\boldsymbol\xi\mid\mathbf y)=\frac{p(\mathbf y)}{p(\mathbf
+y_{-i})}\,r_i(\boldsymbol\xi)$, proportional to $r_i(\boldsymbol\xi)=1/p(y_i\mid\boldsymbol\xi)$. For any
+$\psi$,
+$$
+\mathbb E_{\boldsymbol\xi\mid\mathbf y_{-i}}[\psi]
+=\int\psi(\boldsymbol\xi)\,\frac{\pi(\boldsymbol\xi\mid\mathbf y_{-i})}{\pi(\boldsymbol\xi\mid\mathbf y)}\,
+\pi(\boldsymbol\xi\mid\mathbf y)\,d\boldsymbol\xi
+=\frac{p(\mathbf y)}{p(\mathbf y_{-i})}\,\mathbb E_{\boldsymbol\xi\mid\mathbf y}[\psi\,r_i] .
+$$
+Taking $\psi\equiv 1$ gives $1=\frac{p(\mathbf y)}{p(\mathbf y_{-i})}\mathbb E_{\boldsymbol\xi\mid\mathbf
+y}[r_i]$, which both pins the unknown constant and, on dividing, yields the self-normalized form
+@eq-comp-is (self-normalized because the denominator is estimated from the same draws, so the unknown
+constant $p(\mathbf y)/p(\mathbf y_{-i})$ cancels and never has to be computed). Finally take
+$\psi=p(y_i\mid\cdot)$: the numerator is $\mathbb E_{\boldsymbol\xi\mid\mathbf
+y}[p(y_i\mid\boldsymbol\xi)\,r_i]=\mathbb E_{\boldsymbol\xi\mid\mathbf y}[1]=1$, so
+$$
+p(y_i\mid\mathbf y_{-i})=\mathbb E_{\boldsymbol\xi\mid\mathbf y_{-i}}[p(y_i\mid\boldsymbol\xi)]
+=\frac{1}{\mathbb E_{\boldsymbol\xi\mid\mathbf y}[r_i]}
+=\frac{1}{\mathbb E_{\boldsymbol\xi\mid\mathbf y}[1/p(y_i\mid\boldsymbol\xi)]},
+$$
+which is @eq-comp-loo-identity. $\square$
+:::
+
+With the identity in hand we define the three criteria and prove how they relate. All are written so that
+*lower is better*, on the deviance scale (a factor of $-2$ times a log predictive density), to match
+historical convention.
+
+::: {#def-comp-criteria}
+## DIC, WAIC, and LOO-CV
+With $D(\boldsymbol\xi)=-2\log p(\mathbf y\mid\boldsymbol\xi)$ the deviance and $\bar{\boldsymbol\xi}=
+\mathbb E_{\boldsymbol\xi\mid\mathbf y}[\boldsymbol\xi]$ the posterior mean:
+
+- the **deviance information criterion** is $\mathrm{DIC}=D(\bar{\boldsymbol\xi})+2p_{D}$ with effective
+  parameter count $p_{D}=\mathbb E_{\boldsymbol\xi\mid\mathbf y}[D(\boldsymbol\xi)]-D(\bar{\boldsymbol
+  \xi})$;
+- the **widely applicable information criterion** is $\mathrm{WAIC}=-2\big(\mathrm{lppd}-p_{\mathrm
+  {WAIC}}\big)$ with $p_{\mathrm{WAIC}}=\sum_{i=1}^n v_i=\sum_{i=1}^n\mathrm{Var}_{\boldsymbol\xi\mid
+  \mathbf y}[\ell_i(\boldsymbol\xi)]$;
+- **leave-one-out cross-validation** is $\mathrm{LOO}=-2\,\widehat{\mathrm{elpd}}_{\mathrm{loo}}$ with
+  $\widehat{\mathrm{elpd}}_{\mathrm{loo}}=\sum_{i=1}^n\log p(y_i\mid\mathbf y_{-i})$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** All three are "fit minus a complexity penalty," on the deviance scale where
+lower is better. The first term rewards fitting the data you have; the penalty ($2p_D$, $2p_{\mathrm
+{WAIC}}$, or the built-in leave-one-out of LOO) docks you for the optimism of having used each
+observation both to fit and to score the model. They differ only in how honestly they estimate that
+optimism, which the next theorem quantifies.
+$\blacktriangleleft$
+:::
+
+::: {#thm-dic-waic-loo}
+## Relationships among the predictive criteria
+Assume the posterior concentrates as $n\to\infty$ in the standard regular way, so that for each $i$ the
+posterior fluctuation of $\ell_i(\boldsymbol\xi)$ has variance $v_i=O(1/n)$ and third cumulant
+$\kappa_{3,i}=o(v_i)$. Then:
+
+1. **(WAIC equals LOO to second order.)** For each observation,
+   $$
+   \log p(y_i\mid\mathbf y_{-i})=\mathrm{lppd}_i-v_i+o(v_i),
+   $$ {#eq-comp-waic-loo-pointwise}
+   where $\mathrm{lppd}_i=\log\mathbb E_{\boldsymbol\xi\mid\mathbf y}[p(y_i\mid\boldsymbol\xi)]$.
+   Summing, $\widehat{\mathrm{elpd}}_{\mathrm{loo}}=\mathrm{lppd}-p_{\mathrm{WAIC}}+o(1)$, so
+   $\mathrm{WAIC}=\mathrm{LOO}+o(1)$.
+
+2. **(DIC's effective parameters.)** For an approximately quadratic log likelihood with observed
+   information $\mathcal J=-\nabla^2\log p(\mathbf y\mid\bar{\boldsymbol\xi})$ (the curvature of the log
+   likelihood at the posterior mean, the sample analogue of the Fisher information of Chapter 5),
+   $$
+   p_{D}=\operatorname{tr}\!\big(\mathcal J\,\mathrm{Var}(\boldsymbol\xi\mid\mathbf y)\big)+o(1),
+   $$ {#eq-comp-pd}
+   which under a flat prior, where the Bernstein-von Mises approximation gives
+   $\mathrm{Var}(\boldsymbol\xi\mid\mathbf y)\approx\mathcal J^{-1}$, equals the parameter dimension $p$ to
+   leading order. The WAIC penalty satisfies the same trace formula, $p_{\mathrm{WAIC}}=\operatorname{tr}
+   (\mathcal J\,\mathrm{Var}(\boldsymbol\xi\mid\mathbf y))+o(1)$, so $p_{\mathrm{WAIC}}=p_{D}+o(1)$ and all
+   three criteria agree to leading order.
+
+3. **(Parameterization.)** WAIC and LOO depend on $\boldsymbol\xi$ only through the pointwise densities
+   $p(y_i\mid\boldsymbol\xi)$ and are invariant under reparameterization of $\boldsymbol\xi$; DIC depends
+   on the posterior mean $\bar{\boldsymbol\xi}$ through $D(\bar{\boldsymbol\xi})$ and is not.
+:::
+
+::: {.proof}
+*Strategy and vocabulary.* The whole of Part 1 is one Taylor expansion of a *cumulant generating
+function*: for a random quantity $Z$, this is the function $K(t)=\log\mathbb E[e^{tZ}]$ whose derivatives
+at $t=0$ are the *cumulants* of $Z$ (the first cumulant is the mean, the second the variance, the third
+$\kappa_3$ a measure of skewness). The one trick is that the two predictive densities we must compare
+turn out to be exactly $K$ evaluated at $t=+1$ and at $t=-1$, so subtracting two Taylor series does the
+work.
+
+*Part 1.* Fix $i$ and let $K_i(t)=\log\mathbb E_{\boldsymbol\xi\mid\mathbf y}[e^{t\ell_i(\boldsymbol\xi)}]$
+be the cumulant generating function of $\ell_i$ under the posterior, with $K_i(0)=0$, $K_i'(0)=m_i$,
+$K_i''(0)=v_i$, and third derivative the third cumulant $\kappa_{3,i}$. By Taylor expansion,
+$$
+K_i(t)=m_i t+\tfrac12 v_i t^2+\tfrac16\kappa_{3,i}t^3+\cdots .
+$$
+Two evaluations give the two predictive densities. First, $\mathrm{lppd}_i=\log\mathbb E_{\boldsymbol\xi
+\mid\mathbf y}[p(y_i\mid\boldsymbol\xi)]=\log\mathbb E[e^{\ell_i}]=K_i(1)=m_i+\tfrac12 v_i+O(\kappa_{3,i})$.
+Second, by the leave-one-out identity @eq-comp-loo-identity,
+$$
+\log p(y_i\mid\mathbf y_{-i})=-\log\mathbb E_{\boldsymbol\xi\mid\mathbf y}\big[e^{-\ell_i}\big]
+=-K_i(-1)=-\big(-m_i+\tfrac12 v_i-\tfrac16\kappa_{3,i}+\cdots\big)=m_i-\tfrac12 v_i+O(\kappa_{3,i}).
+$$
+Subtracting, $\mathrm{lppd}_i-\log p(y_i\mid\mathbf y_{-i})=v_i+O(\kappa_{3,i})=v_i+o(v_i)$ under the
+hypothesis $\kappa_{3,i}=o(v_i)$, which rearranges to @eq-comp-waic-loo-pointwise. Summing over $i$ and
+recognizing $\sum_i v_i=p_{\mathrm{WAIC}}$ gives $\widehat{\mathrm{elpd}}_{\mathrm{loo}}=\mathrm{lppd}-
+p_{\mathrm{WAIC}}+o(1)$; multiplying by $-2$, $\mathrm{LOO}=\mathrm{WAIC}+o(1)$.
+
+*Part 2.* Write $\ell(\boldsymbol\xi)=\log p(\mathbf y\mid\boldsymbol\xi)$ and expand to second order about
+the posterior mean $\bar{\boldsymbol\xi}$,
+$$
+\ell(\boldsymbol\xi)=\ell(\bar{\boldsymbol\xi})+\nabla\ell(\bar{\boldsymbol\xi})^\top(\boldsymbol\xi-
+\bar{\boldsymbol\xi})-\tfrac12(\boldsymbol\xi-\bar{\boldsymbol\xi})^\top\mathcal J\,(\boldsymbol\xi-
+\bar{\boldsymbol\xi})+\cdots,
+$$
+with $\mathcal J=-\nabla^2\ell(\bar{\boldsymbol\xi})$. Taking the posterior expectation and using
+$\mathbb E[\boldsymbol\xi-\bar{\boldsymbol\xi}]=\mathbf 0$ and $\mathbb E[(\boldsymbol\xi-\bar{\boldsymbol
+\xi})(\boldsymbol\xi-\bar{\boldsymbol\xi})^\top]=\mathrm{Var}(\boldsymbol\xi\mid\mathbf y)$,
+$$
+\mathbb E_{\boldsymbol\xi\mid\mathbf y}[\ell(\boldsymbol\xi)]=\ell(\bar{\boldsymbol\xi})-\tfrac12
+\operatorname{tr}\!\big(\mathcal J\,\mathrm{Var}(\boldsymbol\xi\mid\mathbf y)\big)+o(1).
+$$
+Since $p_D=\mathbb E[D(\boldsymbol\xi)]-D(\bar{\boldsymbol\xi})=-2\big(\mathbb E[\ell(\boldsymbol\xi)]-
+\ell(\bar{\boldsymbol\xi})\big)$, substituting gives @eq-comp-pd. Under a flat prior the posterior is
+approximately $\mathcal N(\bar{\boldsymbol\xi},\mathcal J^{-1})$ (Bernstein-von Mises), so $\mathrm{Var}
+(\boldsymbol\xi\mid\mathbf y)\approx\mathcal J^{-1}$ and $p_D\approx\operatorname{tr}(I_p)=p$. For the WAIC
+penalty, linearize each $\ell_i$ about $\bar{\boldsymbol\xi}$: $\ell_i(\boldsymbol\xi)\approx\ell_i
+(\bar{\boldsymbol\xi})+\nabla\ell_i(\bar{\boldsymbol\xi})^\top(\boldsymbol\xi-\bar{\boldsymbol\xi})$, so
+$v_i=\mathrm{Var}[\ell_i]\approx\nabla\ell_i^\top\mathrm{Var}(\boldsymbol\xi\mid\mathbf y)\nabla\ell_i$ and
+$$
+p_{\mathrm{WAIC}}=\sum_i v_i\approx\operatorname{tr}\!\Big(\mathrm{Var}(\boldsymbol\xi\mid\mathbf y)
+\sum_i\nabla\ell_i\nabla\ell_i^\top\Big)=\operatorname{tr}\!\big(\mathcal J\,\mathrm{Var}(\boldsymbol\xi
+\mid\mathbf y)\big)+o(1),
+$$
+because the outer-product (empirical Fisher) information $\sum_i\nabla\ell_i\nabla\ell_i^\top$ agrees with
+the observed information $\mathcal J$ to leading order near the mode, where the score $\sum_i\nabla\ell_i$
+vanishes. Hence $p_{\mathrm{WAIC}}=p_D+o(1)$ and, combined with Part 1, $\mathrm{DIC}=\mathrm{WAIC}+o(1)=
+\mathrm{LOO}+o(1)$.
+
+*Part 3.* $\mathrm{WAIC}$ and $\widehat{\mathrm{elpd}}_{\mathrm{loo}}$ are built only from the numbers
+$\{p(y_i\mid\boldsymbol\xi^{(s)})\}$, which are densities of the data and are unchanged by any smooth
+invertible reparameterization $\boldsymbol\xi\mapsto\boldsymbol\eta(\boldsymbol\xi)$ (the likelihood value
+at a parameter point does not depend on the coordinates used to name that point). DIC contains
+$D(\bar{\boldsymbol\xi})$, and the posterior mean $\bar{\boldsymbol\xi}$ is *not* equivariant under
+nonlinear reparameterization ($\overline{\boldsymbol\eta(\boldsymbol\xi)}\neq\boldsymbol\eta(\bar
+{\boldsymbol\xi})$ in general), so $D(\bar{\boldsymbol\xi})$, $p_D$, and DIC change under
+reparameterization. $\square$
+:::
+
+::: {.remark}
+**Why this matters, and a scorecard.** The theorem says the three criteria estimate one thing,
+out-of-sample predictive accuracy, and agree to leading order, so the choice among them is about
+robustness and honesty, not about targeting different quantities. For an indirect comparison you will be
+asked to justify a modeling choice, say whether to include the age effect modifier $\boldsymbol\beta_2$
+or which outcome model to use, and predictive criteria are the Bayesian answer. The scorecard:
+
+| Property | DIC | WAIC | LOO (PSIS) |
+|---|---|---|---|
+| Estimates out-of-sample elpd | yes | yes | yes |
+| Uses the whole posterior, not just its mean | no | yes | yes |
+| Pointwise (per-observation, gives a standard error) | no | yes | yes |
+| Invariant to reparameterization | no | yes | yes |
+| Per-observation reliability diagnostic | no | no | yes ($\widehat k$) |
+| Can misbehave (negative penalty on skew posteriors) | yes | rarely | flagged by $\widehat k$ |
+
+The ranking is LOO, then WAIC, then DIC. Report WAIC or PSIS-LOO by default; report DIC only when an
+older NMA analysis you must compare against reported it, and then with these caveats stated.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Comparison is not checking.** A subtle trap for the indirect-comparison analyst: a model can have the
+best WAIC or LOO in a candidate set and still answer the wrong question. Predictive criteria score *fit
+to the observed evidence*; they say nothing about whether the target population is right, whether the
+shared-effect-modifier assumption holds, or whether the networks overlap enough to transport an effect
+(Chapters 11, 12, and 17). Model *checking*, posterior predictive checks, prior-sensitivity analysis,
+and covariate-overlap diagnostics, is a separate obligation that must be met *before* model *comparison*
+is meaningful. Good LOO on a model that violates transportability is a precise answer to the wrong
+question.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Computation and recommendation.** Every quantity here is computed from the posterior draws
+$\{\boldsymbol\xi^{(s)}\}_{s=1}^S$ by replacing posterior expectations with sample averages:
+$\mathrm{lppd}_i\approx\log\big(\tfrac1S\sum_s p(y_i\mid\boldsymbol\xi^{(s)})\big)$ and $v_i\approx$ the
+sample variance of $\{\log p(y_i\mid\boldsymbol\xi^{(s)})\}_s$. WAIC and LOO are pointwise (a contribution
+per observation), which yields a standard error for the criterion and for differences between models, and
+flags individual influential observations; DIC offers neither. Because DIC further depends on the
+non-equivariant posterior mean and can return a negative $p_D$ for skewed posteriors, current practice
+prefers WAIC or, better, the LOO-CV of the next section, which estimates the same elpd while leaving each
+observation genuinely out. $\blacktriangleleft$
+:::
+
+This development corresponds to I.5 in the proof catalogue, and to result D.14 (the DIC decomposition) of
+Chapter 15.
+
+## Pareto-smoothed importance sampling LOO {#sec-comp-psis}
+
+The leave-one-out identity @eq-comp-loo-identity expresses $p(y_i\mid\mathbf y_{-i})$ as a posterior
+expectation, hence as a single Monte Carlo average over the draws we already have, with no refitting. The
+catch is that the importance ratios $r_i(\boldsymbol\xi)=1/p(y_i\mid\boldsymbol\xi)$ are heavy-tailed: they
+are largest exactly where the $i$-th likelihood is smallest, in regions the full posterior visits rarely,
+so a few draws can dominate the sum and inflate its variance, sometimes to infinity. Pareto-smoothed
+importance sampling (PSIS) repairs the tail and, as a by-product, returns a diagnostic that says when the
+repair can be trusted. This is catalogue result I.6.
+
+::: {#def-psis-loo}
+## Pareto-smoothed importance sampling LOO
+Given posterior draws $\{\boldsymbol\xi^{(s)}\}_{s=1}^S$ from the full posterior, form for each observation
+$i$ the raw importance ratios $r_i^{(s)}=1/p(y_i\mid\boldsymbol\xi^{(s)})$. **PSIS** proceeds:
+
+1. Fit a generalized Pareto distribution (GPD) to the largest ratios (the upper tail, in practice the top
+   $20\%$ or the top $\min\{0.2S,\,3\sqrt S\}$ ratios), obtaining a shape estimate $\widehat k$ and scale
+   estimate.
+2. Replace those largest ratios by the expected GPD order statistics implied by the fit, and cap all
+   ratios at the largest fitted value (smoothing and truncation), giving stabilized weights $\bar
+   r_i^{(s)}$.
+3. Estimate the leave-one-out predictive density by the self-normalized importance average of
+   @eq-comp-is,
+   $$
+   \widehat p(y_i\mid\mathbf y_{-i})=\frac{\sum_{s}\bar r_i^{(s)}\,p(y_i\mid\boldsymbol\xi^{(s)})}
+   {\sum_{s}\bar r_i^{(s)}},
+   $$ {#eq-comp-psis}
+   and report $\mathrm{PSIS\text{-}LOO}=-2\sum_i\log\widehat p(y_i\mid\mathbf y_{-i})$.
+
+The fitted shape $\widehat k_i$ is retained as a per-observation reliability diagnostic. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation: what is being smoothed, and what $\widehat k$ measures.** To reuse one posterior
+fit as if we had refit it without observation $i$, we reweight the draws by $r_i=1/p(y_i\mid\boldsymbol
+\xi)$: draws where the model fit $y_i$ badly (small $p$) get large weight, because those are the draws
+the without-$i$ posterior would favor. The danger is a handful of draws with tiny $p(y_i\mid\cdot)$ and
+therefore enormous weights that swamp the sum, the way a single lottery winner swamps the mean income of
+a room. The *generalized Pareto distribution* (GPD) is the standard model for the extreme upper tail of
+such weights; its *shape* parameter $k$ measures how heavy that tail is (larger $k$ means a heavier
+tail, more prone to one dominating weight). PSIS fits a GPD to the largest weights, replaces them with
+the tamer values the fit predicts, and returns $\widehat k$ as a thermometer for how dangerous the tail
+was. A large $\widehat k$ says the reweighting is untrustworthy *and*, substantively, that unit $i$ is
+influential.
+$\blacktriangleleft$
+:::
+
+That the raw ratios are the correct importance weights is exactly @lem-comp-loo-identity: $r_i\propto
+\pi(\boldsymbol\xi\mid\mathbf y_{-i})/\pi(\boldsymbol\xi\mid\mathbf y)$, so @eq-comp-is targets the
+leave-one-out posterior. The reason smoothing is needed, and the meaning of the thresholds on $\widehat
+k$, both follow from a single fact about the moments of a Pareto tail.
+
+::: {#lem-comp-gpd-moments}
+## Moments of a generalized Pareto tail
+Let $X$ have a generalized Pareto upper tail with shape $k>0$ and scale $\sigma>0$, that is survival
+function $\bar F(x)=(1+k x/\sigma)^{-1/k}$ for $x\ge 0$. Then $\mathbb E[X^{m}]<\infty$ if and only if
+$m<1/k$. In particular the mean is finite iff $k<1$ and the variance is finite iff $k<1/2$.
+:::
+
+::: {.proof}
+The density is $f(x)=\tfrac1\sigma(1+kx/\sigma)^{-1/k-1}$, so as $x\to\infty$, $f(x)\sim C\,x^{-1/k-1}$ for
+a positive constant $C$ (since $(1+kx/\sigma)^{-1/k-1}\sim(kx/\sigma)^{-1/k-1}$). The $m$-th moment is
+$\int_0^\infty x^m f(x)\,dx$; its convergence is determined by the integrand's decay at infinity, where
+$x^m f(x)\sim C\,x^{m-1/k-1}$. The integral $\int^{\infty}x^{m-1/k-1}\,dx$ converges if and only if the
+exponent is below $-1$, that is $m-1/k-1<-1$, equivalently $m<1/k$. Setting $m=1$ gives finiteness of the
+mean iff $k<1$, and $m=2$ gives finiteness of the variance iff $k<1/2$. $\square$
+:::
+
+::: {#thm-comp-psis-reliability}
+## The shape parameter governs reliability
+Let the importance ratios $r_i$ have a generalized Pareto upper tail with shape $\widehat k_i$. Then:
+
+1. if $\widehat k_i<\tfrac12$, the ratios have finite variance, the central limit theorem applies to the
+   importance estimator, and the PSIS-LOO estimate @eq-comp-psis is reliable;
+2. if $\tfrac12\le\widehat k_i<1$, the ratios have finite mean but infinite variance, so the raw estimator
+   has no $\sqrt S$ central-limit guarantee, although PSIS smoothing keeps the bias and variance moderate
+   in practice up to about $\widehat k_i\approx 0.7$;
+3. if $\widehat k_i\ge 1$, even the mean is infinite and the importance estimate is unusable; that
+   observation must be evaluated by actually refitting the model without it.
+:::
+
+::: {.proof}
+By @lem-comp-gpd-moments the second moment of $r_i$ is finite iff $\widehat k_i<\tfrac12$, which is the
+classical condition for a $\sqrt S$ central limit theorem for the self-normalized importance estimator
+@eq-comp-is; this gives (1). For $\tfrac12\le\widehat k_i<1$ the same lemma gives a finite mean but an
+infinite variance, so the importance average still converges to the right value by the law of large
+numbers but without a Gaussian error rate; the residual usefulness up to $\widehat k_i\approx 0.7$ is the
+empirical finding that PSIS truncation and smoothing reduce the finite-sample error enough to be tolerable
+in that range, which is why $0.7$ rather than $0.5$ is the operational alarm. For $\widehat k_i\ge 1$ the
+mean is infinite, the importance estimator does not even converge to a finite limit, and refitting is the
+only recourse; this is (3). $\square$
+:::
+
+::: {.remark}
+**Why this matters: an influential study in the running network.** Suppose the fitted model reports
+$\widehat k=0.8$ for the aggregate $BC$ arm and $\widehat k<0.5$ everywhere else. Read it twice, exactly
+as @thm-comp-psis-reliability licenses. As a *computational* warning, $0.8$ exceeds the $0.7$ alarm, so
+the PSIS-LOO contribution of that arm is unreliable and should be recomputed by actually refitting
+without it. As a *substantive* signal, it says the $d_{BC}$ contrast, and therefore the indirect $d_{AC}$
+that depends on it, rests heavily on this one study: the estimate is one study away from changing. The
+correct response is a robustness analysis, refit without $BC$ and report how far $d_{AC}$ moves, which is
+precisely the kind of sensitivity check an HTA reviewer demands of a two-study network. A high $\widehat
+k$ is thus not only a caution about a number; it is the diagnostic pointing at the study your conclusion
+leans on.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why the harmonic-mean estimator fails, and PSIS as the fix.** Setting all weights equal in
+@eq-comp-loo-identity recovers the notorious harmonic-mean estimator $\widehat p(y_i\mid\mathbf y_{-i})=
+S/\sum_s 1/p(y_i\mid\boldsymbol\xi^{(s)})$, whose ratios $r_i$ typically have $\widehat k_i>\tfrac12$ and
+sometimes $\widehat k_i\ge 1$; it is unstable precisely for the reason @thm-comp-psis-reliability isolates.
+PSIS replaces the offending upper tail of the $r_i$ by the smooth GPD fit, which both stabilizes the
+estimate and yields $\widehat k_i$ as a calibrated warning light. For ML-NMR and its unanchored extension,
+$\widehat k_i$ flags aggregate cells or studies whose removal would most change the fit, so a large
+$\widehat k_i$ is read twice: as a caution about the LOO number and as a substantive indication of an
+influential or poorly-fit data point. PSIS-LOO is the default method of the standard cross-validation
+software and the recommended criterion for these models. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**No machine-checked counterpart.** None of the results of this chapter has a counterpart in the
+companion Coq development; the formalized tree ends with the algebraic content of population adjustment,
+and the computational and diagnostic material here is established by the proofs above and validated
+empirically rather than by mechanized proof. No theorem in this chapter carries a machine-checked tag.
+$\blacktriangleleft$
+:::
+
+This development corresponds to I.6 in the proof catalogue.
+
+## How to use this chapter in practice: a diagnostic workflow {#sec-comp-workflow}
+
+The results above prove that each diagnostic does what it claims. This section assembles them into the
+order a health researcher should actually run, and into a single table to consult when one fires. The
+ordering principle is that model *comparison* is meaningless until the fit is *computationally*
+trustworthy, which is meaningless until the model has passed *checking*. So the sequence runs
+computation, then checking, then comparison, and never the reverse.
+
+*The order of operations.*
+
+1. **Divergences and tree depth first.** Before reading any estimate, check the count of divergent
+   transitions after warmup and whether trajectories are hitting the maximum tree depth. A nonzero
+   divergence count is a red flag that the sampler could not enter part of the posterior; treat it as a
+   geometry problem (@sec-comp-param), not a "run longer" problem.
+2. **$\widehat R$ next.** Require $\widehat R\le 1.01$ for every reported quantity: contrasts, $\tau$,
+   baselines, effect modifiers, and the transformed marginal probabilities. A failure here means the
+   chains disagree (@sec-comp-rhat); do not read the posterior.
+3. **Bulk and tail $N_{\mathrm{eff}}$.** With convergence established, check that both exceed about
+   $400$ per quantity (@sec-comp-ess). Low bulk $N_{\mathrm{eff}}$ makes the posterior mean noisy; low
+   tail $N_{\mathrm{eff}}$ makes the credible-interval endpoints noisy.
+4. **Inspect the culprits.** For any parameter that failed, look at its trace and at pairs plots against
+   $\log\tau$; a funnel signature (divergences bunched at small $\tau$) points to the non-centered fix.
+5. **QMC doubling for aggregate cells.** Confirm the integration grid is fine enough
+   (@sec-comp-integration) so that the likelihood the sampler targeted is the one you meant.
+6. **Posterior predictive and assumption checks.** Only a model that fits and that respects its
+   transportability and effect-modification assumptions (Chapters 11, 12, 17) is worth comparing.
+7. **Then, and only then, PSIS-LOO or WAIC**, reading $\widehat k$ per unit before trusting the numbers
+   (@sec-comp-psis).
+
+*The diagnostic table.* Each row is a check; consult it when the check fires.
+
+| Diagnostic | What it detects | Threshold and action |
+|---|---|---|
+| Divergent transitions | posterior geometry the sampler could not follow; possible bias | any after warmup is a warning; non-center, raise `adapt_delta`, tighten the prior on $\tau$, rescale covariates |
+| Max tree depth hit | trajectories truncated; inefficiency, not bias | raise the limit; usually a curvature symptom |
+| $\widehat R$ | chains disagree (unconverged, multimodal, drifting) | require $\le 1.01$; if not, more warmup or reparameterize |
+| Bulk $N_{\mathrm{eff}}$ | noisy posterior *mean* from autocorrelation | aim $\ge 400$; run longer or improve mixing |
+| Tail $N_{\mathrm{eff}}$ | noisy *credible-interval endpoints* | aim $\ge 400$; matters when you report $2.5\%$ and $97.5\%$ limits |
+| QMC doubling increment | integration grid too coarse inside the likelihood | require $<\epsilon$ (say $0.005$); double $N$ |
+| Pareto $\widehat k$ | unreliable LOO *and* an influential unit | $<0.7$ trust; $\ge 0.7$ refit without that unit |
+| Model-comparison SE | difference in WAIC or LOO within noise | compare the difference to its standard error before ranking models |
+
+*Divergences in depth, because they are the check most often mishandled.* A divergence is the leapfrog
+integrator's report that it lost the trajectory: the simulated energy jumped by more than a threshold, so
+the proposed move was discarded and, more importantly, a region of the posterior was left unexplored. Two
+consequences follow. First, divergences usually signal *geometry, not too few iterations*: running four
+times as long reproduces them in the same place. The remedies are the ones this chapter derived or named,
+the non-centered parameterization when $\tau$ is weakly identified (@thm-comp-param), a higher
+`adapt_delta` so warmup chooses a smaller step size, a tighter prior on $\tau$ to keep the chain out of
+the extreme neck, and rescaling covariates so the mass matrix can round the geometry. Second, *a few
+divergences are not negligible*: because they concentrate exactly where the geometry is worst, often at
+small $\tau$, the parameters most affected are the heterogeneity and the study effects tied to it, which
+for a sparse network are the very quantities the indirect comparison is most sensitive to. The correct
+reaction to "12 divergences" is to find where they sit and remove their cause, not to report the fit with
+a footnote.
+
+*Reading a real summary table.* Software returns a table like the following, a plausible fit of the
+running network with the age effect modifier included. Every column is a diagnostic from this chapter.
+
+| Parameter | mean | sd | bulk $N_{\mathrm{eff}}$ | tail $N_{\mathrm{eff}}$ | $\widehat R$ |
+|---|---|---|---|---|---|
+| $d_{AC}$ (A vs C, log-odds) | $-0.42$ | $0.28$ | $2100$ | $1850$ | $1.001$ |
+| $d_{AB}$ | $-0.55$ | $0.19$ | $3200$ | $2900$ | $1.000$ |
+| $d_{BC}$ | $0.13$ | $0.21$ | $2600$ | $2400$ | $1.001$ |
+| $\boldsymbol\beta_{2,\text{age}}$ | $-0.08$ | $0.11$ | $1900$ | $1700$ | $1.002$ |
+| $\mu_{AB}$ | $-1.20$ | $0.15$ | $2800$ | $2500$ | $1.001$ |
+| $\tau$ | $0.31$ | $0.24$ | $90$ | $140$ | $1.08$ |
+
+Read it top to bottom. The contrasts and the effect modifier are healthy: $\widehat R=1.00$, several
+thousand effective draws, so the reported $d_{AC}=-0.42$ (an odds ratio of about $0.66$ for $A$ versus
+$C$) is stable and precise. The last row is the failure the whole chapter anticipates: $\tau$ has
+$\widehat R=1.08\gg 1.01$ and only $90$ bulk effective draws, the signature of a residual funnel in a
+one-study-per-contrast network. Reported alongside, say, "14 divergent transitions, all at $\tau<0.1$,"
+the diagnosis is unambiguous. The fix is not to publish $d_{AC}$ with a caveat; it is to refit under the
+non-centered parameterization (already the default here, so one would instead tighten the prior on $\tau$
+and raise `adapt_delta`), confirm the divergences vanish and $\tau$'s $\widehat R$ falls below $1.01$, and
+only then read the contrast. That is what "checking whether an indirect comparison fit can be trusted"
+concretely means.
+
+## A worked diagnostic example {#sec-comp-example}
+
+We run the full diagnostic battery on a small, hand-checkable instance, mimicking the report one would
+produce for a fitted ML-NMR model: convergence ($\widehat R$), efficiency ($N_{\mathrm{eff}}$),
+integration error (the doubling rule), and model comparison (WAIC and PSIS-LOO). Every number can be
+reproduced with a calculator.
+
+::: {#exm-comp-diagnostics}
+## A complete diagnostic report
+
+The numbers here are deliberately tiny so every step is checkable by hand: read each block as the
+hand-computation behind one row of the summary table of @sec-comp-workflow, applied to the running
+network. Here $\theta=d_{AB}$ is the $A$-versus-$B$ log-odds contrast, and the two fitted observations
+stand for one IPD patient and one aggregate arm.
+
+**Convergence: $\widehat R$.** Two chains of length $N=4$ are run for a treatment contrast $\theta=d_{AB}$,
+giving the post-warmup draws
+$$
+\text{chain 1: }(2,4,6,8),\qquad \text{chain 2: }(4,6,8,10).
+$$
+The chain means are $\bar\theta^{(1)}=5$ and $\bar\theta^{(2)}=7$, grand mean $\bar{\bar\theta}=6$. Each
+chain has the same sample variance, $s_m^2=\frac{1}{3}\big[(\pm3)^2+(\pm1)^2\big]=\frac{1}{3}(9+1+1+9)=
+\frac{20}{3}$, so $W=\frac{20}{3}\approx 6.667$. The between-chain variance is $B=\frac{N}{M-1}\big[(5-6)^2
++(7-6)^2\big]=\frac{4}{1}(1+1)=8$. The pooled estimator is
+$$
+\widehat V=\Big(1-\tfrac14\Big)\tfrac{20}{3}+\tfrac14\cdot 8=5+2=7,
+\qquad
+\widehat R=\sqrt{\widehat V/W}=\sqrt{\tfrac{7}{20/3}}=\sqrt{\tfrac{21}{20}}=\sqrt{1.05}\approx 1.025 .
+$$
+With $\widehat R\approx 1.025>1.01$ the chains have not converged: the systematic offset between the chain
+means (5 versus 7) inflates $\widehat V$ above $W$, exactly the mechanism of part 3 of @thm-gelman-rubin.
+The remedy is more warmup or a better parameterization (@sec-comp-param), after which $\widehat R$ should
+fall below $1.01$.
+
+**Efficiency: $N_{\mathrm{eff}}$.** Suppose the converged chains behave like an AR(1) process. With lag-1
+autocorrelation $\phi=\tfrac13$, @exm-comp-ar1 gives $\tau_{\mathrm{int}}=\frac{1+1/3}{1-1/3}=2$ and
+efficiency $\tfrac12$, so $4000$ total draws are worth $N_{\mathrm{eff}}=2000$ independent draws; the Monte
+Carlo standard error of the posterior mean is $\sigma/\sqrt{2000}$. A stickier chain with $\phi=0.9$ gives
+$\tau_{\mathrm{int}}=19$ and $N_{\mathrm{eff}}\approx 210$, below the working threshold of $400$ and a
+signal to run longer or improve mixing.
+
+**Integration error: the doubling rule.** A logit-link aggregate cell requires
+$\theta=\int_0^1\operatorname{expit}\!\big(0.4+0.8\,\Phi^{-1}(u)\big)\,du$, the marginal event
+probability when the linear predictor is normal with mean $0.4$ and standard deviation $0.8$. We integrate
+with the one-dimensional Sobol' sequence (the van der Corput sequence in base $2$, @def-sobol-net), whose
+first points are $u_1=\tfrac12,\,u_2=\tfrac14,\,u_3=\tfrac34,\,u_4=\tfrac18,\dots$; the first eight
+integrand values are
+$$
+0.599,\ 0.465,\ 0.719,\ 0.373,\ 0.658,\ 0.536,\ 0.789,\ 0.304,
+$$
+averaging to $\widehat\theta^{(8)}=0.5554$. Doubling the grid gives the sequence
+$$
+\widehat\theta^{(16)}=0.5683,\quad \widehat\theta^{(32)}=0.5765,\quad \widehat\theta^{(64)}=0.5812,
+\quad \widehat\theta^{(128)}=0.5838,\quad \widehat\theta^{(256)}=0.5853,
+$$
+converging to the exact value $\theta=0.5868$ (computable independently by high-order Gauss-Hermite
+quadrature). The relative doubling increments @eq-comp-doubling are
+$$
+\frac{|0.5812-0.5765|}{0.5812}=0.0082,\quad
+\frac{|0.5838-0.5812|}{0.5838}=0.0045,\quad
+\frac{|0.5853-0.5838|}{0.5853}=0.0024 .
+$$
+At tolerance $\epsilon=0.005$ the criterion first passes at $N=128$ (increment $0.0045<0.005$), and the
+next doubling confirms it ($0.0024$). The true relative error at $N=128$ is $|0.5838-0.5868|/0.5868=
+0.0051$, consistent with the bound of @prp-comp-doubling at $\rho\approx\tfrac12$, which predicts a true
+relative error near the observed increment. So $N=128$ points suffice for this cell at this tolerance.
+
+**Model comparison: WAIC and PSIS-LOO.** Two observations are fit, and the pointwise likelihoods at $S=4$
+posterior draws are
+$$
+p(y_1\mid\boldsymbol\xi^{(s)})\in\{0.4,0.5,0.5,0.6\},\qquad
+p(y_2\mid\boldsymbol\xi^{(s)})\in\{0.2,0.3,0.3,0.4\}.
+$$
+The pointwise predictive densities are the within-row means, $\bar p_1=0.5$ and $\bar p_2=0.3$, so
+$$
+\mathrm{lppd}=\log 0.5+\log 0.3=-0.6931-1.2040=-1.8971 .
+$$
+The WAIC penalties are the within-row sample variances of the log likelihoods. For $y_1$, the logs are
+$(-0.9163,-0.6931,-0.6931,-0.5108)$ with mean $-0.7033$ and sample variance $v_1=0.02754$; for $y_2$, the
+logs are $(-1.6094,-1.2040,-1.2040,-0.9163)$ with mean $-1.2334$ and sample variance $v_2=0.08123$. Hence
+$p_{\mathrm{WAIC}}=v_1+v_2=0.1088$ and
+$$
+\widehat{\mathrm{elpd}}_{\mathrm{WAIC}}=\mathrm{lppd}-p_{\mathrm{WAIC}}=-2.0059,\qquad
+\mathrm{WAIC}=-2\,(-2.0059)=4.012 .
+$$
+For LOO, the raw importance ratios are $r_i^{(s)}=1/p(y_i\mid\boldsymbol\xi^{(s)})$, and because
+$p\cdot r=1$ the self-normalized estimate @eq-comp-psis with raw weights reduces to the harmonic mean
+$\widehat p(y_i\mid\mathbf y_{-i})=S/\sum_s r_i^{(s)}$. For $y_1$, $\sum_s r_1^{(s)}=2.5+2+2+1.667=8.167$,
+so $\widehat p_1=4/8.167=0.4898$; for $y_2$, $\sum_s r_2^{(s)}=5+3.333+3.333+2.5=14.167$, so $\widehat
+p_2=4/14.167=0.2824$. Then
+$$
+\widehat{\mathrm{elpd}}_{\mathrm{loo}}=\log 0.4898+\log 0.2824=-0.7137-1.2645=-1.9782,\qquad
+\mathrm{LOO}=3.956 .
+$$
+The two criteria agree to within $4.012-3.956=0.056$ on the deviance scale, illustrating the asymptotic
+equivalence of part 1 of @thm-dic-waic-loo even at this tiny sample size; the small gap is the
+higher-order $o(v_i)$ term. With only $S=4$ draws a generalized Pareto tail cannot be fit, so $\widehat k$
+is not reported here; in a real fit with thousands of draws one would read $\widehat k_i$ for each
+observation against the $0.7$ alarm of @thm-comp-psis-reliability before trusting the LOO numbers.
+$\blacktriangleleft$
+:::
+
+## Notes and references {#sec-comp-notes}
+
+The chapter expands results I.1 to I.6 of the proof catalogue (`proofs/I_computation.md`) and the companion
+manuscript chapter on Bayesian computation, supplying complete proofs and the worked example. The
+underlying Bayesian-foundations results it draws on, Bayes' theorem, conjugacy, the posterior predictive,
+and the detailed-balance correctness of HMC, are catalogue results L.1 to L.4, proved in Chapter 8
+(@thm-mh-stationarity, @def-hmc, @thm-conjugate-normal); the numerical-integration machinery it monitors,
+the Koksma-Hlawka inequality and the Sobol' construction, are catalogue results H.12 to H.19 of Chapter 22
+(@thm-koksma-hlawka, @thm-mc-rmse, @def-sobol-net, @thm-hypercube-integration); and the aggregation
+integral whose evaluation is at stake is the subject of Chapter 20 (@thm-aggregation, @thm-log-link-mgf,
+@thm-logit-no-closed-form). The DIC decomposition $\mathrm{DIC}=D(\bar{\boldsymbol\xi})+2p_D$ is catalogue
+result D.14, introduced for network meta-analysis in Chapter 15.
+
+The centered-versus-non-centered analysis and the funnel pathology it addresses are standard in the
+Hamiltonian Monte Carlo literature; the leapfrog stability threshold $\epsilon\omega\le 2$
+(@lem-comp-leapfrog-stability) is the linear-stability analysis of the Stormer-Verlet integrator, and the
+funnel as the canonical hierarchical-model trap is due to Neal. The implementation of HMC and the No-U-Turn
+Sampler used by the reference ML-NMR software, including the automatic step-size and mass-matrix
+adaptation, is Stan (@carpenter2017stan). The Gelman-Rubin statistic is the original convergence
+diagnostic of Gelman and Rubin; the exact expectation identities $\mathbb E[\widehat V]=\sigma^2$ and
+$\mathbb E[W]=\frac{N}{N-1}(\sigma^2-v_N)$ derived here (@thm-gelman-rubin) make precise the "$\widehat V$
+overestimates, $W$ underestimates" intuition, and the split and rank-normalized refinements are the modern
+reassessment of Vehtari and coauthors, who also introduced the bulk/tail effective sample sizes of
+@sec-comp-ess. The variance-of-the-mean identity @eq-comp-var-mean and the integrated autocorrelation time
+are classical time-series facts (see, for example, the MCMC standard-error literature of Geyer). The
+predictive-criterion framework, elpd as the target and lppd as its optimistic in-sample estimate, is due to
+Watanabe (WAIC) and to the cross-validation synthesis of Vehtari, Gelman, and Gabra; the exact
+leave-one-out importance identity @eq-comp-loo-identity and the Pareto-smoothing algorithm with its
+$\widehat k$ diagnostic (@def-psis-loo, @thm-comp-psis-reliability) are from the PSIS-LOO papers of that
+group, and the generalized-Pareto moment characterization @lem-comp-gpd-moments is elementary extreme-value
+theory.
+
+The proofs given here are pen-and-paper throughout. As recorded in the remark closing @sec-comp-psis, none
+of this material has a machine-checked counterpart in the `ITC_Coq` development, whose formalized content
+ends with population-adjustment algebra; accordingly no theorem in this chapter carries a machine-checked
+tag.
+
+## Exercises {#sec-comp-exercises}
+
+An exercise marked $\star$ has a full worked solution in Appendix F. The first two are warm-ups: read a
+diagnostic report and decide what to do, before any algebra.
+
+::: {#exr-comp-read-table}
+## Reading a Stan summary (warm-up, interpretation)
+A fitted ML-NMR model reports, for the contrast $d_{AC}$: $\widehat R=1.00$, bulk $N_{\mathrm{eff}}=2200$,
+tail $N_{\mathrm{eff}}=1900$; and for the heterogeneity $\tau$: $\widehat R=1.06$, bulk $N_{\mathrm{eff}}
+=110$, tail $N_{\mathrm{eff}}=160$, with $9$ divergent transitions reported, all at small $\tau$. In
+words, and without any calculation: which quantity do you trust, which do you not, what single mechanism
+from @sec-comp-param most likely explains the pattern, and what would you change before reporting
+$d_{AC}$? Explain why "just run the chains four times longer" is the wrong first move.
+:::
+
+::: {#exr-comp-classify}
+## Classify the diagnostics (warm-up, interpretation)
+For each finding, state whether it is a hard failure that blocks reporting, a warning that needs
+investigation, or acceptable, and name the action, using the table of @sec-comp-workflow: (a) $\widehat
+R=1.004$ on every parameter; (b) bulk $N_{\mathrm{eff}}=95$ on a treatment contrast; (c) Pareto
+$\widehat k=0.9$ on one aggregate arm; (d) a QMC doubling increment of $0.012$ at tolerance
+$\epsilon=0.005$; (e) a WAIC difference between two models that is half the size of its standard error.
+:::
+
+::: {#exr-comp-rhat}
+## Computing $\widehat R$
+Three chains of length $N=5$ give the draws $(1,2,3,4,5)$, $(2,3,4,5,6)$, and $(3,4,5,6,7)$. Compute $W$,
+$B$, $\widehat V$, and $\widehat R$. Does the run pass the $\widehat R\le 1.01$ threshold? Explain, using
+@thm-gelman-rubin, why the answer is driven entirely by the spacing of the chain means.
+:::
+
+::: {#exr-comp-rhat-floor}
+## A deterministic lower bound for $\widehat R$ $(\star)$
+Show from the definitions @eq-comp-wb and @eq-comp-vhat that $\widehat V/W=\frac{N-1}{N}+\frac{B}{NW}$, and
+deduce that $\widehat R\ge\sqrt{(N-1)/N}$ always, with $\widehat R\ge 1$ if and only if $B\ge W$. Using the
+stationarity expectations of @lem-comp-within and @lem-comp-between, show that at convergence
+$\mathbb E[B]=\mathbb E[W]$ in the iid-within-chain idealization, so that $\widehat R$ is centered at $1$,
+and identify the term that pushes it above $1$ when the chains are positively autocorrelated but share a
+common stationary law. (Solution in Appendix F.)
+:::
+
+::: {#exr-comp-ess-acf}
+## Effective sample size from an autocorrelation sequence
+A chain has estimated autocorrelations $\rho_1=0.6$, $\rho_2=0.36$, $\rho_3=0.216$, and $\rho_k=0.6^k$
+thereafter. Using @def-mcmc-ess, compute the integrated autocorrelation time and the efficiency
+$N_{\mathrm{eff}}/N$. Compare with the AR(1) formula of @exm-comp-ar1 and explain why they coincide.
+:::
+
+::: {#exr-comp-leapfrog}
+## Leapfrog stability and the funnel
+A centered hierarchical effect has prior-dominated curvature $1/\tau^2$ (@lem-comp-funnel). Using
+@lem-comp-leapfrog-stability, find the largest stable leapfrog step $\epsilon_{\max}(\tau)$. If the
+posterior of $\tau$ ranges over $[0.05,2]$ and a single global $\epsilon$ must be stable everywhere, what
+is the largest admissible $\epsilon$, and by what factor is it smaller than the step that would be
+efficient at the typical value $\tau=1$? Repeat for the non-centered parameterization and comment.
+:::
+
+::: {#exr-comp-doubling}
+## The doubling rule on a known integral
+For $\theta=\int_0^1 u^2\,du=\tfrac13$, compute the one-dimensional Sobol' (van der Corput) estimates
+$\widehat\theta^{(N)}$ for $N\in\{2,4,8,16\}$, evaluate the relative doubling increments
+@eq-comp-doubling, and report the smallest $N$ at which the criterion passes at $\epsilon=0.01$. Compare the
+observed errors $|\widehat\theta^{(N)}-\tfrac13|$ with the increments and comment in the light of
+@prp-comp-doubling.
+:::
+
+::: {#exr-comp-loo-identity}
+## The leave-one-out identity
+Prove the special case $\psi=p(y_i\mid\cdot)$ of @eq-comp-is directly: starting from
+$\pi(\boldsymbol\xi\mid\mathbf y_{-i})\propto\pi(\boldsymbol\xi\mid\mathbf y)/p(y_i\mid\boldsymbol\xi)$,
+show that $p(y_i\mid\mathbf y_{-i})=1/\mathbb E_{\boldsymbol\xi\mid\mathbf y}[1/p(y_i\mid\boldsymbol\xi)]$.
+Then explain in one sentence why estimating this by the sample harmonic mean of the draw-wise likelihoods
+can have infinite variance.
+:::
+
+::: {#exr-comp-waic-loo}
+## WAIC and LOO on a small posterior
+Three posterior draws give pointwise likelihoods $p(y_1\mid\boldsymbol\xi^{(s)})\in\{0.3,0.5,0.7\}$ and
+$p(y_2\mid\boldsymbol\xi^{(s)})\in\{0.4,0.4,0.4\}$. Compute $\mathrm{lppd}$, $p_{\mathrm{WAIC}}$, and
+$\mathrm{WAIC}$, and the raw-importance-sampling $\mathrm{LOO}$. Why is the second observation's
+contribution to $p_{\mathrm{WAIC}}$ exactly zero, and what does that say about its influence?
+:::
+
+::: {#exr-comp-gpd}
+## Pareto tails and importance-sampling reliability $(\star)$
+Let $X$ have the generalized Pareto upper tail $\bar F(x)=(1+kx/\sigma)^{-1/k}$ with $k>0$. Prove that
+$\mathbb E[X^m]<\infty$ if and only if $m<1/k$ (@lem-comp-gpd-moments). Deduce the variance-finiteness
+threshold $k<\tfrac12$ and the mean-finiteness threshold $k<1$, and relate them to the PSIS-LOO diagnostic
+thresholds of @thm-comp-psis-reliability. Explain why the operational alarm is set at $\widehat k=0.7$
+rather than at the theoretical variance threshold $0.5$. (Solution in Appendix F.)
+:::

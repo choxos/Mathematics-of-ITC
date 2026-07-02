@@ -1,0 +1,1278 @@
+---
+title: "Multilevel Network Meta-Regression II: Discrete Outcomes and Approximation Theory"
+---
+
+## Introduction {#sec-discrete-intro}
+
+Chapter 20 built the engine of multilevel network meta-regression (ML-NMR) on a single idea, the
+aggregation principle: to honor an aggregate-data (AgD) study we write the individual-level model
+(@def-individual-model), push each individual's linear predictor through the inverse link, and average on
+the response scale *before* comparing with the reported summary (@def-aggregate-model, @thm-aggregation).
+For a continuous outcome on the identity scale that average is itself the linear predictor evaluated at the
+covariate mean (@thm-identity-link-exact), and the aggregate likelihood is an ordinary normal: the
+arithmetic was gentle because summation and the identity link commute. This chapter takes up the outcomes
+for which they do not, the counts and the binary events that dominate health-technology assessment, whose
+aggregate is not a smooth average of a single quantity but a *sum* of many small, non-identical random
+contributions, one per patient.
+
+::: {#exm-running-oncology}
+## A running example: an oncology responder arm
+Throughout this chapter we return to one aggregate-data (AgD) arm from a hypothetical oncology network.
+Study $AB$ compares drug $A$ against drug $B$; for the drug-$A$ arm it reports only the *number of
+responders* out of the patients treated, a responder being a binary outcome (tumor shrinkage past a fixed
+threshold). We do not see individual records for this arm, only summary covariates (baseline severity,
+prior lines of therapy). The ML-NMR model of Chapter 20, fitted to the individual-patient-data (IPD)
+studies elsewhere in the network, assigns any covariate profile $x$ a response probability
+$p=\operatorname{expit}(\eta(x))$, where $\operatorname{expit}(z)=e^{z}/(1+e^{z})$ is the inverse of the
+logit link (@def-link-function).
+
+Two facts make the aggregate awkward. First, patients differ: a frail, heavily pretreated patient may
+have response probability near $0.1$, a fit, treatment-naive patient near $0.7$. Second, we must turn
+those unequal per-patient probabilities into a single likelihood for the reported total. The naive move
+is to average the risks to a common $\bar p$ and write $\mathrm{Bin}(n,\bar p)$; much of this chapter is
+about what that shortcut gets wrong and how to repair it.
+
+To keep every number checkable by hand, our concrete instance uses five equally weighted covariate
+profiles with model-predicted response probabilities
+$$
+\mathbf p=(p_1,\dots,p_5)=(0.1,\ 0.3,\ 0.4,\ 0.5,\ 0.7),
+\qquad \bar p=0.4,
+$$
+the vector we carry all the way to the fully worked @exm-aggregate-binomial. These five are *profiles that
+summarize the covariate distribution* (the numerical integration nodes of Chapter 22), not necessarily
+five real patients. Whether we hold them fixed or regard the arm as a random sample from the distribution
+they summarize is exactly the conditional-versus-marginal choice that organizes everything below.
+$\blacktriangleleft$
+:::
+
+Two questions organize the chapter. First, what is the exact law of that sum? Second, since the exact law
+is in general intractable, what tractable distribution approximates it, and how large is the error? The
+answers split cleanly by outcome type, and the split is itself instructive.
+
+For **count outcomes** the news is good and then subtle. A sum of independent Poisson variables is again
+Poisson, with rate equal to the sum of the rates, and this holds whether or not the rates are identical
+(@lem-poisson-convolution); the Poisson family is closed under convolution with addition of parameters.
+So conditional on the patients' covariates the aggregate count is exactly Poisson (@thm-poisson-aggregate),
+and no approximation is needed at that level. The subtlety is that the covariates are themselves random
+draws from the study population, so the rate of the conditional Poisson is random, and marginalizing over
+it yields not a Poisson but a *mixed* Poisson (a Poisson whose rate is itself random, drawn from a
+distribution and then averaged out), which carries the same mean and a strictly larger variance.
+The excess, the overdispersion, is the count-data fingerprint of the within-study covariate variation that
+ML-NMR exists to respect, and we compute it exactly under Gaussian covariates.
+
+For **binary outcomes** the news is that the obvious guess is wrong. A sum of independent Bernoulli
+variables with a *common* success probability is binomial, but a sum of Bernoullis with *different*
+success probabilities, exactly the situation when each patient's event risk
+$p_i=\operatorname{expit}(\eta(x_i))$ depends on that patient's covariates, is not binomial. It is the
+**Poisson binomial** distribution (@def-poisson-binomial), whose exact probability mass function is a sum
+over all $\binom{n}{y}$ subsets of size $y$ and is hopeless to evaluate directly for the sample sizes of a
+real trial. We derive its structure cleanly through the probability generating function
+(@thm-poisson-binomial-pgf), and then face the practical need for a tractable surrogate. Two classical
+surrogates answer that need, and they are genuinely different, a point the early ML-NMR literature was
+careful to separate and we are careful to keep separate here. **Le Cam's approximation** replaces the
+Poisson binomial by a Poisson with matched mean and controls the total-variation error by the elegant
+bound $\sum_i p_i^2$; we give the full coupling proof (@thm-le-cam-tv), one of the few places in Part V
+where a sharp inequality, rather than a numerical recipe, carries the argument. The **adjusted
+two-parameter binomial** instead matches the first two moments exactly, producing a binomial whose count
+is automatically bounded above by its sample size and whose dispersion is correct (@thm-adjusted-binomial);
+it is the surrogate used in practice for binary ML-NMR. We close with a fully worked example that computes
+an aggregate binary likelihood three ways, by integration to a marginal binomial, by the exact Poisson
+binomial, and by the adjusted binomial, with the Le Cam Poisson alongside for contrast, and shows by hand
+which is faithful and which is not.
+
+Throughout, the notation is that of Chapter 20 and of [Notation](/notation.qmd): a study indexed $j$, an
+arm or treatment indexed $k$, individuals indexed $i$, an outcome $Y_{ijk}$ with conditional mean
+$\theta_{ijk}=g^{-1}(\eta_{jk}(x_{ijk}))$ for the link $g$ (@def-link-function) and linear predictor
+$\eta_{jk}$ of @def-individual-model, and the aggregate mean
+$\theta_{\bullet jk}=\int_{\mathcal X}g^{-1}(\eta_{jk}(x))\,f_j(x)\,dx$ of @def-aggregate-model. We write
+$Y_{\bullet jk}=\sum_{i=1}^{n_{jk}}Y_{ijk}$ for the aggregate count over the $n_{jk}$ individuals of arm
+$k$ in study $j$, and we drop the study and arm subscripts to $Y_\bullet$, $n$, $\theta_\bullet$, $\eta$,
+$\mathbf x$ wherever a single arm is under discussion. This chapter corresponds to results H.8 to H.11 of
+the proof catalogue.
+
+## The aggregate count and its two laws {#sec-discrete-setup}
+
+Fix a single AgD arm with $n$ individuals. The individual-level model gives, conditional on patient $i$'s
+covariate vector $x_i$, a mean $\theta_i=g^{-1}(\eta(x_i))$ on the outcome scale; the outcomes $Y_i$ are
+conditionally independent given the covariates. The object the AgD study reports is some function of the
+aggregate count $Y_\bullet=\sum_i Y_i$, typically the total number of events $y_\bullet=\sum_i y_i$ out of
+$n$, and the aggregate likelihood is the law of $Y_\bullet$ evaluated at $y_\bullet$. There are two
+distinct probability laws in play, and conflating them is the principal hazard of this subject, so we
+isolate them now.
+
+::: {.remark}
+**Conditional versus marginal.** The **conditional law** of $Y_\bullet$ fixes the covariate values
+$\mathbf x=(x_1,\dots,x_n)$ of the $n$ specific patients and treats only the outcomes as random; it is the
+law of a sum of independent variables with parameters $\theta_i=g^{-1}(\eta(x_i))$ that differ from patient
+to patient. The **marginal law** additionally treats each $x_i$ as an independent draw from the study
+covariate distribution $f_j$ and integrates it out, so that the patients become exchangeable and each
+single outcome has the aggregate mean $\theta_\bullet=\mathbb{E}_{X\sim f_j}[g^{-1}(\eta(X))]$ of
+@def-aggregate-model. The marginal law is the mixture of the conditional laws over random covariate
+configurations. The two have the same mean, $n\theta_\bullet$, but in general different variances, because
+randomizing the covariates injects extra variability; the gap between them is the recurring theme of this
+chapter, appearing as overdispersion for counts (@thm-poisson-aggregate) and as the difference between the
+integrated and adjusted binomials for binary events (@exm-aggregate-binomial). $\blacktriangleleft$
+:::
+
+Before any machinery, here is the whole distinction in two patients and numbers a reader can check in a
+minute. It is the seed of the fully worked example at the end of the chapter.
+
+::: {#exm-two-patient-conditional}
+## Two patients, two laws, by hand
+Take the two extreme profiles of the running example (@exm-running-oncology): a frail patient with
+response probability $0.1$ and a fit patient with response probability $0.7$, and suppose the study
+population is exactly these two profiles in equal proportion (a single binary effect modifier, frail
+versus fit, prevalence one half). Consider an arm of $n=2$.
+
+*Conditional law (profiles held fixed).* Fix one patient at each profile. Then $Y_\bullet=Y_1+Y_2$ with
+$Y_1\sim\mathrm{Ber}(0.1)$ and $Y_2\sim\mathrm{Ber}(0.7)$ independent, so
+$$
+P(Y_\bullet=0)=0.9\cdot 0.3=0.27,\quad
+P(Y_\bullet=1)=0.1\cdot 0.3+0.9\cdot 0.7=0.66,\quad
+P(Y_\bullet=2)=0.1\cdot 0.7=0.07,
+$$
+with mean $0.1+0.7=0.8$ and variance $0.1(0.9)+0.7(0.3)=0.30$.
+
+*Marginal law (patients drawn at random).* Now let each of the two patients be an independent draw from
+the population, so marginally each is $\mathrm{Ber}(0.4)$ (the average risk) and
+$Y_\bullet\sim\mathrm{Bin}(2,0.4)$:
+$$
+P(Y_\bullet=0)=0.36,\quad P(Y_\bullet=1)=0.48,\quad P(Y_\bullet=2)=0.16,
+$$
+with mean $0.8$ and variance $2(0.4)(0.6)=0.48$.
+
+The two laws share the mean $0.8$ but differ in variance, $0.30$ against $0.48$. The extra $0.18$ is the
+price of randomizing which profile each patient occupies; it equals $n\,s_p^2$ with
+$s_p^2=\tfrac12\big[(0.1-0.4)^2+(0.7-0.4)^2\big]=0.09$ the variance of the two risks. This single pair of
+numbers is the entire conditional-versus-marginal theme in miniature, and it returns, with five profiles
+instead of two, as Step 7 of @exm-aggregate-binomial. $\blacktriangleleft$
+:::
+
+For binary outcomes the marginal law is immediate and is the likelihood ML-NMR uses by default, so we
+record it before turning to the finer conditional analysis.
+
+::: {#prp-marginal-binomial}
+## The integrated binomial aggregate likelihood
+Suppose the individual outcomes are Bernoulli, $Y_i\mid X_i\sim\mathrm{Ber}(g^{-1}(\eta(X_i)))$, that the
+covariates $X_1,\dots,X_n$ are independent and identically distributed draws from $f_j$, and that the
+outcomes are conditionally independent given the covariates. Then marginally the $Y_i$ are independent and
+identically distributed $\mathrm{Ber}(\theta_\bullet)$ with $\theta_\bullet$ the aggregate mean of
+@def-aggregate-model, and the aggregate count is exactly binomial,
+$$
+Y_\bullet=\sum_{i=1}^n Y_i\ \sim\ \mathrm{Bin}(n,\theta_\bullet),
+\qquad
+\theta_\bullet=\int_{\mathcal X}g^{-1}(\eta(x))\,f_j(x)\,dx .
+$$ {#eq-integrated-binomial}
+:::
+
+::: {.proof}
+By the tower property, that averaging a conditional probability over the conditioning variable returns
+the unconditional probability, for each $i$,
+$P(Y_i=1)=\mathbb{E}_{X_i}\!\big[P(Y_i=1\mid X_i)\big]=\mathbb{E}_{X_i}\!\big[g^{-1}(\eta(X_i))\big]
+=\theta_\bullet$, the last equality being the definition of the aggregate mean (@def-aggregate-model),
+which exists by @thm-aggregation. The pairs $(X_i,Y_i)$ are independent across $i$ and identically
+distributed, so the marginal outcomes $Y_i$ are independent and identically distributed
+$\mathrm{Ber}(\theta_\bullet)$; their sum is $\mathrm{Bin}(n,\theta_\bullet)$ by the definition of the
+binomial as a sum of independent identical Bernoullis (@def-binomial). $\square$
+:::
+
+::: {.remark}
+**Reader translation.** Integrating the covariate out first says: treat every future patient from this
+arm's target population as carrying the same *average* response chance $\theta_\bullet$, even though any
+one patient's risk would differ if we saw their covariates. The aggregate count is then an ordinary
+binomial, exactly as if the arm had run $n$ identical coin flips with success probability $\theta_\bullet$.
+Nothing is approximated; the only assumption is that the $n$ patients are an exchangeable sample from
+$f_j$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why this is not the end of the story.** Proposition @prp-marginal-binomial is exact, requires no
+approximation, and is the binary aggregate likelihood of the original ML-NMR (@phillippo2020mlnmr): compute
+$\theta_\bullet$ by numerical integration (Chapter 22) and treat the reported events as
+$\mathrm{Bin}(n,\theta_\bullet)$. Its one assumption is that the $n$ patients are an exchangeable sample
+from $f_j$, so that integrating the covariate out is legitimate before forming the count. The conditional
+view, which keeps the per-patient risks $p_i$ distinct, is needed for three purposes that occupy the rest
+of the chapter: to understand the *structure* of an aggregate event count as a sum of unequal risks
+(@thm-poisson-binomial-pgf); to quantify how a Poisson surrogate for that count behaves (@thm-le-cam-tv);
+and to build the moment-matched binomial that is preferred when one works directly with the integration
+nodes that represent $f_j$ as a fixed design rather than as a random sample (@thm-adjusted-binomial). The
+gap between the marginal law @eq-integrated-binomial and the conditional law is exactly the overdispersion
+we now compute for counts. $\blacktriangleleft$
+:::
+
+## A roadmap of the aggregate laws {#sec-discrete-roadmap}
+
+It is tempting to ask which single likelihood is *the* binary ML-NMR likelihood. The honest answer is
+that there are two, and they are not rivals: they are the correct laws for two different ways of
+representing an AgD study's covariates. If the arm's patients are regarded as an exchangeable random
+sample from the covariate distribution, one integrates the covariate out first and the exact aggregate is
+the *integrated binomial* $\mathrm{Bin}(n,\theta_\bullet)$ of @prp-marginal-binomial. If instead the
+covariate distribution is represented by a fixed set of integration nodes carrying distinct risks $p_i$
+(the numerical grid of Chapter 22), one conditions on those nodes and the aggregate is a *Poisson
+binomial* (@sec-pobin), for which the *adjusted binomial* of @sec-adjusted is the practical two-moment
+surrogate. The per-node risks $p_i$ are themselves produced by the numerical integration of Chapter 22,
+which represents the covariate density $f_j$ by nodes drawn through a Gaussian copula $C_\Omega$;
+throughout this chapter we take the $p_i$ as given inputs and study only what to do with them.
+
+The count case splits the same way, and @tbl-aggregate-laws collects all five situations. With covariates
+held fixed the aggregate is exact (Poisson or Poisson binomial); only when the covariates are treated as
+random does the story change, into overdispersion for counts and into a plain binomial for binary events.
+The right-hand column points to the section that fills in each row.
+
+| Data representation | Exact aggregate law | Tractable directly? | Surrogate used | Surrogate matches |
+|---|---|---|---|---|
+| Count, covariates fixed | Poisson $\mathrm{Poi}(\sum_i W_i)$ | yes, exact | none needed | (exact) |
+| Count, covariates random | mixed Poisson, overdispersed | mean and variance | negative binomial | mean and variance |
+| Binary, exchangeable patients | $\mathrm{Bin}(n,\theta_\bullet)$ | yes, exact | none needed | (exact) |
+| Binary, fixed nodes | Poisson binomial | exact but intractable | adjusted $\mathrm{Bin}(N^{*},\pi^{*})$ | mean and variance |
+| Binary, rare events | Poisson binomial | intractable | Le Cam $\mathrm{Poi}(\lambda)$ | mean, $+$ TV bound $\sum_i p_i^2$ |
+
+: The five aggregate-likelihood situations of this chapter and the law each one uses. "Covariates fixed"
+means conditioning on a set of covariate profiles (integration nodes); "covariates random" means treating
+the patients as an exchangeable sample and integrating the covariate distribution out. {#tbl-aggregate-laws}
+
+A reader who wants only the practical upshot may read @tbl-aggregate-laws, the worked
+@exm-aggregate-binomial, and the closing remark of @sec-discrete-example, then skip the proofs on a first
+pass. The proofs are where the *exactness* and *error* claims in the table are earned.
+
+## Count outcomes: the Poisson aggregate {#sec-poisson-aggregate}
+
+Count outcomes, modeled with the log link so that $g^{-1}(\eta)=e^{\eta}$, are the easy case at the
+conditional level and the instructive case at the marginal level. The conditional ease rests on a closure
+property of the Poisson family that the binomial family lacks, so we prove it first and in full. The
+reason to dwell on so elementary a fact is the contrast it draws: the very same closure *fails* for the
+Bernoulli, and that single failure is what forces the approximation theory of the second half of the
+chapter (@sec-lecam, @sec-adjusted).
+
+::: {#lem-poisson-convolution}
+## A sum of independent Poissons is Poisson
+Let $Y_1,\dots,Y_n$ be independent with $Y_i\sim\mathrm{Poi}(\lambda_i)$, $\lambda_i>0$, the rates not
+necessarily equal. Then
+$$
+\sum_{i=1}^n Y_i\ \sim\ \mathrm{Poi}\!\Big(\sum_{i=1}^n\lambda_i\Big).
+$$ {#eq-poisson-convolution}
+:::
+
+::: {.proof}
+It suffices to treat $n=2$ and induct, since $Y_1+\cdots+Y_{n}=(Y_1+\cdots+Y_{n-1})+Y_n$ is a sum of two
+independent Poissons once the inductive hypothesis identifies the first summand as
+$\mathrm{Poi}(\lambda_1+\cdots+\lambda_{n-1})$. For $X\sim\mathrm{Poi}(\lambda)$ and
+$Y\sim\mathrm{Poi}(\mu)$ independent, the convolution formula for the law of a sum of independent
+nonnegative integer variables gives, for $k=0,1,2,\dots$,
+$$
+P(X+Y=k)=\sum_{j=0}^{k}P(X=j)\,P(Y=k-j)
+=\sum_{j=0}^{k}e^{-\lambda}\frac{\lambda^{j}}{j!}\,e^{-\mu}\frac{\mu^{k-j}}{(k-j)!}.
+$$
+Factor out $e^{-(\lambda+\mu)}$ and multiply and divide by $k!$:
+$$
+P(X+Y=k)=\frac{e^{-(\lambda+\mu)}}{k!}\sum_{j=0}^{k}\binom{k}{j}\lambda^{j}\mu^{k-j}
+=\frac{e^{-(\lambda+\mu)}}{k!}\,(\lambda+\mu)^{k},
+$$
+the inner sum being $(\lambda+\mu)^k$ by the binomial theorem. This is the mass function of
+$\mathrm{Poi}(\lambda+\mu)$ (@def-poisson), proving the case $n=2$ and, by induction,
+@eq-poisson-convolution.
+
+A second proof records the structural reason, and it is this *mechanism*, not the conclusion, that we
+reuse: it shows in @sec-pobin precisely why the Bernoulli analogue breaks. By @def-poisson the moment generating
+function (MGF, @def-mgf) of $Y_i$ is $M_{Y_i}(t)=\exp(\lambda_i(e^{t}-1))$, finite for all $t$. By the
+product rule for MGFs of independent sums (@thm-mgf-sum),
+$$
+M_{\sum_i Y_i}(t)=\prod_{i=1}^n\exp\!\big(\lambda_i(e^{t}-1)\big)
+=\exp\!\Big(\Big(\textstyle\sum_i\lambda_i\Big)(e^{t}-1)\Big),
+$$
+which is the MGF of $\mathrm{Poi}(\sum_i\lambda_i)$; by the uniqueness theorem for moment generating
+functions (@thm-mgf-uniqueness) the sum has that law. $\square$
+:::
+
+::: {.remark}
+**The asymmetry with the binomial.** In plain terms: pooling several Poisson counts just adds their
+rates, so there is nothing to approximate for counts, whereas pooling several Bernoulli events does not
+stay binomial unless the individual risks are equal. Closure under convolution with parameter addition is
+special. It
+holds for the Poisson regardless of whether the rates agree, which is why count outcomes give no trouble at
+the conditional level. It fails for the Bernoulli: a sum of Bernoullis is binomial only when the success
+probabilities are equal, and otherwise leaves the binomial family entirely for the Poisson binomial of
+@sec-pobin. The whole approximation apparatus of this chapter, Le Cam and the adjusted binomial, exists to
+repair this single missing closure property in the binary case. The MGF proof makes the contrast precise:
+the Poisson MGF $\exp(\lambda(e^t-1))$ multiplies into the same functional form with $\lambda$ summed,
+whereas the Bernoulli MGF $1-p+pe^t$ multiplies into $\prod_i(1-p_i+p_ie^t)$, which is the form of a
+binomial MGF $((1-p)+pe^t)^n$ only when every $p_i$ is the same $p$. $\blacktriangleleft$
+:::
+
+We can now state the law of the aggregate count, both conditionally and marginally. Write
+$\eta(x)=\eta_{jk}(x)$ for the arm's linear predictor and $W=W(X)=e^{\eta(X)}$ for the random conditional
+rate of a single individual, so that $\theta_\bullet=\mathbb{E}[W]$ is the aggregate mean of
+@def-aggregate-model and $\sigma_W^2:=\operatorname{Var}(W)$ measures how much that rate varies across the
+study population. (Here $W$ is a scalar random rate, not the vector space $W$ of Part I.) The theorem that
+follows has three layers, worth holding apart: conditional on the patients' covariates the aggregate count
+is *exactly* Poisson; marginally, once the covariates are themselves random, it is an overdispersed
+*mixed* Poisson; and under Gaussian covariates the overdispersion collapses to a closed form.
+
+::: {#thm-poisson-aggregate}
+## The Poisson aggregate likelihood and its overdispersion
+Let the individual count outcomes satisfy $Y_i\mid X_i\sim\mathrm{Poi}(W_i)$ with $W_i=e^{\eta(X_i)}$,
+conditionally independent given the covariates, and let $X_1,\dots,X_n$ be independent and identically
+distributed draws from $f_j$.
+
+1. *(Conditional law.)* Conditional on the covariate configuration $\mathbf X=(X_1,\dots,X_n)$, the
+aggregate count is exactly Poisson,
+$$
+Y_\bullet=\sum_{i=1}^n Y_i\ \Big|\ \mathbf X\ \sim\ \mathrm{Poi}\!\Big(\sum_{i=1}^n W_i\Big).
+$$ {#eq-poisson-agg-conditional}
+
+2. *(Marginal law.)* Marginally over the covariates, $Y_\bullet$ has the **mixed Poisson** law
+$$
+P(Y_\bullet=y)=\mathbb{E}_{\mathbf X}\!\left[e^{-\Lambda}\frac{\Lambda^{y}}{y!}\right],
+\qquad \Lambda=\sum_{i=1}^n W_i,
+$$ {#eq-poisson-agg-marginal}
+with mean and variance
+$$
+\mathbb{E}[Y_\bullet]=n\theta_\bullet,
+\qquad
+\operatorname{Var}(Y_\bullet)=n\theta_\bullet+n\sigma_W^2 .
+$$ {#eq-poisson-agg-moments}
+The marginal count is therefore **overdispersed** relative to a Poisson of the same mean, by exactly
+$n\sigma_W^2\ge 0$, with equality (a genuine Poisson) if and only if $W$ is degenerate, that is, if and
+only if the linear predictor $\eta(X)$ is almost surely constant across the population.
+
+3. *(Gaussian covariates.)* If in addition $X\sim\mathcal N(\boldsymbol\mu_j,\boldsymbol\Sigma_j)$ and
+$\eta(x)=\mu+x^\top\boldsymbol\beta_{\mathrm{tot}}$ is affine in $x$ (with
+$\boldsymbol\beta_{\mathrm{tot}}=\boldsymbol\beta_1+\boldsymbol\beta_{2,k}$ the total covariate slope of
+@def-individual-model, the prognostic slopes $\boldsymbol\beta_1$ plus this arm's effect-modifier
+interactions $\boldsymbol\beta_{2,k}$), then the relative overdispersion has the closed form
+$$
+\frac{\sigma_W^2}{\theta_\bullet^2}
+=\exp\!\big(\boldsymbol\beta_{\mathrm{tot}}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot}}\big)-1 .
+$$ {#eq-poisson-agg-overdisp}
+:::
+
+::: {.proof}
+*Part 1.* Conditional on $\mathbf X$, the rates $W_i=e^{\eta(X_i)}$ are fixed positive numbers and the
+$Y_i$ are independent $\mathrm{Poi}(W_i)$; @lem-poisson-convolution gives
+$Y_\bullet\mid\mathbf X\sim\mathrm{Poi}(\sum_i W_i)$, which is @eq-poisson-agg-conditional.
+
+*Part 2.* The marginal mass function is the expectation of the conditional Poisson mass function over the
+law of $\mathbf X$, which is @eq-poisson-agg-marginal. For the moments, write $\Lambda=\sum_i W_i$ and use
+the tower property and the conditional Poisson identities $\mathbb{E}[Y_\bullet\mid\mathbf X]=\Lambda$ and
+$\operatorname{Var}(Y_\bullet\mid\mathbf X)=\Lambda$ (mean equals variance for a Poisson, @def-poisson).
+For the mean,
+$$
+\mathbb{E}[Y_\bullet]=\mathbb{E}\big[\mathbb{E}[Y_\bullet\mid\mathbf X]\big]=\mathbb{E}[\Lambda]
+=\sum_{i=1}^n\mathbb{E}[W_i]=n\theta_\bullet,
+$$
+since each $W_i$ has mean $\theta_\bullet=\mathbb{E}[e^{\eta(X)}]$. For the variance, the law of total
+variance,
+$$
+\operatorname{Var}(Y_\bullet)
+=\mathbb{E}\big[\operatorname{Var}(Y_\bullet\mid\mathbf X)\big]
++\operatorname{Var}\big(\mathbb{E}[Y_\bullet\mid\mathbf X]\big)
+=\mathbb{E}[\Lambda]+\operatorname{Var}(\Lambda),
+$$
+holds because $\mathbb{E}[Y^2]=\mathbb{E}[\mathbb{E}[Y^2\mid\mathbf X]]
+=\mathbb{E}[\operatorname{Var}(Y\mid\mathbf X)+\mathbb{E}[Y\mid\mathbf X]^2]$ and subtracting
+$\mathbb{E}[Y]^2=\mathbb{E}[\mathbb{E}[Y\mid\mathbf X]]^2$ leaves precisely the two displayed terms. Now
+$\mathbb{E}[\Lambda]=n\theta_\bullet$ as above, and by independence of the $W_i$,
+$\operatorname{Var}(\Lambda)=\sum_i\operatorname{Var}(W_i)=n\sigma_W^2$. Hence
+$\operatorname{Var}(Y_\bullet)=n\theta_\bullet+n\sigma_W^2$, which is @eq-poisson-agg-moments. The excess
+over the mean is $n\sigma_W^2\ge 0$, zero exactly when $\sigma_W^2=\operatorname{Var}(e^{\eta(X)})=0$, that
+is when $e^{\eta(X)}$, equivalently $\eta(X)$, is almost surely constant.
+
+*Part 3.* Under the stated Gaussian assumption $\eta(X)=\mu+X^\top\boldsymbol\beta_{\mathrm{tot}}$ is an
+affine function of a normal vector, hence univariate normal: for $X\sim\mathcal N(\boldsymbol\mu_j,
+\boldsymbol\Sigma_j)$ the scalar $a+\mathbf b^\top X$ has moment generating function
+$\mathbb{E}[e^{t(a+\mathbf b^\top X)}]=\exp\!\big(t(a+\mathbf b^\top\boldsymbol\mu_j)
++\tfrac12 t^2\,\mathbf b^\top\boldsymbol\Sigma_j\mathbf b\big)$, which is the MGF of a univariate normal
+(@def-normal), so
+$\eta(X)\sim\mathcal N(m,s^2)$ with $m=\mu+\boldsymbol\mu_j^\top\boldsymbol\beta_{\mathrm{tot}}$ and
+$s^2=\boldsymbol\beta_{\mathrm{tot}}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot}}$. Then $W=e^{\eta(X)}$
+is log-normal (a variable whose logarithm is normal), and because
+$\mathbb{E}[W^{r}]=\mathbb{E}[e^{r\eta(X)}]$ is the normal MGF of $\eta(X)$ read off at $t=r$, its moments
+are values of that MGF (@def-normal): with $M(t)=e^{mt+s^2t^2/2}$,
+$$
+\theta_\bullet=\mathbb{E}[W]=\mathbb{E}[e^{\eta(X)}]=M(1)=e^{m+s^2/2},
+\qquad
+\mathbb{E}[W^2]=\mathbb{E}[e^{2\eta(X)}]=M(2)=e^{2m+2s^2}.
+$$
+The first identity is the closed form of the aggregate rate under the log link (@thm-log-link-mgf).
+Therefore
+$$
+\sigma_W^2=\mathbb{E}[W^2]-\mathbb{E}[W]^2=e^{2m+2s^2}-e^{2m+s^2}=e^{2m+s^2}\big(e^{s^2}-1\big)
+=\theta_\bullet^2\big(e^{s^2}-1\big),
+$$
+using $\theta_\bullet^2=e^{2m+s^2}$. Dividing by $\theta_\bullet^2$ gives @eq-poisson-agg-overdisp. $\square$
+:::
+
+::: {#exm-count-overdispersion}
+## Overdispersion in a two-profile count arm
+A hospitalization-count arm has $n=40$ patients and a single binary effect modifier (say, prior
+hospitalization: yes or no) with prevalence one half. The log-link linear predictor gives conditional rate
+$W=1$ event per patient at one profile and $W=3$ at the other, so
+$$
+\theta_\bullet=\mathbb{E}[W]=\tfrac12(1+3)=2,\qquad
+\mathbb{E}[W^2]=\tfrac12(1+9)=5,\qquad
+\sigma_W^2=5-2^2=1.
+$$
+By @eq-poisson-agg-moments the marginal count has mean $n\theta_\bullet=40\cdot 2=80$ and variance
+$n\theta_\bullet+n\sigma_W^2=80+40=120$, a dispersion index $120/80=1.5$. A plain
+$\mathrm{Poi}(n\theta_\bullet)=\mathrm{Poi}(80)$ would claim variance $80$; ignoring the overdispersion
+understates the true variance by $40/120\approx 33\%$, so it treats the reported count as far more
+informative than it is, and an AgD arm modeled that way would pull the network estimate too hard. This is
+the count-data face of the conditional-versus-marginal gap of @exm-two-patient-conditional.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reading the overdispersion.** The factor $e^{s^2}-1$ in @eq-poisson-agg-overdisp is the squared
+coefficient of variation of the random rate $W$, and $s^2=\boldsymbol\beta_{\mathrm{tot}}^\top
+\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot}}$ is the variance that the covariates induce in the linear
+predictor through the prognostic and effect-modifying slopes. When those slopes are small, or the covariate
+spread $\boldsymbol\Sigma_j$ is small, $s^2$ is near zero and $e^{s^2}-1\approx s^2$ is negligible, so the
+Poisson approximation to the marginal count is excellent and one may safely use $\mathrm{Poi}(n\theta_\bullet)$
+as the aggregate likelihood. For a concrete feel, recall $\theta_\bullet=e^{m+s^2/2}$ from the log-link
+identity (@thm-log-link-mgf); if $s^2=\boldsymbol\beta_{\mathrm{tot}}^\top\boldsymbol\Sigma_j
+\boldsymbol\beta_{\mathrm{tot}}=0.25$, the relative overdispersion is $e^{0.25}-1\approx 0.28$, so the
+rate's coefficient of variation is $\sqrt{0.28}\approx 0.53$ and each patient contributes excess count
+variance $\sigma_W^2\approx 0.28\,\theta_\bullet^2$ beyond the Poisson baseline. When the effect modifiers are strong and dispersed, the overdispersion is
+real and ignoring it understates the uncertainty of the aggregate count, exactly the ecological-bias
+phenomenon of @def-ecological-bias seen now in the second moment rather than the first. The naive claim
+that the marginalized count is itself Poisson is false in this regime; @eq-poisson-agg-moments is the
+correct statement. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**The negative-binomial remedy.** When the overdispersion $n\sigma_W^2$ is not negligible, a Poisson
+aggregate likelihood is misspecified in its variance, and a two-parameter count law is wanted. The natural
+choice is the negative binomial, which arises precisely as a Gamma-mixed Poisson: if the random rate
+$\Lambda$ were Gamma distributed, the mixture @eq-poisson-agg-marginal would be exactly negative binomial.
+The log-normal mixing implied by Gaussian covariates is not Gamma, so the match is by moments rather than
+in law, but a negative binomial calibrated to the mean $n\theta_\bullet$ and variance
+$n\theta_\bullet+n\sigma_W^2$ of @eq-poisson-agg-moments restores correct dispersion; its extra dispersion
+parameter plays the role of a study-level random effect on the count scale (@def-random-effects). This is
+the count-data analogue of the adjusted binomial we build for binary outcomes in @sec-adjusted, and the two
+share the same logic: keep the correct first two moments, accept a parametric family that is convenient and
+respects the natural support. Concretely, in the two-profile arm of @exm-count-overdispersion this means
+calibrating a negative binomial to mean $80$ and variance $120$ (a dispersion index of $1.5$); in ML-NMR
+practice the same excess variance is more often absorbed by a study-level random effect on the log-rate
+(@def-random-effects), which keeps each covariate profile Poisson while letting the arm as a whole be
+overdispersed, than by switching count families outright. $\blacktriangleleft$
+:::
+
+This development corresponds to H.8 in the proof catalogue. The catalogue records the corrected statement,
+that the marginalized aggregate is a mixed Poisson with the overdispersion @eq-poisson-agg-moments, not a
+plain Poisson; @lem-poisson-convolution is the closure property that makes the *conditional* aggregate
+exact.
+
+## Binary outcomes: the Poisson binomial and its generating function {#sec-pobin}
+
+We turn to the binary case, where the aggregate count of events is a sum of independent but non-identical
+Bernoulli variables. By @lem-poisson-convolution's failing analogue, this sum is not binomial; it is the
+Poisson binomial of @def-poisson-binomial. That definition (Chapter 4) already records the mass function,
+mean, variance, and MGF of the Poisson binomial. Here we re-derive its structure through the
+*probability generating function* (PGF), which is the natural transform for an integer-valued count
+because it stores the mass function in its Taylor coefficients and turns the convolution of independent
+counts into a product, exactly as the MGF does on the exponential scale. The PGF is the tool that makes the
+combinatorial mass function of @def-poisson-binomial transparent and that hands us the moments without
+re-summing the subset expansion.
+
+::: {#def-pgf}
+## Probability generating function
+For a random variable $X$ taking values in $\{0,1,2,\dots\}$, the **probability generating function** is
+$$
+G_X(z):=\mathbb{E}\big[z^{X}\big]=\sum_{k\ge 0}P(X=k)\,z^{k},\qquad |z|\le 1 .
+$$ {#eq-pgf-def}
+The series converges absolutely for $|z|\le 1$ because the coefficients are a probability distribution. The
+mass function is recovered by differentiation at the origin, $P(X=k)=G_X^{(k)}(0)/k!$, and the factorial
+moments by differentiation at one, $\mathbb{E}[X(X-1)\cdots(X-r+1)]=G_X^{(r)}(1)$ whenever the latter
+derivative exists. For independent integer-valued $X\perp Y$, $G_{X+Y}(z)=G_X(z)\,G_Y(z)$. The PGF and the
+MGF are related by $G_X(z)=M_X(\log z)$ for $z>0$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** A probability generating function packs an entire count distribution into one
+polynomial in a bookkeeping variable $z$: the probability of the count $k$ is simply the coefficient of
+$z^{k}$. Its usefulness is that *multiplying* two such polynomials corresponds to *adding* two independent
+counts, so a sum of many simple Bernoulli pieces becomes a product of many simple linear factors that we
+can expand. $\blacktriangleleft$
+:::
+
+The recovery and product properties asserted in @def-pgf are standard and elementary: term-by-term
+differentiation of the power series @eq-pgf-def is justified within its radius of convergence, evaluation
+at $z=0$ isolates the coefficient $P(X=k)$, evaluation of the $r$-th derivative at $z=1$ gives
+$\sum_k k(k-1)\cdots(k-r+1)P(X=k)=\mathbb{E}[X(X-1)\cdots(X-r+1)]$, and the product rule
+$G_{X+Y}(z)=\mathbb{E}[z^{X+Y}]=\mathbb{E}[z^X]\,\mathbb{E}[z^Y]$ follows from independence exactly as the
+MGF product rule does (@thm-mgf-sum). We now specialize to the Poisson binomial.
+
+::: {#exm-two-bernoulli-pgf}
+## Two unequal risks, expanded by hand
+Return to the two extreme profiles of the running example, response probabilities $p_1=0.1$ (frail) and
+$p_2=0.7$ (fit). The number of responders $Y_\bullet=Y_1+Y_2$ has generating function
+$$
+G_{Y_\bullet}(z)=(0.9+0.1z)(0.3+0.7z)=0.27+0.66\,z+0.07\,z^2,
+$$
+so, reading off coefficients, $P(Y_\bullet=0)=0.27$, $P(Y_\bullet=1)=0.66$, $P(Y_\bullet=2)=0.07$. The
+middle coefficient $0.1\cdot 0.3+0.9\cdot 0.7$ is exactly "one patient responds and the other does not,
+either way around." This is *not* $\mathrm{Bin}(2,0.4)$, which would give $0.36,0.48,0.16$: both laws have
+mean $0.8$, but the unequal risks pile mass onto exactly one responder and thin out the extremes. These are
+the same conditional two-patient numbers as @exm-two-patient-conditional; the generating function has
+merely organized the bookkeeping. For five profiles the same kind of product yields the six coefficients
+computed in @exm-aggregate-binomial, and for a realistic arm of $n=400$ patients the coefficient of
+$z^{120}$ is a sum of $\binom{400}{120}$ subset products, a number exceeding $10^{100}$; that is why direct
+evaluation is hopeless and a tractable surrogate is unavoidable. $\blacktriangleleft$
+:::
+
+::: {#thm-poisson-binomial-pgf}
+## Poisson binomial via the probability generating function
+Let $Y_1,\dots,Y_n$ be independent with $Y_i\sim\mathrm{Ber}(p_i)$, $p_i\in[0,1]$, and let
+$Y_\bullet=\sum_{i=1}^n Y_i\sim\mathrm{PoBin}(\mathbf p)$ be their Poisson binomial sum
+(@def-poisson-binomial), $\mathbf p=(p_1,\dots,p_n)$. Then:
+
+1. *(Generating function.)* The probability generating function factors over individuals,
+$$
+G_{Y_\bullet}(z)=\prod_{i=1}^n\big(1-p_i+p_i z\big).
+$$ {#eq-pobin-pgf}
+
+2. *(Mass function.)* The probabilities are the coefficients of this polynomial,
+$$
+P(Y_\bullet=y)=[z^{y}]\prod_{i=1}^n(1-p_i+p_i z)
+=\sum_{\substack{A\subseteq\{1,\dots,n\}\\ |A|=y}}\ \prod_{i\in A}p_i\prod_{i\notin A}(1-p_i),
+\qquad y=0,\dots,n,
+$$ {#eq-pobin-pmf}
+recovering the subset expansion of @def-poisson-binomial.
+
+3. *(Moments.)* The mean and variance are
+$$
+\mathbb{E}[Y_\bullet]=\sum_{i=1}^n p_i,
+\qquad
+\operatorname{Var}(Y_\bullet)=\sum_{i=1}^n p_i(1-p_i).
+$$ {#eq-pobin-moments}
+:::
+
+::: {.proof}
+*Part 1.* Each Bernoulli has PGF $G_{Y_i}(z)=\mathbb{E}[z^{Y_i}]=(1-p_i)z^{0}+p_i z^{1}=1-p_i+p_i z$.
+By the product property of @def-pgf, applied inductively to the mutually independent $Y_i$,
+$G_{Y_\bullet}(z)=\prod_{i=1}^n G_{Y_i}(z)=\prod_{i=1}^n(1-p_i+p_i z)$, which is @eq-pobin-pgf.
+
+*Part 2.* By @def-pgf the probability $P(Y_\bullet=y)$ is the coefficient of $z^{y}$ in
+$G_{Y_\bullet}(z)$. Expanding the product @eq-pobin-pgf, a monomial $z^{y}$ is formed by selecting the term
+$p_i z$ from each factor $i$ in some index set $A$ of size $y$ and the term $1-p_i$ from each factor
+$i\notin A$; summing over all such $A$ gives
+$[z^{y}]\prod_i(1-p_i+p_i z)=\sum_{|A|=y}\prod_{i\in A}p_i\prod_{i\notin A}(1-p_i)$, which is @eq-pobin-pmf
+and matches the mass function of @def-poisson-binomial.
+
+*Part 3.* Differentiate @eq-pobin-pgf. By the product rule,
+$$
+G_{Y_\bullet}'(z)=\sum_{i=1}^n p_i\prod_{\ell\ne i}(1-p_\ell+p_\ell z).
+$$
+At $z=1$ every factor $1-p_\ell+p_\ell\cdot 1=1$, so $G_{Y_\bullet}'(1)=\sum_i p_i$, which is the first
+factorial moment $\mathbb{E}[Y_\bullet]$ by @def-pgf. Differentiating once more,
+$$
+G_{Y_\bullet}''(z)=\sum_{i=1}^n p_i\sum_{\ell\ne i}p_\ell\prod_{m\ne i,\ell}(1-p_m+p_m z),
+$$
+and at $z=1$ the surviving products are again $1$, giving
+$G_{Y_\bullet}''(1)=\sum_{i\ne\ell}p_i p_\ell=\big(\sum_i p_i\big)^2-\sum_i p_i^2$, the second factorial
+moment $\mathbb{E}[Y_\bullet(Y_\bullet-1)]$. Therefore
+$$
+\operatorname{Var}(Y_\bullet)=G_{Y_\bullet}''(1)+G_{Y_\bullet}'(1)-\big(G_{Y_\bullet}'(1)\big)^2
+=\Big[\big(\textstyle\sum_i p_i\big)^2-\sum_i p_i^2\Big]+\sum_i p_i-\big(\textstyle\sum_i p_i\big)^2
+=\sum_i p_i-\sum_i p_i^2,
+$$
+which is $\sum_i p_i(1-p_i)$, establishing @eq-pobin-moments. The identity
+$\operatorname{Var}(X)=G''(1)+G'(1)-G'(1)^2$ used here is the translation of
+$\operatorname{Var}(X)=\mathbb{E}[X(X-1)]+\mathbb{E}[X]-\mathbb{E}[X]^2$. $\square$
+:::
+
+::: {.remark}
+**Consistency with Chapter 4 and the binomial special case.** Setting $z=e^{t}$ in @eq-pobin-pgf recovers
+the MGF $M_{Y_\bullet}(t)=\prod_i(1-p_i+p_i e^{t})$ recorded in @def-poisson-binomial, as the relation
+$G_X(z)=M_X(\log z)$ of @def-pgf requires. When all $p_i$ equal a common $p$, @eq-pobin-pgf collapses to
+$(1-p+pz)^n$, the PGF of $\mathrm{Bin}(n,p)$, whose coefficient of $z^y$ is $\binom{n}{y}p^y(1-p)^{n-y}$;
+the Poisson binomial is the exact generalization that permits unequal risks. For fixed mean
+$\lambda=\sum_i p_i$, the variance $\lambda-\sum_i p_i^2$ is largest when the $p_i$ are equal, because
+$\sum_i p_i^2$ is minimized at fixed $\sum_i p_i$ by equal coordinates; spreading the individual risks apart
+*reduces* the dispersion of the count, the opposite of the intuition one might carry over from the rates of
+the Poisson case. The intuition is that a Bernoulli with $p$ near $0$ or $1$ is nearly deterministic (its
+variance $p(1-p)$ is small), while $p=\tfrac12$ is maximally uncertain; pushing the risks toward the
+predictable extremes lowers the total count variance. A Poisson rate has no such ceiling, so a more
+variable rate always *inflates* the count variance (@eq-poisson-agg-moments). That is the structural reason
+counts overdisperse while spread-out binary risks underdisperse. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why an approximation is unavoidable.** The mass function @eq-pobin-pmf has $\binom{n}{y}$ terms, and the
+full distribution requires expanding a degree-$n$ polynomial; while this can be organized into an
+$O(n^2)$ recursion or an $O(n\log n)$ discrete Fourier evaluation of @eq-pobin-pgf on the roots of unity,
+the result must be recomputed for every candidate value of the parameter vector $\boldsymbol\xi$, inside
+every iteration of the Markov chain Monte Carlo sampler of Chapter 24, for every AgD arm. In a network with
+many arms and thousands of patients this is prohibitive, and worse, it does not compose with the numerical
+integration over the covariate distribution that ML-NMR also requires (Chapter 22). The practical path is
+to replace the Poisson binomial by a one- or two-parameter law that captures its salient features cheaply.
+The next two sections develop the two such laws and, crucially, distinguish what each one guarantees. In
+inference terms, a faithful surrogate is one that misstates how *surprising* the reported count is by as
+little as possible, since that surprise is exactly the AgD arm's likelihood contribution to the network.
+$\blacktriangleleft$
+:::
+
+This development corresponds to H.9 in the proof catalogue.
+
+## The Poisson approximation: Le Cam's total-variation bound {#sec-lecam}
+
+The first surrogate replaces $\mathrm{PoBin}(\mathbf p)$ by a Poisson with the same mean
+$\lambda=\sum_i p_i$. Its justification is a sharp bound on the total-variation distance between the two
+laws, due to @lecam1960, which we prove in full by the coupling method. The bound is structural and
+elegant: the error is at most $\sum_i p_i^2$, the same quantity that measures how far the individual risks
+are from zero. We prove a sharp bound, rather than merely assert the approximation, because the bound is a
+*ruler*: it says quantitatively when the Poisson shortcut is safe (rare events) and when it silently lies
+(moderate risks), which is exactly what decides whether an AgD arm's likelihood can be trusted. We first
+fix the meaning of total-variation distance and assemble the two elementary facts about it that the proof
+uses.
+
+The proof has four moving parts, and it helps to see them before they arrive. (i) A *definition* of
+total-variation distance, the yardstick for how different two count laws are. (ii) A *three-forms lemma*
+rewriting that distance as one half the sum of absolute mass differences, which is what we actually
+compute. (iii) A *coupling inequality*: if we can place both laws on one probability space, their distance
+is at most the chance they disagree. (iv) An *exponential inequality* $1-e^{-p}\le p$, the sole analytic
+input. The plan is then to couple each Bernoulli with a Poisson so they rarely disagree, make the couplings
+independent, add them up (the Poisson halves sum to a Poisson by @lem-poisson-convolution), and bound the
+total disagreement by a union bound.
+
+::: {#def-total-variation}
+## Total-variation distance
+For probability measures $\mu,\nu$ on a countable set $S$, the **total-variation distance** is
+$$
+\|\mu-\nu\|_{\mathrm{TV}}:=\sup_{A\subseteq S}\big|\mu(A)-\nu(A)\big| .
+$$ {#eq-tv-def}
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** Total variation is the largest gap, over *every* possible set of event counts,
+between the probability the two laws assign to that set. If two aggregate laws are $0.17$ apart in total
+variation, then for any question of the form "did the arm report a count in this range?" their answers
+differ by at most $0.17$ in probability. A likelihood built from the wrong law can therefore misstate how
+surprising an observed count is by up to that much, and that misstatement feeds straight into how strongly
+the AgD arm pulls the treatment-effect estimate. A total-variation bound is thus a worst-case guarantee on
+the likelihood error, not an abstract nicety. $\blacktriangleleft$
+:::
+
+::: {#lem-tv-characterization}
+## Three forms of total variation
+For probability measures $\mu,\nu$ on a countable set $S$,
+$$
+\|\mu-\nu\|_{\mathrm{TV}}
+=\tfrac12\sum_{k\in S}\big|\mu(k)-\nu(k)\big|
+=1-\sum_{k\in S}\min\big(\mu(k),\nu(k)\big).
+$$ {#eq-tv-three-forms}
+:::
+
+::: {.proof}
+Let $A^{+}=\{k:\mu(k)>\nu(k)\}$. For any $A\subseteq S$,
+$\mu(A)-\nu(A)=\sum_{k\in A}(\mu(k)-\nu(k))\le\sum_{k\in A^{+}}(\mu(k)-\nu(k))=\mu(A^{+})-\nu(A^{+})$,
+because adding indices outside $A^{+}$ can only subtract nonnegative amounts; symmetrically the most
+negative value of $\mu(A)-\nu(A)$ is attained at $A^{-}=\{k:\mu(k)<\nu(k)\}$. Since both $\mu$ and $\nu$ are
+probability measures, $\sum_k(\mu(k)-\nu(k))=0$, so the total positive discrepancy equals the total
+negative discrepancy:
+$\sum_{k\in A^{+}}(\mu(k)-\nu(k))=\sum_{k\in A^{-}}(\nu(k)-\mu(k))=\tfrac12\sum_k|\mu(k)-\nu(k)|$. Hence the
+supremum in @eq-tv-def equals $\tfrac12\sum_k|\mu(k)-\nu(k)|$. For the third form, use
+$\min(a,b)=\tfrac12(a+b-|a-b|)$ to write
+$\sum_k\min(\mu(k),\nu(k))=\tfrac12\sum_k(\mu(k)+\nu(k))-\tfrac12\sum_k|\mu(k)-\nu(k)|
+=1-\|\mu-\nu\|_{\mathrm{TV}}$. $\square$
+:::
+
+A **coupling** of $\mu$ and $\nu$ is a pair of random variables $(X,Z)$ on a common probability space with
+marginal laws $\mu$ and $\nu$. Couplings turn distances between laws into probabilities of disagreement, by
+the following one-directional inequality, which is all the proof needs.
+
+::: {#lem-coupling-inequality}
+## The coupling inequality
+If $(X,Z)$ is any coupling of $\mu$ and $\nu$, then
+$$
+\|\mu-\nu\|_{\mathrm{TV}}\le P(X\ne Z).
+$$ {#eq-coupling-ineq}
+:::
+
+::: {.proof}
+Fix $A\subseteq S$. Since $X$ has law $\mu$ and $Z$ has law $\nu$,
+$$
+\mu(A)-\nu(A)=P(X\in A)-P(Z\in A)
+=P(X\in A,\,Z\notin A)-P(Z\in A,\,X\notin A)\le P(X\in A,\,Z\notin A)\le P(X\ne Z),
+$$
+where the second equality splits each event on whether the other variable lands in $A$ and cancels the
+common term $P(X\in A,Z\in A)$, and the inequalities drop a nonnegative probability and then enlarge the
+event $\{X\in A,Z\notin A\}\subseteq\{X\ne Z\}$. The same bound holds for $\nu(A)-\mu(A)$ by symmetry, so
+$|\mu(A)-\nu(A)|\le P(X\ne Z)$; taking the supremum over $A$ gives @eq-coupling-ineq. $\square$
+:::
+
+::: {.remark}
+**Which way the inequality runs.** A coupling gives an *upper* bound on total variation, never a lower
+bound, because we are free to choose the coupling that disagrees as little as possible. (Total variation
+equals the disagreement of the single best coupling, a converse we do not need here.) So to bound the
+distance we only have to exhibit *one* good coupling, which is what the proof does next.
+$\blacktriangleleft$
+:::
+
+The strategy of Le Cam's proof is to build, for each individual, a coupling of its Bernoulli law with a
+Poisson law that disagree only rarely, then to assemble these into a coupling of the whole Poisson binomial
+with a Poisson by taking the couplings independent across individuals. The independent sum of the Poisson
+halves is Poisson by @lem-poisson-convolution, and the probability that the two sums disagree is bounded by
+the union of the individual disagreements. The single-pair coupling is explicit, and the only analytic
+input is the inequality $1-e^{-p}\le p$, which we record.
+
+::: {#lem-exp-inequality}
+## An elementary exponential inequality
+For all $p\ge 0$, $\,e^{-p}\ge 1-p$, equivalently $0\le 1-e^{-p}\le p$.
+:::
+
+::: {.proof}
+Let $h(p)=e^{-p}-(1-p)$. Then $h(0)=0$ and $h'(p)=1-e^{-p}\ge 0$ for $p\ge 0$, so $h$ is nondecreasing and
+$h(p)\ge h(0)=0$; thus $e^{-p}\ge 1-p$. Rearranging gives $1-e^{-p}\le p$, and $1-e^{-p}\ge 0$ since
+$e^{-p}\le 1$. $\square$
+:::
+
+::: {#thm-le-cam-tv}
+## Le Cam's Poisson approximation to the Poisson binomial
+Let $Y_\bullet\sim\mathrm{PoBin}(\mathbf p)$ with $\mathbf p=(p_1,\dots,p_n)$ and
+$\lambda=\sum_{i=1}^n p_i$, and let $Z\sim\mathrm{Poi}(\lambda)$. Then
+$$
+\big\|\mathrm{PoBin}(\mathbf p)-\mathrm{Poi}(\lambda)\big\|_{\mathrm{TV}}\ \le\ \sum_{i=1}^n p_i^2 .
+$$ {#eq-lecam-bound}
+:::
+
+::: {.proof}
+Fix an index $i$ and write $p=p_i$. We construct a coupling $(B_i,P_i)$ of $\mathrm{Ber}(p)$ and
+$\mathrm{Poi}(p)$ with a small probability of disagreement. The idea is to place as much probability as
+possible on the diagonal $\{B_i=P_i\}$, so the two agree whenever they can: we match $B_i=P_i=0$ with the
+largest allowed mass $1-p$, keep $B_i=P_i=1$ where possible, and dump the leftover Poisson mass (the
+outcomes $P_i\ge 2$ that a Bernoulli can never reach, plus a sliver forced by the marginals) onto
+$B_i=1$. Define the joint law of $(B_i,P_i)$ on
+$\{0,1\}\times\{0,1,2,\dots\}$ by
+$$
+\begin{aligned}
+&P(B_i=0,P_i=0)=1-p, \\
+&P(B_i=1,P_i=1)=p\,e^{-p}, \\
+&P(B_i=1,P_i=0)=e^{-p}-(1-p), \\
+&P(B_i=1,P_i=k)=e^{-p}\frac{p^{k}}{k!}\quad (k\ge 2),
+\end{aligned}
+$$ {#eq-lecam-pair}
+and all other combinations probability zero. Each entry is nonnegative: the only one in question is
+$P(B_i=1,P_i=0)=e^{-p}-(1-p)\ge 0$, which is @lem-exp-inequality. We check the marginals. The
+$P_i$-marginal at $0$ is $(1-p)+(e^{-p}-(1-p))=e^{-p}$; at $1$ it is $p\,e^{-p}$; at $k\ge 2$ it is
+$e^{-p}p^{k}/k!$; these are exactly the $\mathrm{Poi}(p)$ probabilities (@def-poisson). The $B_i$-marginal
+at $0$ is $1-p$, and at $1$ it is
+$$
+p\,e^{-p}+\big(e^{-p}-(1-p)\big)+\sum_{k\ge 2}e^{-p}\frac{p^{k}}{k!}
+=e^{-p}\sum_{k\ge 0}\frac{p^{k}}{k!}-(1-p)=e^{-p}e^{p}-(1-p)=p,
+$$
+so the $B_i$-marginal is $\mathrm{Ber}(p)$ (@def-bernoulli). Thus @eq-lecam-pair is a valid coupling. Its
+disagreement probability is the sum of the off-diagonal masses,
+$$
+P(B_i\ne P_i)=\big(e^{-p}-(1-p)\big)+\sum_{k\ge 2}e^{-p}\frac{p^{k}}{k!}
+=\big(e^{-p}-1+p\big)+\big(1-e^{-p}-p\,e^{-p}\big)=p-p\,e^{-p}=p\big(1-e^{-p}\big),
+$$
+where $\sum_{k\ge 2}e^{-p}p^{k}/k!=1-e^{-p}-p\,e^{-p}$ is the Poisson tail beyond $k=1$. By
+@lem-exp-inequality, $1-e^{-p}\le p$, so
+$$
+P(B_i\ne P_i)=p_i\big(1-e^{-p_i}\big)\le p_i^2 .
+$$ {#eq-lecam-pairbound}
+
+For a concrete rate, $p_i=0.2$ gives per-pair disagreement $0.2(1-e^{-0.2})\approx 0.0363$, just under the
+bound $p_i^2=0.04$: the coupled Bernoulli and Poisson agree about $96\%$ of the time.
+
+Now take the $n$ couplings $(B_1,P_1),\dots,(B_n,P_n)$ to be independent across $i$, on a common product
+probability space. Then $B_1,\dots,B_n$ are independent with $B_i\sim\mathrm{Ber}(p_i)$, so
+$Y_\bullet:=\sum_i B_i\sim\mathrm{PoBin}(\mathbf p)$; and $P_1,\dots,P_n$ are independent with
+$P_i\sim\mathrm{Poi}(p_i)$, so by @lem-poisson-convolution $Z:=\sum_i P_i\sim\mathrm{Poi}(\sum_i
+p_i)=\mathrm{Poi}(\lambda)$. The pair $(Y_\bullet,Z)$ is thus a coupling of $\mathrm{PoBin}(\mathbf p)$ and
+$\mathrm{Poi}(\lambda)$. If $B_i=P_i$ for every $i$ then $Y_\bullet=Z$, so
+$\{Y_\bullet\ne Z\}\subseteq\bigcup_{i=1}^n\{B_i\ne P_i\}$, and the union bound with @eq-lecam-pairbound
+gives
+$$
+P(Y_\bullet\ne Z)\le\sum_{i=1}^n P(B_i\ne P_i)\le\sum_{i=1}^n p_i^2 .
+$$
+By the coupling inequality (@lem-coupling-inequality) applied to this coupling,
+$\|\mathrm{PoBin}(\mathbf p)-\mathrm{Poi}(\lambda)\|_{\mathrm{TV}}\le P(Y_\bullet\ne Z)\le\sum_i p_i^2$,
+which is @eq-lecam-bound. $\square$
+:::
+
+::: {.remark}
+**The classical law of small numbers as a special case.** When every $p_i=p$, the Poisson binomial is
+$\mathrm{Bin}(n,p)$ and $\lambda=np$, so @eq-lecam-bound reads
+$\|\mathrm{Bin}(n,p)-\mathrm{Poi}(np)\|_{\mathrm{TV}}\le np^2$. This is the quantitative form of the
+Poisson limit of the binomial (@thm-poisson-limit): if $p=\lambda/n$, the bound is $\lambda^2/n\to 0$,
+recovering convergence in distribution and adding a rate. Le Cam's theorem is thus the finite-sample
+refinement, valid for unequal risks, of the limit theorem proved in Chapter 4. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Sharpness, refinements, and when the bound is useful.** The bound @eq-lecam-bound is of the right order:
+Barbour and Hall (1984) proved the sharper estimate
+$\|\mathrm{PoBin}(\mathbf p)-\mathrm{Poi}(\lambda)\|_{\mathrm{TV}}\le\min(1,\lambda^{-1})\sum_i p_i^2$
+together with a matching lower bound of the same form up to a universal constant, via Stein's method for
+Poisson approximation (the operator approach pioneered by Chen in 1975). The factor $\min(1,\lambda^{-1})$
+shows that the approximation improves when the events are spread over a large expected count. Physically,
+events spread over a larger expected count $\lambda$ dilute each event's share of the error, so the
+per-event total $\sum_i p_i^2$ is discounted by $\lambda^{-1}$; for $\lambda>1$ the refined bound reduces
+to the average risk $\bar p$ itself. The practical
+lesson for ML-NMR is sobering: with $n=100$ patients at an average risk $\bar p=0.3$, one has
+$\sum_i p_i^2\approx n\bar p^2=9$ and even the refined bound $\min(1,1/30)\cdot 9=0.3$ is large, so the
+Poisson surrogate is a poor approximation to a binary aggregate at the moderate risks typical of clinical
+events. @tbl-lecam-regime traces the verdict across event rates for $n=100$ patients.
+
+| Average risk $\bar p$ | Expected count $\lambda=n\bar p$ | Le Cam $\approx n\bar p^2$ | Barbour-Hall $\approx\min(1,\lambda^{-1})n\bar p^2$ | Verdict |
+|---|---|---|---|---|
+| $0.02$ | $2$ | $0.04$ | $0.02$ | Poisson excellent |
+| $0.05$ | $5$ | $0.25$ | $0.05$ | Poisson usable |
+| $0.20$ | $20$ | $4.0$ | $0.20$ | Poisson poor |
+| $0.50$ | $50$ | $25$ | $0.50$ | Poisson useless |
+
+: Le Cam and Barbour-Hall total-variation bounds for a binary aggregate of $n=100$ patients at several
+average risks. The refined bound equals the average risk $\bar p$ in every row with $\lambda>1$; only rare
+events ($\bar p\lesssim 0.05$) put the Poisson surrogate within a usefully small distance of the truth.
+{#tbl-lecam-regime}
+
+The Poisson approximation earns its place only when both $\lambda$ and the individual $p_i$ are
+small, the rare-event regime. For the common case of moderate risks and moderate sample sizes, the
+moment-matched binomial of @sec-adjusted is the better tool, precisely because it respects the upper bound
+$Y_\bullet\le n$ that the Poisson, with its unbounded support, violates. $\blacktriangleleft$
+:::
+
+This development corresponds to H.10 in the proof catalogue.
+
+## The adjusted binomial by moment matching {#sec-adjusted}
+
+The second surrogate keeps the binomial family, with its bounded support $\{0,1,\dots\}$ up to a sample
+size and its natural fit to event counts, but adjusts its two parameters so that its first two moments
+agree with those of the Poisson binomial. Unlike Le Cam's Poisson, this surrogate carries no
+total-variation guarantee; its justification is exactly that it reproduces the mean and the variance, and
+nothing more is claimed. We make the construction and its properties precise, and we are scrupulous about
+what is and is not proved.
+
+::: {#thm-adjusted-binomial}
+## The two-parameter adjusted binomial
+Let $Y_\bullet\sim\mathrm{PoBin}(\mathbf p)$ with $\lambda=\sum_{i=1}^n p_i>0$ and
+$\nu=\sum_{i=1}^n p_i^2$, so that $\mathbb{E}[Y_\bullet]=\lambda$ and
+$\operatorname{Var}(Y_\bullet)=\lambda-\nu$ by @thm-poisson-binomial-pgf. The unique pair $(N^{*},\pi^{*})$
+with $N^{*}>0$ and $\pi^{*}\in(0,1)$ for which $\mathrm{Bin}(N^{*},\pi^{*})$ has the same mean and variance,
+$$
+N^{*}\pi^{*}=\lambda,
+\qquad
+N^{*}\pi^{*}(1-\pi^{*})=\lambda-\nu,
+$$ {#eq-adjbin-moments}
+is
+$$
+\pi^{*}=\frac{\nu}{\lambda}=\frac{\sum_i p_i^2}{\sum_i p_i},
+\qquad
+N^{*}=\frac{\lambda^2}{\nu}=\frac{\big(\sum_i p_i\big)^2}{\sum_i p_i^2}.
+$$ {#eq-adjbin-solution}
+Moreover:
+
+1. $\pi^{*}$ is the $p$-weighted mean of the individual risks, $\pi^{*}=\sum_i(p_i/\lambda)\,p_i$, and
+satisfies $\pi^{*}\ge\bar p:=\lambda/n$, with equality if and only if all $p_i$ are equal.
+
+2. $N^{*}=\big(\sum_i p_i\big)^2/\sum_i p_i^2\le n$, with equality if and only if all $p_i$ are equal; this
+is the effective sample size of the risk vector $\mathbf p$, the same Cauchy-Schwarz quantity as the
+effective sample size of Chapter 18 (@thm-maic-ess-bound).
+:::
+
+::: {.proof}
+*Solving the moment equations.* From the first equation in @eq-adjbin-moments, $N^{*}\pi^{*}=\lambda$.
+Expand the second, $N^{*}\pi^{*}(1-\pi^{*})=N^{*}\pi^{*}-N^{*}(\pi^{*})^2=\lambda-N^{*}(\pi^{*})^2$, and set
+it equal to $\lambda-\nu$; the $\lambda$ terms cancel, leaving $N^{*}(\pi^{*})^2=\nu$. Dividing this by
+$N^{*}\pi^{*}=\lambda$ gives $\pi^{*}=\nu/\lambda$, and then $N^{*}=\lambda/\pi^{*}=\lambda^2/\nu$, which is
+@eq-adjbin-solution. These are well defined because $\lambda>0$ and, unless every $p_i=0$,
+$\nu=\sum_i p_i^2>0$. Uniqueness is immediate: the two equations determine $N^{*}(\pi^{*})^2=\nu$ and
+$N^{*}\pi^{*}=\lambda$, whose ratio fixes $\pi^{*}$ and hence $N^{*}$. That $\pi^{*}\in(0,1)$ holds because
+$0<\nu\le\lambda$ (each $p_i\le 1$ gives $p_i^2\le p_i$, so $\nu\le\lambda$, with the bound strict unless
+every $p_i\in\{0,1\}$), so $\pi^{*}=\nu/\lambda\in(0,1]$, and $\pi^{*}<1$ unless the risks are degenerate.
+
+*Part 1.* Writing the weights $\omega_i=p_i/\lambda$, which are nonnegative and sum to one,
+$\pi^{*}=\nu/\lambda=\sum_i\omega_i p_i$ is the weighted mean of the $p_i$ with weights proportional to the
+$p_i$ themselves; larger risks receive larger weight, so the weighted mean exceeds the unweighted mean.
+Concretely, let $\bar p=\lambda/n$ and let $s_p^2=\tfrac1n\sum_i(p_i-\bar p)^2=\tfrac1n\nu-\bar p^2$ be the
+population variance of the risks. Then
+$$
+\pi^{*}=\frac{\nu}{\lambda}=\frac{n(\bar p^2+s_p^2)}{n\bar p}=\bar p+\frac{s_p^2}{\bar p}\ \ge\ \bar p,
+$$
+with equality if and only if $s_p^2=0$, that is, all $p_i$ equal.
+
+*Part 2.* By the Cauchy-Schwarz inequality applied to the vectors $\mathbf 1=(1,\dots,1)$ and
+$\mathbf p=(p_1,\dots,p_n)$,
+$$
+\lambda^2=\Big(\sum_i 1\cdot p_i\Big)^2\le\Big(\sum_i 1^2\Big)\Big(\sum_i p_i^2\Big)=n\,\nu,
+$$
+so $N^{*}=\lambda^2/\nu\le n$, with equality if and only if $\mathbf p$ is proportional to $\mathbf 1$,
+that is, all $p_i$ equal. The expression $\big(\sum_i p_i\big)^2/\sum_i p_i^2$ is the effective-sample-size
+functional of Chapter 18 (@thm-maic-ess-bound) evaluated with the $p_i$ in the role of weights; the
+adjusted binomial's "sample size" $N^{*}$ is literally the effective number of independent equal-risk
+trials that the unequal-risk Poisson binomial is worth. $\square$
+:::
+
+::: {.remark}
+**Reader translation.** The adjusted binomial answers the question "which single equal-risk binomial has
+the same mean and spread as my unequal-risk count?" Its success probability $\pi^{*}=\nu/\lambda$ is a
+risk-weighted average of the individual risks, so it sits *above* the plain average $\bar p$ because
+higher-risk patients count more toward it, and its size $N^{*}=\lambda^2/\nu$ is the *effective number of
+equal-risk trials* the arm is worth. Both parameters are chosen so the surrogate reproduces the count's
+mean and variance exactly; nothing else is promised. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why a weighting quantity reappears here.** It can seem surprising that
+$N^{*}=(\sum_i p_i)^2/\sum_i p_i^2$ is the same functional as the effective sample size of
+matching-adjusted indirect comparison (@thm-maic-ess-bound), since one is a *likelihood* construction and
+the other a *weighting* diagnostic. The reason is structural: both are Cauchy-Schwarz answers to "how many
+equal-information units are these unequal ones worth?" In MAIC the inputs are the weights $w_i$ and the
+answer is how many equally weighted patients carry the same information; here the inputs are the risks
+$p_i$ and the answer is how many equal-risk Bernoulli trials carry the same mean and variance. Same
+inequality, different inputs. To keep the two apart, read $N^{*}$ as the *likelihood* effective sample
+size, structurally identical to the *weighting* effective sample size of Chapter 18 but playing a different
+role, not the MAIC effective sample size of any particular analysis. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**What is guaranteed, and what is not.** The adjusted binomial $\mathrm{Bin}(N^{*},\pi^{*})$ matches the
+Poisson binomial's mean and variance *exactly*, by construction. It does **not** in general match the
+third or higher moments, and no total-variation bound of the Le Cam type (@thm-le-cam-tv) is asserted or
+true for it: moment matching is a different and weaker promise than a bound on the distance between laws.
+The contrast with the Poisson approximation is instructive and the two should never be conflated. The Le
+Cam Poisson has a total-variation guarantee but the wrong variance (a Poisson has variance equal to its
+mean $\lambda$, whereas the Poisson binomial has the smaller variance $\lambda-\nu$) and unbounded support;
+the adjusted binomial has the right first two moments and the correct bounded support $\{0,\dots,N^{*}\}$
+but no distance guarantee. They serve different regimes: the Poisson when $\lambda$ and the $p_i$ are
+small, the adjusted binomial when the sample size is moderate and the natural bound $Y_\bullet\le n$ on the
+count is the feature that matters. In inference terms, choosing the wrong surrogate mis-scales the
+likelihood: the Le Cam Poisson, with variance $\lambda>\lambda-\nu$, makes the observed count look *less*
+surprising than it is and so lets the arm speak too softly, whereas a correctly moment-matched law reports
+the right surprise and hence the right weight in the network. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Non-integer $N^{*}$ and practical use.** The effective sample size $N^{*}=\lambda^2/\nu$ is generally not
+an integer, so $\mathrm{Bin}(N^{*},\pi^{*})$ is used as a *likelihood* with a continuous size parameter,
+its mass function written through Gamma functions,
+$P(y)=\frac{\Gamma(N^{*}+1)}{\Gamma(y+1)\,\Gamma(N^{*}-y+1)}(\pi^{*})^{y}(1-\pi^{*})^{N^{*}-y}$, which the
+Markov chain Monte Carlo sampler of Chapter 24 evaluates without difficulty.
+
+A binomial with a non-integer size such as $\mathrm{Bin}(3.7,0.45)$ looks strange at first sight; the
+Gamma-function form is exactly the smooth interpolation that makes sense of it, agreeing with the ordinary
+binomial coefficient whenever $N^{*}$ happens to be a whole number. One caveat deserves flagging. The
+continuous mass is defined only for $0\le y\le N^{*}$, and since $N^{*}\le n$ an observed count can in
+principle exceed $N^{*}$: in @exm-aggregate-binomial the count $y=5$ is possible under the true law yet
+falls outside the adjusted binomial's support $\{0,\dots,N^{*}\}=\{0,\dots,4\}$. In a real arm the reported
+total is a fixed number out of the real $n$, and for the mild risk spreads usual in practice $N^{*}$ sits
+close to $n$, so $y\le N^{*}$ holds comfortably; when it does not, the exact integrated binomial
+@eq-integrated-binomial (integer $n$, full support $\{0,\dots,n\}$) is the safe fallback, which is one
+reason implementations that anticipate occasional extreme counts prefer it.
+
+This is the adjusted-binomial
+aggregate likelihood used for binary outcomes in @phillippo2020mlnmr and in the thesis @phillippo2019thesis
+(its psoriasis case study), where the per-node event probabilities produced by the integration pipeline of
+Chapter 22 are summarized by their two moments $\lambda$ and $\nu$ and fed to @eq-adjbin-solution. Because
+$N^{*}\le n$, the adjusted binomial automatically reports less information than $n$ independent equal-risk
+trials would, the count-likelihood echo of the effective-sample-size deflation that weighting methods pay
+(@thm-maic-ess-bound). $\blacktriangleleft$
+:::
+
+This development corresponds to H.11 in the proof catalogue.
+
+## A fully worked aggregate binary likelihood {#sec-discrete-example}
+
+We carry a single AgD arm from covariate-specified individual risks to an aggregate likelihood, computing
+the latter three ways and laying the Le Cam Poisson alongside for contrast. Every number is exact and
+checkable by hand. The example is built so that the adjusted binomial has integer parameters, which keeps
+its mass function elementary, and so that the moment summaries $\lambda$ and $\nu$ come out in round
+numbers, which makes every law auditable by hand.
+
+::: {#exm-aggregate-binomial}
+## An aggregate event count by integration, exactly, and by approximation
+An AgD arm reports the number of responders out of $n=5$ patients. The study covariate distribution $f_j$
+is represented, through the integration of Chapter 22, by five equally weighted profiles, at which the
+individual-level model of @def-individual-model gives the response probabilities
+$$
+\mathbf p=(p_1,\dots,p_5)=(0.1,\ 0.3,\ 0.4,\ 0.5,\ 0.7),
+$$ {#eq-ex-pvec}
+with $p_i=\operatorname{expit}(\eta(x_i))$ for the logit link (@def-link-function), where
+$\operatorname{expit}(z)=e^{z}/(1+e^{z})$. The five profiles span a range of risks, from a low-risk profile
+at $0.1$ to a high-risk profile at $0.7$, with average risk $0.4$.
+
+*Patients or profiles?* The five values above are a numerical summary of the arm's covariate distribution,
+the integration nodes of Chapter 22, not necessarily five individual patients. We nonetheless take the
+reported arm size to be $n=5$ so that every count is checkable by hand; picture a stylized arm in which
+each profile stands for one patient. The conditional-versus-marginal question is precisely whether we hold
+these five profiles fixed (the conditional Poisson binomial of route two) or regard the arm as five
+exchangeable draws from the covariate distribution they summarize (the integrated binomial of route one).
+
+**Step 1: the summary moments.** Compute
+$$
+\lambda=\sum_i p_i=0.1+0.3+0.4+0.5+0.7=2.0,
+\qquad
+\nu=\sum_i p_i^2=0.01+0.09+0.16+0.25+0.49=1.00 .
+$$
+The aggregate response probability of @def-aggregate-model is the average risk,
+$\theta_\bullet=\lambda/n=2.0/5=0.4$.
+
+**Step 2: the integrated binomial (route one).** Treating the five patients as an exchangeable sample from
+$f_j$, @prp-marginal-binomial gives the aggregate count law $\mathrm{Bin}(n,\theta_\bullet)=
+\mathrm{Bin}(5,0.4)$ exactly. Its mass function $P(y)=\binom{5}{y}(0.4)^{y}(0.6)^{5-y}$ is
+$$
+\big(P(0),\dots,P(5)\big)=(0.07776,\ 0.25920,\ 0.34560,\ 0.23040,\ 0.07680,\ 0.01024),
+$$ {#eq-ex-binom}
+with mean $n\theta_\bullet=2.0$ and variance $n\theta_\bullet(1-\theta_\bullet)=5(0.4)(0.6)=1.20$.
+
+**Step 3: the exact Poisson binomial (route two).** Conditional on the five distinct profiles, the count is
+$\mathrm{PoBin}(\mathbf p)$, whose mass function we obtain as the coefficients of the generating polynomial
+@eq-pobin-pgf,
+$$
+G(z)=(0.9+0.1z)(0.7+0.3z)(0.6+0.4z)(0.5+0.5z)(0.3+0.7z).
+$$ {#eq-ex-pgf}
+Multiplying the factors in turn,
+$$
+\begin{aligned}
+(0.9+0.1z)(0.7+0.3z)&=0.63+0.34z+0.03z^2,\\
+{}\times(0.6+0.4z)&=0.378+0.456z+0.154z^2+0.012z^3,\\
+{}\times(0.5+0.5z)&=0.189+0.417z+0.305z^2+0.083z^3+0.006z^4,\\
+{}\times(0.3+0.7z)&=0.0567+0.2574z+0.3834z^2+0.2384z^3+0.0599z^4+0.0042z^5,
+\end{aligned}
+$$
+so the exact aggregate count law is
+$$
+\big(P(0),\dots,P(5)\big)=(0.0567,\ 0.2574,\ 0.3834,\ 0.2384,\ 0.0599,\ 0.0042).
+$$ {#eq-ex-pobin}
+As a check the coefficients sum to $1$; the mean is $\sum_y y\,P(y)=2.0=\lambda$ and the variance is
+$\sum_y y^2 P(y)-2.0^2=5.0-4.0=1.00=\lambda-\nu$, matching @thm-poisson-binomial-pgf. The distribution is
+mildly right-skewed, with third central moment $\sum_i p_i(1-p_i)(1-2p_i)=0.12>0$, reflecting the spread of
+the underlying risks; this skew is one feature the two-moment surrogates of Steps 4 and 5 cannot reproduce.
+
+**Step 4: the adjusted binomial (route three).** By @eq-adjbin-solution,
+$$
+\pi^{*}=\frac{\nu}{\lambda}=\frac{1.0}{2.0}=0.5,
+\qquad
+N^{*}=\frac{\lambda^2}{\nu}=\frac{4.0}{1.0}=4 ,
+$$
+an integer here by design, so the adjusted aggregate law is $\mathrm{Bin}(4,0.5)$ with
+$P(y)=\binom{4}{y}(0.5)^{4}=\binom{4}{y}/16$,
+$$
+\big(P(0),\dots,P(4)\big)=(0.0625,\ 0.25,\ 0.375,\ 0.25,\ 0.0625),
+\qquad P(5)=0 .
+$$ {#eq-ex-adjbin}
+Its mean is $N^{*}\pi^{*}=2.0$ and variance $N^{*}\pi^{*}(1-\pi^{*})=4(0.5)(0.5)=1.00$, matching the exact
+Poisson binomial mean and variance by construction. Note $N^{*}=4<5=n$, the Cauchy-Schwarz deflation of
+@thm-adjusted-binomial; the adjusted binomial cannot produce the count $5$, whereas the exact Poisson
+binomial assigns it probability $0.0042$.
+
+**Step 5: the Le Cam Poisson, for contrast.** The matched Poisson is $\mathrm{Poi}(\lambda)=\mathrm{Poi}(2)$,
+with $P(y)=e^{-2}2^{y}/y!$,
+$$
+\big(P(0),\dots,P(5)\big)=(0.1353,\ 0.2707,\ 0.2707,\ 0.1804,\ 0.0902,\ 0.0361),\ \dots
+$$ {#eq-ex-poisson}
+its support unbounded. Its mean is $2.0$ but its variance is $\lambda=2.0$, far larger than the true
+$1.00$: the Poisson cannot capture the underdispersion of a binary count.
+
+@tbl-worked-comparison places the four laws side by side before we read off the reported count.
+
+| $y$ | exact PoBin | adjusted $\mathrm{Bin}(4,0.5)$ | integrated $\mathrm{Bin}(5,0.4)$ | Le Cam $\mathrm{Poi}(2)$ |
+|---|---|---|---|---|
+| $0$ | $0.0567$ | $0.0625$ | $0.0778$ | $0.1353$ |
+| $1$ | $0.2574$ | $0.2500$ | $0.2592$ | $0.2707$ |
+| $2$ | $0.3834$ | $0.3750$ | $0.3456$ | $0.2707$ |
+| $3$ | $0.2384$ | $0.2500$ | $0.2304$ | $0.1804$ |
+| $4$ | $0.0599$ | $0.0625$ | $0.0768$ | $0.0902$ |
+| $5$ | $0.0042$ | $0$ | $0.0102$ | $0.0361$ |
+| mean | $2.00$ | $2.00$ | $2.00$ | $2.00$ |
+| variance | $1.00$ | $1.00$ | $1.20$ | $2.00$ |
+
+: The aggregate-count likelihood under the four laws of @exm-aggregate-binomial (five profiles, risks
+$\mathbf p=(0.1,0.3,0.4,0.5,0.7)$). The two-moment surrogates match the exact mean and variance
+($2.00$ and $1.00$); the integrated binomial matches the mean but inflates the variance to $1.20$; the Le
+Cam Poisson matches only the mean, and with variance $2.00$ and unbounded support (the $y\ge 6$ tail carries
+the remaining $0.0166$) is visibly the worst fit. {#tbl-worked-comparison}
+
+**Step 6: compare the likelihoods.** Suppose the arm reports $y_\bullet=2$ responders, the modal count.
+The aggregate likelihood contribution under each model is the value at $y=2$:
+$$
+\underbrace{0.3834}_{\text{exact PoBin}},\quad
+\underbrace{0.375}_{\text{adjusted }\mathrm{Bin}(4,0.5)},\quad
+\underbrace{0.3456}_{\text{integrated }\mathrm{Bin}(5,0.4)},\quad
+\underbrace{0.2707}_{\text{Le Cam }\mathrm{Poi}(2)} .
+$$
+The adjusted binomial is within $0.0084$ of the exact value, the integrated binomial within $0.0378$, and
+the Le Cam Poisson off by $0.1127$. The whole-distribution discrepancies tell the same story through the
+total-variation distance @eq-tv-three-forms:
+$$
+\big\|\mathrm{PoBin}-\mathrm{Bin}(4,0.5)\big\|_{\mathrm{TV}}=0.0200,
+\qquad
+\big\|\mathrm{PoBin}-\mathrm{Poi}(2)\big\|_{\mathrm{TV}}=0.1707 .
+$$
+The Le Cam bound @eq-lecam-bound for this arm is $\sum_i p_i^2=\nu=1.00$, and the Barbour-Hall refinement
+is $\min(1,\lambda^{-1})\nu=0.5$; both are correct (the actual distance $0.1707$ is well below them) but far
+too loose to be useful, exactly the moderate-risk regime where the Poisson approximation is poor.
+
+**Step 7: reconcile the two binomials.** The integrated binomial @eq-ex-binom and the exact Poisson
+binomial @eq-ex-pobin share the mean $2.0$ but differ in variance, $1.20$ against $1.00$. The difference is
+$$
+n\theta_\bullet(1-\theta_\bullet)-(\lambda-\nu)=\nu-\frac{\lambda^2}{n}=1.00-\frac{4.0}{5}=0.20
+=n\,s_p^2,
+$$
+the population variance of the five risks times the sample size, $s_p^2=\tfrac1n\nu-\bar p^2=0.20-0.16=0.04$.
+This is the binary shadow of the mixed-Poisson overdispersion @eq-poisson-agg-moments: randomizing which
+profile a patient occupies, as the integrated binomial does, adds variance $n\,s_p^2$ over the conditional
+law that fixes one patient at each profile. The adjusted binomial @eq-ex-adjbin tracks the *conditional*
+Poisson binomial (right variance $1.00$), while the integrated binomial @eq-ex-binom is the exact
+*marginal* law (variance $1.20$); both are legitimate answers to slightly different questions, and the
+worked numbers make the distinction concrete. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Which likelihood to report.** For a genuine exchangeable sample of patients, the integrated binomial
+@eq-ex-binom is exact and is the default ML-NMR choice (@prp-marginal-binomial, @phillippo2020mlnmr). When
+one instead conditions on a fixed set of representative profiles, as the deterministic integration nodes of
+Chapter 22 are, the conditional Poisson binomial is the target and the adjusted binomial @eq-ex-adjbin is
+its faithful two-moment surrogate. The Le Cam Poisson is never competitive at these risks; its value is
+theoretical, as the sharp total-variation statement of @thm-le-cam-tv and as the bridge to the Poisson
+limit of Chapter 4. The single discipline that matters in practice is to match the variance, which both the
+integrated and the adjusted binomial do for their respective targets and the Poisson does not.
+$\blacktriangleleft$
+:::
+
+## Notes and references {#sec-discrete-notes}
+
+The aggregation principle of multilevel network meta-regression, and the integral form of the aggregate
+mean that underlies the integrated binomial likelihood @eq-integrated-binomial, are due to
+@phillippo2020mlnmr and the thesis @phillippo2019thesis; this chapter develops the discrete-outcome
+likelihoods that the principle requires, the material of the catalogue results H.8 to H.11. The closure of
+the Poisson family under convolution (@lem-poisson-convolution) and the resulting exact conditional Poisson
+aggregate are classical; the moment generating function proof rests on the uniqueness and product theorems
+of Chapter 4 (@thm-mgf-uniqueness, @thm-mgf-sum). The corrected statement that the *marginalized* aggregate
+count is a mixed Poisson, overdispersed by $n\sigma_W^2$ rather than itself Poisson
+(@thm-poisson-aggregate), follows from the law of total variance; the closed-form relative overdispersion
+$e^{\boldsymbol\beta_{\mathrm{tot}}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot}}}-1$ under Gaussian
+covariates uses the log-link aggregate identity of Chapter 20 (@thm-log-link-mgf). The negative-binomial
+remedy for overdispersed counts is the count-data analogue of a study-level random effect
+(@def-random-effects) and is standard in the generalized linear model literature (@mccullagh1989glm).
+
+The Poisson binomial distribution and its generating function (@def-poisson-binomial,
+@thm-poisson-binomial-pgf) are textbook once the probability generating function is in hand; the chapter
+introduces the generating function (@def-pgf) as the integer-valued counterpart of the moment generating
+function of Chapter 4 (@def-mgf). The intractability of the exact mass function, with its $\binom{n}{y}$
+subset terms, motivates the two approximations. Le Cam's total-variation bound (@thm-le-cam-tv) is from
+@lecam1960; the coupling proof given here is self-contained, building on the coupling inequality
+(@lem-coupling-inequality) and an explicit single-pair coupling of a Bernoulli with a Poisson, and uses the
+author's own @lem-poisson-convolution to identify the summed Poisson coupling. The sharper bound
+$\min(1,\lambda^{-1})\sum_i p_i^2$, with a matching lower bound establishing that the order is correct, is
+due to Barbour and Hall (1984) and is most cleanly obtained by Stein's method for Poisson approximation, the
+operator technique introduced by Chen (1975) and developed at length by Barbour, Holst, and Janson (1992);
+these three sources are not in the book's bibliography and are recorded in the work log as proposed
+additions. The adjusted two-parameter binomial obtained by moment matching (@thm-adjusted-binomial) is the
+binary aggregate likelihood of @phillippo2020mlnmr and @phillippo2019thesis (Equation 4.6 of the thesis);
+its effective sample size $N^{*}=(\sum_i p_i)^2/\sum_i p_i^2$ is the same Cauchy-Schwarz functional as the
+weighting effective sample size of Chapter 18 (@thm-maic-ess-bound), a pleasing recurrence of the same
+inequality in a different guise.
+
+The forward connections are to the rest of Part V. The aggregate means $\theta_{\bullet jk}$ that feed all
+of these likelihoods are themselves integrals that, for the logit and log links, have no elementary closed
+form (@thm-logit-no-closed-form) and must be evaluated by the quasi-Monte Carlo machinery of Chapter 22
+(@thm-koksma-hlawka, @thm-mc-rmse); the discrete likelihoods of this chapter sit on top of that
+integration. The likelihoods are assembled into the target-population estimands of Chapter 23
+(@thm-target-population-integral) and fitted by the Bayesian computation of Chapter 24. The general-likelihood
+formulation of @phillippo2025general (Chapter 25, @thm-general-likelihood-mlnmr) places the binomial,
+Poisson, and their adjusted and overdispersed variants in a single framework, of which the count and binary
+cases treated here are the leading instances.
+
+No result in this chapter has a counterpart in the companion Coq development: the `ITC_Coq` `theories`
+directory formalizes the causal and weighting core of Parts II to IV but not the discrete-outcome
+approximation theory of Part V, which is computational and analytic. Accordingly none of
+@lem-poisson-convolution, @thm-poisson-aggregate, @thm-poisson-binomial-pgf, @thm-le-cam-tv, or
+@thm-adjusted-binomial carries a machine-checked tag; their proofs are pen-and-paper and complete as given.
+
+## Exercises {#sec-discrete-exercises}
+
+A $\star$ marks an exercise with a full worked solution in Appendix F; here the starred exercises are
+@exr-lecam-coupling and @exr-adjbin-thirdmoment. The first three exercises are warm-ups (interpretation and
+likelihood selection) to fix the ideas before the computational and proof exercises that follow.
+
+::: {#exr-why-not-binomial}
+**Why unequal risks are not binomial (in words).** In one or two sentences, explain to a colleague why the
+total number of responders among five patients with response probabilities $0.1,0.3,0.4,0.5,0.7$ is *not*
+distributed as $\mathrm{Bin}(5,0.4)$, even though the average risk is $0.4$. Using @exm-two-bernoulli-pgf
+as a guide, say what breaks in the assumption that every patient shares one common success probability, and
+name the distribution that is correct.
+:::
+
+::: {#exr-choose-likelihood}
+**Choosing the aggregate likelihood.** For each scenario, name the aggregate law you would use from
+@tbl-aggregate-laws (integrated binomial, adjusted binomial, exact Poisson binomial, Le Cam Poisson, or a
+negative binomial) and justify the choice in one sentence. (a) A binary responder arm whose patients are an
+exchangeable random sample from a covariate distribution you can integrate over. (b) A binary safety
+endpoint (a rare adverse event, average risk about $2\%$) summarized at a handful of fixed integration
+nodes. (c) A binary responder arm represented by fixed integration nodes at moderate risks ($0.2$ to
+$0.7$). (d) A count outcome (hospitalizations) with strong effect modifiers, where a plain Poisson badly
+understates the variance.
+:::
+
+::: {#exr-two-patient-warmup}
+**Conditional and marginal by hand.** Two profiles have response probabilities $0.2$ and $0.6$, equally
+prevalent, and the arm has $n=2$. (a) Compute the conditional law of the count with one patient fixed at
+each profile (its three probabilities, mean, and variance). (b) Compute the marginal law when each patient
+is an independent draw from the two-profile population, and recognize it as a binomial. (c) Confirm the two
+laws share a mean but that the marginal variance exceeds the conditional variance by $n\,s_p^2$, and report
+$s_p^2$. Compare with @exm-two-patient-conditional.
+:::
+
+::: {#exr-poisson-twopoint}
+**A count aggregate with a two-point covariate.** A Poisson-outcome AgD arm has $n=20$ patients and a
+single binary effect modifier $x\in\{0,1\}$ with $P(x=1)=0.5$ in the study, and log-link linear predictor
+$\eta(x)=\log 2+x\log 2$, so that the conditional rate is $W=e^{\eta(x)}$. Compute the two possible rates,
+the aggregate mean rate $\theta_\bullet=\mathbb{E}[W]$, the rate variance $\sigma_W^2$, the marginal mean
+$\mathbb{E}[Y_\bullet]$ and variance $\operatorname{Var}(Y_\bullet)$ from @eq-poisson-agg-moments, and the
+dispersion index $\operatorname{Var}(Y_\bullet)/\mathbb{E}[Y_\bullet]$. By how many percent does ignoring
+the overdispersion understate the variance?
+:::
+
+::: {#exr-pobin-pgf-compute}
+**Poisson binomial by generating function.** For risks $\mathbf p=(0.2,0.5,0.8)$, write the generating
+polynomial @eq-pobin-pgf, expand it to obtain the full mass function, and verify the mean and variance
+against @eq-pobin-moments. Compare the mass function to that of the binomial $\mathrm{Bin}(3,\bar p)$ with
+the same mean ($\bar p=0.5$): which has the larger variance, and why does the remark after
+@thm-poisson-binomial-pgf predict this?
+:::
+
+::: {#exr-lecam-coupling}
+**($\star$) The coupling, the bound, and its sharpness.** (a) Verify directly from @eq-lecam-pair that the
+single-pair coupling has Bernoulli and Poisson marginals and disagreement probability $p(1-e^{-p})$. (b)
+Prove the coupling inequality @eq-coupling-ineq and deduce @eq-lecam-bound for a general risk vector. (c)
+For the equal-risk case $p_i\equiv p$, show the bound becomes $\|\mathrm{Bin}(n,p)-\mathrm{Poi}(np)\|_{\mathrm{TV}}
+\le np^2$ and relate this to the Poisson limit theorem @thm-poisson-limit. (d) Using a second-order
+expansion $1-e^{-p}=p-\tfrac12 p^2+O(p^3)$, argue that the per-pair disagreement is $p^2-\tfrac12 p^3+O(p^4)$,
+so the bound $\sum_i p_i^2$ is tight to leading order in small risks.
+:::
+
+::: {#exr-adjbin-moments}
+**Computing and reading the adjusted binomial.** For $\mathbf p=(0.2,0.4,0.6,0.8)$ compute $\lambda$, $\nu$,
+$\pi^{*}$, and $N^{*}$ from @eq-adjbin-solution, confirm $N^{*}\le n$, and evaluate the adjusted-binomial
+mass at the count $y=2$ using the Gamma-function form of the binomial mass when $N^{*}$ is not an integer.
+Compare with the exact Poisson binomial mass at $y=2$ (compute it from the generating polynomial), and
+report the total-variation distance between the exact and adjusted laws.
+:::
+
+::: {#exr-adjbin-thirdmoment}
+**($\star$) Moment matching stops at two.** The third central moment of $\mathrm{Bin}(N,\pi)$ is
+$N\pi(1-\pi)(1-2\pi)$, and that of $\mathrm{PoBin}(\mathbf p)$ is $\sum_i p_i(1-p_i)(1-2p_i)$. (a) Prove the
+Poisson binomial formula from the generating function @eq-pobin-pgf or from the independence of the
+Bernoulli summands. (b) For the risk vector $\mathbf p=(0.1,0.3,0.4,0.5,0.7)$ of @exm-aggregate-binomial,
+compute the Poisson binomial third central moment and the adjusted-binomial third central moment from the
+matched parameters $(N^{*},\pi^{*})=(4,0.5)$, and show they differ: the adjusted binomial is symmetric so
+its third central moment is zero, whereas the Poisson binomial has third central moment
+$\sum_i p_i(1-p_i)(1-2p_i)=0.12>0$, a right skew the surrogate misses. Conclude that no choice of $(N,\pi)$
+can match three moments of a generic Poisson binomial, so the adjusted binomial is genuinely a two-moment
+surrogate, consistent with the remark after @thm-adjusted-binomial that no total-variation guarantee is
+available.
+:::
+
+::: {#exr-overdispersion-gaussian}
+**Overdispersion under Gaussian covariates.** A Poisson-outcome arm has $\theta_\bullet=3$ events per
+patient on average and a single continuous covariate with total slope $\beta_{\mathrm{tot}}=0.5$ and
+within-study standard deviation $\sigma=0.8$, so $s^2=\beta_{\mathrm{tot}}^2\sigma^2$. Using
+@eq-poisson-agg-overdisp, compute the squared coefficient of variation of the rate, the per-patient excess
+variance $\sigma_W^2$, and the dispersion index $\operatorname{Var}(Y_\bullet)/\mathbb{E}[Y_\bullet]$ for
+$n=50$ patients. State the value of $s^2$ below which the dispersion index stays under $1.05$, and interpret
+it as a tolerance on the effect-modifier strength.
+:::

@@ -1,0 +1,1532 @@
+---
+title: "Simulation Study Theory"
+---
+
+## Introduction {#sec-sim-intro}
+
+The theorems of Parts II to V are limit statements. They certify that an estimator is *consistent*: that
+matching-adjusted indirect comparison (MAIC) recovers the target contrast as the index sample grows
+(@thm-anchored-maic-consistency), that the unanchored estimators do so only under the far stronger
+absolute-constancy hypothesis (@thm-unanchored-paic-consistency), that multilevel network meta-regression
+removes the aggregation bias a standard network meta-analysis cannot (@thm-aggregation-bias,
+@thm-failure-of-bucher). What these theorems do not say is how an estimator behaves at the sample sizes a
+health-technology-assessment dossier actually carries: a single index trial of a few hundred patients, a
+comparator known only through a published mean. Consistency is a statement about the horizon; the analyst
+stands at a finite distance from it. Four questions remain open at that distance, and none of them is
+answerable by a limit theorem alone.
+
+How large is the finite-sample bias, and is the residual bias of an "asymptotically unbiased" method
+negligible at the sample size in hand? How does one method's variance compare with another's, so that a
+slightly biased but stable estimator can be preferred to an unbiased but volatile one? Do the nominal
+ninety-five percent confidence intervals actually contain the truth ninety-five percent of the time, or
+does the variance approximation that produced them quietly fail? And how do all of these degrade when the
+method's assumptions are violated, when an effect modifier is omitted, when the populations barely overlap,
+when the outcome model is wrong? These are empirical questions about the *sampling distribution* of an
+estimator at finite $n$, and the instrument that answers them is the **simulation study**: fix a
+data-generating mechanism whose truth you control, draw many datasets from it, apply each candidate method
+to each dataset, and summarize how the resulting estimates scatter around the known target. The decisive advantage of this
+instrument is that in a simulation we build the world ourselves, so the truth is known by construction:
+unlike a real analysis, where the target effect can never be observed and an estimator's error can only be
+guessed at, a simulation lets us measure that error directly, by comparing every estimate against the number
+we put in.
+
+This chapter is the mathematics of that instrument. The central conceptual move, which organizes
+everything that follows, is to recognize that a simulation study has *two* sample sizes, governing *two*
+asymptotics. The first is $n$, the size of each simulated dataset; it controls the statistical behavior of
+the estimator and is the variable in every consistency theorem of the preceding chapters. The second is
+$R$, the number of simulated datasets, the *replications*; it controls how precisely the simulation
+*measures* that behavior, and it is a budget the analyst sets, not a feature of the data. A performance
+measure such as bias or coverage is a *functional* of the estimator's sampling distribution at a fixed $n$,
+hence a fixed but unknown number; here a functional is simply a rule that takes an entire distribution as its
+input and returns a single number, the way a mean or a variance summarizes a distribution, and the sampling
+distribution in question, written $F_n$ and defined precisely in @def-sim-performance-functional below, is
+what the average estimates; the simulation estimates it by a Monte Carlo average over the $R$
+replications, an estimate that carries its own sampling error. Confusing the two asymptotics is the
+cardinal sin of simulation practice: reporting a bias to four decimal places from $R=100$ replications, or
+declaring two methods' coverages different when the difference is within Monte Carlo noise. We will be
+scrupulous about keeping them apart, and the recurring discipline is to attach to every reported
+performance number a **Monte Carlo standard error** (MCSE) that quantifies the $R$-driven uncertainty.
+
+::: {.remark}
+**A running clinical example.** To keep the symbols attached to something concrete, we illustrate every
+performance measure on one indirect comparison, returned to at each step and worked in full in
+@sec-sim-example. A health-technology-assessment team must compare a new interleukin-23 inhibitor $A$ against
+an established interleukin-17 inhibitor $B$ for moderate-to-severe plaque psoriasis. No head-to-head trial
+exists; instead an index trial compares $A$ against ustekinumab $C$ with full individual patient data, while
+a published trial compares $B$ against the same ustekinumab $C$ but reports only arm means. The common
+comparator $C$ anchors the comparison (the *anchored* setting of Chapter 17). The endpoint is the reduction
+in the Psoriasis Area and Severity Index (PASI) score from baseline to week 16, measured in points, so the
+natural scale is the identity (mean-difference) scale. Two baseline covariates matter: an effect modifier
+$x_1$ (baseline disease severity, which changes how large the treatment benefit is) and a purely prognostic
+covariate $x_2$ (age, which shifts outcomes but not the benefit). The target estimand is the marginal
+$A$-versus-$B$ mean difference in the comparator trial's population, $\theta=d_{AB(\mathcal{P}_{BC})}$. All
+numbers used below are illustrative, chosen for arithmetic transparency, not taken from real trials.
+$\blacktriangleleft$
+:::
+
+The two sample sizes of a simulation, and the two limits they govern, can be laid side by side. The columns
+are independent: a large $R$ cannot cure a small-$n$ deficiency, and a large $n$ cannot excuse too few
+replications.
+
+| | Within one replication | Across replications |
+|---|---|---|
+| Sample size | $n$: patients per simulated dataset | $R$: number of simulated datasets |
+| Set by | the scenario, to mimic a real trial size | the analyst's computing budget |
+| Governs | the estimator's true behavior (bias, variance, coverage at that $n$) | how precisely the simulation *measures* that behavior |
+| Limit | statistical limit $n\to\infty$: the consistency theorems of Parts II to V | Monte Carlo limit $R\to\infty$: shrinks every MCSE at rate $1/\sqrt{R}$ |
+| Error controlled | the method's finite-sample error | the simulation's own reporting error, the MCSE |
+
+The plan is as follows. @sec-sim-ademp sets out the **ADEMP** framework of @morris2019ademp, the
+now-standard checklist (aims, data-generating mechanism, estimands, methods, performance measures) that
+disciplines the design and reporting of a simulation study, and formalizes a simulation study as a triple
+of a sampling distribution, a family of performance functionals, and their Monte Carlo estimators
+(@def-ademp, catalogue K.1). @sec-sim-bias treats bias and its Monte Carlo standard error, proving that
+the Monte Carlo bias estimator is exactly unbiased for the true bias with a variance that shrinks as $1/R$
+(@def-bias-mcse, K.2). @sec-sim-coverage develops the empirical and model-based standard errors and
+interval coverage, proving the unbiasedness of the empirical variance and the binomial law of the coverage
+estimator (@def-coverage, K.3). @sec-sim-mse proves the mean-squared-error decomposition into squared bias
+plus variance, both as a population identity and as an exact finite-sample identity for the Monte Carlo
+estimators (@thm-mse-decomposition, K.4). @sec-sim-misspec is the analytic heart of the chapter: it
+derives the limiting coverage of a Wald interval as an explicit function of a single standardized
+asymptotic bias parameter, showing that coverage is nominal exactly when the method is asymptotically
+unbiased and that under a fixed specification bias coverage collapses to zero as $n\to\infty$, so that
+*more data makes a biased method's intervals worse* (@thm-coverage-misspecification, K.5). @sec-sim-power
+treats Type I error and power, which turn out to be the coverage theorem read through the duality of tests
+and intervals (@def-power-type1, K.6). @sec-sim-efficiency anchors the variance comparisons of a
+simulation in the Cramér-Rao bound (@thm-cramer-rao), the theoretical floor below which no regular method's
+empirical standard error can fall. @sec-sim-robustness states, as precisely as an empirical finding can be
+stated, the main robustness conclusion of the @phillippo2019thesis simulation study and its unanchored
+extension (@prp-phillippo-robustness, K.7), tying each ranked claim either to a theorem proved earlier or
+to the cited simulation evidence. @sec-sim-example carries a complete miniature simulation from its ADEMP
+specification through every performance computation by hand. This chapter owns catalogue results K.1 to
+K.7.
+
+Throughout, $\theta$ denotes the scalar estimand (a relative effect $d_{ab(\mathcal{P})}$ on a stated
+scale, in the applications of interest), $\hat\theta_n$ a method's estimator computed from a dataset of
+size $n$, $\widehat{\mathrm{SE}}_n$ the standard error that method reports for it, and $I_n$ the
+associated nominal $(1-\alpha)$ interval. A simulation produces $R$ independent replicate values
+$\hat\theta^{(1)}_n,\dots,\hat\theta^{(R)}_n$, with $\bar{\hat\theta}=R^{-1}\sum_{r}\hat\theta^{(r)}_n$
+their average. We write $z_{\alpha/2}$ for the upper $\alpha/2$ standard-normal quantile, so that
+$\Phi(z_{\alpha/2})=1-\alpha/2$ and $P(|Z|\le z_{\alpha/2})=1-\alpha$ for $Z\sim\mathcal{N}(0,1)$; for the
+usual $\alpha=0.05$, $z_{\alpha/2}=1.96$. The asymptotic toolkit is the one assembled in Chapter 5: the
+weak law of large numbers, the central limit theorem, Slutsky's theorem (@thm-slutsky), the continuous
+mapping theorem (@thm-continuous-mapping), and the delta method (@thm-delta-method).
+
+The chapter uses a compact vocabulary of performance quantities. The following glossary collects them; the
+single most important distinction, stressed throughout, is between the two kinds of standard error, the one
+a *method* reports for a single analysis and the one the *simulation* reports for its own summary.
+
+| Symbol | Name | Plain meaning |
+|---|---|---|
+| $n$ | per-replication sample size | patients in one simulated dataset |
+| $R$ | replications | number of simulated datasets |
+| $\theta$ | estimand | the known true effect we put into the world |
+| $\hat\theta_n$ | estimate | one method's answer from one dataset |
+| $\widehat{\mathrm{SE}}_n$ | statistical (model-based) standard error | the uncertainty a method reports for *its own* estimate on one dataset |
+| $\widehat{\mathrm{Bias}}$ | bias | average estimate minus the truth |
+| $\mathrm{EmpSE}$ | empirical standard error | actual spread of the $R$ estimates, the truth about variability |
+| $\mathrm{ModSE}$ | model-based standard error | average of the reported $\widehat{\mathrm{SE}}_n$ across replications |
+| $\widehat{\mathrm{MSE}}$ | mean squared error | average squared distance of estimates from the truth |
+| $\widehat{\mathrm{Cov}}$ | coverage | fraction of intervals that contain the truth |
+| $\mathrm{MCSE}(\hat\mu)$ | Monte Carlo standard error | uncertainty in a *reported performance number* caused by using only $R$ replications |
+
+The last row is not a property of any single analysis: it is the simulation's own sampling error, and it is
+the quantity that shrinks when the analyst runs more replications. Confusing $\widehat{\mathrm{SE}}_n$, the
+uncertainty in one estimate, with $\mathrm{MCSE}$, the uncertainty in the reported bias, coverage, or mean
+squared error, is a frequent novice error; the two answer different questions and have different remedies.
+
+## The ADEMP framework {#sec-sim-ademp}
+
+A simulation study can be run badly in many ways: by simulating from a mechanism that no one can
+reconstruct, by reporting an estimand the methods were never trying to estimate, by summarizing with a
+statistic that hides the behavior of interest. @morris2019ademp distilled good practice into a five-part
+specification whose initials spell ADEMP. We adopt it as the definitional backbone of the chapter and then
+attach to it the probabilistic objects that the performance measures will be functionals of. The value of
+the checklist is that each letter forces one decision into the open where it can be criticized: the aims
+stop a study from being a fishing expedition, the data-generating mechanism makes the simulated world
+reproducible, the estimand fixes what "the truth" even is before any method is judged against it, the
+methods list what is being compared, and the performance measures decide what "good" means. A simulation
+that skips any one of these can silently answer the wrong question.
+
+::: {#def-ademp}
+## The ADEMP framework for a simulation study
+A **simulation study** is specified by five components.
+
+1. **Aims (A).** The scientific questions to be answered, stated before any data are simulated: for
+example, "quantify the bias of MAIC for the marginal $A$-versus-$B$ log-odds-ratio when a binary effect
+modifier is omitted, as a function of its imbalance between trials."
+
+2. **Data-generating mechanism (DGM, D).** A fully specified probability model $\mathbb{P}=\mathbb{P}_n$
+from which datasets of size $n$ are drawn: the covariate distribution, the treatment assignment, the
+outcome model with all its parameters, and any features (overlap, effect-modification strength) that the
+aims require to be varied across *scenarios*. A study comprises a finite set of DGMs, one per scenario.
+
+3. **Estimands (E).** The target quantities, defined as functionals $\theta=\theta(\mathbb{P})$ of the
+DGM. In the population-adjustment setting $\theta$ is a marginal relative effect $d_{ab(\mathcal{P})}$ in a
+named target population $\mathcal{P}$ on a named scale $g$; because the DGM is known, $\theta$ is known
+exactly, by analytic calculation or by a large auxiliary simulation.
+
+4. **Methods (M).** The estimation procedures under comparison, each a measurable map from a dataset to a
+triple $(\hat\theta_n,\widehat{\mathrm{SE}}_n,I_n)$ of a point estimate, a standard error, and a nominal
+$(1-\alpha)$ interval. In this book the methods are the naive Bucher comparison (@thm-bucher-unbiased),
+MAIC (Chapter 18), simulated treatment comparison (Chapter 19), and multilevel network meta-regression
+(Chapter 20), with their unanchored counterparts (Chapters 17, 26).
+
+5. **Performance measures (P).** The summaries of a method's behavior across replications: bias, empirical
+and model-based standard error, mean squared error, interval coverage, and, where the aim is testing,
+Type I error and power. Each is a functional $\mu(F_n)$ of the sampling distribution $F_n$ of
+$(\hat\theta_n,\widehat{\mathrm{SE}}_n,I_n)$ under the DGM at fixed $n$. $\blacktriangleleft$
+:::
+
+The following table instantiates the five components for the running psoriasis comparison, so the abstract
+checklist has a concrete referent before we turn it into probability.
+
+| ADEMP component | The running psoriasis comparison |
+|---|---|
+| **Aims** | Quantify the bias and $95\%$ interval coverage of MAIC and of the naive Bucher comparison for the $A$-versus-$B$ PASI mean difference, as baseline-severity imbalance between the trials varies. |
+| **Data-generating mechanism** | Draw $n$ patients per arm; baseline severity $x_1$ and age $x_2$ from chosen distributions with a set between-trial imbalance; PASI reduction from a linear model with an $x_1$-by-treatment interaction; independent outcome noise. The $BC$ trial is then reduced to arm means, mimicking the published aggregate data. |
+| **Estimands** | $\theta=d_{AB(\mathcal{P}_{BC})}$, the marginal $A$-versus-$B$ mean difference in the $BC$ population, computed exactly from the known model (@sec-sim-example). |
+| **Methods** | MAIC (Chapter 18) and the naive Bucher comparison (@thm-bucher-unbiased), each returning an estimate $\hat\theta_n$, a standard error $\widehat{\mathrm{SE}}_n$, and a $95\%$ interval $I_n$. |
+| **Performance measures** | Bias, empirical and model-based standard error, mean squared error, and coverage, each with its Monte Carlo standard error. |
+
+Which pieces are which is worth stressing, because a novice designing a simulation must know what to fix and
+what to vary. The covariate distributions and the outcome model are *chosen* by the analyst to resemble the
+real trials; the between-trial imbalance and the effect-modification strength are *varied across scenarios*,
+where each **scenario** is one cell of the design grid, that is, one combination of overlap, effect-modifier
+imbalance, effect-modification strength, and sample size; the trial sizes are *set* to mimic the real
+dossier; and the estimand is *derived* from the chosen model, not observed. Only the performance measures
+are *outputs*. A method, stripped of the formal language of measurable maps, is in plain terms a computer
+program that takes one simulated trial dataset and returns three things: a point estimate, a standard error,
+and a confidence interval.
+
+::: {.remark}
+**How the truth is known, and how it is computed.** In a real analysis the target effect $\theta$ is
+unknown, which is the entire difficulty; in a simulation the analyst *chose* the data-generating mechanism,
+so $\theta=\theta(\mathbb{P})$ is determined and can be computed to any desired accuracy. Computing it is a
+marginalization, not a guess. On the identity (mean-difference) scale of the running example, the marginal
+estimand is the average of the conditional treatment effect over the target population's covariate
+distribution,
+$$
+\theta=\int \tau(x)\,f_{\mathcal{P}}(x)\,dx,\qquad \tau(x)=\mu_1(x)-\mu_0(x),
+$$
+which for a linear outcome model reduces to evaluating the conditional effect at the covariate mean. On a
+*non-collapsible* scale (@def-non-collapsibility), such as a marginal log-odds-ratio, one cannot average the
+conditional log-odds-ratios: the truth must be obtained by *marginal standardization*, integrating the
+conditional outcome probabilities over $f_{\mathcal{P}}(x)$ first, forming the marginal event probabilities
+under each treatment, and only then taking the contrast. When the integral has no closed form (a survival
+estimand, a probit-normal average), the analyst computes $\theta$ by a *large auxiliary simulation*, drawing
+an enormous sample from the known mechanism and reading off the marginal effect; this auxiliary draw has
+nothing to do with the $R$ replications and is made once, as accurately as compute allows. The lesson is
+that even with the model fully known, "the truth" for a marginal, non-collapsible estimand is an integral,
+which is exactly why population adjustment is subtle. $\blacktriangleleft$
+:::
+
+The fourth and fifth components hide the structure that makes the chapter mathematical. Fix a scenario
+(a DGM) and a method. Applying the method to a dataset of size $n$ yields a random triple whose law,
+written $F_n$, is the **sampling distribution**. Every performance measure is a deterministic functional of
+$F_n$, hence a fixed number once $n$ is fixed; what the simulation reports is a Monte Carlo estimate of
+that number.
+
+::: {#def-sim-performance-functional}
+## Performance measures as functionals; the two sample sizes
+Let $F_n$ be the sampling distribution of $(\hat\theta_n,\widehat{\mathrm{SE}}_n,I_n)$ under a fixed DGM,
+and let $\theta$ be the estimand. The **performance measures** are the functionals
+$$
+\mathrm{Bias}_n=\mathbb{E}[\hat\theta_n]-\theta,\quad
+\mathrm{Var}_n=\mathrm{Var}(\hat\theta_n),\quad
+\mathrm{MSE}_n=\mathbb{E}[(\hat\theta_n-\theta)^2],\quad
+\mathrm{Cov}_n=P(\theta\in I_n),
+$$ {#eq-sim-functionals}
+all expectations and probabilities taken under $F_n$. A **Monte Carlo experiment** draws
+$R$ independent datasets from the DGM, producing independent and identically distributed (iid) replicate
+triples $(\hat\theta^{(r)}_n,\widehat{\mathrm{SE}}^{(r)}_n,I^{(r)}_n)$, $r=1,\dots,R$, each with law
+$F_n$; the performance measures are estimated by their sample analogues over these $R$ replicates. Two
+asymptotic regimes act on the experiment: the **statistical** limit $n\to\infty$, which governs the
+functionals @eq-sim-functionals themselves and is the subject of the consistency theorems of earlier
+chapters; and the **Monte Carlo** limit $R\to\infty$, which governs the precision with which the sample
+analogues estimate @eq-sim-functionals. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** Read $F_n$ as the joint distribution of everything one run of a method produces on a
+dataset of size $n$: the estimate, the standard error it reports, and the interval it forms. It is a
+distribution over a *triple*, not a single number, though most performance measures use only one margin of
+it, such as the spread of $\hat\theta_n$. At a fixed $n$ this artificial world has a definite true bias and a
+definite true coverage; we simply do not know them, because we cannot evaluate the distribution in closed
+form. So we do the next best thing: we rebuild the artificial world $R$ times and average. Every performance
+number in this chapter is such an average, and every one therefore comes with a Monte Carlo standard error
+measuring how much the average would wobble if we reran the $R$ replications. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why the two-sample-size view matters.** A consistency theorem controls $\mathrm{Bias}_n\to 0$ as
+$n\to\infty$; it says nothing about how well $R$ replications *measure* $\mathrm{Bias}_n$ at a fixed,
+practically relevant $n$. Conversely, no number of replications can reveal small-sample bias that the
+chosen $n$ does not exhibit: pushing $R\to\infty$ at fixed $n$ converges the sample analogues to the exact
+functionals @eq-sim-functionals at that $n$, not to their $n\to\infty$ limits. The analyst chooses the grid
+of $n$ values to span the regime of interest and chooses $R$ large enough that Monte Carlo error does not
+swamp the differences between methods. The performance measures below are designed so that each comes with
+an MCSE quantifying exactly the second source of error. $\blacktriangleleft$
+:::
+
+The remaining sections instantiate the fifth ADEMP component, one performance measure at a time, proving in
+each case (i) what functional of $F_n$ the measure targets, (ii) that the Monte Carlo estimator is unbiased
+or consistent for it, and (iii) the size of its Monte Carlo standard error. This corresponds to K.1 in the
+proof catalogue.
+
+::: {.remark}
+**Numbers to hang the symbols on.** It helps to carry one arithmetic instance through the definitions that
+follow. In the running example the true effect is $\theta=1.5$ PASI points. Imagine five simulated trials of
+the adjusted method returning estimates $0.9,0.9,1.4,1.9,1.9$ points. Their average is $1.4$, so the
+estimated bias is $1.4-1.5=-0.1$ point; their spread gives an empirical standard error of $0.5$; and if three
+of the five $95\%$ intervals contain $1.5$, the estimated coverage is $3/5=0.6$. Every definition below turns
+one of these back-of-envelope numbers into a general formula, and @sec-sim-example works the same instance in
+full, including why five replications are far too few to trust any of these numbers. $\blacktriangleleft$
+:::
+
+## Bias and its Monte Carlo standard error {#sec-sim-bias}
+
+Bias is the systematic component of an estimator's error: the gap between where its estimates cluster on
+average and the truth. Its Monte Carlo estimator and the precision of that estimator are the content of
+catalogue result K.2.
+
+::: {#def-bias-mcse}
+## Monte Carlo bias estimator, relative bias, and Monte Carlo standard error
+With replicate estimates $\hat\theta^{(1)}_n,\dots,\hat\theta^{(R)}_n$ and known estimand $\theta$, the
+**Monte Carlo bias estimator** is
+$$
+\widehat{\mathrm{Bias}}=\bar{\hat\theta}-\theta=\frac{1}{R}\sum_{r=1}^{R}\hat\theta^{(r)}_n-\theta,
+$$ {#eq-sim-bias}
+and, when $\theta\neq 0$, the **relative bias** is $\widehat{\mathrm{RelBias}}=\widehat{\mathrm{Bias}}/|\theta|$.
+For any Monte Carlo performance estimator $\hat\mu$ targeting a functional $\mu$, its **Monte Carlo standard
+error** is the standard deviation of its sampling distribution over the $R$ replications,
+$\mathrm{MCSE}(\hat\mu)=\sqrt{\mathrm{Var}(\hat\mu)}$. In particular the Monte Carlo standard error of the
+bias estimator is
+$$
+\mathrm{MCSE}(\widehat{\mathrm{Bias}})=\sqrt{\frac{\mathrm{Var}_n}{R}},
+$$ {#eq-sim-mcse-bias}
+estimated in practice by $\mathrm{EmpSE}/\sqrt{R}$ with $\mathrm{EmpSE}$ the empirical standard error of
+@def-coverage below. $\blacktriangleleft$
+:::
+
+The defining properties of the bias estimator are that it is exactly unbiased for the true bias at finite
+$R$ and that its uncertainty is governed by @eq-sim-mcse-bias. We prove both. Unbiasedness matters because
+it certifies that the number we headline as "the bias" is not itself systematically off: were the bias
+estimator biased, our headline error would rest on a biased foundation that more replications could not
+repair. What replications *do* shrink is the random wobble, at the $1/\sqrt{R}$ rate of @eq-sim-mcse-bias.
+
+::: {#lem-sim-bias-unbiased}
+## Exact unbiasedness and variance of the Monte Carlo bias estimator
+Suppose $\mathrm{Var}_n=\mathrm{Var}(\hat\theta_n)<\infty$. Then for every $R\ge 1$ the Monte Carlo bias
+estimator @eq-sim-bias satisfies
+$$
+\mathbb{E}\big[\widehat{\mathrm{Bias}}\big]=\mathrm{Bias}_n,
+\qquad
+\mathrm{Var}\big(\widehat{\mathrm{Bias}}\big)=\frac{\mathrm{Var}_n}{R},
+$$ {#eq-sim-bias-moments}
+so $\widehat{\mathrm{Bias}}$ is unbiased for the true bias $\mathrm{Bias}_n$, its standard deviation is the
+Monte Carlo standard error @eq-sim-mcse-bias, and $\widehat{\mathrm{Bias}}\xrightarrow{p}\mathrm{Bias}_n$ as
+$R\to\infty$.
+:::
+
+::: {.proof}
+The replicates $\hat\theta^{(1)}_n,\dots,\hat\theta^{(R)}_n$ are iid with mean
+$\mathbb{E}[\hat\theta_n]=\theta+\mathrm{Bias}_n$ and variance $\mathrm{Var}_n$. By linearity of
+expectation,
+$$
+\mathbb{E}\big[\widehat{\mathrm{Bias}}\big]
+=\mathbb{E}\Big[\tfrac1R\textstyle\sum_r\hat\theta^{(r)}_n\Big]-\theta
+=\tfrac1R\sum_{r}\mathbb{E}[\hat\theta^{(r)}_n]-\theta
+=\big(\theta+\mathrm{Bias}_n\big)-\theta=\mathrm{Bias}_n.
+$$
+Subtracting the constant $\theta$ does not change the variance, and the variance of an average of $R$ iid
+terms each of variance $\mathrm{Var}_n$ is $\mathrm{Var}_n/R$ because cross-covariances vanish by
+independence:
+$$
+\mathrm{Var}\big(\widehat{\mathrm{Bias}}\big)
+=\mathrm{Var}\Big(\tfrac1R\textstyle\sum_r\hat\theta^{(r)}_n\Big)
+=\frac{1}{R^2}\sum_{r=1}^{R}\mathrm{Var}(\hat\theta^{(r)}_n)=\frac{\mathrm{Var}_n}{R},
+$$
+which is the square of @eq-sim-mcse-bias. Finally, since $\widehat{\mathrm{Bias}}$ has mean
+$\mathrm{Bias}_n$ and variance $\mathrm{Var}_n/R\to 0$, Chebyshev's inequality gives
+$\widehat{\mathrm{Bias}}\xrightarrow{p}\mathrm{Bias}_n$ as $R\to\infty$. $\square$
+:::
+
+The variance formula @eq-sim-bias-moments is what makes the $1/\sqrt{R}$ rate explicit and turns the choice
+of $R$ into an arithmetic exercise.
+
+::: {#cor-sim-replications-bias}
+## Replications needed for a target bias precision
+To estimate the bias with a Monte Carlo standard error no larger than a tolerance $m>0$ requires
+$$
+R\;\ge\;\frac{\mathrm{Var}_n}{m^{2}}.
+$$ {#eq-sim-reps-bias}
+Equivalently, halving the Monte Carlo standard error of the bias estimate requires quadrupling $R$.
+:::
+
+::: {.proof}
+By @lem-sim-bias-unbiased the Monte Carlo standard error is $\sqrt{\mathrm{Var}_n/R}$, which is
+nonincreasing in $R$ and at most $m$ exactly when $\mathrm{Var}_n/R\le m^2$, that is when
+$R\ge\mathrm{Var}_n/m^2$. Replacing $m$ by $m/2$ multiplies the right-hand side by $4$. $\square$
+:::
+
+To feel the $1/\sqrt{R}$ rate before trusting the algebra, fix a per-replication standard deviation
+$\sqrt{\mathrm{Var}_n}=\sigma$ and tabulate the bias Monte Carlo standard error $\sigma/\sqrt{R}$ and the
+worst-case coverage Monte Carlo standard error $1/(2\sqrt{R})$ as $R$ grows.
+
+| $R$ | bias MCSE $=\sigma/\sqrt{R}$ | coverage MCSE $\le 1/(2\sqrt{R})$ |
+|---|---|---|
+| $100$ | $0.100\,\sigma$ | $0.050$ |
+| $1{,}000$ | $0.032\,\sigma$ | $0.016$ |
+| $10{,}000$ | $0.010\,\sigma$ | $0.005$ |
+
+Each tenfold increase in $R$ buys only a threefold ($\sqrt{10}$) reduction in Monte Carlo error, the
+diminishing return that makes $R$ in the low thousands the usual compromise: enough to resolve differences
+between methods, not so many that the study never finishes.
+
+::: {.remark}
+**Reporting discipline.** The bias and its Monte Carlo standard error must be reported together. A bias
+estimate of $0.03$ with $\mathrm{MCSE}=0.05$ is consistent with no bias at all; the same estimate with
+$\mathrm{MCSE}=0.003$ is firm evidence of a small systematic error. In the population-adjustment
+literature, $R$ between $500$ and several thousand is typical; @morris2019ademp recommend choosing $R$ from
+@eq-sim-reps-bias using a pilot estimate of $\mathrm{Var}_n$. Relative bias is often the more interpretable
+summary when the estimand varies across scenarios, since a fixed absolute bias means something different
+for an estimand of $0.1$ than for one of $3$. This Monte Carlo standard error is a property of the
+*simulation*, measuring how firmly the study has pinned the bias down; it is a different object from the
+$\widehat{\mathrm{SE}}_n$ a method reports for a single dataset, as the glossary at the start of the chapter
+stresses. $\blacktriangleleft$
+:::
+
+This section corresponds to K.2 in the proof catalogue.
+
+## Empirical and model-based standard error; coverage {#sec-sim-coverage}
+
+Two notions of "the standard error" coexist in a simulation, and comparing them is the single most
+informative diagnostic the study produces. The **empirical standard error** is the actual spread of the
+estimates across replications, the truth about the estimator's variability. The **model-based standard
+error** is what each method *claims* its variability to be, averaged across replications. When the claim
+matches the truth, interval coverage is correct; when it does not, coverage fails, and the direction of the
+failure is diagnostic. This is catalogue result K.3.
+
+In plain terms, coverage answers a reliability question: if we could rerun the entire study many times, in
+what fraction of runs would the reported $95\%$ interval actually contain the true effect? A trustworthy
+method answers close to $95\%$. The two standard errors are the ingredients that determine that fraction, so
+we define all three objects together.
+
+::: {#def-coverage}
+## Empirical standard error, model-based standard error, and coverage
+With replicate estimates $\hat\theta^{(1)}_n,\dots,\hat\theta^{(R)}_n$, per-replicate reported standard
+errors $\widehat{\mathrm{SE}}^{(1)}_n,\dots,\widehat{\mathrm{SE}}^{(R)}_n$, and nominal $(1-\alpha)$
+intervals $I^{(r)}_n=[\hat L^{(r)},\hat U^{(r)}]$:
+
+- the **empirical standard error** is the sample standard deviation of the estimates,
+$$
+\mathrm{EmpSE}=\sqrt{S^2},\qquad
+S^2=\frac{1}{R-1}\sum_{r=1}^{R}\big(\hat\theta^{(r)}_n-\bar{\hat\theta}\big)^2;
+$$ {#eq-sim-empse}
+
+- the **model-based standard error** is the average of the reported standard errors,
+$$
+\mathrm{ModSE}=\frac{1}{R}\sum_{r=1}^{R}\widehat{\mathrm{SE}}^{(r)}_n;
+$$ {#eq-sim-modse}
+
+- the **coverage** is the proportion of intervals that contain the estimand,
+$$
+\widehat{\mathrm{Cov}}=\frac{1}{R}\sum_{r=1}^{R}\mathbf{1}\{\hat L^{(r)}\le\theta\le\hat U^{(r)}\}.
+$$ {#eq-sim-coverage}
+The target functionals are $\mathrm{Var}_n$ for $\mathrm{EmpSE}^2$, the average reported variance for
+$\mathrm{ModSE}$, and the true coverage $\mathrm{Cov}_n=P(\theta\in I_n)$ for $\widehat{\mathrm{Cov}}$.
+$\blacktriangleleft$
+:::
+
+The empirical standard error squared is an honest estimate of the estimator's variance: the familiar
+$(R-1)$ denominator makes it exactly unbiased.
+
+::: {#lem-sim-empse-unbiased}
+## Unbiasedness of the empirical variance and the Monte Carlo error of the empirical standard error
+Suppose $\mathrm{Var}_n<\infty$. Then $S^2$ of @eq-sim-empse satisfies $\mathbb{E}[S^2]=\mathrm{Var}_n$, so
+$S^2$ is unbiased for the sampling variance, and $S^2\xrightarrow{p}\mathrm{Var}_n$ as $R\to\infty$. The
+empirical standard error $\mathrm{EmpSE}=\sqrt{S^2}$ is consistent for $\sqrt{\mathrm{Var}_n}$ but
+slightly biased downward at finite $R$. If in addition $\hat\theta_n$ is normally distributed under the
+DGM, then
+$$
+\mathrm{MCSE}(\mathrm{EmpSE})\;\approx\;\frac{\mathrm{EmpSE}}{\sqrt{2(R-1)}}.
+$$ {#eq-sim-mcse-empse}
+:::
+
+::: {.proof}
+The one idea behind the $(R-1)$ denominator is that each deviation is measured from the sample mean
+$\bar{\hat\theta}$, itself computed from the same replicates and therefore sitting slightly closer to the
+data than the unknown true mean $\nu$ does; the squared deviations come out systematically a touch too
+small, and dividing by $R-1$ instead of $R$ corrects for the single degree of freedom spent estimating the
+mean. The algebra makes this exact.
+
+*Unbiasedness of $S^2$.* Write $\nu=\mathbb{E}[\hat\theta_n]$ and expand each squared deviation about
+$\nu$ rather than $\bar{\hat\theta}$. Using $\sum_r(\hat\theta^{(r)}_n-\bar{\hat\theta})^2
+=\sum_r(\hat\theta^{(r)}_n-\nu)^2-R(\bar{\hat\theta}-\nu)^2$ (the algebraic identity obtained by adding and
+subtracting $\nu$ inside the square and noting the cross term sums to $-2R(\bar{\hat\theta}-\nu)^2+\cdots$;
+explicitly, $\sum_r(\hat\theta^{(r)}_n-\bar{\hat\theta})^2=\sum_r(\hat\theta^{(r)}_n-\nu)^2
+-2(\bar{\hat\theta}-\nu)\sum_r(\hat\theta^{(r)}_n-\nu)+R(\bar{\hat\theta}-\nu)^2$ and
+$\sum_r(\hat\theta^{(r)}_n-\nu)=R(\bar{\hat\theta}-\nu)$, so the middle term is $-2R(\bar{\hat\theta}-\nu)^2$
+and the last two combine to $-R(\bar{\hat\theta}-\nu)^2$), take expectations:
+$$
+\mathbb{E}\Big[\sum_r(\hat\theta^{(r)}_n-\bar{\hat\theta})^2\Big]
+=\sum_r\mathbb{E}[(\hat\theta^{(r)}_n-\nu)^2]-R\,\mathbb{E}[(\bar{\hat\theta}-\nu)^2]
+=R\,\mathrm{Var}_n-R\cdot\frac{\mathrm{Var}_n}{R}=(R-1)\mathrm{Var}_n,
+$$
+using $\mathrm{Var}(\bar{\hat\theta})=\mathrm{Var}_n/R$ from @lem-sim-bias-unbiased. Dividing by $R-1$ gives
+$\mathbb{E}[S^2]=\mathrm{Var}_n$. Consistency $S^2\xrightarrow{p}\mathrm{Var}_n$ follows from the weak law of
+large numbers applied to $\tfrac1R\sum_r(\hat\theta^{(r)}_n)^2$ and to $\bar{\hat\theta}$ together with the
+continuous mapping theorem (@thm-continuous-mapping), since
+$S^2=\frac{R}{R-1}\big(\tfrac1R\sum_r(\hat\theta^{(r)}_n)^2-\bar{\hat\theta}^2\big)$.
+
+*Downward bias of $\mathrm{EmpSE}$.* The square root is strictly concave on $(0,\infty)$, so by Jensen's
+inequality (@thm-jensen), $\mathbb{E}[\sqrt{S^2}]\le\sqrt{\mathbb{E}[S^2]}=\sqrt{\mathrm{Var}_n}$, with
+strict inequality unless $S^2$ is degenerate; hence $\mathrm{EmpSE}$ underestimates $\sqrt{\mathrm{Var}_n}$
+on average, the bias vanishing as $R\to\infty$ because $S^2$ concentrates at $\mathrm{Var}_n$.
+
+*Monte Carlo error under normality.* If the $\hat\theta^{(r)}_n$ are iid normal with variance
+$\mathrm{Var}_n$, then $(R-1)S^2/\mathrm{Var}_n\sim\chi^2_{R-1}$, whose variance is $2(R-1)$; therefore
+$\mathrm{Var}(S^2)=\big(\mathrm{Var}_n/(R-1)\big)^2\cdot 2(R-1)=2\,\mathrm{Var}_n^2/(R-1)$. Apply the delta
+method (@thm-delta-method) to the smooth map $x\mapsto\sqrt{x}$ at $x=\mathrm{Var}_n$, whose derivative is
+$1/(2\sqrt{\mathrm{Var}_n})$:
+$$
+\mathrm{Var}(\mathrm{EmpSE})=\mathrm{Var}(\sqrt{S^2})
+\approx\Big(\frac{1}{2\sqrt{\mathrm{Var}_n}}\Big)^2\mathrm{Var}(S^2)
+=\frac{1}{4\,\mathrm{Var}_n}\cdot\frac{2\,\mathrm{Var}_n^2}{R-1}=\frac{\mathrm{Var}_n}{2(R-1)}.
+$$
+Taking the square root and substituting the plug-in $\sqrt{\mathrm{Var}_n}\approx\mathrm{EmpSE}$ yields
+@eq-sim-mcse-empse. $\square$
+:::
+
+One caveat deserves flagging next to the formula. The Monte Carlo standard error @eq-sim-mcse-empse is the
+one performance-error formula in this chapter that *assumes normality* of $\hat\theta_n$: it comes from the
+chi-square law of the sample variance and holds only approximately when the replicate estimates are skewed
+or heavy-tailed. The bias, coverage, and mean-squared-error Monte Carlo standard errors carry no such
+assumption.
+
+Coverage is the proportion of a sequence of indicator variables, hence a binomial proportion, and its Monte
+Carlo error is exactly the binomial standard error.
+
+::: {#lem-sim-coverage-binomial}
+## The coverage estimator is a binomial proportion
+Let $C_r=\mathbf{1}\{\theta\in I^{(r)}_n\}$ and $\pi=\mathrm{Cov}_n=P(\theta\in I_n)$. Then
+$C_1,\dots,C_R$ are iid $\mathrm{Ber}(\pi)$, the coverage estimator @eq-sim-coverage satisfies
+$R\,\widehat{\mathrm{Cov}}\sim\mathrm{Bin}(R,\pi)$, and
+$$
+\mathbb{E}[\widehat{\mathrm{Cov}}]=\pi,
+\qquad
+\mathrm{MCSE}(\widehat{\mathrm{Cov}})=\sqrt{\frac{\pi(1-\pi)}{R}}\;\le\;\frac{1}{2\sqrt{R}},
+$$ {#eq-sim-mcse-coverage}
+so $\widehat{\mathrm{Cov}}$ is unbiased and consistent for the true coverage $\pi$, with Monte Carlo
+standard error estimated by $\sqrt{\widehat{\mathrm{Cov}}(1-\widehat{\mathrm{Cov}})/R}$.
+:::
+
+::: {.proof}
+Each replicate produces an interval $I^{(r)}_n$ with the law of $I_n$, so the event $\{\theta\in
+I^{(r)}_n\}$ has probability $\pi$, and the events are independent across the independent replicates;
+hence $C_r$ are iid $\mathrm{Ber}(\pi)$ and their sum is $\mathrm{Bin}(R,\pi)$. Then
+$\mathbb{E}[\widehat{\mathrm{Cov}}]=\tfrac1R\sum_r\mathbb{E}[C_r]=\pi$, and by independence
+$\mathrm{Var}(\widehat{\mathrm{Cov}})=\tfrac1{R^2}\sum_r\mathrm{Var}(C_r)=\tfrac1{R^2}\cdot R\,\pi(1-\pi)
+=\pi(1-\pi)/R$, whose square root is @eq-sim-mcse-coverage. The bound $\pi(1-\pi)\le 1/4$ holds because
+$\pi(1-\pi)$ is maximized at $\pi=1/2$, giving $\mathrm{MCSE}\le 1/(2\sqrt R)$. Consistency is the weak law
+of large numbers for the iid bounded variables $C_r$. $\square$
+:::
+
+::: {#cor-sim-replications-coverage}
+## Replications needed for a target coverage precision
+To estimate coverage with Monte Carlo standard error at most $m$ for any true coverage requires at most
+$R\ge 1/(4m^2)$ replications; near the nominal $\pi=0.95$ it suffices that $R\ge 0.95\cdot 0.05/m^2$. To
+resolve coverage to within a Monte Carlo standard error of $m=0.0066$ at $\pi=0.95$ thus requires
+$R\approx 1090$, the source of the common "use at least a thousand replications" recommendation.
+:::
+
+::: {.proof}
+By @lem-sim-coverage-binomial the worst-case Monte Carlo standard error is $1/(2\sqrt R)$, at most $m$ when
+$R\ge 1/(4m^2)$; substituting the specific $\pi=0.95$ into $\sqrt{\pi(1-\pi)/R}\le m$ gives
+$R\ge 0.95\cdot0.05/m^2=0.0475/m^2$, which for $m=0.0066$ is $0.0475/0.0066^2\approx 1090$. $\square$
+:::
+
+::: {.remark}
+**Replication planning as a workflow.** The two corollaries @cor-sim-replications-bias and
+@cor-sim-replications-coverage are usually run as a four-step recipe, not as one-off formulas. (1) Run a
+small *pilot*, perhaps $R_0=100$ replications of one representative scenario. (2) From the pilot, estimate
+the ingredient the target needs: the estimator's variance $\mathrm{Var}_n$ (via $\mathrm{EmpSE}^2$) if bias
+precision is the goal, or an anticipated coverage near $0.95$ if interval reliability is. (3) Choose a
+tolerance $m$, the largest Monte Carlo standard error you are willing to report. (4) Solve for $R$:
+$R\ge\mathrm{Var}_n/m^2$ for bias, $R\ge\pi(1-\pi)/m^2$ for coverage. The following table shows the coverage
+Monte Carlo standard error near the nominal $\pi=0.95$ at the replication counts most studies actually use.
+
+| $R$ | coverage MCSE at $\pi=0.95$, $\sqrt{0.95\cdot0.05/R}$ | resolves coverage to about |
+|---|---|---|
+| $500$ | $0.0097$ | $\pm 1.0$ percentage point |
+| $1{,}000$ | $0.0069$ | $\pm 0.7$ percentage point |
+| $2{,}000$ | $0.0049$ | $\pm 0.5$ percentage point |
+| $5{,}000$ | $0.0031$ | $\pm 0.3$ percentage point |
+
+The table explains the field's habits: $R=1000$ resolves coverage to well under a percentage point and bias
+to about a thirtieth of the estimator's standard deviation, enough to separate a method covering at $0.88$
+from one covering at $0.94$, while $R=5000$ is reserved for the finer comparisons among near-nominal methods.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**The empirical-versus-model-based diagnostic.** Coverage of a Wald interval
+$\hat\theta_n\pm z_{\alpha/2}\widehat{\mathrm{SE}}_n$ is governed by how the reported standard error
+$\widehat{\mathrm{SE}}_n$, summarized by $\mathrm{ModSE}$, compares with the true variability summarized by
+$\mathrm{EmpSE}$. Three regimes occur. When $\mathrm{ModSE}\approx\mathrm{EmpSE}$ and the estimator is
+approximately unbiased, coverage is near nominal: the intervals are the right width and centered correctly.
+When $\mathrm{ModSE}<\mathrm{EmpSE}$, the method understates its own uncertainty, the intervals are too
+narrow, and coverage falls below nominal; this is the dangerous failure, an overconfident method. When
+$\mathrm{ModSE}>\mathrm{EmpSE}$, the intervals are wider than necessary and coverage exceeds nominal, an
+inefficient but conservative failure. For MAIC and simulated treatment comparison the relevant
+$\widehat{\mathrm{SE}}_n$ is the sandwich standard error of @def-sandwich-variance and
+@thm-maic-sandwich-variance (as a one-line refresher: the sandwich standard error corrects the naive one for
+the fact that MAIC's weights are themselves estimated from the data rather than known in advance, and
+ignoring that extra source of variability is what makes the reported standard error too small), and a naive
+standard error that treats the estimated weights as fixed produces exactly the
+$\mathrm{ModSE}<\mathrm{EmpSE}$ undercoverage that the sandwich correction repairs. For Bayesian
+methods $\widehat{\mathrm{SE}}_n$ is the posterior standard deviation and $I_n$ a credible interval, whose
+frequentist coverage the simulation measures. The next section shows that this diagnostic is only half the
+story: coverage also depends on bias, and under bias coverage can fail no matter how accurate the standard
+error. $\blacktriangleleft$
+:::
+
+This section corresponds to K.3 in the proof catalogue.
+
+## The mean-squared-error decomposition {#sec-sim-mse}
+
+Bias and variance are not competing summaries to be weighed by taste; they combine, exactly, into a single
+measure of total error. The mean squared error is the expected squared distance from the estimand, and it
+splits into a systematic part and a stochastic part with no remainder. This is catalogue result K.4 and the
+one genuine theorem among the performance measures. It earns the name theorem, where the other performance
+measures are definitions with elementary moment calculations, because it is an identity with content: it
+certifies that total error splits cleanly into a part a simulation can blame on *noise* (variance,
+shrinkable by a larger trial or a more efficient method) and a part it must blame on *the method itself*
+(squared bias, removable only by fixing the model), with nothing left over. Every method's mean squared
+error can therefore be attributed to exactly these two causes.
+
+::: {#thm-mse-decomposition}
+## Bias-variance decomposition of the mean squared error
+For any estimator $\hat\theta_n$ of an estimand $\theta$ with $\mathbb{E}[\hat\theta_n^2]<\infty$,
+$$
+\mathrm{MSE}_n=\mathbb{E}\big[(\hat\theta_n-\theta)^2\big]=\mathrm{Bias}_n^{\,2}+\mathrm{Var}_n,
+\qquad \mathrm{Bias}_n=\mathbb{E}[\hat\theta_n]-\theta,\ \ \mathrm{Var}_n=\mathrm{Var}(\hat\theta_n).
+$$ {#eq-sim-mse}
+:::
+
+::: {.proof}
+Write $\nu=\mathbb{E}[\hat\theta_n]$ and insert it inside the square by adding and subtracting:
+$$
+(\hat\theta_n-\theta)^2=\big((\hat\theta_n-\nu)+(\nu-\theta)\big)^2
+=(\hat\theta_n-\nu)^2+2(\hat\theta_n-\nu)(\nu-\theta)+(\nu-\theta)^2.
+$$
+Take expectations term by term, using that $\nu-\theta=\mathrm{Bias}_n$ is a constant. The first term has
+expectation $\mathbb{E}[(\hat\theta_n-\nu)^2]=\mathrm{Var}_n$ by definition of the variance. The cross
+term has expectation $2(\nu-\theta)\,\mathbb{E}[\hat\theta_n-\nu]=2(\nu-\theta)\cdot 0=0$, because
+$\mathbb{E}[\hat\theta_n-\nu]=\nu-\nu=0$. The third term is the constant $(\nu-\theta)^2=\mathrm{Bias}_n^2$.
+Summing,
+$$
+\mathrm{MSE}_n=\mathrm{Var}_n+0+\mathrm{Bias}_n^2,
+$$
+which is @eq-sim-mse. The finiteness $\mathbb{E}[\hat\theta_n^2]<\infty$ guarantees all three expectations
+are finite. $\square$
+:::
+
+::: {.remark}
+**Why this matters: four numbers, four questions.** The decomposition is the reason a simulation reports
+bias, variance, mean squared error, and coverage as a set rather than picking one. Bias asks whether the
+method is *valid*, that is, whether it aims at the right target; variance asks whether it is *precise*, that
+is, how much its answers scatter; mean squared error @eq-sim-mse fuses the two into a single *accuracy*
+score that lets a slightly biased but stable method beat an unbiased but volatile one; and coverage,
+developed next, asks whether the method's *uncertainty statements* can be trusted. In an indirect comparison
+these map directly onto the choice between MAIC, simulated treatment comparison, and multilevel network
+meta-regression: the reweighting methods trade a little bias for controlled variance, the model-based
+methods aim to reduce both, and only the full four-number report reveals which trade the data actually
+reward. $\blacktriangleleft$
+:::
+
+The decomposition extends verbatim to vector estimands by summing over coordinates, which is the form
+needed whenever a method is judged on several contrasts at once.
+
+::: {#cor-sim-mse-trace}
+## Vector form of the decomposition
+For a vector estimator $\hat{\boldsymbol{\theta}}_n\in\mathbb{R}^k$ of $\boldsymbol{\theta}$ with finite
+second moments, the total mean squared error decomposes as
+$$
+\mathbb{E}\big[\|\hat{\boldsymbol{\theta}}_n-\boldsymbol{\theta}\|_2^2\big]
+=\|\mathrm{Bias}(\hat{\boldsymbol{\theta}}_n)\|_2^2+\mathrm{tr}\,\mathrm{Cov}(\hat{\boldsymbol{\theta}}_n),
+$$ {#eq-sim-mse-trace}
+where $\mathrm{Bias}(\hat{\boldsymbol{\theta}}_n)=\mathbb{E}[\hat{\boldsymbol{\theta}}_n]-\boldsymbol{\theta}$
+and $\mathrm{tr}\,\mathrm{Cov}$ is the sum of the coordinatewise variances.
+:::
+
+::: {.proof}
+Write $\|\hat{\boldsymbol{\theta}}_n-\boldsymbol{\theta}\|_2^2=\sum_{j=1}^{k}(\hat\theta_{n,j}-\theta_j)^2$
+and apply @thm-mse-decomposition to each coordinate: the $j$-th term has expectation
+$\mathrm{Bias}(\hat\theta_{n,j})^2+\mathrm{Var}(\hat\theta_{n,j})$. Summing over $j$, the squared biases
+sum to $\|\mathrm{Bias}(\hat{\boldsymbol{\theta}}_n)\|_2^2$ and the variances sum to the trace of the
+covariance matrix, since the diagonal entries of $\mathrm{Cov}(\hat{\boldsymbol{\theta}}_n)$ are exactly
+the coordinate variances. $\square$
+:::
+
+The population identity @eq-sim-mse has an exact finite-sample shadow at the level of the Monte Carlo
+estimators, with no approximation: the empirical mean squared error decomposes into the squared empirical
+bias plus a multiple of the empirical variance.
+
+::: {#lem-sim-mse-empirical-identity}
+## Exact decomposition of the empirical mean squared error
+Let $\widehat{\mathrm{MSE}}=\frac1R\sum_{r=1}^{R}(\hat\theta^{(r)}_n-\theta)^2$ be the Monte Carlo
+mean-squared-error estimator. Then, identically in the data,
+$$
+\widehat{\mathrm{MSE}}=\widehat{\mathrm{Bias}}^{\,2}+\frac{R-1}{R}\,\mathrm{EmpSE}^2,
+$$ {#eq-sim-mse-empirical-identity}
+with $\widehat{\mathrm{Bias}}=\bar{\hat\theta}-\theta$ and $\mathrm{EmpSE}^2=S^2$ as above; and
+$\mathbb{E}[\widehat{\mathrm{MSE}}]=\mathrm{MSE}_n$.
+:::
+
+::: {.proof}
+Apply the same add-and-subtract step as in @thm-mse-decomposition, but to the *sample* mean
+$\bar{\hat\theta}$ in place of the population mean. With $\hat\theta^{(r)}_n-\theta
+=(\hat\theta^{(r)}_n-\bar{\hat\theta})+(\bar{\hat\theta}-\theta)$,
+$$
+\sum_{r}(\hat\theta^{(r)}_n-\theta)^2
+=\sum_{r}(\hat\theta^{(r)}_n-\bar{\hat\theta})^2
++2(\bar{\hat\theta}-\theta)\sum_{r}(\hat\theta^{(r)}_n-\bar{\hat\theta})
++R(\bar{\hat\theta}-\theta)^2.
+$$
+The middle sum vanishes because $\sum_r(\hat\theta^{(r)}_n-\bar{\hat\theta})=0$ by definition of the sample
+mean. Dividing by $R$ and using $\sum_r(\hat\theta^{(r)}_n-\bar{\hat\theta})^2=(R-1)S^2$ and
+$\bar{\hat\theta}-\theta=\widehat{\mathrm{Bias}}$ gives
+$$
+\widehat{\mathrm{MSE}}=\frac{(R-1)S^2}{R}+\widehat{\mathrm{Bias}}^{\,2},
+$$
+which is @eq-sim-mse-empirical-identity. For the expectation, take $\mathbb{E}$ of
+@eq-sim-mse-empirical-identity: $\mathbb{E}[\widehat{\mathrm{Bias}}^2]=\mathrm{Var}(\widehat{\mathrm{Bias}})
++(\mathbb{E}\widehat{\mathrm{Bias}})^2=\mathrm{Var}_n/R+\mathrm{Bias}_n^2$ by @lem-sim-bias-unbiased, and
+$\mathbb{E}[\tfrac{R-1}{R}S^2]=\tfrac{R-1}{R}\mathrm{Var}_n$ by @lem-sim-empse-unbiased; their sum is
+$\mathrm{Bias}_n^2+\mathrm{Var}_n=\mathrm{MSE}_n$ by @thm-mse-decomposition. $\square$
+:::
+
+::: {.remark}
+**The bias-variance trade-off in population adjustment.** The decomposition @eq-sim-mse is the reason a
+biased method can be preferred. Omitting a weakly imbalanced effect modifier from a MAIC introduces a small
+$\mathrm{Bias}_n^2$ but, by retaining a larger effective sample size (@thm-maic-ess-bound), lowers
+$\mathrm{Var}_n$; if the variance saving exceeds the squared bias incurred, the omission lowers the mean
+squared error. The minimizer of @eq-sim-mse over the set of balanced moments is in general not the full
+set, exactly the phenomenon that the no-extrapolation limit (@thm-maic-no-extrapolation) forces under poor
+overlap, where balancing every moment drives the effective sample size, and with it the variance term,
+toward catastrophe. A simulation study quantifies this trade-off scenario by scenario; the decomposition
+guarantees that the two contributions it reports, squared bias and variance, account for the total error
+with nothing left over. $\blacktriangleleft$
+:::
+
+This section corresponds to K.4 in the proof catalogue.
+
+## Coverage under correct and incorrect specification {#sec-sim-misspec}
+
+The coverage diagnostic of @sec-sim-coverage assumed an approximately unbiased estimator and asked whether
+the standard error was right. The deeper question is what happens to coverage when the estimator is
+*biased*, as it must be when a method's assumptions are violated: an omitted effect modifier, a misspecified
+outcome model, a transportability assumption that does not hold. The answer, catalogue result K.5, is
+sharp and at first counterintuitive: a fixed specification bias drives coverage not toward some degraded
+constant but all the way to zero as the per-replication sample size grows. The intervals shrink around the
+wrong value, and more data only sharpens the error.
+
+::: {.remark}
+**The phenomenon in plain words, before any formulas.** Here is the whole result in one breath. Suppose a
+method is biased by a fixed amount: it aims at $1.0$ PASI points when the truth is $1.5$. As the trial grows,
+the method's confidence interval shrinks, because more data makes each estimate more precise; but it shrinks
+around the *wrong center*, $1.0$, not $1.5$. So the true value $1.5$ starts inside a wide early interval and
+is squeezed out as the interval tightens: coverage *falls* as $n$ grows. This is counterintuitive because in
+everyday statistics more data is always better; here more data makes a biased method's intervals *worse*,
+since precision without accuracy is confident error. The worked example computes exactly this collapse for
+the naive comparison in the running scenario, coverage dropping from $0.83$ to $0.48$ to $0.001$ as the
+sample size climbs (@sec-sim-example). The rest of this section proves that the collapse is inevitable and
+computes its exact rate; a reader content with the picture can skim the analysis and rejoin at
+@cor-sim-fixed-bias-collapse. $\blacktriangleleft$
+:::
+
+We make this precise by computing the limiting coverage of a Wald interval as a function of a single
+standardized bias. Throughout, $\theta$ is the true estimand and $\theta_{\mathrm{work}}$ is the value the
+method's estimator actually converges to, the **estimand under the working model** (we write
+$\theta_{\mathrm{work}}$, not $\theta_0$, to keep it distinct from the null value $\theta_0$ of the next
+section). It equals $\theta$ when the method is correctly specified and differs from it otherwise; it is the
+M-estimation target $\boldsymbol{\theta}^*$ of @def-m-estimator transported to the present scalar setting. A
+concrete instance fixes the idea: when a MAIC omits an imbalanced effect modifier of strength $\beta_1$ whose
+mean differs by $\Delta\bar x_1$ between the two trials, the omitted-covariate estimator no longer converges
+to the target $\theta$ but to a shifted value $\theta_{\mathrm{work}}\approx\theta+\beta_1\,\Delta\bar x_1$;
+the gap $\theta_{\mathrm{work}}-\theta$ is exactly the omitted-effect-modifier bias of @thm-failure-of-bucher
+and @thm-aggregation-bias. Two further symbols appear below. The sequence $\sigma_n>0$ is the estimator's
+*true* standard deviation at sample size $n$, a theoretical quantity the analyst never sees and which shrinks
+to $0$ as $n$ grows; $\widehat{\mathrm{SE}}_n$ is the *operational* standard error the method reports and can
+compute, and condition (C2) below says the two agree in the limit. The standardized bias
+$b=\lim (\theta_{\mathrm{work}}-\theta)/\sigma_n$ measures the fixed miss $\theta_{\mathrm{work}}-\theta$ in
+units of the shrinking $\sigma_n$: if the miss is a fixed nonzero constant while $\sigma_n\to 0$, the ratio
+blows up and we record $b=\pm\infty$, the case that will destroy coverage.
+
+First, an elementary lemma about the function that will turn out to be the limiting coverage.
+
+::: {#lem-sim-coverage-unimodal}
+## The coverage curve
+For fixed $z>0$ define $h:\mathbb{R}\to(0,1)$ by
+$$
+h(b)=\Phi(z-b)-\Phi(-z-b).
+$$ {#eq-sim-coverage-curve}
+Then $h$ is even, $h(0)=\Phi(z)-\Phi(-z)=2\Phi(z)-1$, $h$ is strictly increasing on $(-\infty,0)$ and
+strictly decreasing on $(0,\infty)$ with a unique global maximum at $b=0$, and $h(b)\to 0$ as
+$|b|\to\infty$.
+:::
+
+::: {.proof}
+*Even.* Using $\Phi(-x)=1-\Phi(x)$, $h(-b)=\Phi(z+b)-\Phi(-z+b)=\big(1-\Phi(-z-b)\big)-\big(1-\Phi(z-b)\big)
+=\Phi(z-b)-\Phi(-z-b)=h(b)$.
+
+*Monotonicity.* Differentiate, using $\Phi'=\phi$ and the evenness of $\phi$:
+$$
+h'(b)=-\phi(z-b)+\phi(-z-b)=\phi(z+b)-\phi(z-b),
+$$
+since $\phi(-z-b)=\phi(z+b)$. For $b>0$ compare the arguments by absolute value: $(z+b)^2-(z-b)^2=4zb>0$,
+so $|z+b|>|z-b|$, and because $\phi$ is strictly decreasing in the absolute value of its argument,
+$\phi(z+b)<\phi(z-b)$, whence $h'(b)<0$ for all $b>0$. By evenness $h'(b)>0$ for $b<0$, and $h'(0)=0$.
+Thus $h$ increases up to $b=0$ and decreases after, with a unique global maximum $h(0)=2\Phi(z)-1$.
+
+*Limit.* As $b\to+\infty$ both $z-b\to-\infty$ and $-z-b\to-\infty$, so $\Phi(z-b)\to 0$ and
+$\Phi(-z-b)\to 0$, giving $h(b)\to 0$; by evenness the same holds as $b\to-\infty$. $\square$
+:::
+
+A short table of the coverage curve $h(b)=\Phi(z-b)-\Phi(-z-b)$ at $z=1.96$ shows its shape at a glance: a
+symmetric peak of $0.95$ at $b=0$, decaying on both sides, so that any nonzero standardized bias costs
+coverage and a large one erases it.
+
+| $b$ | $0$ | $\pm 0.5$ | $\pm 1$ | $\pm 2$ | $\pm 3$ | $\pm 5$ |
+|---|---|---|---|---|---|---|
+| $h(b)$ | $0.950$ | $0.921$ | $0.830$ | $0.484$ | $0.149$ | $0.001$ |
+
+**How to read the theorem below.** It computes the large-sample coverage of a Wald interval as this single
+function $h(b)$ of the standardized bias $b$. The three conditions are the fine print that makes the
+computation valid: (C1) the estimate is approximately normal around its own limit $\theta_{\mathrm{work}}$;
+(C2) the reported standard error $\widehat{\mathrm{SE}}_n$ is asymptotically right for the true scale
+$\sigma_n$; and (C3) the standardized bias settles to a value $b$, possibly $\pm\infty$. The payoff is the
+dichotomy: coverage hits its nominal $1-\alpha$ exactly when $b=0$ (no bias), sits below nominal for any
+finite $b\neq 0$, and collapses to $0$ when $b=\pm\infty$ (a fixed bias against a shrinking standard error).
+
+::: {#thm-coverage-misspecification}
+## Limiting coverage of a Wald interval under asymptotic bias
+Fix $\alpha\in(0,1)$ and let $z=z_{\alpha/2}$. For each $n$ let
+$I_n=[\hat\theta_n-z\,\widehat{\mathrm{SE}}_n,\ \hat\theta_n+z\,\widehat{\mathrm{SE}}_n]$ with
+$\widehat{\mathrm{SE}}_n>0$, and suppose there is a deterministic scale sequence $\sigma_n>0$ with
+$\sigma_n\to 0$ such that:
+
+(C1) *(asymptotic normality about the working-model target)*
+$(\hat\theta_n-\theta_{\mathrm{work}})/\sigma_n\xrightarrow{d}\mathcal{N}(0,1)$;
+
+(C2) *(ratio-consistent standard error)* $\widehat{\mathrm{SE}}_n/\sigma_n\xrightarrow{p}1$;
+
+(C3) *(calibrated asymptotic bias)* $(\theta_{\mathrm{work}}-\theta)/\sigma_n\to b$ for some $b\in[-\infty,\infty]$.
+
+Then the coverage of the true estimand $\theta$ satisfies
+$$
+\mathrm{Cov}_n=P(\theta\in I_n)\ \longrightarrow\
+\begin{cases}
+\Phi(z-b)-\Phi(-z-b), & b\in\mathbb{R},\\[2pt]
+0, & b=\pm\infty.
+\end{cases}
+$$ {#eq-sim-coverage-limit}
+Consequently, by @lem-sim-coverage-unimodal, the limiting coverage equals the nominal $1-\alpha=2\Phi(z)-1$
+if and only if $b=0$, is strictly less than nominal for every finite $b\neq 0$, and degrades to $0$ as the
+standardized bias diverges.
+:::
+
+::: {.proof}
+The estimand lies in the interval exactly when the studentized statistic is within the critical values:
+$$
+\theta\in I_n
+\iff |\hat\theta_n-\theta|\le z\,\widehat{\mathrm{SE}}_n
+\iff -z\le T_n\le z,\qquad T_n:=\frac{\hat\theta_n-\theta}{\widehat{\mathrm{SE}}_n}.
+$$
+Split $T_n$ at the working-model target $\theta_{\mathrm{work}}$:
+$$
+T_n=\underbrace{\frac{\hat\theta_n-\theta_{\mathrm{work}}}{\widehat{\mathrm{SE}}_n}}_{W_n}
++\underbrace{\frac{\theta_{\mathrm{work}}-\theta}{\widehat{\mathrm{SE}}_n}}_{D_n}.
+$$
+For the first term write $W_n=\dfrac{\hat\theta_n-\theta_{\mathrm{work}}}{\sigma_n}\cdot\dfrac{\sigma_n}{\widehat{\mathrm{SE}}_n}$.
+By (C1) the first factor converges in distribution to $Z\sim\mathcal{N}(0,1)$, and by (C2)
+$\sigma_n/\widehat{\mathrm{SE}}_n\xrightarrow{p}1$; Slutsky's theorem (@thm-slutsky) gives
+$W_n\xrightarrow{d}Z$.
+
+*Finite $b$.* Write $D_n=\dfrac{\theta_{\mathrm{work}}-\theta}{\sigma_n}\cdot\dfrac{\sigma_n}{\widehat{\mathrm{SE}}_n}$.
+The first factor is a deterministic sequence converging to $b$ by (C3) and the second converges in
+probability to $1$ by (C2), so $D_n\xrightarrow{p}b$. Applying Slutsky's theorem again to
+$T_n=W_n+D_n$ gives $T_n\xrightarrow{d}Z+b\sim\mathcal{N}(b,1)$. The points $\pm z$ are continuity points
+of the limiting distribution function, so
+$$
+P(-z\le T_n\le z)\to P(-z\le Z+b\le z)=P(-z-b\le Z\le z-b)=\Phi(z-b)-\Phi(-z-b)=h(b),
+$$
+which is the first branch of @eq-sim-coverage-limit.
+
+*Infinite $b$.* Suppose $b=+\infty$; the case $-\infty$ is symmetric. Fix $M>0$. Since
+$D_n=(\theta_{\mathrm{work}}-\theta)/\widehat{\mathrm{SE}}_n$ and $(\theta_{\mathrm{work}}-\theta)/\sigma_n\to+\infty$ while
+$\sigma_n/\widehat{\mathrm{SE}}_n\xrightarrow{p}1$, we have $D_n\xrightarrow{p}+\infty$, so
+$P(D_n<M)\to 0$. In words: we force the bias term $D_n$ to be at least a large constant $M$; the test
+statistic $T_n$ is then dragged above $z$ unless the random part $W_n$ compensates by being very negative
+(below $z-M$), an event of vanishing probability, so the interval almost never reaches up to $\theta$.
+Formally, on the event $\{D_n\ge M\}$ we have $T_n\ge W_n+M$, hence $\{T_n\le z\}\subseteq
+\{W_n\le z-M\}\cup\{D_n<M\}$, and therefore
+$$
+P(\theta\in I_n)\le P(T_n\le z)\le P(W_n\le z-M)+P(D_n<M).
+$$
+Letting $n\to\infty$, the first term tends to $\Phi(z-M)$ because $W_n\xrightarrow{d}Z$ and $z-M$ is a
+continuity point, and the second tends to $0$; thus $\limsup_n P(\theta\in I_n)\le\Phi(z-M)$. As $M>0$ was
+arbitrary and $\Phi(z-M)\to 0$ as $M\to\infty$, the limit is $0$, the second branch of
+@eq-sim-coverage-limit.
+
+The final consequences are @lem-sim-coverage-unimodal: $h(0)=2\Phi(z)-1=1-\alpha$ is the unique maximum,
+so finite $b\neq 0$ gives $h(b)<1-\alpha$, and the infinite-$b$ branch gives $0$. $\square$
+:::
+
+The case that matters in practice is a *fixed* specification bias, where $\theta_{\mathrm{work}}\neq\theta$
+does not depend on $n$ while $\sigma_n\to 0$; then $b=\pm\infty$ and coverage collapses.
+
+::: {#cor-sim-fixed-bias-collapse}
+## Fixed specification bias destroys coverage
+Suppose (C1) and (C2) hold and the working-model target $\theta_{\mathrm{work}}$ is a fixed constant with
+$\theta_{\mathrm{work}}\neq\theta$. Then $(\theta_{\mathrm{work}}-\theta)/\sigma_n\to\pm\infty$ as $\sigma_n\to 0$, so by
+@thm-coverage-misspecification the coverage of $\theta$ tends to $0$: a consistently misspecified method
+has asymptotic coverage zero, and its undercoverage *worsens* with increasing $n$.
+:::
+
+::: {.proof}
+With $\theta_{\mathrm{work}}-\theta\neq 0$ a nonzero constant and $\sigma_n\downarrow 0$, the ratio
+$(\theta_{\mathrm{work}}-\theta)/\sigma_n$ diverges to $+\infty$ if $\theta_{\mathrm{work}}>\theta$ and to $-\infty$ if
+$\theta_{\mathrm{work}}<\theta$; either way $b=\pm\infty$ in (C3), and the second branch of @eq-sim-coverage-limit gives
+limiting coverage $0$. Monotone worsening follows because the half-width $z\,\widehat{\mathrm{SE}}_n\approx
+z\sigma_n$ shrinks while the centering error $|\hat\theta_n-\theta|$ stays near the fixed
+$|\theta_{\mathrm{work}}-\theta|$, so the fixed miss eventually exceeds any shrinking half-width. $\square$
+:::
+
+::: {#cor-sim-correct-coverage}
+## Correct specification yields nominal coverage
+If the method is correctly specified, so that $\theta_{\mathrm{work}}=\theta$, and (C1) and (C2) hold, then $b=0$ and the
+coverage of $\theta$ tends to the nominal level $1-\alpha$.
+:::
+
+::: {.proof}
+Correct specification gives $\theta_{\mathrm{work}}-\theta=0$, hence $(\theta_{\mathrm{work}}-\theta)/\sigma_n=0\to 0=b$, and the first
+branch of @eq-sim-coverage-limit evaluates to $h(0)=\Phi(z)-\Phi(-z)=2\Phi(z)-1=1-\alpha$ by the definition
+$\Phi(z_{\alpha/2})=1-\alpha/2$. $\square$
+:::
+
+::: {.remark}
+**Two distinct ways coverage fails, and why bias is the worse one.** @cor-sim-correct-coverage shows
+correct specification with an accurate standard error gives nominal coverage. The diagnostic of
+@sec-sim-coverage concerns failures of (C2): if $\widehat{\mathrm{SE}}_n$ is biased so that
+$\widehat{\mathrm{SE}}_n/\sigma_n\xrightarrow{p}c\neq 1$, the studentized limit is $\mathcal{N}(0,1/c^2)$
+and coverage tends to $2\Phi(cz)-1$, above nominal if $c>1$ and below if $c<1$; this is a fixed, often
+modest, miscalibration. @thm-coverage-misspecification concerns failures of unbiasedness, failures of (C3)
+with $b\neq 0$, and these are categorically worse: a *fixed* bias sends coverage to $0$. The practical
+moral is that for a biased method, a larger trial or a longer Markov chain Monte Carlo run does not rescue
+the interval; it tightens a confidently wrong statement. In the population-adjustment setting the fixed
+bias $\theta_{\mathrm{work}}-\theta$ is precisely the aggregation or transitivity bias quantified earlier: the omitted
+effect-modifier bias of @thm-failure-of-bucher and @thm-aggregation-bias, or the non-collapsibility-induced
+scale mismatch of @def-non-collapsibility when contrasts are combined across populations on a
+non-collapsible scale. A simulation study that reports coverage as a function of $n$ exhibits the collapse
+of @cor-sim-fixed-bias-collapse directly: the telltale signature of a biased method is coverage that *falls*
+as $n$ grows, distinguishing it from a merely inefficient one whose coverage stays near nominal.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**The telltale signature.** Coverage that *falls* as $n$ grows is the fingerprint of bias; coverage that
+*holds* near nominal as $n$ grows is the fingerprint of a merely inefficient method. A single simulation run
+across a grid of sample sizes distinguishes the two at a glance, which is the practical reason coverage is
+tabulated against $n$ rather than reported at one sample size. $\blacktriangleleft$
+:::
+
+This section corresponds to K.5 in the proof catalogue.
+
+## Power and Type I error {#sec-sim-power}
+
+When the aim of a study is detection rather than estimation, the relevant performance measures are the
+Type I error rate and the power of a test. In the population-adjustment setting these are secondary, since
+the goal is almost always a point estimate with an interval; but they are the natural language for
+sample-size and design questions, and, as we show, they are governed by exactly the machinery of the
+previous section through the duality between tests and intervals. This is catalogue result K.6.
+
+::: {#def-power-type1}
+## Wald test, Type I error rate, and power
+For testing $H_0:\theta=\theta_0$ against $H_1:\theta\neq\theta_0$ at nominal level $\alpha$, the
+**two-sided Wald test** rejects $H_0$ when $\theta_0$ falls outside the interval $I_n$, equivalently when
+$$
+|T_{0,n}|>z_{\alpha/2},\qquad T_{0,n}=\frac{\hat\theta_n-\theta_0}{\widehat{\mathrm{SE}}_n}.
+$$ {#eq-sim-wald-test}
+The **Type I error rate** is the rejection probability when $H_0$ is true, $P_{\theta=\theta_0}(\text{reject})$,
+whose target is the nominal level $\alpha$. The **power** at a true value $\theta_1\neq\theta_0$ is the
+rejection probability $P_{\theta=\theta_1}(\text{reject})$. In a simulation each is estimated by the
+proportion of replications in which $H_0$ is rejected, a binomial proportion whose Monte Carlo standard
+error is given by @lem-sim-coverage-binomial with $\pi$ the true rejection probability.
+$\blacktriangleleft$
+:::
+
+The asymptotic level and power follow from one theorem, which is @thm-coverage-misspecification applied to
+the null value, because the test rejects exactly when the interval misses $\theta_0$.
+
+::: {.remark}
+**How to read the power theorem, and why an ITC analyst should care.** The single input is the standardized
+signal $\Delta_n=(\theta-\theta_0)/\sigma_n$: the true departure from the hypothesized null $\theta_0$,
+measured in standard-error units, the mirror image of the standardized bias $b$ of the previous section.
+Part (1) says a correctly centered test rejects a true null at the intended rate $\alpha$; part (2) gives
+the power at a *local alternative*, meaning an alternative that shrinks toward the null as $n$ grows,
+$\Delta_n\to\Delta$ finite, so that power settles at a value strictly between $\alpha$ and $1$ rather than
+racing to $1$ (this shrinking is the device that keeps the calculation informative at every sample size);
+part (3) says that against any fixed alternative the test eventually rejects with certainty. An
+indirect-comparison analyst uses part (2) in reverse, as a sample-size rule: to detect a target effect with
+prescribed power, solve @eq-sim-power for the $n$ that makes $\sigma_n$ small enough (@exr-sim-power carries
+this out numerically). $\blacktriangleleft$
+:::
+
+::: {#thm-sim-power}
+## Asymptotic level and power of the Wald test
+Let $z=z_{\alpha/2}$ and suppose the estimator satisfies (C1) and (C2) of @thm-coverage-misspecification
+with working-model target equal to the true value, $\theta_{\mathrm{work}}=\theta$, and define the
+standardized signal $\Delta_n=(\theta-\theta_0)/\sigma_n$ measuring the departure from the hypothesized
+$\theta_0$ in standard-error units.
+
+1. *(Level.)* If $H_0$ is true, so $\theta=\theta_0$ and $\Delta_n\equiv 0$, then the Type I error rate
+converges to $\alpha$:
+$$
+P_{\theta=\theta_0}(|T_{0,n}|>z_{\alpha/2})\to P(|Z|>z_{\alpha/2})=\alpha.
+$$
+
+2. *(Power, local alternatives.)* If $\Delta_n\to\Delta\in\mathbb{R}$, the power converges to
+$$
+1-\big(\Phi(z-\Delta)-\Phi(-z-\Delta)\big)
+=\Phi(\Delta-z_{\alpha/2})+\Phi(-\Delta-z_{\alpha/2}).
+$$ {#eq-sim-power}
+For $\Delta>0$ the second term is negligible, giving the standard one-sided approximation
+$\mathrm{Power}\approx\Phi\!\big(\Delta-z_{\alpha/2}\big)=\Phi\!\big(|\theta-\theta_0|/\sigma_n-z_{\alpha/2}\big)$.
+
+3. *(Consistency, fixed alternatives.)* If $\theta\neq\theta_0$ is fixed and $\sigma_n\to 0$, so
+$\Delta_n\to\pm\infty$, the power converges to $1$.
+:::
+
+::: {.proof}
+By the same studentization as in @thm-coverage-misspecification, the test statistic decomposes as
+$$
+T_{0,n}=\frac{\hat\theta_n-\theta_0}{\widehat{\mathrm{SE}}_n}
+=\frac{\hat\theta_n-\theta}{\widehat{\mathrm{SE}}_n}+\frac{\theta-\theta_0}{\widehat{\mathrm{SE}}_n}
+=W_n+\Delta_n\cdot\frac{\sigma_n}{\widehat{\mathrm{SE}}_n},
+$$
+where $W_n\xrightarrow{d}Z\sim\mathcal{N}(0,1)$ as shown there (using $\theta_{\mathrm{work}}=\theta$ in
+(C1) and (C2)) and $\sigma_n/\widehat{\mathrm{SE}}_n\xrightarrow{p}1$.
+
+*(1)* Under $H_0$, $\Delta_n\equiv 0$, so $T_{0,n}=W_n\xrightarrow{d}Z$; since $\pm z_{\alpha/2}$ are
+continuity points, $P(|T_{0,n}|>z_{\alpha/2})\to P(|Z|>z_{\alpha/2})=2\Phi(-z_{\alpha/2})=2(\alpha/2)=\alpha$,
+using $\Phi(-z_{\alpha/2})=1-\Phi(z_{\alpha/2})=\alpha/2$.
+
+*(2)* If $\Delta_n\to\Delta$ finite, then $\Delta_n\cdot\sigma_n/\widehat{\mathrm{SE}}_n\xrightarrow{p}\Delta$
+by Slutsky, and $T_{0,n}\xrightarrow{d}Z+\Delta\sim\mathcal{N}(\Delta,1)$. Hence the acceptance probability
+$P(-z\le T_{0,n}\le z)\to\Phi(z-\Delta)-\Phi(-z-\Delta)=h(\Delta)$ as in @thm-coverage-misspecification,
+and the power is $1-h(\Delta)$. Rewriting with $1-\Phi(z-\Delta)=\Phi(\Delta-z)$ and
+$\Phi(-z-\Delta)=\Phi(-\Delta-z)$ gives @eq-sim-power. For $\Delta>0$ the term $\Phi(-\Delta-z)$ is the
+upper tail beyond $\Delta+z>0$ and is small, leaving the one-sided approximation.
+
+*(3)* If $\theta\neq\theta_0$ is fixed and $\sigma_n\to 0$, then $|\Delta_n|=|\theta-\theta_0|/\sigma_n\to\infty$,
+so $h(\Delta_n)\to 0$ by the divergence branch of @lem-sim-coverage-unimodal (made rigorous by the same
+bounding argument as in @thm-coverage-misspecification), and the power $1-h(\Delta_n)\to 1$. $\square$
+:::
+
+::: {.remark}
+**Tests are intervals turned inside out.** Part (1) is @cor-sim-correct-coverage read at the null: the
+event $\{\theta_0\notin I_n\}$ has limiting probability $1-(1-\alpha)=\alpha$, which is the Type I error.
+Part (2) is @thm-coverage-misspecification read with $\theta_0$ playing the role of the "true" value and
+$\theta$ the role of the working-model target, so that the noncentrality $\Delta$ is the bias parameter
+$b$ with a sign change. The power function @eq-sim-power evaluated at $\Delta=0$ returns
+$2\Phi(-z_{\alpha/2})=\alpha$, recovering the level, as it must. This duality means a simulation that
+reports interval coverage already contains the Type I error information; power requires only re-centering
+the test at a hypothesized null. Population-adjustment simulations report power chiefly to inform the
+sample size a future head-to-head or single-arm study would need, with $\Delta$ supplied by a target effect
+size and $\sigma_n$ by the method's standard error at the planned $n$. For a concrete instance in the running
+example: to detect a true $1.0$-point PASI advantage at $80\%$ power one needs
+$\Delta=z_{0.025}+z_{0.20}=1.96+0.84=2.80$, hence a design reaching a sample size at which the method's
+standard error has fallen to $\sigma_n=1.0/2.80=0.36$ points; the method's standard-error-versus-$n$ curve
+then reads off the required $n$, and a less efficient method, needing the same $\sigma_n=0.36$ from a larger
+$n$, is precisely the one a precision simulation flags. $\blacktriangleleft$
+:::
+
+This section corresponds to K.6 in the proof catalogue.
+
+## The efficiency baseline {#sec-sim-efficiency}
+
+A simulation that ranks methods by empirical standard error is estimating their relative efficiency, and
+relative efficiency has a theoretical floor. The Cramér-Rao bound (@thm-cramer-rao) fixes the smallest
+variance any regular estimator can achieve; the empirical standard error of the best possible method
+approaches that floor, and the empirical standard error of any competitor measures its distance above it.
+Anchoring the variance comparisons of a simulation to this baseline is what separates a finding that one
+method is "more precise" from a finding that it is "near-optimal."
+
+::: {.remark}
+**What the baseline buys, in plain terms.** A precision ranking answers "is method X more precise than
+method Y." The Cramér-Rao floor answers a more useful question: "is method X close to the best precision
+*any* reasonable method could achieve, or is there room to do better?" Two pieces of fine print make the
+statement rigorous, and a reader who wants only the conclusion may skip them. A *regular* model and estimator
+(@def-regular-model, @def-efficient-estimator) are ones without pathological tricks: regularity excludes the
+super-efficient estimators that beat the bound only at isolated parameter values by exploiting discontinuous
+behavior, so the bound is a genuine floor for the methods a practitioner would use. *Uniform integrability*
+of $\{n(\hat\theta_n-\theta)^2\}_n$ is the technical condition that lets us pass from convergence of the
+distribution to convergence of the variance; concretely it rules out heavy tails, the situation where a rare
+enormous estimate, such as a single dominating MAIC weight under near-failing overlap, inflates the true
+variance far above the nominal asymptotic value. The conclusion, stripped of fine print, is that the
+empirical standard error estimates $\sqrt{V(\theta)/n}$, and $V(\theta)$ can never fall below the information
+floor $\mathcal{I}_1(\theta)^{-1}$. $\blacktriangleleft$
+:::
+
+::: {#prp-sim-efficiency-baseline}
+## Empirical standard error estimates the asymptotic variance, bounded below by the Cramér-Rao floor
+Let $\hat\theta_n$ be an estimator of a scalar $\theta$ in a regular parametric model (@def-regular-model)
+with per-observation Fisher information $\mathcal{I}_1(\theta)>0$, and suppose
+$\sqrt{n}\,(\hat\theta_n-\theta)\xrightarrow{d}\mathcal{N}(0,V(\theta))$ with $\{n(\hat\theta_n-\theta)^2\}_n$
+uniformly integrable.
+
+1. For each fixed $n$, the empirical variance $S^2$ from $R$ iid replications satisfies
+$S^2\xrightarrow{p}\mathrm{Var}_n$ as $R\to\infty$, and $n\,\mathrm{Var}_n\to V(\theta)$ as $n\to\infty$;
+hence $\mathrm{EmpSE}$ estimates $\sqrt{\mathrm{Var}_n}\approx\sqrt{V(\theta)/n}$.
+
+2. If $\hat\theta_n$ is regular and asymptotically unbiased, then
+$$
+V(\theta)\ \ge\ \mathcal{I}_1(\theta)^{-1},
+$$ {#eq-sim-crlb-floor}
+with equality if and only if $\hat\theta_n$ is asymptotically efficient (@def-efficient-estimator,
+@cor-mle-efficient). Consequently the empirical standard error of any regular method satisfies, to first
+order, $\mathrm{EmpSE}\gtrsim\sqrt{\mathcal{I}_1(\theta)^{-1}/n}$, the **efficiency baseline**, and the
+empirical relative efficiency $\mathrm{EmpSE}_2^2/\mathrm{EmpSE}_1^2$ of two methods estimates the ratio
+$V_2(\theta)/V_1(\theta)$ of their asymptotic variances.
+:::
+
+::: {.proof}
+*(1)* Sample-variance consistency is @lem-sim-empse-unbiased: $S^2\xrightarrow{p}\mathrm{Var}_n$ as
+$R\to\infty$. For the second limit, convergence in distribution of $\sqrt{n}(\hat\theta_n-\theta)$ to
+$\mathcal{N}(0,V(\theta))$ together with uniform integrability of the squares
+$\{n(\hat\theta_n-\theta)^2\}_n$ upgrades to convergence of second moments,
+$n\,\mathbb{E}[(\hat\theta_n-\theta)^2]\to V(\theta)$ (uniform integrability plus convergence in
+distribution implies convergence of the corresponding expectations; see @billingsley1995). Asymptotic
+unbiasedness, which the same uniform integrability gives via convergence of first moments
+$\sqrt{n}\,\mathrm{Bias}_n\to 0$, yields $n\,\mathrm{Bias}_n^2\to 0$, so by @thm-mse-decomposition
+$n\,\mathrm{Var}_n=n\,\mathrm{MSE}_n-n\,\mathrm{Bias}_n^2\to V(\theta)-0=V(\theta)$.
+
+*(2)* The information for $n$ iid observations is $n\,\mathcal{I}_1(\theta)$ by additivity of Fisher
+information over independent samples. For an exactly unbiased estimator the Cramér-Rao inequality
+(@thm-cramer-rao) gives $\mathrm{Var}_n\ge (n\,\mathcal{I}_1(\theta))^{-1}$, hence
+$n\,\mathrm{Var}_n\ge\mathcal{I}_1(\theta)^{-1}$; letting $n\to\infty$ through part (1),
+$V(\theta)\ge\mathcal{I}_1(\theta)^{-1}$. The statement that no regular, asymptotically unbiased estimator
+can have asymptotic variance below $\mathcal{I}_1(\theta)^{-1}$, with equality characterizing asymptotic
+efficiency, is the local-asymptotic-minimax and convolution theory cited in Chapter 5 following
+@def-efficient-estimator and realized by the maximum likelihood estimator in @cor-mle-efficient; we invoke
+it here rather than reprove it. The relative-efficiency claim is then immediate: by part (1),
+$\mathrm{EmpSE}_k^2\approx V_k(\theta)/n$ for method $k$, so the ratio estimates $V_2(\theta)/V_1(\theta)$.
+$\square$
+:::
+
+::: {.remark}
+**What a precision ranking means.** When a simulation reports that multilevel network meta-regression has a
+smaller empirical standard error than MAIC under good overlap, @prp-sim-efficiency-baseline says it is
+estimating a ratio $V_{\mathrm{ML\text{-}NMR}}/V_{\mathrm{MAIC}}<1$ of asymptotic variances, both bounded
+below by the same Cramér-Rao floor $\mathcal{I}_1(\theta)^{-1}$. The reweighting methods pay for covariate
+balance with the variance inflation factor $n/\mathrm{ESS}$ of @thm-maic-ess-bound and the variance-inflation
+theorem of Chapter 18, lifting their $V(\theta)$ above the floor; a likelihood-based method that models the
+outcome can sit closer to it. A simulation thus turns the abstract efficiency ordering into measured
+numbers, with the bound certifying how much room for improvement remains. The uniform-integrability
+hypothesis is not a formality: an estimator with occasional extreme values, such as MAIC under near-failing
+overlap where a single weight dominates, can have a finite-sample variance far larger than its nominal
+asymptotic variance, and the simulation will, correctly, report the large empirical standard error.
+$\blacktriangleleft$
+:::
+
+## The empirical robustness finding {#sec-sim-robustness}
+
+We now state the principal conclusion of the simulation literature on population adjustment, the synthesis
+of the @phillippo2019thesis study and its successors. It is an **empirical** statement: it summarizes
+measured bias and coverage across a designed grid of data-generating mechanisms, not a theorem with a
+proof. We label it a proposition to record it precisely and to tie each of its claims either to a theorem
+proved earlier in the book or to the cited simulation evidence, but its warrant is the simulation, and
+different data-generating mechanisms could in principle reorder it. This is catalogue result K.7.
+
+The following table summarizes the ordering at a glance; the proposition then states it precisely and ties
+each row to a theorem. Here "good overlap" and "poor overlap" refer to whether the index and comparator
+covariate distributions substantially share support. The literature has no single fixed cutoff, but it uses
+the matching effective sample size relative to $n$ as the working diagnostic (@thm-maic-ess-bound, Chapter
+18): overlap is comfortable when $\mathrm{ESS}$ remains a substantial fraction of the index sample size, and
+worrying when it collapses to a small fraction, the regime of the no-extrapolation limit
+@thm-maic-no-extrapolation. Below, EM abbreviates effect modifier.
+
+| Method (anchored) | Key assumption | Bias | Variance | Coverage, good overlap | Coverage, poor overlap |
+|---|---|---|---|---|---|
+| ML-NMR, all EMs | correct EM model, adequate overlap | low | lowest | near nominal | degrades gracefully |
+| STC, all EMs | correct outcome model | low | low | near nominal | can extrapolate |
+| MAIC, all EMs | adequate overlap | low | higher ($n/\mathrm{ESS}$) | near nominal | low and unstable |
+| MAIC, omitted EM | assumption violated | substantial | higher | below nominal, falls with $n$ | below nominal |
+| Naive Bucher | transitivity (EM balance) | largest under imbalance | low | collapses with $n$ | collapses with $n$ |
+
+::: {#prp-phillippo-robustness}
+## Empirical robustness ordering of population-adjustment methods
+Across data-generating mechanisms with correlated baseline covariates, varying covariate overlap between
+the index and comparator populations, varying effect-modification strength, and varying inclusion or
+omission of effect modifiers, the @phillippo2019thesis simulation study and its replications and extensions
+(@chandler2025mlumr) find the following qualitative ordering, on the relative-effect scale of interest, for
+the **anchored** comparison.
+
+1. **Multilevel network meta-regression with all effect modifiers** attains low bias and near-nominal
+coverage when the effect-modifier specification is correct and overlap is adequate; it is the most robust
+method studied. Its consistency is the aggregation theorem @thm-aggregation, and it avoids the
+ecological/aggregation bias @thm-aggregation-bias by integrating the individual-level model rather than
+matching means.
+
+2. **Simulated treatment comparison with all effect modifiers and a correctly specified outcome model**
+attains low bias comparable to multilevel network meta-regression for pairwise comparisons; under a correct
+linear model it is asymptotically equivalent to MAIC (@thm-maic-stc-equivalence), and it can interpolate
+where MAIC cannot.
+
+3. **MAIC with all effect modifiers and adequate overlap** attains low bias, at the cost of somewhat higher
+variance than the model-based methods, the variance inflation being the $n/\mathrm{ESS}$ factor of
+@thm-maic-ess-bound and Chapter 18.
+
+4. **MAIC with all effect modifiers but poor overlap** has high variance and can be substantially biased,
+and may fail outright as the effective sample size collapses toward zero, the no-extrapolation limit
+@thm-maic-no-extrapolation.
+
+5. **Any method that omits an imbalanced effect modifier** incurs substantial bias, increasing with the
+omitted modifier's interaction strength and its imbalance across populations; by
+@cor-sim-fixed-bias-collapse this fixed bias also drives interval coverage toward zero as $n$ grows. This
+is the transitivity failure @thm-failure-of-bucher and the ecological bias @thm-aggregation-bias seen
+through the performance measures.
+
+6. **The unadjusted Bucher comparison** exhibits the largest bias whenever effect modifiers are distributed
+differently across populations, being the $b=\pm\infty$ extreme of @thm-coverage-misspecification; it is
+unbiased only under transitivity (@thm-bucher-unbiased), which population adjustment exists to repair.
+
+For the **unanchored** comparison, where no common comparator anchors the contrast (Chapters 17, 26), the
+ordering is shorter but the demands are stiffer.
+
+7. **Multilevel unanchored meta-regression under a correct shared-prognostic-factor assumption** (@def-sema,
+in its absolute form @def-conditional-constancy-absolute) attains near-nominal coverage and low bias. The
+residual bias concentrates in scenarios where strong effect modification acts in the index or target
+population.
+
+8. **The same method with the assumption relaxed by subgroup aggregate data** restores near-nominal coverage
+under any effect-modification strength, at the price of requiring that extra subgroup information.
+
+9. **All unanchored methods remain far more demanding than their anchored counterparts**, because dropping
+the common comparator forfeits the cancellation that makes an anchored contrast robust. This is the content
+of @thm-unanchored-paic-consistency and of the insufficiency of the shared-effect-modifier assumption alone
+(@thm-sema-insufficient).
+:::
+
+::: {.remark}
+**Empirical, but not arbitrary.** Each ranked claim above is anchored to a theorem of the preceding
+chapters: items 1 to 3 to consistency and equivalence results, items 4 to 6 to the limitation theorems and
+to the coverage-collapse corollary @cor-sim-fixed-bias-collapse of this chapter. What the simulation
+*adds* is the finite-sample magnitude and the relative ordering, which no theorem supplies: how much
+variance MAIC pays at a given overlap, how large the omitted-modifier bias is at a given imbalance, at what
+sample size coverage has already collapsed. The proposition is robust in the sense that independent
+simulation studies reproduce the ordering, but it is contingent on the designed mechanisms; an application
+whose covariates, overlap, or scale differ markedly from the studied grid should verify the relevant
+scenarios for itself, which is precisely what the ADEMP framework of @def-ademp equips it to do. The
+practical reading is unchanged across studies: when individual patient data are available and overlap is
+adequate, prefer the model-based methods, multilevel network meta-regression for anchored and multilevel
+unanchored meta-regression for unanchored comparisons, reserving MAIC for settings where its assumptions
+are mild and its effective sample size healthy, and treating the unadjusted comparison as the bias-prone
+baseline it is. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Practice, in one rule.** When individual patient data are available and overlap is healthy, prefer the
+model-based methods: multilevel network meta-regression for anchored comparisons and multilevel unanchored
+meta-regression for unanchored ones. Reserve MAIC for settings where its assumptions are mild and its
+effective sample size stays healthy. Treat the unadjusted Bucher comparison as the bias-prone baseline
+against which the others are judged, never as the answer when effect modifiers are imbalanced.
+$\blacktriangleleft$
+:::
+
+This section corresponds to K.7 in the proof catalogue.
+
+## A worked miniature simulation {#sec-sim-example}
+
+We carry a complete simulation through its ADEMP specification and every performance computation, choosing
+the numbers so that each performance measure and its Monte Carlo standard error can be checked by hand, and
+so that the coverage-collapse theorem can be evaluated against a standard normal table.
+
+::: {#exm-sim-miniature}
+## An anchored simulation comparing an adjusted method with the naive comparison
+We reuse the data-generating geometry of the worked MAIC example (@exm-maic-twocov), now wrapped in the
+ADEMP framework and pushed through the performance measures. Read concretely, this is the running
+plaque-psoriasis comparison of @sec-sim-intro: $A$ a new interleukin-23 inhibitor, $B$ an established
+comparator biologic, $C$ ustekinumab as the common anchor, the effect modifier $x_1$ baseline disease
+severity, the prognostic covariate $x_2$ age, and the outcome the reduction in PASI score at week 16 in
+points, so every number below is a PASI mean difference.
+
+**Aims (A).** Quantify, on the identity scale, the bias and ninety-five percent interval coverage of two
+methods for the target contrast $d_{AB(\mathcal{P}_{BC})}$: an adjusted method (MAIC or simulated treatment
+comparison) and the unadjusted Bucher comparison, under an imbalanced effect modifier.
+
+**Data-generating mechanism (D).** An index trial $AC$ with one effect modifier $x_1$ and one prognostic
+covariate $x_2$, covariate mean $\bar{\mathbf{x}}_{AC}=(0,0)$; a comparator trial $BC$ reporting covariate
+mean $\bar{\mathbf{x}}_{BC}=(0.5,0.5)$ and a $B$-versus-$C$ benefit $d_{BC}=3.0$. The conditional benefit
+of $A$ over $C$ is $\mu_C(\mathbf{x})-\mu_A(\mathbf{x})=4+x_1$, depending on the effect modifier $x_1$ but
+not on $x_2$. Each replication draws $n$ patients per arm with independent mean-zero outcome noise of
+variance making the per-replication sampling standard deviation of each method's estimator equal to
+$\sigma_n$.
+
+*Anatomy of one replication.* Concretely, one replication of this mechanism does the following. Draw $n$
+patients for the $A$ arm and $n$ for the $C$ arm of the index trial; for each patient draw baseline severity
+$x_1$ and age $x_2$ from the index-trial covariate distribution, then draw a PASI reduction from the linear
+model, where the $A$-versus-$C$ conditional benefit is $4+x_1$ points plus mean-zero noise. Reduce the
+comparator trial to its reported means $\bar{\mathbf{x}}_{BC}=(0.5,0.5)$ and $d_{BC}=3.0$, mimicking the
+published aggregate data. Apply each method to this single dataset to obtain its triple
+$(\hat\theta_n,\widehat{\mathrm{SE}}_n,I_n)$. That one pass produces *one row* of the table below; the study
+repeats it $R$ times with fresh random draws. Seeing this makes plain why $R=5$ is a teaching device and not
+a real study: five datasets pin down neither the bias nor the coverage with any precision, as the Monte
+Carlo standard errors will show.
+
+**Estimands (E).** The target is the $A$-versus-$B$ benefit in the comparator population. From
+@exm-maic-twocov, $d_{AC(\mathcal{P}_{BC})}=4+\bar x_{1,BC}=4.5$, so
+$$
+\theta=d_{AB(\mathcal{P}_{BC})}=d_{AC(\mathcal{P}_{BC})}-d_{BC}=4.5-3.0=1.5.
+$$
+
+**Methods (M).** The *adjusted* method targets $\theta_{\mathrm{work}}^{\mathrm{adj}}=d_{AC(\mathcal{P}_{BC})}-d_{BC}=1.5=\theta$,
+correctly specified, asymptotically unbiased. The *naive* Bucher method uses the index-population benefit
+$d_{AC(\mathcal{P}_{AC})}=4+\bar x_{1,AC}=4.0$, so it targets $\theta_{\mathrm{work}}^{\mathrm{naive}}=4.0-3.0=1.0$, a
+fixed bias of $\theta_{\mathrm{work}}^{\mathrm{naive}}-\theta=-0.5$.
+
+**Performance measures (P): the adjusted method by hand.** Suppose at the chosen $n$ we run $R=5$
+replications of the adjusted method (an unrealistically small $R$, used only so the arithmetic is
+transparent; the Monte Carlo standard errors below show why $R=5$ is far too few in practice) and observe
+the point estimates and nominal ninety-five percent Wald intervals
+$\hat\theta^{(r)}\pm 1.96\,\widehat{\mathrm{SE}}^{(r)}$ with a common reported standard error
+$\widehat{\mathrm{SE}}^{(r)}=0.30$ (half-width $1.96\times 0.30=0.588$):
+
+| $r$ | $\hat\theta^{(r)}$ | $\widehat{\mathrm{SE}}^{(r)}$ | $95\%$ CI | covers $\theta=1.5$? |
+|---|---|---|---|---|
+| 1 | $0.9$ | $0.30$ | $[0.312,\,1.488]$ | no |
+| 2 | $0.9$ | $0.30$ | $[0.312,\,1.488]$ | no |
+| 3 | $1.4$ | $0.30$ | $[0.812,\,1.988]$ | yes |
+| 4 | $1.9$ | $0.30$ | $[1.312,\,2.488]$ | yes |
+| 5 | $1.9$ | $0.30$ | $[1.312,\,2.488]$ | yes |
+
+*Bias.* The mean estimate is $\bar{\hat\theta}=(0.9+0.9+1.4+1.9+1.9)/5=7.0/5=1.4$, so by @eq-sim-bias
+$\widehat{\mathrm{Bias}}=1.4-1.5=-0.1$ and the relative bias is $-0.1/1.5=-6.7\%$.
+
+*Empirical standard error.* The deviations from $\bar{\hat\theta}=1.4$ are $-0.5,-0.5,0,0.5,0.5$, with
+squares $0.25,0.25,0,0.25,0.25$ summing to $1.0$; by @eq-sim-empse, $S^2=1.0/(5-1)=0.25$ and
+$\mathrm{EmpSE}=0.5$.
+
+*Monte Carlo standard error of the bias.* By @eq-sim-mcse-bias, $\mathrm{MCSE}(\widehat{\mathrm{Bias}})
+=\mathrm{EmpSE}/\sqrt{R}=0.5/\sqrt{5}=0.224$. The estimated bias $-0.1$ is *smaller in magnitude* than its
+Monte Carlo standard error, so from $R=5$ replications we cannot distinguish it from zero; pinning the bias
+to a Monte Carlo standard error of $0.02$ would require, by @eq-sim-reps-bias,
+$R\ge\mathrm{Var}_n/m^2\approx 0.25/0.02^2=625$ replications.
+
+*Mean squared error and the exact identity.* The squared errors from $\theta=1.5$ are
+$(0.9-1.5)^2=0.36$, $0.36$, $(1.4-1.5)^2=0.01$, $(1.9-1.5)^2=0.16$, $0.16$, summing to $1.05$, so
+$\widehat{\mathrm{MSE}}=1.05/5=0.21$. The exact identity @eq-sim-mse-empirical-identity checks:
+$$
+\widehat{\mathrm{Bias}}^2+\frac{R-1}{R}\,\mathrm{EmpSE}^2
+=(-0.1)^2+\frac{4}{5}(0.25)=0.01+0.20=0.21=\widehat{\mathrm{MSE}}.
+$$
+
+*Coverage and the diagnostic.* Three of the five intervals contain $\theta=1.5$, so by @eq-sim-coverage
+$\widehat{\mathrm{Cov}}=3/5=0.6$, with Monte Carlo standard error
+$\sqrt{0.6\times 0.4/5}=\sqrt{0.048}=0.219$ by @eq-sim-mcse-coverage. The model-based standard error is
+$\mathrm{ModSE}=0.30$, well below the empirical $\mathrm{EmpSE}=0.50$; this is the
+$\mathrm{ModSE}<\mathrm{EmpSE}$ regime of @sec-sim-coverage, the reported standard error understates the
+true variability, the intervals are too narrow, and coverage falls below nominal. (With only $R=5$ the
+coverage estimate is itself very imprecise; the point is the arithmetic and the diagnostic direction, not
+the value $0.6$.)
+
+**Performance measures (P): the naive method by theory.** The naive method has the fixed bias
+$\theta_{\mathrm{work}}^{\mathrm{naive}}-\theta=-0.5$, which does not shrink with $n$, while the
+per-replication scale $\sigma_n\to 0$ (recall $\sigma_n$ is the estimator's true standard deviation at
+sample size $n$, so it shrinks as the trial grows, at the usual $1/\sqrt{n}$ rate). By
+@thm-coverage-misspecification its limiting coverage is $h(b)=\Phi(z-b)-\Phi(-z-b)$ with $z=1.96$ and
+standardized bias $b=(\theta_{\mathrm{work}}^{\mathrm{naive}}-\theta)/\sigma_n=-0.5/\sigma_n$. Evaluating at
+three sample sizes (so three values of $\sigma_n$):
+
+| $\sigma_n$ | $b=-0.5/\sigma_n$ | coverage $h(b)=\Phi(1.96-b)-\Phi(-1.96-b)$ |
+|---|---|---|
+| $0.50$ | $-1.0$ | $\Phi(2.96)-\Phi(-0.96)=0.9985-0.1685=0.830$ |
+| $0.25$ | $-2.0$ | $\Phi(3.96)-\Phi(0.04)=1.0000-0.5160=0.484$ |
+| $0.10$ | $-5.0$ | $\Phi(6.96)-\Phi(3.04)=1.0000-0.9988=0.001$ |
+
+As $n$ grows and $\sigma_n$ shrinks, the naive method's coverage falls from $0.83$ to $0.48$ to
+$0.001$, marching to $0$ exactly as @cor-sim-fixed-bias-collapse predicts: more data tightens the interval
+around the wrong value $1.0$. The adjusted method, with $b=0$, keeps coverage at the nominal
+$h(0)=2\Phi(1.96)-1=0.95$ for every $\sigma_n$. The contrast between a coverage that *collapses* with $n$
+(biased) and one that *holds* at nominal (unbiased) is the simulation signature distinguishing the two,
+and it is the empirical face of items 5 and 6 of @prp-phillippo-robustness. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**What the miniature shows and what it hides.** The example makes three lessons concrete. First, the exact
+identity @eq-sim-mse-empirical-identity holds in the data, not merely in expectation: $0.21=0.01+0.20$ with
+no slack. Second, a performance estimate without its Monte Carlo standard error is uninterpretable: the
+bias $-0.1$ is invisible against its noise $0.224$ at $R=5$, and only @eq-sim-reps-bias tells us that
+$R\approx 625$ would resolve it. Third, coverage is a joint verdict on bias and standard error: the
+adjusted method undercovers here *only* because its reported standard error is too small
+($\mathrm{ModSE}<\mathrm{EmpSE}$), a curable calibration fault, whereas the naive method undercovers
+because it is biased, an incurable fault that worsens with $n$. What the miniature hides is the realism of a
+true data-generating mechanism, where outcomes are drawn with noise, weights are estimated, and
+$\sigma_n$ emerges from the design rather than being posited; a genuine study fixes the mechanism, draws
+$R\ge 1000$ datasets per scenario, and tabulates these same measures across a grid of overlap and
+effect-modification settings. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**The decision the numbers imply.** Read as a dossier, the miniature says this. The adjusted method looks
+*valid*, since no bias is detectable, but its intervals look *overconfident*, reporting a standard error of
+$0.30$ against a true spread of $0.50$; that fault is repaired by using the sandwich standard error rather
+than by collecting more data. The naive method looks *invalid* in a way no standard error can fix, and its
+intervals will only worsen as the real trials grow. The next scenario an analyst would run varies the
+severity imbalance $\Delta\bar x_1$ to trace how fast the naive method's coverage collapses and to confirm
+that the adjusted method holds nominal across the grid, which is exactly the aim stated at the top of this
+ADEMP specification. $\blacktriangleleft$
+:::
+
+## Notes and references {#sec-sim-notes}
+
+The ADEMP framework of @def-ademp is due to @morris2019ademp, whose tutorial is the standard reference for
+the design, execution, and reporting of simulation studies in statistics; the five-component structure, the
+emphasis on stating estimands and aims before simulating, the definitions of the performance measures, the
+Monte Carlo standard error formulas of @sec-sim-bias and @sec-sim-coverage, and the rule of thumb for
+choosing the number of replications from a target Monte Carlo standard error (@cor-sim-replications-bias,
+@cor-sim-replications-coverage) all follow that paper. The distinction between the empirical and model-based
+standard errors and its use as a coverage diagnostic (@def-coverage and the remark following
+@lem-sim-coverage-binomial) is likewise from @morris2019ademp; the normal-theory Monte Carlo error of the
+empirical standard error @eq-sim-mcse-empse is their formula, derived here from the chi-square law of the
+sample variance and the delta method (@thm-delta-method).
+
+The mean-squared-error decomposition @thm-mse-decomposition is classical and elementary; the exact
+finite-sample identity @eq-sim-mse-empirical-identity for the Monte Carlo estimators, which mirrors it at
+the sample level, is the simulation-specific companion and is the algebraic content behind reporting bias,
+variance, and mean squared error as a coherent triple. The coverage-collapse phenomenon of
+@thm-coverage-misspecification, that a fixed asymptotic bias sends Wald coverage to zero as the standard
+error shrinks, is folklore in the asymptotics literature; the explicit limiting-coverage curve $h(b)$ of
+@lem-sim-coverage-unimodal and its consequences are assembled here from Slutsky's theorem (@thm-slutsky) and
+the continuous mapping theorem (@thm-continuous-mapping). The duality of @sec-sim-power, that Type I error
+and power are the coverage theorem read at the null and at the alternative, is the standard correspondence
+between two-sided Wald tests and Wald intervals. The efficiency baseline of @prp-sim-efficiency-baseline
+grounds the variance comparisons of a simulation in the Cramér-Rao bound (@thm-cramer-rao,
+@def-efficient-estimator, @cor-mle-efficient); the upgrade from convergence in distribution to convergence
+of variances requires uniform integrability and is cited from @billingsley1995, and the optimality of the
+information bound among regular estimators is the convolution and local-asymptotic-minimax theory cited in
+Chapter 5.
+
+The empirical robustness ordering @prp-phillippo-robustness is the synthesis of Chapter 8 of
+@phillippo2019thesis, whose simulation study compared multilevel network meta-regression, simulated
+treatment comparison, MAIC, and the unadjusted Bucher comparison across a designed grid of overlap,
+effect-modification, and effect-modifier-inclusion scenarios; the unanchored addendum follows
+@chandler2025mlumr. We have been careful to mark this result as empirical rather than proved, and to anchor
+each of its claims to a theorem established earlier, the consistency and equivalence results of Chapters 17
+to 20 for the favorable items and the limitation theorems @thm-failure-of-bucher, @thm-aggregation-bias,
+@thm-maic-no-extrapolation, @thm-sema-insufficient together with the coverage collapse
+@cor-sim-fixed-bias-collapse for the unfavorable ones.
+
+Simulation theory connects to the quantitative bias analysis of Chapter 28 from the other direction: a
+simulation fixes the data-generating mechanism and *measures* a method's error, whereas probabilistic bias
+analysis (@def-probabilistic-bias-analysis) fixes a method and *propagates* assumed distributions of
+unmeasured bias parameters through it; both are Monte Carlo computations over a designed input distribution,
+and the performance measures of this chapter are the natural summaries of either output.
+
+No part of this chapter has a machine-checked counterpart. The companion Coq development formalizes the
+algebraic and causal core of the population-adjustment methods (the effective-sample-size bound
+@thm-maic-ess-bound in `theories/MAIC.v`, the Bucher and balancing-score results, and the estimator
+definitions), but it contains no simulation, mean-squared-error, or coverage content: a simulation study is
+an empirical procedure whose conclusions, such as @prp-phillippo-robustness, are findings under specific
+data-generating mechanisms rather than theorems, and the elementary identities of @sec-sim-bias to
+@sec-sim-power, while provable, are not part of the formalized development. Chapter 30 documents exactly
+what the Coq sources do and do not establish; the simulation theory of this chapter is deliberately outside
+that scope, and the absence of a machine-checked tag on any result here is itself accurate to the sources.
+This chapter corresponds to results K.1 through K.7 of the proof catalogue in
+`proofs/K_simulation_study.md`.
+
+## Exercises {#sec-sim-exercises}
+
+The exercises progress from warm-up interpretation to hand computation to proof and design. A $\star$ marks
+an exercise whose full solution appears in Appendix F.
+
+::: {#exr-sim-interpret-mcse}
+**(Warm-up, interpretation.)** A simulation reports a bias of $0.08$ with Monte Carlo standard error $0.03$
+for method X, and a bias of $0.08$ with Monte Carlo standard error $0.005$ for method Y. Both headline the
+same bias. Explain in one or two sentences why the second is firm evidence of a real systematic error while
+the first is not, and say what the analyst should do about method X to reach a verdict.
+:::
+
+::: {#exr-sim-interpret-collapse}
+**(Warm-up, interpretation.)** Two methods are simulated at sample sizes $n=200,800,3200$. Method P has
+coverage $0.94,0.95,0.94$; method Q has coverage $0.90,0.71,0.32$. Using @cor-sim-fixed-bias-collapse and
+the telltale-signature remark of @sec-sim-misspec, say which method is biased and which is merely less
+efficient, and explain what the trend of Q's coverage with $n$ reveals that a single sample size could not.
+:::
+
+::: {#exr-sim-mcse-arithmetic}
+**(Computation.) Performance measures by hand.** A simulation of an unbiased method returns $R=8$ replicate estimates of
+an estimand $\theta=2.0$: $1.6,1.8,1.9,2.0,2.1,2.2,2.3,2.5$. Compute $\bar{\hat\theta}$,
+$\widehat{\mathrm{Bias}}$, the empirical standard error $\mathrm{EmpSE}$, the Monte Carlo standard error of
+the bias, and the Monte Carlo mean squared error $\widehat{\mathrm{MSE}}$, and verify the exact identity
+@eq-sim-mse-empirical-identity. Then determine, using @eq-sim-reps-bias, how many replications would be
+needed to estimate the bias with a Monte Carlo standard error of $0.01$.
+:::
+
+::: {#exr-sim-replications}
+**(Computation, design.) Designing the replication count.** Using @cor-sim-replications-coverage, find the smallest $R$ that
+guarantees a Monte Carlo standard error of at most $0.005$ for an estimated coverage, valid for every true
+coverage. Then find the smaller $R$ that suffices if the true coverage is believed to be near $0.95$, and
+explain why the worst-case requirement occurs at a true coverage of $0.5$.
+:::
+
+::: {#exr-sim-coverage-curve}
+**(Computation.) The coverage curve.** For the curve $h(b)=\Phi(1.96-b)-\Phi(-1.96-b)$ of
+@lem-sim-coverage-unimodal, compute $h(b)$ at $b=0,0.5,1,2,3$ from a standard normal table, confirm that
+$h(0)=0.95$ and that $h$ is strictly decreasing in $|b|$, and find the standardized bias $b^\star$ at which
+coverage has dropped to $0.90$. Interpret $b^\star$ in words: how large, in standard-error units, must an
+asymptotic bias be to cost five percentage points of coverage? *Hint.* For the inverse problem, note from
+your table that $h(0.5)=0.921$ and $h(1)=0.830$, so the value $b^\star$ with $h(b^\star)=0.90$ lies between
+$0.5$ and $1$; interpolate, then refine by evaluating $\Phi(1.96-b)-\Phi(-1.96-b)$ at your candidate.
+:::
+
+::: {#exr-sim-modse-empse}
+**(Interpretation.) Diagnosing a standard-error failure.** A simulation reports, for a MAIC estimator at fixed $n$ over
+$R=1000$ replications, $\mathrm{EmpSE}=0.42$ and $\mathrm{ModSE}=0.31$, with empirical coverage of nominal
+ninety-five percent intervals equal to $0.86$. Argue from @sec-sim-coverage and the remark after
+@cor-sim-correct-coverage that the undercoverage is attributable to standard-error underestimation rather
+than to bias, estimate the ratio $c=\mathrm{ModSE}/\mathrm{EmpSE}$ and the coverage $2\Phi(cz)-1$ it
+predicts under no bias, and relate the underestimation to treating the estimated MAIC weights as fixed
+(@thm-maic-sandwich-variance).
+:::
+
+::: {#exr-sim-power}
+**($\star$, design.) Power and sample size.** Using @thm-sim-power, an analyst plans a study to detect a true contrast
+$\theta=0.4$ against the null $\theta_0=0$ at level $\alpha=0.05$, with a method whose standard error at
+sample size $n$ is $\sigma_n=c/\sqrt{n}$ for a known constant $c=2.0$. (a) Express the standardized signal
+$\Delta_n$ as a function of $n$. (b) Using the one-sided approximation
+$\mathrm{Power}\approx\Phi(\Delta_n-z_{\alpha/2})$, find the sample size $n$ giving power $0.80$. (c) Show
+from @eq-sim-power that the two-term and one-term power formulas differ negligibly at this $n$ by bounding
+the dropped term $\Phi(-\Delta_n-z_{\alpha/2})$. (d) Explain, via the test-interval duality remark, how the
+same calculation would read off as a statement about the width of the confidence interval. *Hint.* For (b),
+set $\Phi(\Delta_n-1.96)=0.80$, so $\Delta_n-1.96=z_{0.20}=0.84$ and $\Delta_n=2.80$; with
+$\Delta_n=|\theta-\theta_0|/\sigma_n=0.4\sqrt{n}/2$, solve $0.2\sqrt{n}=2.80$. For (c), bound the dropped
+term by $\Phi(-\Delta_n-1.96)=\Phi(-4.76)$.
+:::
+
+::: {#exr-sim-bias-variance-tradeoff}
+**($\star$, proof.) A mean-squared-error-optimal moment set.** Consider, in the geometry of @exm-sim-miniature, a family
+of adjusted estimators indexed by whether the prognostic covariate $x_2$ is balanced in addition to the
+effect modifier $x_1$. Balancing only $x_1$ leaves a small omitted-covariate bias $\beta$ on a
+non-collapsible scale but retains effective sample size $\mathrm{ESS}_1$, giving variance
+$\sigma^2 n/\mathrm{ESS}_1$; balancing both removes the bias but lowers the effective sample size to
+$\mathrm{ESS}_2<\mathrm{ESS}_1$, giving variance $\sigma^2 n/\mathrm{ESS}_2$. (a) Write the mean squared
+error of each estimator using @thm-mse-decomposition. (b) Derive the exact condition on $\beta$,
+$\mathrm{ESS}_1$, and $\mathrm{ESS}_2$ under which balancing only $x_1$ achieves the smaller mean squared
+error. (c) Relate the condition to @thm-maic-ess-bound and to the bias-variance remark following
+@lem-sim-mse-empirical-identity, and explain why, on the *identity* scale where $\beta=0$ for a purely
+prognostic covariate, balancing $x_2$ can only hurt.
+:::

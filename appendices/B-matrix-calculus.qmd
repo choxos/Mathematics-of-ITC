@@ -1,0 +1,1324 @@
+---
+title: "Matrix Calculus"
+---
+
+Several of the central derivations of this book are exercises in differentiating a function whose
+argument is a vector or a matrix. The normal equations of least squares come from setting the gradient
+of a quadratic form to zero (@def-quadratic-form and the least-squares chapter); the score and Fisher
+information of a likelihood are a gradient and a negative expected Hessian (@def-score); the restricted
+likelihood used for variance components in hierarchical models and meta-analysis is built from a
+log-determinant and an inverse-quadratic form (Chapters 8 and 13); and the calibration of
+matching weights and the variance propagation of population-adjusted estimators rest on Jacobians
+(Chapters 18 and 19). This appendix collects the matrix-calculus identities those chapters use and proves
+each one. It is reference material, but reference material with proofs: every formula below is derived
+from the definition of the derivative, so the reader can trust it and reconstruct it.
+
+**How to read this appendix.** The identities here are tools, and different readers need different
+tools. If your goal is least squares and the normal equations, read the gradient and quadratic-form
+identities (@sec-mc-forms) and stop. If your goal is the delta method and variance propagation for
+MAIC and STC (Chapters 18 and 19), read the Jacobian convention (@def-mc-jacobian) and the chain rule
+(@thm-chain-rule). If your goal is restricted maximum likelihood and random-effects meta-analysis
+(Chapters 8 and 13), read the trace, inverse, and log-determinant identities
+(@sec-mc-trace-inverse-det) together with the worked covariance example (@sec-mc-example). If your goal
+is efficient computation of a marginal likelihood in ML-NMR (Chapters 20 to 25), read the
+Sherman-Morrison-Woodbury identity (@sec-mc-woodbury). A one-line map from each identity to the chapter
+that consumes it is the closing table of the appendix (@sec-mc-summary); a reader who wants that map
+first may jump there now and use it as a roadmap.
+
+Two reading aids appear throughout. A short *reader translation* in italics follows each identity,
+saying in plain words what it computes and where the book uses it. A *shape check* in parentheses
+records the size of each factor: the single most common error in matrix calculus is a stray transpose
+or a nonconformable product, and a shape check catches it on sight.
+
+The treatment is deliberately self-contained. We fix one set of layout conventions, compatible with the
+gradient and Jacobian already used in the foundations chapters, and we adopt the *differential* as the
+working tool. Differentials turn matrix differentiation into ordinary algebra: one expands a perturbation
+to first order, reads off a linear term, and identifies the derivative from it. This avoids the
+index gymnastics that make componentwise differentiation error-prone, while remaining completely
+rigorous. The prerequisites are the determinant, the adjugate and Cramer's rule, and the characterization
+of invertibility, all developed in @strang2016 and in @thm-invertibility-characterization.
+
+Throughout, $\|\cdot\|$ denotes any fixed norm on the relevant finite-dimensional space; because all
+norms on a finite-dimensional space are equivalent, the Landau symbols $O(\cdot)$ and $o(\cdot)$ do not
+depend on the choice. For matrices we will most often use the Frobenius norm
+$\|A\|_F=\sqrt{\sum_{i,j}A_{ij}^2}$. We write $E_{ij}=\mathbf{e}_i\mathbf{e}_j^\top$ for the standard
+basis matrix with a single $1$ in position $(i,j)$ and zeros elsewhere. The symbol $X^{-\top}$ abbreviates
+$(X^{-1})^\top=(X^\top)^{-1}$. See [Notation](/notation.qmd) for the standing conventions on bold vectors
+and matrices.
+
+**A note on symbols used only here.** Two small conventions differ from the rest of the book, and we
+flag them so the reader is not tripped up. First, matrix calculus is traditionally written with plain
+capital letters for generic matrices; accordingly, in this appendix $A$, $X$, $U$, $V$, $C$ denote
+generic matrices, not random variables, not the design matrix $\mathbf{X}$ of the regression chapters,
+and not a covariance matrix, while bold letters such as $\mathbf{x}$, $\mathbf{a}$, $\mathbf{1}_n$ are
+reserved for vectors. This is why the matrices here are unbolded even though the book's standing
+convention (see [Notation](/notation.qmd)) bolds matrices; where a plain capital could be confused with
+a book-wide symbol we say so explicitly. Second, two pieces of asymptotic shorthand recur. The symbol
+$o(\|\mathbf{h}\|)$ denotes a remainder that, divided by $\|\mathbf{h}\|$, tends to $0$ as
+$\mathbf{h}\to\mathbf{0}$: it is strictly smaller than linear in the perturbation, so it disappears when
+we identify a derivative. The symbol $O(\|\mathbf{h}\|^2)$ denotes a remainder bounded in absolute value
+by a constant times $\|\mathbf{h}\|^2$, that is, at most quadratic; a quadratic remainder is in
+particular $o(\|\mathbf{h}\|)$. The phrase "$U$ is **open**" may be read as "$U$ contains a small ball
+around each of its points," so that a small perturbation in any direction stays inside $U$ and the
+function is defined there; a reader who has not met open sets may replace "open $U\subseteq\mathbb{R}^n$"
+by "a neighborhood of the point in question" without losing anything. Finally, $f$ is called **$C^2$**
+if it has continuous second-order partial derivatives; this is the standard condition under which the
+mixed partials are equal, so the Hessian is symmetric.
+
+## A scalar warm-up: derivatives as first-order approximations {#sec-mc-warmup}
+
+Before any matrices, we recall the one idea that all of matrix calculus generalizes. For a
+differentiable scalar function of one real variable, the derivative $f'(x)$ is the number for which
+$$
+f(x+h)=f(x)+f'(x)\,h+o(h)\qquad(h\to 0).
+$$ {#eq-mc-scalar-deriv}
+Read this as: near $x$, the function changes by approximately $f'(x)\,h$, a quantity *linear* in the
+small step $h$, plus an error $o(h)$ too small to matter as $h\to 0$. Every definition in this appendix
+is this one sentence with $h$ replaced by a vector or a matrix perturbation and the ordinary product
+$f'(x)\,h$ replaced by an inner product. Nothing more abstract is going on; matrix calculus is
+single-variable calculus with the slope promoted to a vector or a matrix.
+
+The **differential** is simply a name for the linear part $f'(x)\,h$. To see it in the smallest
+possible case, take $f(x)=x^2$. Then
+$$
+f(x+h)=(x+h)^2=x^2+2xh+h^2,
+$$
+so the change $f(x+h)-f(x)=2xh+h^2$ splits into a linear part $2xh$ and a quadratic remainder
+$h^2=o(h)$. We write $df=2x\,dx$, meaning: the first-order change in $f$ caused by a small change $dx$
+in $x$ is $2x\,dx$, and we read the derivative $f'(x)=2x$ off the coefficient of $dx$. The whole method
+of this appendix is exactly this three-step move, *expand, discard everything smaller than linear, read
+off the coefficient*, carried out for functions whose argument is a vector or a matrix. The single new
+feature is that matrices do not commute, so the coefficient may sit to the left or to the right of the
+perturbation $dX$, and that order must be respected; getting it wrong is what produces a spurious
+transpose.
+
+Geometrically, the derivative is the best linear approximation to the function at a point: a slope in
+one dimension, a direction of steepest ascent (the gradient) for a scalar field, a local linear map
+(the Jacobian) for a vector field, and a curvature (the Hessian) for the second order. Keeping those
+pictures in mind makes the algebra below easier to remember.
+
+## Conventions: gradient, Jacobian, and the matrix derivative {#sec-mc-conventions}
+
+We first pin down what "the derivative" means for the three cases we need: a scalar function of a vector,
+a vector function of a vector, and a scalar function of a matrix. The conventions chosen here are exactly
+those already in force in the inference and regression chapters, so the formulas of this appendix can be
+dropped into those chapters without relabeling.
+
+One choice deserves to be named, because it is the source of most apparent contradictions between
+textbooks. There are two competing traditions, called **numerator layout** and **denominator layout**,
+for arranging the partial derivatives of a function into an array. They differ by a transpose. We use
+**denominator layout**, meaning the derivative is given the *same shape as the variable*: the gradient
+of a scalar function of the vector $\mathbf{x}$ is a column vector shaped like $\mathbf{x}$, and the
+derivative of a scalar function of the matrix $X$ is a matrix shaped like $X$. This is the natural
+choice because it puts the gradient in the same space as the argument, so that a step $\mathbf{x}\mapsto
+\mathbf{x}-\eta\,\nabla f(\mathbf{x})$ makes sense without a transpose. The practical warning is this: if
+you meet a formula in a paper that disagrees with ours by a single transpose, it is almost certainly a
+layout difference and not an error. Numerator layout would report the gradient as a row; we never do.
+
+::: {#def-mc-gradient}
+## Gradient of a scalar function of a vector
+Let $U\subseteq\mathbb{R}^{n}$ be open and $f:U\to\mathbb{R}$. We say $f$ is **differentiable** at
+$\mathbf{x}\in U$ if there is a vector $\nabla f(\mathbf{x})\in\mathbb{R}^{n}$, the **gradient**, with
+$$
+f(\mathbf{x}+\mathbf{h})=f(\mathbf{x})+\nabla f(\mathbf{x})^\top\mathbf{h}+o(\|\mathbf{h}\|)
+\qquad\text{as }\mathbf{h}\to\mathbf{0}.
+$$ {#eq-mc-grad-def}
+The gradient is a **column vector** of the same shape as $\mathbf{x}$, with entries
+$[\nabla f(\mathbf{x})]_i=\partial f/\partial x_i$.
+:::
+
+*Reader translation.* The gradient is the vector version of a slope: it collects the $n$ partial
+derivatives into one column so that $\nabla f(\mathbf{x})^\top\mathbf{h}$ gives the first-order change
+in $f$ when we step from $\mathbf{x}$ to $\mathbf{x}+\mathbf{h}$. It is a column, not a row, precisely so
+that it lives in the same space as $\mathbf{x}$; that is what lets a step $\mathbf{x}-\eta\,\nabla
+f(\mathbf{x})$ (gradient descent, and Fisher scoring in later chapters) even be written down. Its
+direction is the direction of steepest ascent of $f$. In this book the gradient is the score
+$\mathbf{s}(\boldsymbol\theta)=\nabla_{\boldsymbol\theta}\ell(\boldsymbol\theta)$ of a log-likelihood
+(@def-score) and the gradient of the least-squares objective that yields the normal equations.
+
+This is the convention under which the least-squares objective $S(\mathbf{b})$ has gradient
+$\nabla S(\mathbf{b})=-2\mathbf{X}^\top\mathbf{y}+2\mathbf{X}^\top\mathbf{X}\mathbf{b}$, a column vector,
+and under which the score $\mathbf{s}(\boldsymbol\theta)=\nabla_{\boldsymbol\theta}\ell(\boldsymbol\theta)$
+of @def-score is a column vector in the parameter space.
+
+::: {#def-mc-jacobian}
+## Jacobian of a vector function of a vector
+Let $U\subseteq\mathbb{R}^{n}$ be open and $\mathbf{g}:U\to\mathbb{R}^{m}$. We say $\mathbf{g}$ is
+**differentiable** at $\mathbf{x}\in U$ if there is a matrix
+$J_{\mathbf{g}}(\mathbf{x})\in\mathbb{R}^{m\times n}$, the **Jacobian**, with
+$$
+\mathbf{g}(\mathbf{x}+\mathbf{h})=\mathbf{g}(\mathbf{x})+J_{\mathbf{g}}(\mathbf{x})\,\mathbf{h}
++o(\|\mathbf{h}\|).
+$$ {#eq-mc-jac-def}
+Its entries are $[J_{\mathbf{g}}(\mathbf{x})]_{ab}=\partial g_a/\partial x_b$: row $a$ collects the
+partials of output $g_a$, column $b$ the partials with respect to input $x_b$.
+:::
+
+*Reader translation.* The Jacobian is the local linear map that best approximates $\mathbf{g}$ near
+$\mathbf{x}$: it is the matrix by which you multiply a small input change $\mathbf{h}$ to get the
+resulting output change, $\mathbf{g}(\mathbf{x}+\mathbf{h})-\mathbf{g}(\mathbf{x})\approx
+J_{\mathbf{g}}(\mathbf{x})\,\mathbf{h}$. This is the object the delta method uses to push the variance
+of an estimator through a smooth transformation, which is exactly how the variance of a
+population-adjusted effect is propagated in the MAIC and STC chapters (Chapters 18 and 19). A concrete
+$2\times 2$ Jacobian is computed in @exm-mc-jacobian below.
+
+This is the $q\times p$ Jacobian $\mathbf{D}=[\partial g_a/\partial\theta_b]$ of the delta method
+(@thm-delta-method). The two conventions are consistent: a scalar function $f$ is the special case
+$m=1$, where the Jacobian is the $1\times n$ row vector $J_f(\mathbf{x})$, and comparing
+@eq-mc-grad-def with @eq-mc-jac-def gives the relationship
+$$
+\nabla f(\mathbf{x})=J_f(\mathbf{x})^\top.
+$$ {#eq-mc-grad-is-jac-transpose}
+This equation looks like a paradox on first reading, so it is worth stating carefully: the gradient and
+the Jacobian of a scalar function are *not the same object*. The gradient $\nabla f(\mathbf{x})$ is a
+*column* vector (denominator layout), while the Jacobian $J_f(\mathbf{x})$ of the same scalar $f$ is a
+$1\times n$ *row* vector; one is literally the transpose of the other. There is no contradiction because
+they are two different arrangements of the same $n$ partial derivatives. Throughout the book we use the
+gradient (the column). Say it once and the confusion never returns.
+
+The **Hessian** of a twice differentiable $f$ is the Jacobian of the gradient map
+$\mathbf{x}\mapsto\nabla f(\mathbf{x})$,
+$$
+\nabla^2 f(\mathbf{x})=J_{\nabla f}(\mathbf{x})\in\mathbb{R}^{n\times n},
+\qquad
+[\nabla^2 f(\mathbf{x})]_{ij}=\frac{\partial^2 f}{\partial x_i\,\partial x_j},
+$$
+which is symmetric whenever $f$ is $C^2$, by the equality of mixed partials.
+
+*Reader translation.* The Hessian is curvature: it is the matrix of second derivatives, and it records
+how fast the gradient itself is changing. Its sign pattern classifies a stationary point (positive
+definite Hessian means a strict local minimum, negative definite a maximum, indefinite a saddle), which
+is exactly how the least-squares and maximum-likelihood objectives of this book are shown to have genuine
+optima. Its role in inference is central: the observed information is the negative Hessian of the
+log-likelihood, and the Fisher information $\mathcal{I}(\boldsymbol\theta)$ is its negative expectation
+(@def-score), so the Hessian is what turns a fitted model into a standard error. It is also the matrix
+inverted at each step of Newton and Fisher scoring.
+
+For functions of a matrix we use the natural extension: the derivative has the same shape as the matrix
+argument.
+
+::: {#def-mc-matrix-derivative}
+## Derivative of a scalar function of a matrix
+Let $U\subseteq\mathbb{R}^{m\times n}$ be open and $f:U\to\mathbb{R}$ differentiable at $X\in U$, meaning
+that there is a matrix $\dfrac{\partial f}{\partial X}\in\mathbb{R}^{m\times n}$ with
+$$
+f(X+H)=f(X)+\Big\langle \tfrac{\partial f}{\partial X},\,H\Big\rangle_F+o(\|H\|),
+\qquad
+\langle A,B\rangle_F:=\operatorname{tr}(A^\top B)=\sum_{i,j}A_{ij}B_{ij}.
+$$ {#eq-mc-matder-def}
+The matrix $\partial f/\partial X$ has entries $[\partial f/\partial X]_{ij}=\partial f/\partial X_{ij}$,
+and $\langle\cdot,\cdot\rangle_F$ is the **Frobenius inner product**.
+:::
+
+*Reader translation.* The Frobenius inner product $\langle A,B\rangle_F=\sum_{i,j}A_{ij}B_{ij}$ is not
+an arbitrary ceremony involving a trace: it is exactly the ordinary dot product of $A$ and $B$ after you
+*flatten* each matrix into a long vector of its entries. So @eq-mc-matder-def says the same thing as the
+gradient definition, only with the $mn$ entries of $X$ laid out as a rectangle instead of a column. That
+is also why the derivative with respect to a matrix is itself a matrix and not a giant unwieldy array:
+we keep the $mn$ partial derivatives arranged in the same rectangle as $X$ (denominator layout), so that
+$[\partial f/\partial X]_{ij}=\partial f/\partial X_{ij}$ sits in the slot of the entry it differentiates.
+The simplest instance is $f(X)=\operatorname{tr}(X)$, whose derivative is the identity $I$; it is worked
+in @exm-mc-trace-derivative once we have the differential rules.
+
+The bridge between the differential of a matrix function and its derivative is the following
+identification, the single most useful tool in this appendix.
+
+::: {#lem-mc-identification}
+## Identification of the derivative from the differential
+Let $f:U\to\mathbb{R}$ be differentiable at $X\in U\subseteq\mathbb{R}^{m\times n}$. If a matrix
+$G\in\mathbb{R}^{m\times n}$ satisfies
+$$
+f(X+H)=f(X)+\operatorname{tr}(G^\top H)+o(\|H\|)\qquad\text{for all }H,
+$$
+then $\partial f/\partial X=G$. Such a $G$ is unique.
+:::
+
+::: {.proof}
+Setting $H=tE_{ij}$ for a scalar $t\to 0$ in the hypothesis gives, after dividing by $t$,
+$$
+\frac{\partial f}{\partial X_{ij}}
+=\lim_{t\to0}\frac{f(X+tE_{ij})-f(X)}{t}
+=\operatorname{tr}(G^\top E_{ij})=G_{ij},
+$$
+because $\operatorname{tr}(G^\top E_{ij})=\sum_{k}(G^\top)_{ik}(E_{ij})_{ki}=G_{ij}$. Hence
+$G=\partial f/\partial X$ entrywise, which is @eq-mc-matder-def. Uniqueness is the same computation: if
+$\operatorname{tr}(G^\top H)=\operatorname{tr}(\tilde G^\top H)$ for all $H$, take $H=E_{ij}$ to get
+$G_{ij}=\tilde G_{ij}$ for every $i,j$. $\square$
+:::
+
+In words: expand $f(X+H)$, keep only the part linear in $H$, write it as $\operatorname{tr}(G^\top H)$,
+and read off $\partial f/\partial X=G$. Everything quadratic or smaller in $H$ is absorbed into
+$o(\|H\|)$. The same principle, with $\operatorname{tr}(G^\top H)$ replaced by $\mathbf{a}^\top\mathbf{h}$
+or $J\mathbf{h}$, identifies gradients and Jacobians in the vector case.
+
+Why is this the most useful tool here? Because it splits a hard problem into an easy one. Computing a
+derivative entry by entry means differentiating $mn$ scalar functions and keeping the bookkeeping
+straight, which is where sign and transpose errors creep in. Computing a *differential*, by contrast, is
+pure algebra: it obeys a product rule, a transpose rule, and a trace rule (developed next), so one
+manipulates whole matrices at once. The identification lemma is the hinge that connects the two. Once we
+have massaged the linear part of $f(X+H)$ into the canonical form $\operatorname{tr}(G^\top\,dX)$, the
+derivative is $G$ for free, with no indices. Essentially every identity below is proved this way.
+
+## The differential and its algebra {#sec-mc-differential}
+
+It is convenient to manipulate the linear term abstractly. For a map $F$ between matrix spaces (a scalar,
+vector, or matrix being special cases), the **differential** at $X$ is the linear map $H\mapsto dF(X)[H]$
+defined by
+$$
+F(X+H)=F(X)+dF(X)[H]+o(\|H\|).
+$$
+When the base point is understood we write $dF$ for $dF(X)[H]$ and treat $dX:=H$ as a free increment. The
+derivative is recovered from the differential by @lem-mc-identification in the scalar case and by reading
+off the coefficient matrix in the vector case. The following rules let us compute differentials of
+composite expressions without ever returning to indices.
+
+*What $dX$ and $dF$ mean, in plain words.* Think of $dX$ as a bookkeeping symbol standing for a small,
+arbitrary change applied to every entry of $X$ at once (it is the perturbation $H$, renamed). Then $dF$
+is the resulting first-order change in $F$, the part of $F(X+dX)-F(X)$ that is linear in $dX$, with the
+smaller-than-linear remainder thrown away. This is precisely the scalar picture $df=f'(x)\,dx$ from
+@sec-mc-warmup, promoted to matrices. The one caution: $dX$ is *not* a number, so when a rule produces a
+factor on each side of $dX$, as in $A\,(dX)\,B$, the order cannot be rearranged; the whole art of the
+method is to shuffle those factors, legally, until $dX$ stands alone at the end inside a trace.
+
+::: {#lem-mc-differential-rules}
+## Rules of differentials
+Let $F,G$ be differentiable matrix-valued maps and $\alpha,\beta\in\mathbb{R}$ constants. Wherever the
+shapes are conformable,
+$$
+\begin{aligned}
+d(\alpha F+\beta G)&=\alpha\,dF+\beta\,dG, &&\text{(linearity)}\\
+d(FG)&=(dF)\,G+F\,(dG), &&\text{(product rule)}\\
+d(F^\top)&=(dF)^\top, &&\text{(transpose)}\\
+d\operatorname{tr}(F)&=\operatorname{tr}(dF). &&\text{(trace)}
+\end{aligned}
+$$
+A constant matrix $C$ has $dC=0$.
+:::
+
+::: {.proof}
+*Linearity* is immediate from the definition, since the first-order term of a sum is the sum of the
+first-order terms, and $d C=0$ holds because a constant satisfies $C(X+H)=C(X)$ exactly.
+
+*Product rule.* With $F=F(X)$, $G=G(X)$ and increments $dF,dG$ of order $\|H\|$,
+$$
+F(X+H)\,G(X+H)
+=\bigl(F+dF+o\bigr)\bigl(G+dG+o\bigr)
+=FG+(dF)G+F(dG)+\underbrace{(dF)(dG)}_{O(\|H\|^2)}+o(\|H\|).
+$$
+The cross term $(dF)(dG)$ is $O(\|H\|^2)=o(\|H\|)$ because each factor is $O(\|H\|)$ and the Frobenius
+norm is **submultiplicative**, meaning $\|AB\|_F\le\|A\|_F\,\|B\|_F$ (the size of a product is at most the
+product of the sizes; this standard inequality is proved from the Cauchy-Schwarz inequality applied to the
+rows of $A$ and columns of $B$). So the product of two first-order changes is a second-order quantity, the
+matrix analogue of the discarded $h^2$ in $f(x)=x^2$: two small things multiplied give something an order
+of magnitude smaller still, negligible at first order. Collecting the linear part gives
+$d(FG)=(dF)G+F(dG)$.
+
+*Transpose* and *trace* are linear operations with constant coefficients, so they commute with taking the
+first-order term: $(F+dF)^\top=F^\top+(dF)^\top$ and $\operatorname{tr}(F+dF)=\operatorname{tr}F
++\operatorname{tr}(dF)$. $\square$
+:::
+
+We will also use, repeatedly, the three elementary properties of the trace that turn a differential into
+the canonical form $\operatorname{tr}(G^\top\,dX)$.
+
+::: {#lem-mc-trace-properties}
+## Properties of the trace
+For matrices of conformable shape and $\alpha,\beta\in\mathbb{R}$:
+$$
+\operatorname{tr}(\alpha A+\beta B)=\alpha\operatorname{tr}A+\beta\operatorname{tr}B,\qquad
+\operatorname{tr}(A^\top)=\operatorname{tr}(A),\qquad
+\operatorname{tr}(AB)=\operatorname{tr}(BA).
+$$
+Consequently $\operatorname{tr}(A^\top B)=\operatorname{tr}(B^\top A)=\langle A,B\rangle_F$, and the
+Frobenius inner product is symmetric.
+:::
+
+::: {.proof}
+Linearity is entrywise. For the transpose, $\operatorname{tr}(A^\top)=\sum_i (A^\top)_{ii}=\sum_i
+A_{ii}=\operatorname{tr}(A)$. For the cyclic property, with $A\in\mathbb{R}^{p\times q}$ and
+$B\in\mathbb{R}^{q\times p}$,
+$$
+\operatorname{tr}(AB)=\sum_{i=1}^{p}\sum_{k=1}^{q}A_{ik}B_{ki}
+=\sum_{k=1}^{q}\sum_{i=1}^{p}B_{ki}A_{ik}=\operatorname{tr}(BA).
+$$
+The last claim follows since $\operatorname{tr}(A^\top B)=\operatorname{tr}((A^\top B)^\top)
+=\operatorname{tr}(B^\top A)=\sum_{i,j}A_{ij}B_{ij}$. $\square$
+:::
+
+**The canonical-form recipe.** These trace rules exist to serve one workflow, the recipe that recovers a
+matrix derivative from a differential. It has four steps.
+
+1. **Differentiate.** Apply the differential rules of @lem-mc-differential-rules to $f(X)$, treating $dX$
+   as a small perturbation. Discard at once every term containing two factors of $dX$ (those are
+   $o(\|dX\|)$).
+2. **Trace it.** Since $f$ is scalar, $df$ already equals its own trace; write $df=\operatorname{tr}(df)$
+   if it is not yet a trace.
+3. **Isolate $dX$.** Use the cyclic property to rotate the factors until $dX$ sits alone at the right end,
+   producing the form $\operatorname{tr}(M\,dX)$ for some matrix $M$.
+4. **Read off.** Rewrite $M=G^\top$; then @lem-mc-identification gives $\partial f/\partial X=G$.
+
+One warning is essential here, because the whole recipe leans on step 3. The cyclic property
+$\operatorname{tr}(AB)=\operatorname{tr}(BA)$ extends to longer products as a *rotation*:
+$$
+\operatorname{tr}(ABC)=\operatorname{tr}(BCA)=\operatorname{tr}(CAB).
+$$
+You may rotate the factors around the circle, keeping their circular order. You may **not** permute them
+freely: in general $\operatorname{tr}(ABC)\ne\operatorname{tr}(ACB)$, because swapping two factors breaks
+the circular order. Rotate, never reshuffle. Confusing the two is the commonest mistake in this style of
+calculation.
+
+As a mini example of step 3, suppose a differentiation has produced the term $\operatorname{tr}(A\,dX\,B)$
+with $A,B$ constant. Rotate $dX$ to the end:
+$$
+\operatorname{tr}(A\,dX\,B)=\operatorname{tr}(B A\,dX)
+=\operatorname{tr}\bigl((A^\top B^\top)^\top dX\bigr),
+$$
+so the coefficient is $G=A^\top B^\top$ and the derivative of that piece is $A^\top B^\top$. Notice we
+rotated $B$ to the front, we did not swap it past $A$.
+
+::: {#exm-mc-trace-derivative}
+## The two simplest matrix derivatives, from scratch
+Take $f(X)=\operatorname{tr}(X)$. By the trace rule $d\operatorname{tr}(X)=\operatorname{tr}(dX)
+=\operatorname{tr}(I^\top\,dX)$, so @lem-mc-identification reads off $\partial f/\partial X=I$: the
+derivative of the trace is the identity matrix. Now take $f(X)=\operatorname{tr}(AX)$ with $A$ constant.
+The product and trace rules give $d\operatorname{tr}(AX)=\operatorname{tr}(A\,dX)
+=\operatorname{tr}\bigl((A^\top)^\top dX\bigr)$, so $\partial f/\partial X=A^\top$. These are the two
+identities of @thm-trace-derivative, obtained here in one line each purely by the recipe, with no indices.
+:::
+
+*Reader translation.* This is the payoff promised in the introduction: differentiating whole matrices by
+the recipe is quick and mechanical, whereas doing the same entry by entry (as in @thm-trace-derivative's
+alternative) is where errors hide. We reuse exactly this recipe for every identity in the next two
+sections.
+
+## Linear, quadratic, and bilinear forms {#sec-mc-forms}
+
+These are the derivatives that appear in least squares and in the quadratic-form arithmetic of the normal
+theory of regression.
+
+::: {#thm-linear-form-derivative}
+## Derivative of a linear form and of a linear map
+Let $\mathbf{a}\in\mathbb{R}^{n}$ and $A\in\mathbb{R}^{m\times n}$ be constant.
+
+1. The linear form $f(\mathbf{x})=\mathbf{a}^\top\mathbf{x}=\mathbf{x}^\top\mathbf{a}$ has gradient
+   $\nabla f(\mathbf{x})=\mathbf{a}$ for every $\mathbf{x}$.
+2. The linear map $\mathbf{g}(\mathbf{x})=A\mathbf{x}$ has Jacobian $J_{\mathbf{g}}(\mathbf{x})=A$ for
+   every $\mathbf{x}$.
+:::
+
+::: {.proof}
+For (1), $f(\mathbf{x}+\mathbf{h})=\mathbf{a}^\top\mathbf{x}+\mathbf{a}^\top\mathbf{h}
+=f(\mathbf{x})+\mathbf{a}^\top\mathbf{h}$, with no remainder; comparison with @eq-mc-grad-def gives
+$\nabla f(\mathbf{x})=\mathbf{a}$. Equivalently $\partial(\sum_k a_k x_k)/\partial x_i=a_i$. For (2),
+$\mathbf{g}(\mathbf{x}+\mathbf{h})=A\mathbf{x}+A\mathbf{h}=\mathbf{g}(\mathbf{x})+A\mathbf{h}$, again with
+no remainder, so @eq-mc-jac-def gives $J_{\mathbf{g}}=A$. Entrywise, $g_a=\sum_b A_{ab}x_b$ has
+$\partial g_a/\partial x_b=A_{ab}$. $\square$
+:::
+
+*Reader translation.* A linear form $\mathbf{a}^\top\mathbf{x}$ has a constant gradient, namely its own
+coefficient vector $\mathbf{a}$ (shape check: $\mathbf{a}$ is $n\times 1$, matching $\mathbf{x}$); a
+linear map $A\mathbf{x}$ has constant Jacobian $A$ (shape check: $A$ is $m\times n$, mapping an
+$n$-vector step to an $m$-vector step). These are the "slope equals the coefficient" facts that make the
+linear predictor $\boldsymbol\eta=\mathbf{X}\boldsymbol\beta$ differentiate to the design matrix, which is
+the first step of every score computation in the regression and GLM chapters.
+
+::: {#exm-mc-jacobian}
+## A concrete $2\times 2$ Jacobian
+Let $\mathbf{g}:\mathbb{R}^2\to\mathbb{R}^2$ be the nonlinear map
+$\mathbf{g}(\mathbf{x})=(x_1^2 x_2,\; x_1+x_2^2)$. Its Jacobian collects the four partials, output by
+input:
+$$
+J_{\mathbf{g}}(\mathbf{x})=
+\begin{pmatrix}
+\partial g_1/\partial x_1 & \partial g_1/\partial x_2\\[2pt]
+\partial g_2/\partial x_1 & \partial g_2/\partial x_2
+\end{pmatrix}
+=\begin{pmatrix} 2x_1 x_2 & x_1^2\\ 1 & 2x_2 \end{pmatrix}.
+$$
+At the point $\mathbf{x}=(1,2)$ this is the numerical matrix
+$J_{\mathbf{g}}(1,2)=\left(\begin{smallmatrix}4&1\\1&4\end{smallmatrix}\right)$. Reading it as a local
+linear approximation: a small input step $\mathbf{h}=(h_1,h_2)$ produces the output step
+$J_{\mathbf{g}}(1,2)\,\mathbf{h}=(4h_1+h_2,\;h_1+4h_2)$ to first order. This is the picture behind the
+delta method (@thm-delta-method): to move a variance through $\mathbf{g}$, sandwich the input covariance
+with this matrix.
+:::
+
+::: {#thm-quadratic-form-derivative}
+## Derivative of a quadratic form
+Let $A\in\mathbb{R}^{n\times n}$ be constant, not necessarily symmetric, and let
+$q(\mathbf{x})=\mathbf{x}^\top A\mathbf{x}$. Then
+$$
+\nabla q(\mathbf{x})=(A+A^\top)\mathbf{x},
+\qquad
+\nabla^2 q(\mathbf{x})=A+A^\top .
+$$ {#eq-mc-quad-grad}
+If $A$ is symmetric, $\nabla q(\mathbf{x})=2A\mathbf{x}$ and $\nabla^2 q(\mathbf{x})=2A$.
+:::
+
+::: {.proof}
+Expand about $\mathbf{x}$:
+$$
+q(\mathbf{x}+\mathbf{h})
+=(\mathbf{x}+\mathbf{h})^\top A(\mathbf{x}+\mathbf{h})
+=\mathbf{x}^\top A\mathbf{x}
++\mathbf{x}^\top A\mathbf{h}+\mathbf{h}^\top A\mathbf{x}
++\mathbf{h}^\top A\mathbf{h}.
+$$
+The term $\mathbf{x}^\top A\mathbf{h}$ is a scalar, hence equal to its transpose
+$\mathbf{h}^\top A^\top\mathbf{x}$, so the two middle terms combine to
+$\mathbf{h}^\top(A^\top+A)\mathbf{x}=\bigl((A+A^\top)\mathbf{x}\bigr)^\top\mathbf{h}$. The final term
+satisfies $|\mathbf{h}^\top A\mathbf{h}|\le\|A\|\,\|\mathbf{h}\|^2=o(\|\mathbf{h}\|)$. Therefore
+$$
+q(\mathbf{x}+\mathbf{h})=q(\mathbf{x})+\bigl((A+A^\top)\mathbf{x}\bigr)^\top\mathbf{h}+o(\|\mathbf{h}\|),
+$$
+and @eq-mc-grad-def identifies $\nabla q(\mathbf{x})=(A+A^\top)\mathbf{x}$. The gradient is the linear map
+$\mathbf{x}\mapsto(A+A^\top)\mathbf{x}$, whose Jacobian is $A+A^\top$ by @thm-linear-form-derivative; that
+Jacobian is the Hessian. When $A=A^\top$ these reduce to $2A\mathbf{x}$ and $2A$. $\square$
+:::
+
+This is the identity behind the normal equations: the least-squares objective expands as
+$S(\mathbf{b})=\mathbf{y}^\top\mathbf{y}-2\mathbf{b}^\top\mathbf{X}^\top\mathbf{y}
++\mathbf{b}^\top(\mathbf{X}^\top\mathbf{X})\mathbf{b}$, a quadratic form with symmetric matrix
+$\mathbf{X}^\top\mathbf{X}$, so @thm-quadratic-form-derivative and @thm-linear-form-derivative give
+$\nabla S(\mathbf{b})=-2\mathbf{X}^\top\mathbf{y}+2\mathbf{X}^\top\mathbf{X}\mathbf{b}$ and Hessian
+$2\mathbf{X}^\top\mathbf{X}$, positive semidefinite by @def-definiteness.
+
+*Reader translation.* The gradient of $\mathbf{x}^\top A\mathbf{x}$ is $(A+A^\top)\mathbf{x}$, the
+symmetrized matrix times $\mathbf{x}$ (shape check: $A+A^\top$ is $n\times n$, $\mathbf{x}$ is
+$n\times 1$, so the gradient is $n\times 1$, the same shape as $\mathbf{x}$, as denominator layout
+demands). Setting this to zero is what produces the normal equations
+$\mathbf{X}^\top\mathbf{X}\hat{\boldsymbol\beta}=\mathbf{X}^\top\mathbf{y}$; the Hessian
+$2\mathbf{X}^\top\mathbf{X}$ being positive semidefinite is what certifies that solution is a minimum,
+not a saddle. This one identity is the entire analytic content of least squares.
+
+::: {#exm-mc-quadratic}
+## A quadratic gradient two ways
+Let $q(\mathbf{x})=3x_1^2+2x_1x_2+x_2^2$. Writing $q(\mathbf{x})=\mathbf{x}^\top A\mathbf{x}$ with the
+symmetric $A=\left(\begin{smallmatrix}3&1\\1&1\end{smallmatrix}\right)$ checks out, since
+$\mathbf{x}^\top A\mathbf{x}=3x_1^2+2\cdot 1\cdot x_1x_2+x_2^2$. **Entrywise**, $\partial q/\partial x_1
+=6x_1+2x_2$ and $\partial q/\partial x_2=2x_1+2x_2$, so $\nabla q=(6x_1+2x_2,\;2x_1+2x_2)$. **By the
+formula** @eq-mc-quad-grad, $\nabla q=2A\mathbf{x}
+=2\left(\begin{smallmatrix}3&1\\1&1\end{smallmatrix}\right)\mathbf{x}
+=(6x_1+2x_2,\;2x_1+2x_2)$, in agreement. At $\mathbf{x}=(1,1)$ both give $\nabla q=(8,4)$, and the Hessian
+is $2A=\left(\begin{smallmatrix}6&2\\2&2\end{smallmatrix}\right)$. The theorem also tolerates a
+nonsymmetric representation: taking instead
+$A'=\left(\begin{smallmatrix}3&2\\0&1\end{smallmatrix}\right)$ (which also gives $q$) yields the *same*
+gradient because $A'+A'^\top=\left(\begin{smallmatrix}6&2\\2&2\end{smallmatrix}\right)$; this is exactly
+why the symmetrization $A+A^\top$ appears in @eq-mc-quad-grad.
+:::
+
+::: {#thm-bilinear-form-derivative}
+## Derivative of a bilinear form
+Let $A\in\mathbb{R}^{m\times n}$ be constant and $\beta(\mathbf{x},\mathbf{y})=\mathbf{x}^\top
+A\mathbf{y}$ for $\mathbf{x}\in\mathbb{R}^{m}$, $\mathbf{y}\in\mathbb{R}^{n}$. Then
+$$
+\nabla_{\mathbf{x}}\beta=A\mathbf{y},
+\qquad
+\nabla_{\mathbf{y}}\beta=A^\top\mathbf{x}.
+$$
+Regarded instead as a function of the matrix $A$ with $\mathbf{x},\mathbf{y}$ fixed,
+$$
+\frac{\partial}{\partial A}\bigl(\mathbf{x}^\top A\mathbf{y}\bigr)=\mathbf{x}\mathbf{y}^\top .
+$$
+:::
+
+::: {.proof}
+Fix $\mathbf{y}$. Then $\beta(\cdot,\mathbf{y})=\mathbf{x}^\top(A\mathbf{y})=(A\mathbf{y})^\top\mathbf{x}$
+is a linear form in $\mathbf{x}$ with coefficient vector $A\mathbf{y}$, so
+$\nabla_{\mathbf{x}}\beta=A\mathbf{y}$ by @thm-linear-form-derivative(1). Fix $\mathbf{x}$. Then
+$\beta(\mathbf{x},\cdot)=(A^\top\mathbf{x})^\top\mathbf{y}$ is a linear form in $\mathbf{y}$ with
+coefficient $A^\top\mathbf{x}$, so $\nabla_{\mathbf{y}}\beta=A^\top\mathbf{x}$. For the derivative in $A$,
+write $\beta=\sum_{i,j}x_i A_{ij}y_j$; then $\partial\beta/\partial A_{ij}=x_i y_j$, which is the
+$(i,j)$ entry of the outer product $\mathbf{x}\mathbf{y}^\top$. Equivalently, by the differential,
+$\beta(A+H)-\beta(A)=\mathbf{x}^\top H\mathbf{y}=\operatorname{tr}(\mathbf{y}\mathbf{x}^\top H)
+=\operatorname{tr}\bigl((\mathbf{x}\mathbf{y}^\top)^\top H\bigr)$, and @lem-mc-identification gives
+$\partial\beta/\partial A=\mathbf{x}\mathbf{y}^\top$. $\square$
+:::
+
+*Reader translation.* Read left to right, $\mathbf{x}^\top A\mathbf{y}$ is linear in each of its three
+arguments, so each gradient is just the "other" object: differentiating in $\mathbf{x}$ leaves
+$A\mathbf{y}$, in $\mathbf{y}$ leaves $A^\top\mathbf{x}$, and in the matrix $A$ leaves the outer product
+$\mathbf{x}\mathbf{y}^\top$ (shape check: $\mathbf{x}$ is $m\times 1$ and $\mathbf{y}^\top$ is $1\times n$,
+so $\mathbf{x}\mathbf{y}^\top$ is $m\times n$, the shape of $A$). The outer-product rule
+$\partial(\mathbf{x}^\top A\mathbf{y})/\partial A=\mathbf{x}\mathbf{y}^\top$ is the seed from which the
+trace derivatives of the next section grow.
+
+## Trace, inverse, and log-determinant {#sec-mc-trace-inverse-det}
+
+These identities power the restricted-likelihood computations of Chapters 8 and 13, where one must
+differentiate $\log\det\mathbf{V}$ and $\mathbf{a}^\top\mathbf{V}^{-1}\mathbf{a}$ with respect to variance
+parameters that enter $\mathbf{V}$.
+
+*Why these two expressions, and not others.* It is worth seeing, before the algebra, exactly where
+$\log\det\mathbf{V}$ and the inverse-quadratic form come from, because they are not arbitrary. A
+multivariate normal model with mean $\mathbf{X}\boldsymbol\beta$ and covariance
+$\mathbf{V}=\mathbf{V}(\boldsymbol\vartheta)$ (the covariance depending on variance parameters
+$\boldsymbol\vartheta$, for instance a between-study variance $\tau^2$) has log-likelihood
+$$
+\ell(\boldsymbol\beta,\boldsymbol\vartheta)
+=-\tfrac{1}{2}\log\det\mathbf{V}(\boldsymbol\vartheta)
+-\tfrac{1}{2}\,\mathbf{r}^\top\mathbf{V}(\boldsymbol\vartheta)^{-1}\mathbf{r}
++\text{const},
+\qquad \mathbf{r}=\mathbf{y}-\mathbf{X}\boldsymbol\beta,
+$$ {#eq-mc-mvn-loglik}
+where $\mathbf{r}$ is the residual vector. This is the single formula that makes the whole section
+relevant: to fit the model one maximizes @eq-mc-mvn-loglik, and to maximize it one needs its derivative
+with respect to $\boldsymbol\vartheta$, which by the chain rule requires the derivatives of exactly
+$\log\det\mathbf{V}$ and $\mathbf{r}^\top\mathbf{V}^{-1}\mathbf{r}$. The restricted (REML) log-likelihood
+of Chapters 8 and 13 adds one more log-determinant term of the same kind. So the two identities below are
+precisely the pieces a health researcher needs to differentiate a random-effects meta-analysis or mixed
+model likelihood; we assemble the resulting score explicitly at the end of @sec-mc-chain-rule.
+
+::: {#thm-trace-derivative}
+## Derivative of the trace of a product
+For constant $A$ and a matrix variable $X$ of conformable shape,
+$$
+\frac{\partial}{\partial X}\operatorname{tr}(AX)=A^\top,\qquad
+\frac{\partial}{\partial X}\operatorname{tr}(X^\top A)=A,\qquad
+\frac{\partial}{\partial X}\operatorname{tr}(X^\top A X)=(A+A^\top)X,
+$$
+and in particular $\dfrac{\partial}{\partial X}\operatorname{tr}(X)=I$.
+:::
+
+::: {.proof}
+We use @lem-mc-differential-rules and @lem-mc-trace-properties, then @lem-mc-identification.
+
+For $\operatorname{tr}(AX)$: $d\operatorname{tr}(AX)=\operatorname{tr}(A\,dX)
+=\operatorname{tr}\bigl((A^\top)^\top dX\bigr)$, so the derivative is $A^\top$.
+
+For $\operatorname{tr}(X^\top A)$: $d\operatorname{tr}(X^\top A)=\operatorname{tr}\bigl((dX)^\top A\bigr)
+=\operatorname{tr}\bigl(((dX)^\top A)^\top\bigr)=\operatorname{tr}(A^\top\,dX)$, so the derivative is $A$.
+
+For $\operatorname{tr}(X^\top A X)$, the product and trace rules give
+$$
+d\operatorname{tr}(X^\top A X)
+=\operatorname{tr}\bigl((dX)^\top A X\bigr)+\operatorname{tr}\bigl(X^\top A\,dX\bigr).
+$$
+The first term equals $\operatorname{tr}\bigl((AX)^\top dX\bigr)$ by transposing inside the trace, since
+$((dX)^\top AX)^\top=X^\top A^\top\,dX$ has the same trace and $X^\top A^\top=(AX)^\top$. The second term
+is already $\operatorname{tr}\bigl((A^\top X)^\top dX\bigr)$ because $(A^\top X)^\top=X^\top A$. Adding,
+$d\operatorname{tr}(X^\top A X)=\operatorname{tr}\bigl(((A+A^\top)X)^\top dX\bigr)$, so the derivative is
+$(A+A^\top)X$. Setting $A=I$ in the first identity gives $\partial\operatorname{tr}(X)/\partial X=I$.
+$\square$
+:::
+
+*Reader translation.* These are the workhorse trace derivatives. Notice the last one,
+$\partial\operatorname{tr}(X^\top A X)/\partial X=(A+A^\top)X$, is the matrix twin of the quadratic-form
+gradient $(A+A^\top)\mathbf{x}$; the same symmetrization appears for the same reason. It is instructive to
+appreciate what the differential method saved us: done entrywise one writes $\operatorname{tr}(X^\top A X)
+=\sum_{i,j,k}X_{ji}A_{jk}X_{ki}$, differentiates this triple sum in a generic entry $X_{ab}$ (two terms,
+by the product rule on the two factors of $X$), and reassembles the pieces into a matrix; the proof above
+reached $(A+A^\top)X$ in three clean lines with no indices at all. That contrast is the entire argument
+for adopting differentials.
+
+To differentiate the determinant and the inverse we first record how the inverse responds to a
+perturbation. Two classical objects appear, and we define them here at first use rather than assume them.
+The **minor** $M_{ij}$ of a square matrix $X$ is the determinant of the submatrix obtained by striking out
+row $i$ and column $j$. The **cofactor** is the signed minor $C_{ij}=(-1)^{i+j}M_{ij}$, and the
+**adjugate** $\operatorname{adj}(X)$ is the transpose of the cofactor matrix, $\operatorname{adj}(X)=C^\top$.
+The one fact we borrow (from @strang2016) is **Cramer's rule** in the form
+$X^{-1}=\operatorname{adj}(X)/\det(X)$, valid whenever $\det(X)\ne 0$. The proof below needs that the
+entries of $X^{-1}$ are differentiable functions of the entries of $X$; Cramer's rule exhibits each entry
+of $X^{-1}$ as a ratio of polynomials in the entries of $X$ whose denominator $\det(X)$ does not vanish on
+the open set of invertible matrices, so each entry is differentiable there [@strang2016].
+
+::: {#thm-inverse-derivative}
+## Derivative of the inverse
+Let $X$ range over invertible matrices. As a differential,
+$$
+d\bigl(X^{-1}\bigr)=-X^{-1}\,(dX)\,X^{-1}.
+$$ {#eq-mc-inverse-diff}
+Componentwise, $\dfrac{\partial (X^{-1})_{kl}}{\partial X_{ij}}=-(X^{-1})_{ki}\,(X^{-1})_{jl}$. If $X(t)$
+depends differentiably on a scalar $t$, then
+$\dfrac{d}{dt}X(t)^{-1}=-X(t)^{-1}\dot X(t)\,X(t)^{-1}$.
+:::
+
+::: {.proof}
+Differentiate the identity $X X^{-1}=I$. The right side is constant, so $d(X X^{-1})=0$; the product rule
+of @lem-mc-differential-rules gives $(dX)X^{-1}+X\,d(X^{-1})=0$. Left-multiplying by $X^{-1}$ and solving,
+$$
+d(X^{-1})=-X^{-1}(dX)X^{-1},
+$$
+which is @eq-mc-inverse-diff. For the componentwise form take $dX=E_{ij}$; then
+$d(X^{-1})=-X^{-1}E_{ij}X^{-1}$, and
+$$
+\bigl(X^{-1}E_{ij}X^{-1}\bigr)_{kl}
+=\sum_{p,q}(X^{-1})_{kp}(E_{ij})_{pq}(X^{-1})_{ql}
+=(X^{-1})_{ki}(X^{-1})_{jl},
+$$
+where the double sum collapses because $E_{ij}=\mathbf{e}_i\mathbf{e}_j^\top$ has a single nonzero entry,
+$(E_{ij})_{pq}=1$ only when $p=i$ and $q=j$; every other term is zero. Hence
+$\partial(X^{-1})_{kl}/\partial X_{ij}=-(X^{-1})_{ki}(X^{-1})_{jl}$. The scalar-parameter statement is
+the same computation with $dX$ replaced by $\dot X(t)\,dt$. $\square$
+:::
+
+*Reader translation.* The rule $d(X^{-1})=-X^{-1}(dX)X^{-1}$ is the matrix version of the scalar fact
+$d(1/x)=-x^{-2}\,dx$; the two copies of $X^{-1}$, one on each side of $dX$, are the price of
+noncommutativity, and their order cannot be swapped. This is exactly the identity that produces the
+$-\mathbf{a}^\top\mathbf{V}^{-1}(\partial\mathbf{V}/\partial\vartheta)\mathbf{V}^{-1}\mathbf{a}$ term in a
+variance-component score: it says how the inverse covariance changes when a variance parameter nudges
+$\mathbf{V}$. We use it in that form in @sec-mc-chain-rule and Chapters 8 and 13.
+
+Next, the differential of the determinant, classically Jacobi's formula. It rests on the cofactor
+(Laplace) expansion and the adjugate identity $X\,\operatorname{adj}(X)=\det(X)\,I$, both standard
+[@strang2016]. A reader who only needs the log-determinant derivative below (which is what the likelihood
+of @eq-mc-mvn-loglik requires) may accept this lemma on first reading and skip its proof; the cofactor
+machinery is used only to prove it, not to apply it.
+
+::: {#lem-mc-jacobi}
+## Jacobi's formula for the determinant
+For any square $X$, writing $C=\operatorname{cof}(X)$ for the matrix of cofactors
+$C_{ij}=(-1)^{i+j}M_{ij}$ (with $M_{ij}$ the minor deleting row $i$ and column $j$),
+$$
+\frac{\partial \det(X)}{\partial X_{ij}}=C_{ij},
+\qquad
+d\det(X)=\operatorname{tr}\bigl(\operatorname{adj}(X)\,dX\bigr).
+$$
+If in addition $X$ is invertible, then $\operatorname{adj}(X)=\det(X)\,X^{-1}$ and
+$$
+\frac{\partial \det(X)}{\partial X}=\det(X)\,X^{-\top},
+\qquad
+d\det(X)=\det(X)\,\operatorname{tr}\bigl(X^{-1}\,dX\bigr).
+$$ {#eq-mc-jacobi}
+:::
+
+::: {.proof}
+Fix a row index $i$. The Laplace expansion along row $i$ reads
+$\det(X)=\sum_{k=1}^{n}X_{ik}\,C_{ik}$, and crucially each cofactor $C_{ik}$ is built from the minor that
+*deletes* row $i$, so $C_{ik}$ does not depend on any entry of row $i$. To see this last point plainly:
+the minor $M_{ik}$ is by definition the determinant of the submatrix obtained by striking out row $i$ and
+column $k$, so not a single entry $X_{i1},\dots,X_{in}$ of row $i$ survives in it; therefore
+$\partial C_{ik}/\partial X_{ij}=0$ for every $j$. Differentiating $\det(X)=\sum_k X_{ik}C_{ik}$ in
+$X_{ij}$, only the explicit factor $X_{ik}$ can contribute, and it does so only when $k=j$, giving
+$\partial\det(X)/\partial X_{ij}=C_{ij}$. Assembling the differential,
+$$
+d\det(X)=\sum_{i,j}C_{ij}\,dX_{ij}=\operatorname{tr}\bigl(C^\top\,dX\bigr)
+=\operatorname{tr}\bigl(\operatorname{adj}(X)\,dX\bigr),
+$$
+since the adjugate is the transpose of the cofactor matrix, $\operatorname{adj}(X)=C^\top$. When $X$ is
+invertible, the adjugate identity $X\,\operatorname{adj}(X)=\det(X)\,I$ gives
+$\operatorname{adj}(X)=\det(X)\,X^{-1}$; substituting yields
+$d\det(X)=\det(X)\operatorname{tr}(X^{-1}dX)$, and because $\operatorname{adj}(X)=C^\top$ we get
+$C=\det(X)(X^{-1})^\top$, that is $\partial\det(X)/\partial X=\det(X)X^{-\top}$. $\square$
+:::
+
+*Reader translation.* Jacobi's formula says the determinant changes, to first order, in proportion to
+$\det(X)$ times the inverse transpose: $d\det(X)=\det(X)\operatorname{tr}(X^{-1}\,dX)$. We almost never
+need the raw determinant derivative; we need its logarithm, obtained next by one application of the chain
+rule, because it is $\log\det\mathbf{V}$ (not $\det\mathbf{V}$) that appears in every Gaussian
+log-likelihood @eq-mc-mvn-loglik.
+
+::: {#thm-logdet-derivative}
+## Derivative of the log-determinant
+Let $X$ range over matrices with $\det(X)>0$. Then
+$$
+d\log\det(X)=\operatorname{tr}\bigl(X^{-1}\,dX\bigr),
+\qquad
+\frac{\partial}{\partial X}\log\det(X)=X^{-\top}=(X^{-1})^\top .
+$$ {#eq-mc-logdet}
+If $X$ is symmetric and invertible, $\partial\log\det(X)/\partial X=X^{-1}$.
+:::
+
+::: {.proof}
+The map $X\mapsto\log\det(X)$ is the composition of $t\mapsto\log t$ with $X\mapsto\det(X)$, both
+differentiable where $\det(X)>0$. The ordinary chain rule for the outer scalar function gives
+$$
+d\log\det(X)=\frac{1}{\det(X)}\,d\det(X)
+=\frac{1}{\det(X)}\,\det(X)\operatorname{tr}\bigl(X^{-1}\,dX\bigr)
+=\operatorname{tr}\bigl(X^{-1}\,dX\bigr),
+$$
+using @eq-mc-jacobi. Writing this as $\operatorname{tr}\bigl((X^{-\top})^\top dX\bigr)$ and applying
+@lem-mc-identification gives $\partial\log\det(X)/\partial X=X^{-\top}$. For symmetric invertible $X$ the
+inverse is symmetric, so $X^{-\top}=X^{-1}$. $\square$
+:::
+
+*Reader translation.* This is one of the two identities the whole section was aiming at. In words: the
+derivative of $\log\det$ is the inverse (transposed, but for a symmetric covariance matrix the transpose
+does nothing). Combined with the inverse-derivative rule for the $\mathbf{r}^\top\mathbf{V}^{-1}\mathbf{r}$
+term, it delivers the gradient of the Gaussian log-likelihood @eq-mc-mvn-loglik with respect to a variance
+parameter, hence the restricted-likelihood score of random-effects meta-analysis. The next remark records
+a layout subtlety that matters precisely because covariance matrices are symmetric.
+
+::: {.remark}
+The symmetric case hides a layout subtlety worth stating, because covariance and precision matrices are
+symmetric. There are two different questions, and they have different answers.
+
+*Question one: all entries free.* If one differentiates $f(X)=\log\det X$ treating all $n^2$ entries as
+independent, the answer is $X^{-\top}$ as proved above. This is the derivative reported by the theorem.
+
+*Question two: only the free parameters of a symmetric matrix.* If instead $X$ is *constrained* symmetric
+and one differentiates with respect to the $\binom{n+1}{2}$ genuinely free parameters (the diagonal and
+one triangle), then a diagonal parameter $X_{ii}$ moves one entry, but an off-diagonal free parameter
+$X_{ij}$ with $i<j$ moves *two* entries at once, $X_{ij}$ and $X_{ji}$. By the chain rule the derivative
+with respect to that one parameter is $\partial f/\partial X_{ij}+\partial f/\partial X_{ji}
+=2(X^{-1})_{ij}$: the off-diagonal derivatives are doubled.
+
+A $2\times 2$ example makes the doubling concrete. Let
+$X=\left(\begin{smallmatrix}a&b\\ b&c\end{smallmatrix}\right)$ with free parameters $a,b,c$, so
+$\det X=ac-b^2$ and $X^{-1}=\dfrac{1}{ac-b^2}\left(\begin{smallmatrix}c&-b\\ -b&a\end{smallmatrix}\right)$.
+Differentiating $f=\log(ac-b^2)$ directly,
+$$
+\frac{\partial f}{\partial a}=\frac{c}{ac-b^2}=(X^{-1})_{11},
+\qquad
+\frac{\partial f}{\partial c}=\frac{a}{ac-b^2}=(X^{-1})_{22},
+\qquad
+\frac{\partial f}{\partial b}=\frac{-2b}{ac-b^2}=2\,(X^{-1})_{12}.
+$$
+The diagonal parameters reproduce single entries of $X^{-1}$, while the off-diagonal parameter $b$ picks
+up a factor $2$ because it sits in both off-diagonal slots. Arranging these into a symmetric matrix gives
+$$
+\begin{pmatrix}(X^{-1})_{11}&2(X^{-1})_{12}\\ 2(X^{-1})_{12}&(X^{-1})_{22}\end{pmatrix}
+=2X^{-1}-\operatorname{diag}(X^{-1}),
+$$
+the "symmetric gradient" with off-diagonal entries doubled. This is a genuine chain-rule consequence, not
+a trap, once one is clear about which variables are being held free.
+
+In the restricted-likelihood applications of Chapters 8 and 13 this subtlety does not arise: one
+differentiates with respect to a *scalar* variance parameter $\vartheta$ that enters $\mathbf{V}(\vartheta)$,
+and the chain rule of @sec-mc-chain-rule gives the unambiguous
+$$
+\frac{\partial}{\partial\vartheta}\log\det\mathbf{V}(\vartheta)
+=\operatorname{tr}\!\Bigl(\mathbf{V}^{-1}\frac{\partial\mathbf{V}}{\partial\vartheta}\Bigr),
+\qquad
+\frac{\partial}{\partial\vartheta}\bigl(\mathbf{a}^\top\mathbf{V}^{-1}\mathbf{a}\bigr)
+=-\,\mathbf{a}^\top\mathbf{V}^{-1}\frac{\partial\mathbf{V}}{\partial\vartheta}\mathbf{V}^{-1}\mathbf{a},
+$$
+the second equality from @thm-inverse-derivative. These are the two pieces of the restricted-likelihood
+score. $\blacktriangleleft$
+:::
+
+## The Sherman-Morrison-Woodbury identity {#sec-mc-woodbury}
+
+A recurring computational need is to invert a matrix that differs from an easily inverted one by a
+low-rank correction. In random-effects meta-analysis and in mixed models the marginal covariance has the
+form $\mathbf{V}=A+UCV$ with $A$ diagonal (so trivially inverted) and $UCV$ of small rank; the Woodbury
+identity reduces the inversion of $\mathbf{V}$ to that of a small matrix.
+
+*A warning about the letter $V$.* In the identity below, $V$ (plain, unbolded) is a generic rectangular
+factor, one of the four matrices $A,U,C,V$ that build the low-rank update. It is *not* the covariance
+matrix $\mathbf{V}$ (bold) of the likelihood @eq-mc-mvn-loglik, and it is not a vector space. The clash is
+unfortunate but the notation $A+UCV$ is universal, so we keep it and simply flag it here.
+
+*What the four matrices are, concretely.* It helps to have a picture before the algebra. Think of a
+mixed model or a random-effects meta-analysis whose marginal covariance is $\mathbf{V}=A+UCV$. Here $A$
+is the easy diagonal part (within-study or residual variances, one per observation); $U$ is a tall thin
+matrix that maps a few random effects to the many observations they influence; $C$ is the small
+covariance of those random effects (often just a single between-study variance $\tau^2$); and
+$V=U^\top$ closes the low-rank correction. Inverting the big $n\times n$ matrix $\mathbf{V}$ directly is
+expensive, but Woodbury turns it into inverting the tiny $k\times k$ **capacitance matrix**
+$C^{-1}+VA^{-1}U$, where $k$ is the number of random effects. The compound-symmetry example of
+@sec-mc-example is the smallest instance, with $k=1$: a single shared random effect, $U=V^\top=\mathbf{1}_n$
+and $C=[\tau^2]$. The same low-rank structure appears in the marginal likelihood of ML-NMR (Chapters 20
+to 25), where integrating out individual-level variation leaves a diagonal-plus-low-rank covariance of
+exactly this kind, and Woodbury is what keeps the likelihood computable.
+
+We build up from the rank-one case.
+
+::: {#lem-sherman-morrison}
+## Sherman-Morrison rank-one update
+Let $A\in\mathbb{R}^{n\times n}$ be invertible and $\mathbf{u},\mathbf{v}\in\mathbb{R}^{n}$. If
+$1+\mathbf{v}^\top A^{-1}\mathbf{u}\ne 0$, then $A+\mathbf{u}\mathbf{v}^\top$ is invertible and
+$$
+\bigl(A+\mathbf{u}\mathbf{v}^\top\bigr)^{-1}
+=A^{-1}-\frac{A^{-1}\mathbf{u}\,\mathbf{v}^\top A^{-1}}{1+\mathbf{v}^\top A^{-1}\mathbf{u}} .
+$$ {#eq-mc-sm}
+:::
+
+::: {.proof}
+Write $c=\mathbf{v}^\top A^{-1}\mathbf{u}$ (a scalar) and $s=1+c\ne 0$, and let $B$ denote the proposed
+right-hand side of @eq-mc-sm. Multiply on the left by $A+\mathbf{u}\mathbf{v}^\top$:
+$$
+\bigl(A+\mathbf{u}\mathbf{v}^\top\bigr)B
+=AB+\mathbf{u}\mathbf{v}^\top B.
+$$
+Compute each piece. First
+$$
+AB=A A^{-1}-\frac{A A^{-1}\mathbf{u}\,\mathbf{v}^\top A^{-1}}{s}
+=I-\frac{\mathbf{u}\,\mathbf{v}^\top A^{-1}}{s}.
+$$
+Second, using $\mathbf{v}^\top A^{-1}\mathbf{u}=c$,
+$$
+\mathbf{u}\mathbf{v}^\top B
+=\mathbf{u}\mathbf{v}^\top A^{-1}
+-\frac{\mathbf{u}\,(\mathbf{v}^\top A^{-1}\mathbf{u})\,\mathbf{v}^\top A^{-1}}{s}
+=\mathbf{u}\mathbf{v}^\top A^{-1}\Bigl(1-\frac{c}{s}\Bigr)
+=\mathbf{u}\mathbf{v}^\top A^{-1}\,\frac{s-c}{s}
+=\frac{\mathbf{u}\,\mathbf{v}^\top A^{-1}}{s},
+$$
+since $s-c=1$. Adding the two pieces, the corrections cancel and
+$\bigl(A+\mathbf{u}\mathbf{v}^\top\bigr)B=I$. A square matrix with a right inverse is invertible, with
+that right inverse equal to the inverse (@thm-invertibility-characterization), so
+$\bigl(A+\mathbf{u}\mathbf{v}^\top\bigr)^{-1}=B$. $\square$
+:::
+
+*Reader translation.* Sherman-Morrison says: when you add a rank-one bump $\mathbf{u}\mathbf{v}^\top$ to a
+matrix you can already invert, the new inverse is the old inverse minus a rank-one correction, and the only
+new scalar you must compute is the denominator $1+\mathbf{v}^\top A^{-1}\mathbf{u}$. No new matrix is
+inverted at all. It is worth verifying once on numbers before trusting the general case.
+
+::: {#exm-mc-sherman-morrison}
+## Sherman-Morrison on a $2\times 2$ matrix
+Take $A=I_2$ and $\mathbf{u}=\mathbf{v}=\mathbf{1}_2=(1,1)^\top$, so
+$A+\mathbf{u}\mathbf{v}^\top=I_2+\mathbf{1}_2\mathbf{1}_2^\top
+=\left(\begin{smallmatrix}2&1\\ 1&2\end{smallmatrix}\right)$. Here $A^{-1}=I_2$ and the denominator is
+$1+\mathbf{v}^\top A^{-1}\mathbf{u}=1+\mathbf{1}_2^\top\mathbf{1}_2=1+2=3$, so @eq-mc-sm gives
+$$
+\bigl(I_2+\mathbf{1}_2\mathbf{1}_2^\top\bigr)^{-1}
+=I_2-\tfrac{1}{3}\mathbf{1}_2\mathbf{1}_2^\top
+=\frac{1}{3}\begin{pmatrix}2&-1\\ -1&2\end{pmatrix}.
+$$
+Direct check: $\left(\begin{smallmatrix}2&1\\ 1&2\end{smallmatrix}\right)\cdot
+\tfrac{1}{3}\left(\begin{smallmatrix}2&-1\\ -1&2\end{smallmatrix}\right)$ has first row
+$\tfrac{1}{3}(2\cdot 2+1\cdot(-1),\ 2\cdot(-1)+1\cdot 2)=\tfrac{1}{3}(3,0)=(1,0)$, and similarly the
+second row is $(0,1)$, confirming the identity. This is the $n=2$ case of the compound-symmetry inverse
+computed in full in @sec-mc-example.
+:::
+
+::: {#thm-woodbury}
+## Sherman-Morrison-Woodbury identity
+Let $A\in\mathbb{R}^{n\times n}$ and $C\in\mathbb{R}^{k\times k}$ be invertible, and let
+$U\in\mathbb{R}^{n\times k}$, $V\in\mathbb{R}^{k\times n}$. If the **capacitance matrix**
+$S:=C^{-1}+VA^{-1}U\in\mathbb{R}^{k\times k}$ is invertible, then $A+UCV$ is invertible and
+$$
+\bigl(A+UCV\bigr)^{-1}
+=A^{-1}-A^{-1}U\bigl(C^{-1}+VA^{-1}U\bigr)^{-1}VA^{-1}.
+$$ {#eq-mc-woodbury}
+The rank-one identity @eq-mc-sm is the case $k=1$, $C=[1]$, $U=\mathbf{u}$, $V=\mathbf{v}^\top$.
+:::
+
+::: {.proof}
+Let $B$ denote the right-hand side of @eq-mc-woodbury and let $M:=VA^{-1}U\in\mathbb{R}^{k\times k}$, so
+$S=C^{-1}+M$. Multiply on the left by $A+UCV$ and expand:
+$$
+(A+UCV)B=AB+UCVB.
+$$
+The first term is
+$$
+AB=I-US^{-1}VA^{-1}.
+$$
+For the second term, factor $VA^{-1}$ on the right:
+$$
+UCVB=UCVA^{-1}-UCVA^{-1}U S^{-1}VA^{-1}
+=UC\bigl(I-M S^{-1}\bigr)VA^{-1}.
+$$
+Adding and collecting the common right factor $VA^{-1}$ and left factor $U$,
+$$
+(A+UCV)B
+=I+U\Bigl\{-S^{-1}+C-CM S^{-1}\Bigr\}VA^{-1}.
+$$
+The braced $k\times k$ matrix vanishes:
+$$
+-S^{-1}+C-CM S^{-1}
+=C-(I+CM)S^{-1}
+=C-C\bigl(C^{-1}+M\bigr)S^{-1}
+=C-C S S^{-1}
+=C-C=0,
+$$
+using $I+CM=C(C^{-1}+M)=CS$. Hence $(A+UCV)B=I$. A square matrix with a right inverse is invertible
+(@thm-invertibility-characterization), so $(A+UCV)^{-1}=B$. $\square$
+:::
+
+*Reader translation.* Woodbury is Sherman-Morrison for a rank-$k$ (rather than rank-one) correction: the
+$n\times n$ inversion of $A+UCV$ collapses to the $k\times k$ inversion of the capacitance matrix
+$C^{-1}+VA^{-1}U$, a huge saving when $k\ll n$. The name "capacitance" is borrowed from electrical network
+theory, where this Schur-complement matrix arises; in this book it carries no electrical meaning and is
+simply the small matrix you end up inverting. This is the identity that makes the marginal likelihood of a
+mixed model, a random-effects meta-analysis, or ML-NMR computable at scale.
+
+A companion identity handles the determinant, which is what the log-determinant term of a restricted
+likelihood requires. We first record the Schur-complement determinant formula, then specialize.
+
+::: {#lem-mc-schur-det}
+## Block determinant via the Schur complement
+Let $P=\begin{pmatrix}A&B\\ C&D\end{pmatrix}$ be a square block matrix with $A$ square and invertible.
+Then
+$$
+\det P=\det(A)\,\det\bigl(D-CA^{-1}B\bigr).
+$$
+:::
+
+::: {.proof}
+Verify the block factorization
+$$
+\begin{pmatrix}A&B\\ C&D\end{pmatrix}
+=\begin{pmatrix}I&0\\ CA^{-1}&I\end{pmatrix}
+\begin{pmatrix}A&B\\ 0&D-CA^{-1}B\end{pmatrix},
+$$
+by multiplying the right side block by block. All four blocks check out: the $(1,1)$ block is
+$I\cdot A+0\cdot 0=A$; the $(1,2)$ block is $I\cdot B+0\cdot(D-CA^{-1}B)=B$; the $(2,1)$ block is
+$CA^{-1}\cdot A+I\cdot 0=C$; and the $(2,2)$ block is $CA^{-1}B+I\cdot(D-CA^{-1}B)=D$. So the
+factorization holds exactly. The first factor is block lower triangular with identity diagonal
+blocks, so its determinant is $1$; the second is block upper triangular, so its determinant is the product
+$\det(A)\det(D-CA^{-1}B)$ of the diagonal blocks [@strang2016]. Multiplicativity of the determinant gives
+the claim. $\square$
+:::
+
+::: {#cor-mc-matrix-determinant-lemma}
+## Matrix determinant lemma
+With $A,C,U,V$ as in @thm-woodbury and $A,C$ invertible,
+$$
+\det\bigl(A+UCV\bigr)=\det(A)\,\det(C)\,\det\bigl(C^{-1}+VA^{-1}U\bigr).
+$$ {#eq-mc-detlemma}
+In particular, for the rank-one update,
+$\det\bigl(A+\mathbf{u}\mathbf{v}^\top\bigr)=\det(A)\,\bigl(1+\mathbf{v}^\top A^{-1}\mathbf{u}\bigr)$.
+:::
+
+::: {.proof}
+Apply @lem-mc-schur-det to the block matrix
+$P=\begin{pmatrix}A&U\\ -V&C^{-1}\end{pmatrix}$ in two ways. This particular block matrix is not pulled
+from nowhere: it is built so that eliminating one diagonal block produces the *small* capacitance matrix
+$C^{-1}+VA^{-1}U$, while eliminating the other produces the *large* matrix $A+UCV$. Computing $\det P$ both
+ways and equating the results is what links the two determinants. Taking first the Schur complement of the
+invertible top-left block $A$,
+$$
+\det P=\det(A)\,\det\bigl(C^{-1}-(-V)A^{-1}U\bigr)=\det(A)\,\det\bigl(C^{-1}+VA^{-1}U\bigr).
+$$
+Taking instead the Schur complement of the invertible bottom-right block $C^{-1}$ (the same formula
+applied to the block matrix after swapping the roles of the two diagonal blocks),
+$$
+\det P=\det\bigl(C^{-1}\bigr)\,\det\bigl(A-U\,(C^{-1})^{-1}(-V)\bigr)
+=\det\bigl(C^{-1}\bigr)\,\det\bigl(A+UCV\bigr).
+$$
+Equating the two expressions and using $\det(C^{-1})=1/\det(C)$ gives @eq-mc-detlemma. The rank-one case
+is $k=1$, $C=[1]$, where $\det(C)=1$ and $C^{-1}+\mathbf{v}^\top A^{-1}\mathbf{u}
+=1+\mathbf{v}^\top A^{-1}\mathbf{u}$. $\square$
+:::
+
+*Reader translation.* The matrix determinant lemma is Woodbury for determinants: the determinant of the
+big matrix $A+UCV$ factors through the small capacitance determinant, so the $\log\det\mathbf{V}$ term of
+a likelihood (@eq-mc-mvn-loglik) is computed from a $k\times k$ determinant instead of an $n\times n$ one.
+The rank-one case $\det(A+\mathbf{u}\mathbf{v}^\top)=\det(A)(1+\mathbf{v}^\top A^{-1}\mathbf{u})$ is the
+one used in the compound-symmetry determinant of @sec-mc-example.
+
+## The chain rule for matrix functions {#sec-mc-chain-rule}
+
+Finally, the rule that lets all of the above be composed. We state it for vector compositions, where it is
+the workhorse of the delta method (@thm-delta-method), and for a scalar parameter passing through a matrix,
+which is the form used for likelihood scores.
+
+::: {#thm-chain-rule}
+## Chain rule
+1. **(Vector composition.)** Let $\mathbf{f}:\mathbb{R}^{n}\to\mathbb{R}^{m}$ be differentiable at
+   $\mathbf{x}$ and $\mathbf{g}:\mathbb{R}^{m}\to\mathbb{R}^{p}$ differentiable at $\mathbf{f}(\mathbf{x})$.
+   Then $\mathbf{g}\circ\mathbf{f}$ is differentiable at $\mathbf{x}$ with
+   $$
+   J_{\mathbf{g}\circ\mathbf{f}}(\mathbf{x})
+   =J_{\mathbf{g}}\bigl(\mathbf{f}(\mathbf{x})\bigr)\,J_{\mathbf{f}}(\mathbf{x}).
+   $$ {#eq-mc-chain-jac}
+   For a scalar outer function $\phi:\mathbb{R}^{m}\to\mathbb{R}$,
+   $\nabla(\phi\circ\mathbf{f})(\mathbf{x})=J_{\mathbf{f}}(\mathbf{x})^\top\,
+   \nabla\phi\bigl(\mathbf{f}(\mathbf{x})\bigr)$.
+2. **(Scalar parameter through a matrix.)** Let $X:\mathbb{R}\to\mathbb{R}^{m\times n}$ be differentiable
+   at $t$ and $f:\mathbb{R}^{m\times n}\to\mathbb{R}$ differentiable at $X(t)$. Then $\phi(t)=f(X(t))$ is
+   differentiable at $t$ with
+   $$
+   \phi'(t)=\Big\langle \tfrac{\partial f}{\partial X}\big(X(t)\big),\,\dot X(t)\Big\rangle_F
+   =\operatorname{tr}\!\Bigl(\tfrac{\partial f}{\partial X}\big(X(t)\big)^{\!\top}\dot X(t)\Bigr).
+   $$ {#eq-mc-chain-scalar}
+:::
+
+::: {.proof}
+*(1).* Differentiability of $\mathbf{f}$ gives
+$\mathbf{f}(\mathbf{x}+\mathbf{h})=\mathbf{f}(\mathbf{x})+\mathbf{k}$ with
+$\mathbf{k}=J_{\mathbf{f}}\mathbf{h}+o(\|\mathbf{h}\|)$, so $\|\mathbf{k}\|=O(\|\mathbf{h}\|)$ and
+$\mathbf{k}\to\mathbf{0}$ as $\mathbf{h}\to\mathbf{0}$. Differentiability of $\mathbf{g}$ at
+$\mathbf{f}(\mathbf{x})$ gives
+$$
+\mathbf{g}\bigl(\mathbf{f}(\mathbf{x})+\mathbf{k}\bigr)
+=\mathbf{g}\bigl(\mathbf{f}(\mathbf{x})\bigr)+J_{\mathbf{g}}\,\mathbf{k}+o(\|\mathbf{k}\|)
+=\mathbf{g}\bigl(\mathbf{f}(\mathbf{x})\bigr)
++J_{\mathbf{g}}J_{\mathbf{f}}\,\mathbf{h}
++\underbrace{J_{\mathbf{g}}\,o(\|\mathbf{h}\|)+o(\|\mathbf{k}\|)}_{o(\|\mathbf{h}\|)}.
+$$
+The error is $o(\|\mathbf{h}\|)$ because $J_{\mathbf{g}}\,o(\|\mathbf{h}\|)=o(\|\mathbf{h}\|)$ and
+$o(\|\mathbf{k}\|)=o(O(\|\mathbf{h}\|))=o(\|\mathbf{h}\|)$. By @eq-mc-jac-def the Jacobian of the
+composition is $J_{\mathbf{g}}J_{\mathbf{f}}$. The scalar case is @eq-mc-grad-is-jac-transpose applied to
+$\phi\circ\mathbf{f}$: $\nabla(\phi\circ\mathbf{f})=J_{\phi\circ\mathbf{f}}^\top
+=(J_\phi J_{\mathbf{f}})^\top=J_{\mathbf{f}}^\top\,\nabla\phi$.
+
+*(2).* This is part (1) after flattening the matrix into a vector: identify $\mathbb{R}^{m\times n}$ with
+$\mathbb{R}^{mn}$ by stacking columns, under which the Frobenius inner product becomes the Euclidean inner
+product. The choice of stacking order does not matter: the conclusion @eq-mc-chain-scalar is written
+invariantly as a Frobenius inner product (equivalently a trace), and a trace is unchanged by any
+consistent relabeling of the entries, so every flattening gives the same scalar $\phi'(t)$. Concretely,
+$X(t+\delta)=X(t)+\delta\,\dot X(t)+o(\delta)$, so by @eq-mc-matder-def
+$$
+\phi(t+\delta)=f\bigl(X(t)+\delta\dot X(t)+o(\delta)\bigr)
+=f(X(t))+\Big\langle\tfrac{\partial f}{\partial X},\,\delta\dot X(t)\Big\rangle_F+o(\delta),
+$$
+and dividing by $\delta$ and letting $\delta\to0$ gives @eq-mc-chain-scalar. $\square$
+:::
+
+*Reader translation.* The chain rule is what lets all the identities above be composed. Part (1) is the
+familiar "multiply the Jacobians" rule that powers the delta method (@thm-delta-method): to move a
+variance through a chain of transformations, multiply the local linear maps. Part (2) is the version used
+for likelihood scores: when a scalar parameter $t$ (a variance component, say) enters a matrix, the
+derivative of any scalar function of that matrix is a single trace, $\operatorname{tr}((\partial
+f/\partial X)^\top\dot X)$. The next remark applies it to exactly the two functions the Gaussian
+log-likelihood needs.
+
+::: {.remark}
+Two specializations of @eq-mc-chain-scalar were used in @sec-mc-trace-inverse-det. With
+$f(X)=\log\det X$ and $\partial f/\partial X=X^{-\top}$, @eq-mc-chain-scalar gives
+$\frac{d}{dt}\log\det X(t)=\operatorname{tr}\bigl((X^{-\top})^\top\dot X\bigr)
+=\operatorname{tr}(X^{-1}\dot X)$. With $f(X)=\mathbf{a}^\top X^{-1}\mathbf{a}$ one combines
+@thm-inverse-derivative with the chain rule to get
+$\frac{d}{dt}\bigl(\mathbf{a}^\top X^{-1}\mathbf{a}\bigr)
+=-\mathbf{a}^\top X^{-1}\dot X X^{-1}\mathbf{a}$. These are exactly the building blocks of the
+restricted-likelihood score in Chapters 8 and 13. $\blacktriangleleft$
+:::
+
+Rather than leave those building blocks unassembled, we now build the score, since assembling it is the
+single computation this whole section exists to enable.
+
+::: {#exm-mc-variance-score}
+## Assembling a variance-component score
+Consider the Gaussian log-likelihood @eq-mc-mvn-loglik with residual $\mathbf{r}$ held fixed and a
+covariance $\mathbf{V}=\mathbf{V}(\vartheta)$ depending on a single variance parameter $\vartheta$ (for
+instance the between-study variance $\tau^2$):
+$$
+\ell(\vartheta)=-\tfrac{1}{2}\log\det\mathbf{V}(\vartheta)
+-\tfrac{1}{2}\,\mathbf{r}^\top\mathbf{V}(\vartheta)^{-1}\mathbf{r}+\text{const}.
+$$
+Write $\mathbf{V}_\vartheta:=\partial\mathbf{V}/\partial\vartheta$. Differentiate term by term. The first
+term uses @thm-logdet-derivative through the chain rule @eq-mc-chain-scalar,
+$$
+\frac{\partial}{\partial\vartheta}\Bigl(-\tfrac{1}{2}\log\det\mathbf{V}\Bigr)
+=-\tfrac{1}{2}\operatorname{tr}\bigl(\mathbf{V}^{-1}\mathbf{V}_\vartheta\bigr).
+$$
+The second term uses the inverse-derivative rule @thm-inverse-derivative, which supplies
+$\partial\mathbf{V}^{-1}/\partial\vartheta=-\mathbf{V}^{-1}\mathbf{V}_\vartheta\mathbf{V}^{-1}$, so
+$$
+\frac{\partial}{\partial\vartheta}\Bigl(-\tfrac{1}{2}\mathbf{r}^\top\mathbf{V}^{-1}\mathbf{r}\Bigr)
+=+\tfrac{1}{2}\,\mathbf{r}^\top\mathbf{V}^{-1}\mathbf{V}_\vartheta\mathbf{V}^{-1}\mathbf{r}.
+$$
+Adding the two pieces gives the **score for the variance parameter**,
+$$
+\frac{\partial\ell}{\partial\vartheta}
+=-\tfrac{1}{2}\operatorname{tr}\bigl(\mathbf{V}^{-1}\mathbf{V}_\vartheta\bigr)
++\tfrac{1}{2}\,\mathbf{r}^\top\mathbf{V}^{-1}\mathbf{V}_\vartheta\mathbf{V}^{-1}\mathbf{r},
+$$ {#eq-mc-variance-score}
+and setting it to zero yields the estimating equation
+$\operatorname{tr}(\mathbf{V}^{-1}\mathbf{V}_\vartheta)
+=\mathbf{r}^\top\mathbf{V}^{-1}\mathbf{V}_\vartheta\mathbf{V}^{-1}\mathbf{r}$. The restricted (REML)
+log-likelihood adds a further term $-\tfrac12\log\det(\mathbf{X}^\top\mathbf{V}^{-1}\mathbf{X})$, whose
+derivative is again a trace of the same shape by @thm-logdet-derivative and @thm-inverse-derivative; the
+mechanics are identical.
+:::
+
+*Reader translation.* Equation @eq-mc-variance-score is the payoff of the appendix for meta-analysis: it
+is the exact gradient that a random-effects model solves to estimate heterogeneity. Every symbol in it
+came from an identity proved above, the log-determinant derivative and the inverse derivative, glued by
+the chain rule. In the next section we evaluate every piece of it in closed form for the
+compound-symmetry covariance, where $\mathbf{V}_\vartheta=\mathbf{1}_n\mathbf{1}_n^\top$.
+
+## A worked example: the compound-symmetry covariance {#sec-mc-example}
+
+We assemble the rank-one inverse, the matrix determinant lemma, and the log-determinant derivative on the
+covariance matrix that governs the balanced one-way random-effects model and the random-effects
+meta-analysis of Chapter 13. Let
+$$
+\mathbf{V}=\sigma^2 I_n+\tau^2\,\mathbf{1}_n\mathbf{1}_n^\top,
+$$
+the **compound-symmetry** (equicorrelation) matrix, with $\sigma^2>0$ and $\tau^2\ge 0$. We compute its
+inverse, its determinant, and the derivative of $\log\det\mathbf{V}$ with respect to the between-study
+variance $\tau^2$, all in closed form, and then verify the formulas numerically.
+
+*What each symbol means for a meta-analysis.* This covariance is not an abstract choice; it is the exact
+marginal covariance of the estimates from $n$ studies in a random-effects meta-analysis, so it is worth
+translating every symbol. Here $n$ is the number of studies; $\sigma^2$ is the within-study (residual,
+sampling) variance, assumed common across studies in this balanced illustration; and $\tau^2$ is the
+between-study variance, the **heterogeneity**, the extra variability because the true effect differs from
+study to study. The vector $\mathbf{1}_n=(1,\dots,1)^\top$ is the $n$-vector of ones, and the matrix
+$\mathbf{1}_n\mathbf{1}_n^\top$ (a matrix of all ones) encodes a *single shared random effect*: it says
+every study's estimate is shifted by the same common random deviation, so all pairs of studies share the
+$\tau^2$ component of variance. That matrix has rank one, because it is the outer product of one vector
+with itself, and the rank-one structure is exactly what lets Sherman-Morrison and the matrix determinant
+lemma reduce an $n\times n$ inverse and determinant to *scalars*. The reason we care about the derivative
+with respect to $\tau^2$ is that estimating heterogeneity means solving the variance-component score
+@eq-mc-variance-score, and that score is built from precisely $\partial\log\det\mathbf{V}/\partial\tau^2$
+and the inverse-quadratic derivative computed below.
+
+**Inverse.** Apply @lem-sherman-morrison with $A=\sigma^2 I_n$, $\mathbf{u}=\mathbf{1}_n$, and
+$\mathbf{v}=\tau^2\mathbf{1}_n$, so that $\mathbf{u}\mathbf{v}^\top=\tau^2\mathbf{1}_n\mathbf{1}_n^\top$.
+Here $A^{-1}=\sigma^{-2}I_n$ and
+$\mathbf{v}^\top A^{-1}\mathbf{u}=\tau^2\sigma^{-2}\mathbf{1}_n^\top\mathbf{1}_n=n\tau^2/\sigma^2$, so
+@eq-mc-sm gives
+$$
+\mathbf{V}^{-1}
+=\frac{1}{\sigma^2}I_n-\frac{\tau^2/\sigma^4}{1+n\tau^2/\sigma^2}\,\mathbf{1}_n\mathbf{1}_n^\top
+=\frac{1}{\sigma^2}\Bigl(I_n-\frac{\tau^2/\sigma^2}{1+n\tau^2/\sigma^2}\,\mathbf{1}_n\mathbf{1}_n^\top\Bigr).
+$$ {#eq-mc-cs-inverse}
+
+**Determinant.** The rank-one case of @cor-mc-matrix-determinant-lemma gives
+$$
+\det\mathbf{V}=\det(\sigma^2 I_n)\,\bigl(1+\tau^2\,\mathbf{1}_n^\top(\sigma^2 I_n)^{-1}\mathbf{1}_n\bigr)
+=\sigma^{2n}\Bigl(1+\frac{n\tau^2}{\sigma^2}\Bigr).
+$$ {#eq-mc-cs-det}
+
+**Derivative of the log-determinant.** From @eq-mc-cs-det,
+$\log\det\mathbf{V}=n\log\sigma^2+\log\!\bigl(1+n\tau^2/\sigma^2\bigr)$, so directly
+$$
+\frac{\partial}{\partial\tau^2}\log\det\mathbf{V}=\frac{n/\sigma^2}{1+n\tau^2/\sigma^2}.
+$$
+The chain rule @eq-mc-chain-scalar with @thm-logdet-derivative must agree. Since
+$\partial\mathbf{V}/\partial\tau^2=\mathbf{1}_n\mathbf{1}_n^\top$,
+$$
+\frac{\partial}{\partial\tau^2}\log\det\mathbf{V}
+=\operatorname{tr}\!\Bigl(\mathbf{V}^{-1}\frac{\partial\mathbf{V}}{\partial\tau^2}\Bigr)
+=\operatorname{tr}\bigl(\mathbf{V}^{-1}\mathbf{1}_n\mathbf{1}_n^\top\bigr)
+=\mathbf{1}_n^\top\mathbf{V}^{-1}\mathbf{1}_n.
+$$
+Using @eq-mc-cs-inverse and $\mathbf{1}_n^\top\mathbf{1}_n=n$,
+$$
+\mathbf{1}_n^\top\mathbf{V}^{-1}\mathbf{1}_n
+=\frac{1}{\sigma^2}\Bigl(n-\frac{\tau^2/\sigma^2}{1+n\tau^2/\sigma^2}\,n^2\Bigr)
+=\frac{n}{\sigma^2}\cdot\frac{1}{1+n\tau^2/\sigma^2}
+=\frac{n/\sigma^2}{1+n\tau^2/\sigma^2},
+$$
+in agreement.
+
+**Numerical check.** Take $n=3$, $\sigma^2=1$, $\tau^2=2$, so
+$\mathbf{V}=I_3+2\,\mathbf{1}_3\mathbf{1}_3^\top=\left(\begin{smallmatrix}3&2&2\\2&3&2\\2&2&3\end{smallmatrix}\right)$.
+Formula @eq-mc-cs-inverse gives $\mathbf{V}^{-1}=I_3-\tfrac{2}{7}\mathbf{1}_3\mathbf{1}_3^\top$, that is
+$$
+\mathbf{V}^{-1}=\frac{1}{7}\begin{pmatrix}5&-2&-2\\-2&5&-2\\-2&-2&5\end{pmatrix}.
+$$
+Direct multiplication confirms it: the first row of $\mathbf{V}$ dotted with the first column of
+$\mathbf{V}^{-1}$ is $(3\cdot5+2\cdot(-2)+2\cdot(-2))/7=(15-4-4)/7=1$, and with the second column is
+$(3\cdot(-2)+2\cdot5+2\cdot(-2))/7=(-6+10-4)/7=0$. Formula @eq-mc-cs-det gives
+$\det\mathbf{V}=1^3(1+3\cdot2)=7$, matching the eigenvalue count: $\mathbf{1}_3\mathbf{1}_3^\top$ has
+eigenvalues $3,0,0$, so $\mathbf{V}=I_3+2\,\mathbf{1}_3\mathbf{1}_3^\top$ has eigenvalues $7,1,1$ with
+product $7$. Finally $\partial\log\det\mathbf{V}/\partial\tau^2=\frac{3}{1+6}=\frac{3}{7}$, which equals
+$\mathbf{1}_3^\top\mathbf{V}^{-1}\mathbf{1}_3=$ (sum of all entries of $\mathbf{V}^{-1}$)
+$=(3\cdot5+6\cdot(-2))/7=(15-12)/7=\frac{3}{7}$. All three routes agree.
+
+This is precisely the arithmetic that makes the restricted maximum likelihood (REML) estimating equations
+for $\tau^2$ tractable in closed form for balanced designs, as used in Chapters 8 and 13: the Woodbury
+inverse and the matrix determinant lemma reduce an $n\times n$ problem to scalars, and the
+log-determinant and inverse derivatives produce the score.
+
+## A second worked example: the score of a logistic log-likelihood {#sec-mc-logistic}
+
+The previous example served the variance-component side of the book. This one serves the side the target
+reader most often needs: the likelihood derivatives behind logistic regression, which underpin the
+binary-outcome likelihood of ML-NMR (Chapters 20 to 25) and the outcome model of an anchored indirect
+comparison. The phrase "the MAIC, STC, and ML-NMR derivations just follow from differentiating a
+likelihood" means, concretely, the computation below.
+
+Let $y_i\in\{0,1\}$ be binary outcomes for $i=1,\dots,n$, with covariate rows
+$\mathbf{x}_i\in\mathbb{R}^p$ stacked into the design matrix $\mathbf{X}$ (rows $\mathbf{x}_i^\top$).
+Logistic regression sets the linear predictor $\eta_i=\mathbf{x}_i^\top\boldsymbol\beta$ and the success
+probability $p_i=\operatorname{expit}(\eta_i)=1/(1+e^{-\eta_i})$. The log-likelihood is
+$$
+\ell(\boldsymbol\beta)=\sum_{i=1}^{n}\bigl[y_i\log p_i+(1-y_i)\log(1-p_i)\bigr]
+=\sum_{i=1}^{n}\bigl[y_i\,\eta_i-\log(1+e^{\eta_i})\bigr].
+$$
+
+**Score (gradient).** Differentiate term by term in $\boldsymbol\beta$. By the linear-form derivative
+@thm-linear-form-derivative, $\nabla_{\boldsymbol\beta}\eta_i=\mathbf{x}_i$; and by the chain rule
+(@thm-chain-rule), $\nabla_{\boldsymbol\beta}\log(1+e^{\eta_i})
+=\dfrac{e^{\eta_i}}{1+e^{\eta_i}}\,\mathbf{x}_i=p_i\,\mathbf{x}_i$. Hence
+$$
+\mathbf{s}(\boldsymbol\beta)=\nabla_{\boldsymbol\beta}\ell
+=\sum_{i=1}^{n}(y_i-p_i)\,\mathbf{x}_i=\mathbf{X}^\top(\mathbf{y}-\mathbf{p}),
+\qquad \mathbf{p}=(p_1,\dots,p_n)^\top.
+$$ {#eq-mc-logistic-score}
+The score is the design matrix transpose times the residual vector $\mathbf{y}-\mathbf{p}$ (shape check:
+$\mathbf{X}^\top$ is $p\times n$, $\mathbf{y}-\mathbf{p}$ is $n\times 1$, so the score is $p\times 1$,
+matching $\boldsymbol\beta$).
+
+**Hessian (curvature) and Fisher information.** The score is a sum of $-p_i\mathbf{x}_i$ plus constants;
+using $\partial p_i/\partial\boldsymbol\beta^\top=p_i(1-p_i)\,\mathbf{x}_i^\top$ (chain rule again, since
+$\operatorname{expit}'=\operatorname{expit}(1-\operatorname{expit})$),
+$$
+\nabla^2_{\boldsymbol\beta}\ell
+=-\sum_{i=1}^{n}p_i(1-p_i)\,\mathbf{x}_i\mathbf{x}_i^\top
+=-\mathbf{X}^\top W\mathbf{X},
+\qquad W=\operatorname{diag}\bigl(p_i(1-p_i)\bigr).
+$$ {#eq-mc-logistic-hessian}
+Because $W\succeq 0$, the Hessian is negative semidefinite, so $\ell$ is concave and its stationary point
+is the maximum likelihood estimator. The Fisher information is the negative Hessian,
+$\mathcal{I}(\boldsymbol\beta)=\mathbf{X}^\top W\mathbf{X}$, exactly the matrix inverted at each iteration
+of iteratively reweighted least squares (IRLS) in the GLM chapter; the weights $W$ are why it is
+*reweighted*.
+
+**Numerical instance.** Take $n=2$, $p=2$, design rows $\mathbf{x}_1=(1,0)^\top$ and
+$\mathbf{x}_2=(1,1)^\top$ (an intercept and one covariate), outcomes $\mathbf{y}=(1,0)^\top$, evaluated at
+$\boldsymbol\beta=(0,0)^\top$. Then $\eta_1=\eta_2=0$ and $p_1=p_2=\tfrac12$, so the residual is
+$\mathbf{y}-\mathbf{p}=(\tfrac12,-\tfrac12)^\top$ and @eq-mc-logistic-score gives
+$$
+\mathbf{s}=\mathbf{X}^\top(\mathbf{y}-\mathbf{p})
+=\begin{pmatrix}1&1\\ 0&1\end{pmatrix}\begin{pmatrix}\tfrac12\\ -\tfrac12\end{pmatrix}
+=\begin{pmatrix}0\\ -\tfrac12\end{pmatrix}.
+$$
+The weight matrix is $W=\operatorname{diag}(\tfrac14,\tfrac14)$, so @eq-mc-logistic-hessian gives the
+Fisher information
+$$
+\mathcal{I}=\mathbf{X}^\top W\mathbf{X}
+=\begin{pmatrix}1&1\\ 0&1\end{pmatrix}
+\begin{pmatrix}\tfrac14&0\\ 0&\tfrac14\end{pmatrix}
+\begin{pmatrix}1&0\\ 1&1\end{pmatrix}
+=\begin{pmatrix}\tfrac12&\tfrac14\\ \tfrac14&\tfrac14\end{pmatrix},
+$$
+and the Hessian is $-\mathcal{I}$. One Newton (Fisher scoring) step from $\boldsymbol\beta=\mathbf{0}$ is
+$\boldsymbol\beta\mapsto\boldsymbol\beta+\mathcal{I}^{-1}\mathbf{s}$, the same update that drives the
+maximum likelihood fits in the GLM, MAIC, and ML-NMR chapters. This is the derivative computation the
+target reader came to this appendix for; it uses only @thm-linear-form-derivative and @thm-chain-rule.
+
+## Summary of identities {#sec-mc-summary}
+
+The table collects the results of this appendix for reference. Throughout, $\mathbf{a}$ is a constant
+vector, $A$ a constant matrix, and $X$ the matrix variable; the gradient and matrix derivative use the
+denominator (same-shape) layout of @sec-mc-conventions. The "Used in the book for" column is the quick
+answer to "which identity do I need for least squares, the delta method, REML, or an ML-NMR likelihood?"
+and points at the chapter that consumes each result.
+
+| Expression | Variable | Derivative | Used in the book for | Source |
+|---|---|---|---|---|
+| $\mathbf{a}^\top\mathbf{x}$ | $\mathbf{x}$ | $\mathbf{a}$ | linear predictor; first step of every score | @thm-linear-form-derivative |
+| $A\mathbf{x}$ | $\mathbf{x}$ | $A$ (Jacobian) | delta method; MAIC/STC variance propagation | @thm-linear-form-derivative |
+| $\mathbf{x}^\top A\mathbf{x}$ | $\mathbf{x}$ | $(A+A^\top)\mathbf{x}$; Hessian $A+A^\top$ | least-squares normal equations and Hessian | @thm-quadratic-form-derivative |
+| $\mathbf{x}^\top A\mathbf{y}$ | $\mathbf{x};\,\mathbf{y};\,A$ | $A\mathbf{y};\ A^\top\mathbf{x};\ \mathbf{x}\mathbf{y}^\top$ | bilinear terms; seed for the trace rules | @thm-bilinear-form-derivative |
+| $\operatorname{tr}(AX)$ | $X$ | $A^\top$ | derivatives in a matrix parameter | @thm-trace-derivative |
+| $\operatorname{tr}(X^\top A X)$ | $X$ | $(A+A^\top)X$ | quadratic matrix objectives | @thm-trace-derivative |
+| $X^{-1}$ | $X$ | $d(X^{-1})=-X^{-1}(dX)X^{-1}$ | inverse-quadratic term of a REML/Gaussian score | @thm-inverse-derivative |
+| $\det X$ | $X$ | $\det(X)\,X^{-\top}$ | route to the log-determinant | @lem-mc-jacobi |
+| $\log\det X$ | $X$ | $X^{-\top}$ ($=X^{-1}$ if symmetric) | REML and meta-analysis log-determinant term | @thm-logdet-derivative |
+| $(A+UCV)^{-1}$ | low-rank update | $A^{-1}-A^{-1}U(C^{-1}+VA^{-1}U)^{-1}VA^{-1}$ | ML-NMR and mixed-model marginal inverse | @thm-woodbury |
+| $\det(A+UCV)$ | low-rank update | $\det(A)\det(C)\det(C^{-1}+VA^{-1}U)$ | low-rank log-determinant | @cor-mc-matrix-determinant-lemma |
+
+For low-rank updates, $(A+UCV)^{-1}=A^{-1}-A^{-1}U(C^{-1}+VA^{-1}U)^{-1}VA^{-1}$ (@thm-woodbury) and
+$\det(A+UCV)=\det(A)\det(C)\det(C^{-1}+VA^{-1}U)$ (@cor-mc-matrix-determinant-lemma), with the rank-one
+specializations @eq-mc-sm and @cor-mc-matrix-determinant-lemma.
+
+## Notes and references {#sec-mc-notes}
+
+The conventions and identities of this appendix are standard matrix calculus. The differential method,
+which we adopted as the organizing principle, isolates the derivative as the unique matrix appearing in
+the canonical form $\operatorname{tr}(G^\top\,dX)$ (@lem-mc-identification); it is the systematic
+development of Magnus and Neudecker, *Matrix Differential Calculus with Applications in Statistics and
+Econometrics*, and the same identities are cataloged, without proof, in Petersen and Pedersen, *The
+Matrix Cookbook*, and in Harville, *Matrix Algebra from a Statistician's Perspective*. The linear-algebra
+prerequisites we invoked, namely the determinant, the cofactor expansion, the adjugate and Cramer's rule,
+the multiplicativity of the determinant, the block-triangular determinant, and the characterization of
+invertibility, are developed in @strang2016 and, in this book, in @thm-invertibility-characterization,
+@def-quadratic-form, and @def-definiteness.
+
+The Sherman-Morrison formula (@lem-sherman-morrison) and its generalization (@thm-woodbury) are named for
+Sherman and Morrison (1950) and for Woodbury (1950); the matrix determinant lemma
+(@cor-mc-matrix-determinant-lemma) is sometimes attributed to Sylvester. The proofs given here are by
+direct verification, which is the most transparent route and is self-checking. The compound-symmetry
+worked example of @sec-mc-example is the elementary case underlying the closed-form restricted maximum
+likelihood estimators of the balanced one-way random-effects model; the general restricted likelihood,
+built from $\log\det\mathbf{V}$ and $\mathbf{V}^{-1}$, appears in @dias2018nma and is differentiated using
+exactly @thm-logdet-derivative and @thm-inverse-derivative.
+
+These identities have no separate counterpart in the companion `ITC_Coq` development, whose formalized
+results sit at the statistical and causal layer rather than at the level of matrix differentiation;
+accordingly, none carries a machine-checked tag. The downstream uses are pervasive: the gradient and
+Hessian of the least-squares objective (@thm-quadratic-form-derivative) drive the normal equations and the
+Gauss-Markov theory of the regression chapter; the Jacobian and the chain rule (@thm-chain-rule) are the
+analytic content of the delta method (@thm-delta-method) and of the variance propagation in the
+population-adjustment chapters; and the trace, inverse, and log-determinant derivatives are the engine of
+the restricted-likelihood score equations in the hierarchical and meta-analytic models.

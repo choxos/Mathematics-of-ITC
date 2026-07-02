@@ -1,0 +1,1474 @@
+---
+title: "Population Adjustment Theory"
+---
+
+## Introduction {#sec-pat-intro}
+
+Before any symbols, here is the problem in plain words. Chapter 14's Bucher method estimates the effect
+of $A$ versus $B$ by subtracting two relative effects that share a common comparator $C$: the effect of
+$A$ versus $C$ measured in one trial and the effect of $B$ versus $C$ measured in another. This
+subtraction is valid only when each trial's relative effect is a fixed number that does not depend on
+the patient mix. If some baseline characteristic changes the size of a treatment effect, an *effect
+modifier*, and the two trials enrolled different patients, then each trial reports a relative effect
+averaged over a different population, and the subtraction silently mixes the two and is biased. This
+chapter is the systematic repair: instead of treating a trial's effect as a population-free constant, we
+model how it depends on the covariates and re-standardize it to a population we actually care about.
+That is what population adjustment means.
+
+::: {.remark}
+**Running example (anticoagulants).** We carry one clinical scenario through the whole chapter. Let $C$
+be warfarin, the old common comparator; let $A$ be a new oral anticoagulant studied against warfarin in
+a trial that supplies individual patient data (IPD); and let $B$ be an established direct oral
+anticoagulant (DOAC) studied against warfarin in a separate trial that supplies only aggregate data
+(AgD). The outcome is a major bleed within a year, so a *higher* risk is *worse*. The one covariate that
+matters is old age, $X=1$ for age $75$ or over and $X=0$ otherwise, and age raises the bleeding risk on
+the new drug $A$ but not on $B$ or warfarin, so age is an effect modifier of $A$ versus $C$. The $AC$
+trial enrolled mostly younger patients and the $BC$ trial mostly older patients, and a reimbursement
+agency wants the $A$-versus-$B$ comparison in a target population that is half older. This is exactly
+the situation Bucher cannot handle and population adjustment can. We attach numbers to it in
+@sec-pat-setup and return to it at every definition and theorem. $\blacktriangleleft$
+:::
+
+Chapter 14 left us with a clean estimator and a fragile assumption. Bucher's anchored indirect
+comparison $\hat d_{AB}=\hat d_{AC}-\hat d_{BC}$ is unbiased for the cross-study contrast precisely when
+the relative effects are constant across the trial populations (@thm-bucher-unbiased,
+@def-constancy-relative-effects), and Chapter 16 showed exactly how that constancy breaks: an effect
+modifier (@def-effect-modifier) whose distribution differs between the trials makes each trial report a
+different marginal contrast, and the Bucher subtraction then mixes populations and is biased
+(@thm-failure-of-bucher). This chapter is the systematic response to that failure. It is the conceptual
+center of the book.
+
+The idea of **population adjustment** is to refuse to treat a trial's reported effect as a
+population-free constant, and instead to model how the effect depends on the covariates and to
+re-standardize it to a chosen target population. Doing so requires more than aggregate trial summaries.
+It requires, for at least one trial, the **individual patient data** (IPD): the covariate vector,
+treatment, and outcome of each enrolled subject. The other trials may contribute only **aggregate data**
+(AgD): arm-level event counts, means, and covariate summaries. A **population-adjusted indirect
+comparison** (PAIC) combines an IPD trial with one or more AgD trials to deliver an effect estimate valid
+in a stated target population. The methods that do this concretely, matching-adjusted indirect comparison
+(MAIC, Chapter 18), simulated treatment comparison (STC, Chapter 19), and multilevel network
+meta-regression (ML-NMR, Chapter 20), all rest on a single body of theory, and that theory is the subject
+of the present chapter.
+
+The central question is: **under what conditions is a population-adjusted indirect comparison
+consistent for its target estimand?** The modern answer, which we follow, has two features that distinguish
+it from older formulations. First, the conditions are **scale-specific**. The effect modification, the
+collapsibility, and the reported effect measure each live on a scale, and whether adjustment succeeds
+depends on how those scales relate. We must distinguish the model link $g$ (the scale on which the outcome
+model is built and on which effect modification is defined, @def-link-function) from the reporting scale
+$h$ (the scale of the effect measure actually quoted to a decision maker). When $h\circ g^{-1}$ is the
+identity the scales are **aligned** (@def-scale-alignment); when they are not, adjustment that works on
+$g$ need not work on $h$. Second, the classical "if and only if" statements of the early literature are
+replaced by **scale-specific sufficient conditions together with a class-wise necessity** result. By *class-wise* we mean the necessity holds across a whole class of
+data-generating mechanisms, not that every single mechanism in it is biased; a specific trial might
+escape bias by numerical coincidence. The
+"iff" is technically false for non-collapsible marginal estimands such as the odds ratio and hazard ratio,
+because of non-collapsibility (@def-non-collapsibility, @thm-noncollapsibility-or-hr): even a perfectly
+adjusted comparison can fail to transport a marginal odds ratio across populations. We make all of this
+precise.
+
+The development is organized around the two architectures of indirect comparison inherited from
+Chapter 14. The **anchored** setup has a common comparator: an IPD trial of $A$ versus $C$ and an AgD trial
+of $B$ versus $C$, with the shared arm $C$ available to absorb study-level baseline differences. The
+**unanchored** setup has no common comparator: a single-arm or otherwise disconnected source of $A$ and a
+disconnected source of $B$, with no shared arm to difference against. The two architectures demand
+different assumptions. The anchored case needs only that the **relative** effect transports at the
+conditional level (@def-conditional-constancy-relative, E.4) and that imbalanced **effect modifiers** be
+adjusted (@thm-anchored-paic-consistency, E.6a to E.6e). The unanchored case needs that the **absolute**
+conditional outcome transports (@def-conditional-constancy-absolute, E.5) and that imbalanced
+**prognostic variables as well as** effect modifiers be adjusted (@thm-unanchored-paic-consistency, E.7),
+because there is no common comparator to cancel the prognostic terms. The chapter closes with the **shared
+effect modifier assumption** that makes small networks identifiable (@def-sema, E.8;
+@thm-shared-em-identifiability, E.9), the scale dependence of effect modifier status as an explicit
+counterexample (@exm-scale-dependence-em, E.10), the question of which parts of these assumptions are
+testable from data (@prp-testable-untestable-constancy, E.11), and the definition of the target-population
+estimands themselves via the g-formula (@thm-target-population-estimand, E.12). This chapter owns results
+E.4 to E.12 of the proof catalogue; it builds on E.0 to E.3 from Chapters 11, 12, and 16, and on the
+identification machinery of Chapters 9 and 10. A warning threads through all of it and is worth stating
+at the outset: in a two-study comparison the core constancy assumptions cannot be tested from the data,
+and must be defended by domain knowledge and sensitivity analysis (@sec-pat-testable).
+
+## Data structures, models, and estimands {#sec-pat-setup}
+
+We retain the potential-outcome framework of Chapter 9. A population $\mathcal P$ is a distribution over
+covariates $X\in\mathcal X$ with density $f_{\mathcal P}$, and the conditional mean potential outcome
+under treatment $t$ is $\mu_t^{\mathcal P}(x)=\mathbb E_{\mathcal P}[Y(t)\mid X=x]$. Throughout we assume
+the within-trial identification conditions of Chapter 9: SUTVA and consistency (@def-sutva,
+@thm-consistency-identity), within-trial conditional exchangeability (@def-ignorability), and
+within-trial positivity (@def-positivity), so that each trial's conditional means are identified from its
+own data by the g-formula (@thm-g-computation-unbiased). For a treatment $t$ and a population $\mathcal P$
+the **marginal mean** is
+$$
+m_t(\mathcal P)\;=\;\int_{\mathcal X}\mu_t(x)\,f_{\mathcal P}(x)\,dx,
+$$ {#eq-pat-marginal-mean}
+the same quantity written $\bar\mu_{t(\mathcal P)}$ in Chapter 14; we drop the bar here and write
+$m_t(\mathcal P)$ throughout, so the reader need not carry two names for one object.
+
+For orientation, the table below collects the symbols this chapter leans on most heavily. A reader who
+keeps it in view will find the theorem statements much easier to parse; the two estimands
+$\Delta^{\mathrm{Marg}}$ and $\Delta^{\mathrm{Cond}}$ are defined formally in @sec-pat-estimand-scales and
+consolidated in @sec-pat-estimands.
+
+| Symbol | Reads as |
+|---|---|
+| $\mathcal P_{AC},\mathcal P_{BC}$ | covariate distributions of the $AC$ trial (IPD) and the $BC$ trial (AgD) |
+| $\mathcal P^{*}$, $f_{*}$ | the target population and its covariate density |
+| $g$ | the model link: the scale the outcome model is fitted on (for logistic regression, the logit) |
+| $h$ | the reporting scale: the scale of the effect measure quoted to a decision maker |
+| $\mu_t(x)$ | conditional mean outcome (for a binary outcome, the risk) under treatment $t$ at covariates $x$ |
+| $\tau^g_{ab}(x)$ | conditional contrast of $b$ versus $a$ at $x$ on scale $g$ (sign convention in @sec-pat-model) |
+| $m_t(\mathcal P)$ | marginal (population-average) mean outcome under $t$ in population $\mathcal P$ |
+| $\Delta^{\mathrm{Marg},h}_{ab}$ | marginal effect: contrast of the transformed marginal means |
+| $\Delta^{\mathrm{Cond},h}_{ab}$ | population-average conditional effect: average of the stratum contrasts |
+| $\theta^{\mathrm{anch}}_{AB},\theta^{\mathrm{unanch}}_{AB}$ | the anchored and unanchored PAIC estimands |
+| $\tilde d_{kC(\mathcal P_j)}$ | trial $j$'s reported average conditional contrast of $k$ versus $C$ |
+
+::: {.remark}
+**Running example, with numbers.** Give the anticoagulant scenario the conditional risks that the
+capstone example @exm-pat-anchored will reuse, with $X=1$ for age $75$ or over:
+
+| $x$ | $\mu_A(x)$ (new drug) | $\mu_B(x)$ (DOAC) | $\mu_C(x)$ (warfarin) |
+|---|---|---|---|
+| $0$ (younger) | $0.20$ | $0.30$ | $0.40$ |
+| $1$ (older) | $0.50$ | $0.30$ | $0.40$ |
+
+The bleeding risk on the new drug $A$ jumps from $0.20$ to $0.50$ with age, while $B$ and warfarin stay
+flat, so age modifies $A$ versus $C$ but not $B$ versus $C$. The IPD trial enrolled $\Pr_{AC}(X=1)=0.25$
+older patients, the AgD trial $\Pr_{BC}(X=1)=0.75$, and the target population has $\Pr_{*}(X=1)=0.50$.
+Every definition below can be read against this one table. $\blacktriangleleft$
+:::
+
+::: {#def-pat-data-structures}
+## Individual patient data and aggregate data
+A trial $j$ provides **individual patient data** (IPD) if its data set is the empirical distribution of
+the per-subject triples $(x_i,t_i,y_i)$, so that the conditional mean function $x\mapsto\mu_t^{(j)}(x)$ is
+estimable on the trial's covariate support. A trial provides **aggregate data** (AgD) if only arm-level
+summaries are available: for each arm, an outcome summary (for binary outcomes an event count $r$ out of
+$n$, equivalently $\hat m_t=r/n$) and covariate summaries (typically the covariate means $\bar x_j$ and
+possibly higher moments), but not the per-subject records. $\blacktriangleleft$
+:::
+
+The asymmetry between IPD and AgD is the entire operational difficulty of population adjustment. From IPD
+one can recompute the trial's effect under any target covariate distribution, because one holds the
+conditional mean function. From AgD one holds only the effect already aggregated over the trial's own
+covariate distribution, which one cannot re-standardize without an extra modeling assumption.
+
+### The two architectures {#sec-pat-architectures}
+
+The two setups differ only in whether a shared arm connects the treatments, but that one difference
+drives every assumption in the chapter. The picture drawn in health-technology-assessment courses is a
+network of treatments joined by trials:
+
+```
+   ANCHORED  (shared comparator C)        UNANCHORED  (no shared arm)
+
+        A ------ C ------ B                   A            B
+      IPD: A vs C  B vs C: AgD             IPD or       AgD
+                                           single arm   source
+      one connected network               two disconnected pieces
+      target estimand: A vs B in P*        target estimand: A vs B in P*
+```
+
+In the anchored network a path runs from $A$ to $B$ through the shared node $C$; in the unanchored
+network $A$ and $B$ sit in separate pieces with no path between them.
+
+::: {#def-pat-setups}
+## The anchored and unanchored setups
+The **anchored two-study setup** consists of an IPD trial in population $\mathcal P_{AC}$ comparing $A$
+with a common comparator $C$, and an AgD trial in population $\mathcal P_{BC}$ comparing $B$ with the same
+comparator $C$. The target estimand is a contrast of $A$ versus $B$ in a target population
+$\mathcal P^{*}$.
+
+The **unanchored two-study setup** consists of a source of outcome data on $A$ (typically an IPD single
+arm or trial) and a separate source of outcome data on $B$ (typically AgD), with **no common comparator**:
+the two evidence sources share no treatment arm. The target estimand is again a contrast of $A$ versus $B$
+in $\mathcal P^{*}$. $\blacktriangleleft$
+:::
+
+The same distinction, laid out as a table, previews the entire chapter. Read it now and refer back as
+each row is proved.
+
+| Question | Anchored: $AC$ and $BC$ trials share $C$ | Unanchored: no shared arm |
+|---|---|---|
+| Data available | IPD on one arm pair, AgD on another, sharing $C$ | separate sources for $A$ and for $B$ |
+| What is transported | the *relative* effect (a contrast) | the *absolute* conditional outcome (each arm) |
+| Assumption needed | conditional constancy of relative effects (@def-conditional-constancy-relative) | conditional constancy of absolute effects (@def-conditional-constancy-absolute) |
+| Must be adjusted | imbalanced *effect modifiers* only | imbalanced effect modifiers *and* prognostic variables |
+| What the comparator cancels | study baseline and purely prognostic terms | nothing: there is no comparator |
+| Why it can fail | an imbalanced effect modifier omitted from $X$ | any imbalanced predictor of outcome omitted from $X$ |
+
+In the running anticoagulant example the anchored setup is the realistic one: both the new drug $A$ and
+the DOAC $B$ were trialed against warfarin $C$, so warfarin is the shared arm that absorbs how sick each
+trial's patients were at baseline. An unanchored version would arise only if, say, $A$ had been licensed
+on a single-arm study with no control group, leaving nothing to difference against; we treat that harder
+case in @sec-pat-unanchored.
+
+In the anchored setup the comparator $C$ plays exactly the role it played in Chapter 14: differencing each
+trial's arms against $C$ removes the study-specific baseline (@prp-baseline-cancellation in Chapter 14).
+Population adjustment then repairs the *residual* bias from effect-modifier imbalance that survives that
+cancellation. In the unanchored setup there is no comparator to difference against, so the baseline itself
+must be modeled and transported, which is a far stronger demand. The rest of the chapter quantifies that
+difference.
+
+### The conditional outcome model {#sec-pat-model}
+
+All of the methods specialize a single regression model, the network meta-regression of @dias2018nma,
+written on the model link $g$. With $C$ as the reference treatment, the linear predictor for an individual
+with covariates $x$ on arm $k$ in study $j$ is
+$$
+\eta_{jk}(x)\;=\;g\!\left(\mu_k^{(j)}(x)\right)\;=\;\mu_j+\boldsymbol\beta_1^\top x+\gamma_k+\boldsymbol\beta_{2,k}^\top x,
+\qquad \gamma_C=0,\ \boldsymbol\beta_{2,C}=\mathbf 0,
+$$ {#eq-pat-nmr}
+in the notation of [Notation](/notation.qmd): $\mu_j$ is the study baseline, $\boldsymbol\beta_1$ the
+prognostic main effects, $\gamma_k$ the treatment main effect of $k$ versus $C$, and $\boldsymbol\beta_{2,k}$
+the treatment-by-covariate interactions of $k$ versus $C$.
+
+To see @eq-pat-nmr in the flesh, put the anticoagulant trial into it on the logit link
+$g=\operatorname{logit}$, with the single covariate $x=\mathbf{1}\{\mathrm{age}\ge 75\}$. The warfarin arm
+of the IPD trial has linear predictor $\eta_{AC,C}(x)=\mu_{AC}+\beta_1 x$; the new-drug arm adds the
+treatment main effect and its age interaction, $\eta_{AC,A}(x)=\mu_{AC}+\beta_1 x+\gamma_A+\beta_{2,A}\,x$.
+Here $\mu_{AC}$ sets the baseline log-odds of bleeding on warfarin among younger patients, $\beta_1$ says
+how age alone shifts that log-odds, $\gamma_A$ is the log-odds change from switching to the new drug at
+$x=0$, and $\beta_{2,A}$ is the extra log-odds change from switching among older patients, that is, the
+effect modification by age. A nonzero $\beta_{2,A}$ is exactly what makes age an effect modifier of $A$
+versus $C$ on the logit scale.
+
+By @lem-emcoll-interaction the conditional
+effect of an active treatment $k$ versus the comparator $C$ on scale $g$ is the linear-in-$x$ contrast
+$$
+\tau^{g}_{kC}(x)\;=\;g\!\left(\mu_C(x)\right)-g\!\left(\mu_k(x)\right)\;=\;\gamma_k+\boldsymbol\beta_{2,k}^\top x,
+$$ {#eq-pat-tau-linear}
+using the reference-second index convention of Chapter 14, so that $\tau^{g}_{kC}(x)$ is the conditional
+analogue of the trial contrast $d_{kC}=\eta_C-\eta_k$ and a positive value means $k$ improves the (worse
+is larger) outcome relative to $C$. The covariate component $X_\ell$ is an effect modifier of $k$ versus
+$C$ on scale $g$ if and only if its interaction coefficient $\beta_{2,k,\ell}$ is nonzero
+(@lem-emcoll-interaction).
+
+::: {.remark}
+**Sign convention, read this once.** We follow Chapter 14's reference-second convention: the second
+subscript names the reference treatment. So $\tau^g_{kC}(x)=g(\mu_C(x))-g(\mu_k(x))$ subtracts the
+active-treatment term from the comparator term, and because the outcome is "worse is larger" (a bleed, a
+death), a **positive** $\tau^g_{kC}$ means treatment $k$ is **better** than $C$: it lowers the bad
+outcome. This is the opposite of the naive "$k$ minus $C$" reading, and every number in the worked
+examples depends on it. One line to memorize: a positive contrast means the first-named treatment wins.
+$\blacktriangleleft$
+:::
+
+We do not require the linear form @eq-pat-nmr for the abstract theorems below;
+they hold for an arbitrary conditional mean model, with @eq-pat-nmr used only when we need explicit
+parameters (for the shared effect modifier assumption and for the worked example).
+
+### The two estimand scales {#sec-pat-estimand-scales}
+
+Chapter 11 introduced the two population-level effects that a single scale admits, and we will need both.
+
+The difference between these two is the subtlest idea in the chapter, so meet it first with numbers. Take
+two equally sized strata, younger and older, with bleeding risk under drug $b$ of $0.30$ in both and under
+drug $a$ of $0.20$ (young) and $0.50$ (old). The **marginal** way pools first: the population risk under
+$b$ is $0.30$ and under $a$ is $0.35$, and it contrasts those two pooled numbers. The **conditional** way
+contrasts first: the effect is $0.30-0.20=0.10$ among the young and $0.30-0.50=-0.20$ among the old, and
+it averages those two effects to $-0.05$. On the risk-difference scale these happen to agree ($-0.05$
+either way); on the odds-ratio scale they will not, and that gap is the whole story of non-collapsibility
+below. Keep the slogan: **marginal pools then contrasts; conditional contrasts then pools**.
+
+On a reporting scale $h$, in population $\mathcal P$, the **marginal effect** (@def-marginal-effect) is the
+contrast of the transformed marginal means,
+$$
+\Delta^{\mathrm{Marg},h}_{ab}(\mathcal P)\;=\;h\!\left(m_b(\mathcal P)\right)-h\!\left(m_a(\mathcal P)\right),
+$$ {#eq-pat-marg}
+and the **population-average conditional effect** (@def-conditional-effect) is the average of the
+stratum-specific contrasts,
+$$
+\Delta^{\mathrm{Cond},h}_{ab}(\mathcal P)\;=\;\int_{\mathcal X}\Bigl[h\!\left(\mu_b(x)\right)-h\!\left(\mu_a(x)\right)\Bigr]f_{\mathcal P}(x)\,dx
+\;=\;\int_{\mathcal X}\tau^{h}_{ab}(x)\,f_{\mathcal P}(x)\,dx .
+$$ {#eq-pat-cond}
+When $h$ is the identity the two coincide for every population, because the link passes through the
+integral; for a nonlinear $h$ they differ in general by Jensen's inequality, the **collapsibility gap** of
+@def-collapsibility (this is catalogue E.0). The marginal effect answers "what happens to the population
+mean outcome if everyone switches from $a$ to $b$"; the conditional effect answers "what is the average
+within-stratum effect." Both are legitimate, they answer different questions, and the theorems below are
+careful to say which one a given method recovers.
+
+The two scales that recur, the model link $g$ and the reporting scale $h$, are easy to confuse because a
+health researcher meets them as named effect measures, not as functions. The cheat sheet below maps the
+common measures to their roles and flags where the chapter's caveats bite.
+
+| Named measure | Model link $g$ | Reporting scale $h$ | Collapsible? | Caveat that bites |
+|---|---|---|---|---|
+| Risk difference | identity | identity | yes, directly | none: adjustment recovers the marginal effect |
+| Risk ratio | log | log | yes, if contrast constant | mild: needs a constant conditional contrast |
+| Odds ratio | logit | logit | no | part (c): only the *conditional* odds ratio is recovered |
+| Hazard ratio | log-hazard | log-hazard | no | part (c): only the *conditional* hazard ratio is recovered |
+| Mean survival (RMST) | log-hazard | time scale | scale misaligned | part (d): balancing on $g$ need not deliver $h$ |
+
+Two grades of collapsibility appear in the table. A measure is *directly* collapsible if the marginal and
+conditional effects coincide for *every* covariate distribution (the risk difference), and merely
+*collapsible* if they coincide only *when the conditional contrast is constant* across strata (the risk
+ratio). The non-collapsible rows, the odds ratio and hazard ratio, are where "adjust perfectly and still
+read off a population-specific number" happens; the last row, where $h$ is not even $g$, is scale
+misalignment.
+
+We abbreviate the trial's reported average conditional
+contrast, following Chapter 16, by
+$$
+\tilde d_{kC(\mathcal P_j)}\;=\;\Delta^{\mathrm{Cond},g}_{kC}(\mathcal P_j)\;=\;\int\tau^{g}_{kC}(x)\,f_j(x)\,dx .
+$$ {#eq-pat-trial-contrast}
+
+::: {#def-pat-imbalance}
+## Balance and the adjustment set
+A covariate (or covariate component) is **balanced** across two populations if it has the same
+distribution in both, and **imbalanced** otherwise. The **adjustment set** $X$ of a PAIC is the collection
+of covariates that the method measures and balances or regresses on; covariates outside $X$ are
+**unadjusted**. We write the full covariate as $(X,W)$ when we wish to single out an unadjusted component
+$W$. $\blacktriangleleft$
+:::
+
+## Conditional constancy of relative effects {#sec-pat-ccre}
+
+The assumption that licenses an anchored comparison is that the *conditional* relative effect is the same
+quantity in the trial population and in the target. This is weaker than the marginal constancy of
+Chapter 14, and it is exactly the structural invariance that Chapter 12 required for transportability.
+
+::: {#def-conditional-constancy-relative}
+## Conditional constancy of relative effects (anchored)
+Two populations $\mathcal P_1,\mathcal P_2$ satisfy **conditional constancy of relative effects on scale
+$g$ with respect to $X$**, for the treatment pair $(a,b)$, if the conditional effect @eq-emcoll-cate is the
+same function of $x$ in both populations on the common covariate support:
+$$
+\tau^{\mathcal P_1,g}_{ab}(x)\;=\;\tau^{\mathcal P_2,g}_{ab}(x)\qquad\text{for all }x .
+$$ {#eq-pat-ccre}
+Equivalently, the conditional contrast $\tau^{g}_{ab}(\cdot)$ is a population-free function. (Corresponds
+to E.4 in the proof catalogue.) $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** Conditional constancy says the treatment effect *at a fixed patient profile* is a
+property of the drug, not of who happened to enroll. In the anticoagulant example it asks that the
+age-specific risk difference of the new drug versus warfarin, $0.20$ among the young and $-0.10$ among the
+old, be the same numbers in the $AC$ trial, in the $BC$ trial, and in the target. What is allowed to
+differ between populations is the *mix* of young and old; what must not differ is the effect *within* each
+age group. This is weaker than Chapter 14's marginal constancy, which demands the population-averaged
+effect itself be identical, and it is exactly what lets us re-standardize a trial to a new patient mix.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Conditional versus marginal constancy.** Constancy of *marginal* relative effects
+(@def-constancy-relative-effects) asserts that the population-level number $d_{ab(\mathcal P)}$ is the same
+in every population. Conditional constancy @eq-pat-ccre asserts only that the per-stratum contrast
+$\tau^g_{ab}(x)$ is the same; the marginal effect may still differ across populations because it averages
+the same $\tau^g_{ab}(\cdot)$ against different covariate densities. Marginal constancy is therefore the
+stronger statement: by @eq-pat-cond, if $\tau^g_{ab}(\cdot)$ is population-free *and* either the covariate
+distributions agree or the conditional contrast is constant in $x$, then the population-average conditional
+effects agree, but in general they do not. Conditional constancy is the natural assumption for population
+adjustment precisely because it permits the marginal effect to vary with the population while pinning down
+the mechanism that generates that variation. $\blacktriangleleft$
+:::
+
+Conditional constancy is the hypothesis that makes the trial's conditional model portable. The next
+proposition records the consequence we will use repeatedly: under @eq-pat-ccre the population-average
+conditional effect in any target is identified from the source conditional contrast and the target
+covariate distribution, by the transport g-formula of Chapter 12.
+
+::: {#prp-pat-conditional-transport}
+## Conditional effects transport under conditional constancy
+Suppose conditional constancy of relative effects on scale $g$ (@def-conditional-constancy-relative) holds
+from a source population $\mathcal P$ to a target $\mathcal P^{*}$, with target support contained in the
+source support (overlap, equivalently the positivity condition of @def-positivity). Then the source
+conditional contrast $\tau^g_{ab}(\cdot)$,
+identified within the source by the g-formula (@thm-g-computation-unbiased), determines the target
+population-average conditional effect by the transport g-formula (@thm-conditional-transportability):
+$$
+\Delta^{\mathrm{Cond},g}_{ab}(\mathcal P^{*})\;=\;\int_{\mathcal X}\tau^g_{ab}(x)\,f_{\mathcal P^{*}}(x)\,dx
+\;=\;\mathbb E_{X\sim\mathcal P}\!\left[\,w(X)\,\tau^g_{ab}(X)\,\right],\qquad
+w(x)=\frac{f_{\mathcal P^{*}}(x)}{f_{\mathcal P}(x)} .
+$$ {#eq-pat-cond-transport}
+:::
+
+::: {.proof}
+By conditional constancy the function $\tau^g_{ab}(\cdot)$ identified in the source equals the
+corresponding function in the target on the common support. The target population-average conditional
+effect is by definition @eq-pat-cond the expectation of this function under $f_{\mathcal P^{*}}$, which is
+the first equality. For the second, change measure from the target density to the source density: wherever
+$f_{\mathcal P}(x)>0$ we have $f_{\mathcal P^{*}}(x)=w(x)f_{\mathcal P}(x)$, and overlap guarantees the
+target support is covered, so
+$\int\tau^g_{ab}(x)f_{\mathcal P^{*}}(x)\,dx=\int\tau^g_{ab}(x)w(x)f_{\mathcal P}(x)\,dx
+=\mathbb E_{X\sim\mathcal P}[w(X)\tau^g_{ab}(X)]$. This is the reweighting form @eq-transport-gformula of the
+transport g-formula applied to the integrand $\tau^g_{ab}$, which is itself a fixed function of $x$
+constructed from the source conditional means. $\square$
+:::
+
+::: {.remark}
+**Why this matters, and why the density ratio is legitimate.** This proposition is the workhorse of the
+chapter: it says an effect measured in one population can be recomputed for another just by reweighting.
+The reweighting step rewards a slow reading. In the discrete case it is elementary. Suppose the covariate
+takes finitely many values; then $\int\tau^g_{ab}(x)f_{\mathcal P^{*}}(x)\,dx$ is the sum
+$\sum_x\tau^g_{ab}(x)f_{\mathcal P^{*}}(x)$, and multiplying and dividing each term by $f_{\mathcal P}(x)$
+rewrites it as $\sum_x[f_{\mathcal P^{*}}(x)/f_{\mathcal P}(x)]\,\tau^g_{ab}(x)f_{\mathcal P}(x)$, a
+source-weighted average of the same contrast with each stratum reweighted by
+$w(x)=f_{\mathcal P^{*}}(x)/f_{\mathcal P}(x)$. Strata over-represented in the target get weight above
+$1$; under-represented strata get weight below $1$. This is the importance-sampling (Radon-Nikodym)
+identity, and it is the theoretical target that MAIC will estimate. The overlap assumption is what keeps
+the weight finite: if the target puts mass where the source has none, $f_{\mathcal P}(x)=0$ makes $w(x)$
+undefined, and no reweighting of source data can conjure an effect for a patient profile the source never
+observed. That is the precise sense in which population adjustment transports but does not extrapolate.
+$\blacktriangleleft$
+:::
+
+The two faces of @eq-pat-cond-transport are the two faces of population adjustment. The integral form is
+**outcome regression**: model $\tau^g_{ab}(\cdot)$ from IPD, then average it over the target covariate
+distribution. This is STC and the regression core of ML-NMR. The reweighting form is **weighting**:
+reweight the IPD by $w$ to the target and average the raw contrast. This is MAIC. The remainder of the
+chapter establishes when each delivers the target estimand.
+
+## Conditional constancy of absolute effects {#sec-pat-ccae}
+
+The unanchored setup has no comparator to difference against, so it must transport the absolute conditional
+outcome, not merely the contrast. The corresponding assumption is strictly stronger.
+
+::: {#def-conditional-constancy-absolute}
+## Conditional constancy of absolute effects (unanchored)
+Two populations $\mathcal P_1,\mathcal P_2$ satisfy **conditional constancy of absolute effects** with
+respect to $X$ if for every treatment $t$ and every $x$ on the common support,
+$$
+\mu_t^{\mathcal P_1}(x)\;=\;\mu_t^{\mathcal P_2}(x) .
+$$ {#eq-pat-ccae}
+That is, the entire conditional mean function, arm by arm, is population-free. (Corresponds to E.5 in the
+proof catalogue.) $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** Absolute constancy is a far heavier promise than relative constancy: it asks that
+the *actual risk* on each drug, arm by arm, at a fixed patient profile, be identical across populations,
+not merely that the *gap between drugs* be identical. In the anticoagulant example it would require the
+older-patient bleeding risk on warfarin to be exactly $0.40$ in every population, and likewise for every
+arm. Relative constancy lets the whole risk profile float up or down between populations as long as the
+treatment contrast holds; absolute constancy forbids even that. The unanchored setup needs the heavier
+promise because, with no comparator arm to difference against, it must reconstruct each arm's risk from
+scratch. $\blacktriangleleft$
+:::
+
+::: {#prp-pat-absolute-implies-relative}
+## Absolute constancy is strictly stronger than relative constancy
+Conditional constancy of absolute effects (@def-conditional-constancy-absolute) implies conditional
+constancy of relative effects on every scale $g$ (@def-conditional-constancy-relative), for every
+treatment pair. The converse is false: there exist conditional mean functions that satisfy relative
+constancy on a scale $g$ but not absolute constancy.
+:::
+
+::: {.proof}
+If $\mu_t^{\mathcal P_1}(x)=\mu_t^{\mathcal P_2}(x)$ for every $t$ and $x$, then for any scale $g$ and any
+pair $(a,b)$,
+$\tau^{\mathcal P_1,g}_{ab}(x)=g(\mu_b^{\mathcal P_1}(x))-g(\mu_a^{\mathcal P_1}(x))
+=g(\mu_b^{\mathcal P_2}(x))-g(\mu_a^{\mathcal P_2}(x))=\tau^{\mathcal P_2,g}_{ab}(x)$, which is @eq-pat-ccre.
+For the converse, let the covariate be $(X,W)$ and let the absolute means depend on a component $W$ that is
+not adjusted; take, for a single covariate value and on the identity scale,
+$\mu_a^{\mathcal P_1}(x,w)=\mu_b^{\mathcal P_1}(x,w)=w$ and
+$\mu_a^{\mathcal P_2}(x,w)=\mu_b^{\mathcal P_2}(x,w)=w+1$. Then the contrast is identically zero in both
+populations, so relative constancy holds on the identity scale, while the absolute means differ by $1$, so
+absolute constancy fails. $\square$
+:::
+
+The witness in the proof is the formal seed of the difference between anchored and unanchored adjustment:
+a covariate can shift both arms equally, raising the baseline risk while leaving the treatment contrast
+untouched, so the absolute level changes but the contrast does not. Such
+a covariate is invisible to an anchored comparison and fatal to an unanchored one. We now isolate that
+phenomenon as the effect-modifier-versus-prognostic distinction, which is the algebraic heart of the
+chapter.
+
+## The effect modifier versus prognostic distinction {#sec-pat-em-pv}
+
+Recall from Chapter 11 the four-cell classification of a covariate by whether it is prognostic (affects the
+conditional means, @def-prognostic-variable) and whether it is an effect modifier (affects the conditional
+contrast, @def-effect-modifier). The single cell that powers anchored comparison is the **purely
+prognostic** one: a covariate that moves both arms but not their contrast. We prove the two cancellation
+facts that separate the anchored and unanchored architectures. Both have machine-checked counterparts in
+the companion Coq development.
+
+For a reader arriving directly at Part IV, here are the two words in one line each. A **prognostic
+variable** moves the outcome under *both* arms: sicker patients bleed more whatever drug they take. An
+**effect modifier** moves the *difference* between arms: the new drug's advantage over warfarin shrinks or
+reverses with age. A covariate can be one, the other, both, or neither, the four cells of Chapter 11:
+
+| | Not an effect modifier (contrast flat in it) | Effect modifier (contrast varies in it) |
+|---|---|---|
+| **Not prognostic** (outcome flat in it) | irrelevant: ignore it | uncommon, but must be adjusted |
+| **Prognostic** (outcome varies in it) | purely prognostic: cancels when anchored | prognostic *and* modifying: always adjust |
+
+The load-bearing cell is the lower left, purely prognostic. In the anticoagulant example, age sits in the
+lower right for the $A$-versus-$C$ contrast (prognostic and a modifier), whereas a shared frailty score
+that raised every arm's bleeding risk equally would sit in the lower left. The two lemmas below prove
+exactly why the lower-left cell is free in an anchored comparison and fatal in an unanchored one.
+
+::: {#lem-pat-pv-cancellation}
+## Anchored cancellation of purely prognostic covariates
+Let the full covariate be $(X,W)$ and fix a scale $g$ and a treatment pair $(k,C)$. Suppose $W$ is **not an
+effect modifier** of $k$ versus $C$ on scale $g$, in the sense that the conditional contrast does not
+depend on $w$:
+$$
+\tau^{g}_{kC}(x,w)\;=\;\tau^{g}_{kC}(x,w')\qquad\text{for all }x,w,w' .
+$$ {#eq-pat-notem}
+Then, writing $\tau^g_{kC}(x)$ for the common value, the population-average conditional contrast over any
+population $\mathcal P$ depends on $\mathcal P$ only through the marginal distribution of $X$:
+$$
+\int\tau^g_{kC}(x,w)\,f_{\mathcal P}(x,w)\,dx\,dw\;=\;\int\tau^g_{kC}(x)\,f_{\mathcal P}(x)\,dx .
+$$ {#eq-pat-cancellation}
+In particular, omitting $W$ from the adjustment set does not change the anchored estimand, whatever the
+distribution of $W$ given $X$ and however imbalanced $W$ may be.
+:::
+
+[machine-checked: `theories/EffectModifiers.v`, `Theorem anchored_PV_cancellation`]
+
+::: {.proof}
+By hypothesis @eq-pat-notem the integrand $\tau^g_{kC}(x,w)$ equals the constant-in-$w$ value
+$\tau^g_{kC}(x)$ for every $w$. Hence
+$$
+\int\tau^g_{kC}(x,w)\,f_{\mathcal P}(x,w)\,dx\,dw
+=\int\tau^g_{kC}(x)\left(\int f_{\mathcal P}(x,w)\,dw\right)dx
+=\int\tau^g_{kC}(x)\,f_{\mathcal P}(x)\,dx,
+$$
+the inner integral being the marginal density of $X$. The right-hand side does not involve the conditional
+distribution of $W$ given $X$, so it is unchanged if $W$ is left unadjusted and unchanged across
+populations with different $W$-distributions. $\square$
+:::
+
+::: {#lem-pat-em-not-pv}
+## A prognostic variable need not be an effect modifier
+"Not an effect modifier of $k$ versus $C$" does not imply "not prognostic for $k$." Concretely, there
+exist conditional mean functions $\mu_k,\mu_C$ such that the contrast $\mu_k(x,w)-\mu_C(x,w)$ is constant
+in $w$ (so $W$ is not an effect modifier on the identity scale) while $\mu_k(x,w)$ depends on $w$ (so $W$
+is prognostic for $k$).
+:::
+
+[machine-checked: `theories/EffectModifiers.v`, `Theorem not_EM_does_not_imply_not_PV`]
+
+::: {.proof}
+Take $\mu_k(x,w)=\mu_C(x,w)=w$. Then $\mu_k(x,w)-\mu_C(x,w)=0$ for all $w$, so $W$ is not an effect
+modifier; but $\mu_k(x,w)=w$ is nonconstant in $w$, so $W$ is prognostic for $k$. In words, this $W$ is
+the shared-frailty kind of covariate that raises every arm's outcome by the same amount, changing who
+bleeds without changing which drug is better. The same two functions
+witness that absolute constancy is strictly stronger than relative constancy
+(@prp-pat-absolute-implies-relative). $\square$
+:::
+
+The contrast between @lem-pat-pv-cancellation and @lem-pat-em-not-pv is the whole story in miniature. In an
+anchored comparison the estimand depends on $W$ only through the contrast $\tau^g_{kC}$, so a purely
+prognostic $W$ cancels and may be ignored (@lem-pat-pv-cancellation). In an unanchored comparison the
+estimand depends on the absolute means $\mu_k$ themselves, which a prognostic $W$ moves even when it
+modifies no contrast (@lem-pat-em-not-pv), so it cannot be ignored. This is why the anchored case adjusts
+for effect modifiers while the unanchored case must adjust for prognostic variables as well.
+
+## The anchored consistency theorem {#sec-pat-anchored}
+
+We now assemble the central anchored result. Define the **anchored PAIC estimand** at a target
+$\mathcal P^{*}$ as the difference of the two conditional contrasts, each standardized to the target:
+$$
+\theta^{\mathrm{anch}}_{AB}(\mathcal P^{*})
+\;:=\;\Delta^{\mathrm{Cond},g}_{AC}(\mathcal P^{*})-\Delta^{\mathrm{Cond},g}_{BC}(\mathcal P^{*})
+\;=\;\int\tau^g_{AC}(x)\,f_{*}(x)\,dx-\int\tau^g_{BC}(x)\,f_{*}(x)\,dx .
+$$ {#eq-pat-anchored-estimand}
+This is the population-level object that the marginal-form STC, ML-NMR, and moment-balanced MAIC
+estimators target; in the two-study MAIC special case one takes $\mathcal P^{*}=\mathcal P_{BC}$, so that
+the $BC$ contrast is reported directly and only the $AC$ contrast is re-standardized. The first lemma is
+pure algebra and is the conditional analogue of Bucher's additivity (@lem-relative-effect-algebra). It
+looks trivial, but it is the linchpin of the anchored architecture: it is the reason that subtracting two
+separately re-standardized contrasts yields the correct $A$-versus-$B$ answer, and it holds pointwise on
+every scale.
+
+::: {#lem-pat-conditional-additivity}
+## Pointwise additivity of conditional contrasts
+For every $x$ and every scale $g$, the conditional contrasts obey
+$$
+\tau^g_{AB}(x)\;=\;\tau^g_{AC}(x)-\tau^g_{BC}(x).
+$$ {#eq-pat-cond-additivity}
+Consequently, for any population $\mathcal P$, the population-average conditional effects obey
+$\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P)=\Delta^{\mathrm{Cond},g}_{AC}(\mathcal P)-\Delta^{\mathrm{Cond},g}_{BC}(\mathcal P)$.
+:::
+
+::: {.proof}
+Using the reference-second convention $\tau^g_{ab}(x)=g(\mu_b(x))-g(\mu_a(x))$ of @eq-emcoll-cate,
+$$
+\tau^g_{AC}(x)-\tau^g_{BC}(x)=\bigl[g(\mu_C(x))-g(\mu_A(x))\bigr]-\bigl[g(\mu_C(x))-g(\mu_B(x))\bigr]
+=g(\mu_B(x))-g(\mu_A(x))=\tau^g_{AB}(x),
+$$
+the comparator term $g(\mu_C(x))$ canceling pointwise. Integrating both sides against $f_{\mathcal P}$ and
+using linearity of the integral (@eq-pat-cond) gives the population-average statement. $\square$
+:::
+
+Before the theorem, here is the plan in words, because the statement below has five parts that are easy to
+conflate. Part (a) is the good news and does the real work: on the scale the model is fitted, adjusting for
+imbalanced effect modifiers recovers the target's average conditional effect. Parts (b) to (e) are all
+about *which effect measure* that recovered number equals. If the reporting scale is collapsible and
+aligned with the model (a risk difference), the conditional number is also the marginal policy number (b).
+If it is non-collapsible (an odds ratio or hazard ratio), the recovered number is the *conditional* one,
+which is a genuinely different quantity from the marginal one, so it must not be read as a marginal odds
+ratio (c). If the reporting scale is not even the model scale (a hazard model but an RMST target),
+balancing on the model scale need not deliver the target at all (d). And (e) is the one step you cannot
+skip: leave an imbalanced effect modifier out of the adjustment set and the estimate is biased. The
+roadmap table collects this.
+
+| Part | Condition | What the anchored estimand equals | Plain reading |
+|---|---|---|---|
+| (a) | (i)-(iv), any scale $g$ | target population-average *conditional* effect $\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*})$ | adjust imbalanced effect modifiers and you recover the conditional effect |
+| (b) | aligned $h=g$, collapsible | *also* the target marginal effect | on a risk-difference scale, conditional equals marginal, so you also get the policy number |
+| (c) | aligned, *non*-collapsible | the conditional effect, *not* the marginal one | on an odds/hazard-ratio scale you get the conditional measure, not the marginal one |
+| (d) | misaligned $h\circ g^{-1}\neq\mathrm{id}$ | in general neither, on scale $h$ | a hazard model does not hand you an RMST target for free |
+| (e) | an imbalanced effect modifier omitted from $X$ | a biased number | skipping a relevant effect modifier reintroduces the Bucher bias |
+
+::: {.remark}
+**Reader translation of the theorem.** If this is an anchored comparison, the operational instruction is
+short: adjust for every effect modifier that is imbalanced across the trials and the target, on the scale
+you plan to analyze, then read the result as the *conditional* effect on that scale. Do not expect it to
+be a marginal odds ratio or hazard ratio unless the estimand and scale conditions of parts (b) to (d) also
+line up. Everything else in the theorem is the fine print behind those two sentences. $\blacktriangleleft$
+:::
+
+::: {#thm-anchored-paic-consistency}
+## Anchored PAIC consistency (scale-specific)
+Consider the anchored two-study setup (@def-pat-setups) targeting population $\mathcal P^{*}$ on model
+link $g$. Assume
+
+(i) conditional constancy of relative effects on scale $g$ from each trial population to $\mathcal P^{*}$
+(@def-conditional-constancy-relative);
+
+(ii) within-trial identification of the conditional contrasts $\tau^g_{AC}(\cdot),\tau^g_{BC}(\cdot)$
+(@thm-g-computation-unbiased);
+
+(iii) every covariate that is an effect modifier on scale $g$ of $A$ versus $C$ or of $B$ versus $C$, and
+that is imbalanced between some pair of $\{\mathcal P_{AC},\mathcal P_{BC},\mathcal P^{*}\}$, lies in the
+adjustment set $X$ (@def-pat-imbalance);
+
+(iv) overlap: the support of $f_{*}$ on $X$ is contained in the supports of $f_{AC}$ and $f_{BC}$
+(@def-positivity).
+
+Then the following hold.
+
+**(a) Conditional recovery, any scale.** The anchored PAIC estimand @eq-pat-anchored-estimand equals the
+target population-average conditional effect,
+$$
+\theta^{\mathrm{anch}}_{AB}(\mathcal P^{*})\;=\;\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*}).
+$$ {#eq-pat-anchored-cond}
+
+**(b) Marginal recovery on an aligned collapsible scale.** If in addition the reporting scale is aligned,
+$h=g$ (@def-scale-alignment), and the effect measure is collapsible on scale $g$ (@def-collapsibility),
+and either
+
+  - the measure is *directly* collapsible on $g$ (for instance the identity scale, @prp-emcoll-rd-direct), or
+  - the conditional $A$-versus-$B$ contrast $\tau^g_{AB}(\cdot)$ is constant on the support (for instance
+    under the shared effect modifier assumption @def-sema),
+
+then the estimand also equals the target *marginal* effect,
+$\theta^{\mathrm{anch}}_{AB}(\mathcal P^{*})=\Delta^{\mathrm{Marg},h}_{AB}(\mathcal P^{*})$.
+
+**(c) The recovered estimand is the conditional effect, not a non-collapsible marginal one.** If the effect measure is non-collapsible on
+scale $g$ (the odds ratio on the logit link, the hazard ratio on the log-hazard link,
+@thm-noncollapsibility-or-hr), then in general
+$\theta^{\mathrm{anch}}_{AB}(\mathcal P^{*})\neq\Delta^{\mathrm{Marg},g}_{AB}(\mathcal P^{*})$, even under
+SEMA and scale alignment (@thm-sema-insufficient); only the conditional effect of part (a) is recovered.
+
+**(d) Scale misalignment.** If the reporting scale is misaligned, $h\circ g^{-1}\neq\mathrm{id}$ (for
+instance a hazard model, $g=\log$-hazard, with a restricted mean survival time target, $h$ on the time
+scale), then balancing on $g$ does not in general recover the target contrast on $h$, conditional or
+marginal.
+
+**(e) Class-wise necessity.** Over the class of data-generating mechanisms in which some covariate is an
+effect modifier on scale $g$ and is imbalanced between two of the three populations but is omitted from
+$X$, the estimand is asymptotically biased. No claim is made for any specific mechanism: a particular
+mechanism may have zero bias by numerical coincidence.
+
+(Corresponds to E.6a to E.6e in the proof catalogue.)
+:::
+
+::: {.proof}
+**(a).** By assumption (ii) the contrasts $\tau^g_{AC}(\cdot)$ and $\tau^g_{BC}(\cdot)$ are identified
+within their trials, and by assumption (i) they are the same functions in $\mathcal P^{*}$. By assumption
+(iii) every effect modifier that is imbalanced lies in $X$, so each contrast is a function of the adjusted
+covariates $X$ alone on the support that matters: any unadjusted covariate $W$ is, by (iii), not an
+imbalanced effect modifier, hence either balanced (its conditional distribution given $X$ agrees across the
+populations) or not an effect modifier (so @lem-pat-pv-cancellation applies and $W$ drops out of the
+contrast). In either case the standardization to $f_{*}$ is governed by the distribution of $X$, and
+@prp-pat-conditional-transport gives, for $t\in\{A,B\}$,
+$\Delta^{\mathrm{Cond},g}_{tC}(\mathcal P^{*})=\int\tau^g_{tC}(x)f_{*}(x)\,dx$, the quantity appearing in
+@eq-pat-anchored-estimand, with overlap (iv) ensuring the integral is well defined. Subtracting and
+applying the pointwise additivity @lem-pat-conditional-additivity,
+$$
+\theta^{\mathrm{anch}}_{AB}(\mathcal P^{*})
+=\int\bigl[\tau^g_{AC}(x)-\tau^g_{BC}(x)\bigr]f_{*}(x)\,dx
+=\int\tau^g_{AB}(x)\,f_{*}(x)\,dx
+=\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*}),
+$$
+which is @eq-pat-anchored-cond.
+
+**(b).** By part (a) the estimand equals $\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*})$. It remains to show
+this conditional effect equals the marginal effect $\Delta^{\mathrm{Marg},h}_{AB}(\mathcal P^{*})$ under the
+stated conditions, on the aligned scale $h=g$. In the first case the measure is directly collapsible on
+$g$: by @def-collapsibility the marginal effect equals the population-average conditional effect for every
+covariate distribution, so $\Delta^{\mathrm{Marg},g}_{AB}(\mathcal P^{*})=\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*})$
+identically, and the conclusion follows; the identity scale is the canonical instance
+(@prp-emcoll-rd-direct), giving E.6a. In the second case the conditional contrast $\tau^g_{AB}(\cdot)$ is
+constant on the support, say $\tau^g_{AB}(x)\equiv c$; then
+$\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*})=\int c\,f_{*}=c$, and collapsibility of the measure
+(@def-collapsibility, first bullet) gives that a constant conditional effect equals the marginal effect,
+$\Delta^{\mathrm{Marg},g}_{AB}(\mathcal P^{*})=c$; this is the situation of @thm-collapsible-transport, and
+with $g=\log$ for the risk ratio it gives E.6b.
+
+**(c).** Suppose the measure is non-collapsible on $g$, and suppose, for contradiction with the generic
+claim, that recovery of the marginal effect held for all mechanisms satisfying (i) to (iv) plus SEMA and
+alignment. Under SEMA the conditional contrast $\tau^g_{AB}(\cdot)\equiv c$ is constant
+(@def-sema below), so part (a) gives $\theta^{\mathrm{anch}}_{AB}(\mathcal P^{*})=c$. But non-collapsibility
+means precisely that there is a covariate distribution and a pair of stratum means with constant
+conditional effect $c$ whose marginal effect differs from $c$ (@def-non-collapsibility,
+@thm-noncollapsibility-or-hr): for the odds ratio the marginal effect is strictly attenuated toward the
+null. Hence $\Delta^{\mathrm{Marg},g}_{AB}(\mathcal P^{*})\neq c=\theta^{\mathrm{anch}}_{AB}(\mathcal P^{*})$
+for such a mechanism, contradicting universal recovery. The "if and only if" of @thm-sema-insufficient
+makes this sharp: under SEMA and alignment, direct transportability of the marginal effect holds for all
+populations if and only if the measure is collapsible. Thus only the conditional effect is recovered in
+general.
+
+**(d).** Misalignment means $h=H\circ g$ with $H=h\circ g^{-1}$ a nonidentity, nonlinear map. Part (a)
+recovers the $g$-scale conditional contrast $\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*})$. The target on
+the reporting scale is built from the $h$-scale conditional means $h(\mu_t(x))=H(g(\mu_t(x)))$, and because
+$H$ is nonlinear the $h$-scale conditional contrast $h(\mu_B(x))-h(\mu_A(x))$ is not a function of the
+$g$-scale contrast $g(\mu_B(x))-g(\mu_A(x))$ alone; it depends separately on the baseline $g(\mu_A(x))$.
+Transporting the $g$-scale contrast therefore does not determine the $h$-scale contrast, conditional or
+marginal. The survival instance, where $g$ is the log-hazard and $h$ encodes the restricted mean survival
+time through the nonlinear functional $\mathrm{RMST}_t(\tau\mid x)=\int_0^\tau\exp\!\bigl(-\int_0^u h_t(s\mid x)\,ds\bigr)du$
+of the hazard, is E.6e; we defer its survival-specific development to the later chapters on general
+likelihoods and ML-UMR, and record here only that the obstruction is exactly the nonlinearity of $H$.
+
+**(e).** Suppose a covariate $W$ is an effect modifier on $g$ of, say, $A$ versus $C$, and is imbalanced
+between $\mathcal P_{AC}$ and $\mathcal P^{*}$, but is omitted from $X$. Then the standardization in part
+(a) computes, for the $AC$ contrast, $\int\tau^g_{AC}(x,w)\,f^{AC}(w\mid x)\,f_{*}(x)\,dx\,dw$ rather than
+the target $\int\tau^g_{AC}(x,w)\,f^{*}(w\mid x)\,f_{*}(x)\,dx\,dw$, and the difference is the failure-of-Bucher
+residual of @thm-failure-of-bucher,
+$$
+\theta^{\mathrm{anch}}_{AB}(\mathcal P^{*})-\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*})
+=\int\tau^g_{AC}(x,w)\,[\,f^{AC}(w\mid x)-f^{*}(w\mid x)\,]\,f_{*}(x)\,dx\,dw,
+$$
+which by @thm-failure-of-bucher(2) is nonzero for some mechanism in the stated class, since $\tau^g_{AC}$
+depends nontrivially on $w$ (effect modification) and the conditional distributions of $W$ differ
+(imbalance). The statement is class-wise: by @thm-failure-of-bucher(1) the residual vanishes identically
+only when the modifier is balanced or absent, but a specific mechanism may zero the integral by
+cancellation even with an unadjusted imbalanced modifier. $\square$
+:::
+
+::: {.remark}
+**Where the comparator earns its keep.** Part (a) is the engine; parts (b) to (e) are about which scale the
+engine's output lives on. The reason the anchored estimand needs only effect modifiers in $X$, and not all
+prognostic variables, is @lem-pat-pv-cancellation: a purely prognostic $W$ enters $\tau^g_{AC}$ and
+$\tau^g_{BC}$ only through the comparator term $g(\mu_C(x,w))$, which is the same in both and cancels in the
+contrast. This is the conditional-level descendant of the baseline cancellation
+(@prp-baseline-cancellation) that made anchored comparison robust in Chapter 14. The unanchored case
+forfeits exactly this cancellation. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why this matters.** Part (a) is population adjustment stated as a regression fact: it is standardization,
+the same operation that turns a fitted outcome model into a marginal prediction in Chapter 10, now aimed at
+a *different* population than the one that supplied the data. The anchored theorem is the formal license
+for the whole of Part IV. It says the effect-modifier bookkeeping that broke Bucher in Chapter 16 is fully
+repaired by adjusting the imbalanced modifiers, and it pins down the estimand each downstream method (MAIC,
+STC, ML-NMR) may claim. In the anticoagulant example, part (a) promises that adjusting for age turns the
+biased Bucher answer of Step 3 in @exm-pat-anchored into the exact target risk difference of Step 4, while
+part (c) warns that the same adjustment on the odds-ratio scale returns only the conditional odds ratio,
+not the marginal one a reimbursement dossier may quote. $\blacktriangleleft$
+:::
+
+For completeness we record the finite, exact algebraic identity underlying part (a) in the form proved in
+the Coq development: once the adjusted $AC$ contrast has been correctly identified in the target and the
+AgD $BC$ contrast is unbiased, the Bucher subtraction returns the target contrast.
+
+::: {#cor-pat-anchored-algebra}
+## The adjusted Bucher identity
+Let $\hat d_{AC}^{\mathrm{adj}}$ be an estimator of the target $A$-versus-$C$ contrast with
+$\hat d_{AC}^{\mathrm{adj}}=d_{AC(\mathcal P^{*})}$, let $\hat d_{BC}$ satisfy $\hat d_{BC}=d_{BC(\mathcal P^{*})}$,
+and let transitivity hold in $\mathcal P^{*}$ in the form $d_{AB(\mathcal P^{*})}=d_{AC(\mathcal P^{*})}-d_{BC(\mathcal P^{*})}$.
+Then $\hat d_{AC}^{\mathrm{adj}}-\hat d_{BC}=d_{AB(\mathcal P^{*})}$.
+:::
+
+[machine-checked: `theories/EffectModifiers.v`, `Theorem anchored_unbiased`]
+
+::: {.proof}
+Substitute the two identifications and the transitivity relation:
+$\hat d_{AC}^{\mathrm{adj}}-\hat d_{BC}=d_{AC(\mathcal P^{*})}-d_{BC(\mathcal P^{*})}=d_{AB(\mathcal P^{*})}$.
+$\square$
+:::
+
+## The unanchored consistency theorem {#sec-pat-unanchored}
+
+Without a comparator, the estimator must transport each absolute marginal mean separately, and there is no
+cancellation to relieve it of the prognostic variables.
+
+The unanchored setup is a method of last resort, and it helps to know when a health researcher is forced
+into it. It arises when the two treatments were never controlled against a common arm: perhaps $A$ was
+licensed on a single-arm study, common for accelerated approvals in oncology and rare disease, while $B$
+comes from a placebo-controlled trial, so there is no shared placebo or active comparator to difference
+against. Stripped of the comparator, the estimator can no longer content itself with contrasts; it must
+rebuild each arm's absolute outcome in the target population and only then take a difference. That is why
+the assumptions jump from relative to absolute constancy and from effect modifiers to all prognostic
+variables.
+
+Define the **unanchored PAIC estimand** at target
+$\mathcal P^{*}$ on reporting scale $h$ as
+$$
+\theta^{\mathrm{unanch}}_{AB}(\mathcal P^{*})\;:=\;h\!\left(m_B(\mathcal P^{*})\right)-h\!\left(m_A(\mathcal P^{*})\right)
+\;=\;\Delta^{\mathrm{Marg},h}_{AB}(\mathcal P^{*}),
+$$ {#eq-pat-unanchored-estimand}
+with $m_t(\mathcal P^{*})=\int\mu_t(x)f_{*}(x)\,dx$ as in @eq-pat-marginal-mean.
+
+::: {#thm-unanchored-paic-consistency}
+## Unanchored PAIC consistency
+Consider the unanchored two-study setup (@def-pat-setups) targeting $\mathcal P^{*}$ on reporting scale
+$h$. Assume
+
+(i) conditional constancy of **absolute** effects (@def-conditional-constancy-absolute): the conditional
+mean function $\mu_t(\cdot)$ is the same in each source and in $\mathcal P^{*}$;
+
+(ii) within-trial identification of $\mu_A(\cdot)$ and $\mu_B(\cdot)$ (@thm-g-computation-unbiased);
+
+(iii) every covariate that is **either** an effect modifier on the modeled scale **or** a prognostic
+variable for $A$ or $B$, and that is imbalanced between some pair of the source and target populations,
+lies in the adjustment set $X$;
+
+(iv) overlap (@def-positivity).
+
+Then the unanchored PAIC estimand @eq-pat-unanchored-estimand is recovered: each marginal mean is
+identified by the transport g-formula,
+$$
+m_t(\mathcal P^{*})\;=\;\int\mu_t(x)\,f_{*}(x)\,dx
+\;=\;\mathbb E_{X\sim\mathcal P_{\mathrm{src},t}}\!\left[\,w_t(X)\,\mu_t(X)\,\right],\qquad
+w_t(x)=\frac{f_{*}(x)}{f_{\mathrm{src},t}(x)},
+$$ {#eq-pat-unanchored-recovery}
+and applying $h$ and differencing gives $\theta^{\mathrm{unanch}}_{AB}(\mathcal P^{*})=\Delta^{\mathrm{Marg},h}_{AB}(\mathcal P^{*})$.
+
+**Necessity (over a class).** Over the class of mechanisms with an imbalanced prognostic variable for $A$
+or $B$ omitted from $X$, the estimand is asymptotically biased, with bias for the $A$ arm
+$$
+\int\!\!\int\mu_A(x,w)\,[\,f_{\mathrm{src},A}(w\mid x)-f^{*}(w\mid x)\,]\,f_{*}(x)\,dw\,dx,
+$$ {#eq-pat-unanchored-bias}
+which is nonzero whenever $\mu_A$ depends on the omitted $w$ (prognostic) and its conditional distribution
+differs between source and target (imbalance), with no comparator term to cancel it.
+
+(Corresponds to E.7 in the proof catalogue.)
+:::
+
+::: {.proof}
+By assumption (ii) the function $\mu_t(\cdot)$ is identified within its source, and by (i) it is the same
+function in $\mathcal P^{*}$. By (iii) every imbalanced prognostic variable lies in $X$, so on the relevant
+support $\mu_t$ is a function of $X$ alone: any omitted covariate is either balanced, with the same
+conditional distribution given $X$ in source and target, or nonprognostic, in which case it does not enter
+$\mu_t$. Applying the transport g-formula @thm-conditional-transportability to the function $\mu_t$ gives
+@eq-pat-unanchored-recovery, with overlap (iv) guaranteeing the integral and the reweighting are well
+defined. Both arms are handled this way; there is no subtraction step, so the two transports are
+independent. Applying $h$ to the two recovered marginal means and differencing yields
+$\theta^{\mathrm{unanch}}_{AB}(\mathcal P^{*})=h(m_B(\mathcal P^{*}))-h(m_A(\mathcal P^{*}))$, which is the
+target marginal effect.
+
+For the necessity claim, let $W$ be prognostic for $A$ and imbalanced, but omitted from $X$. The estimator
+that adjusts only on $X$ computes the source within-stratum average
+$\bar\mu_A^{\mathrm{src}}(x)=\int\mu_A(x,w)f_{\mathrm{src},A}(w\mid x)\,dw$ and standardizes it to $f_{*}$,
+producing $\int\bar\mu_A^{\mathrm{src}}(x)f_{*}(x)\,dx$. The target requires the target within-stratum
+average $\bar\mu_A^{*}(x)=\int\mu_A(x,w)f^{*}(w\mid x)\,dw$, so the bias of the $A$ marginal mean is
+$\int[\bar\mu_A^{\mathrm{src}}(x)-\bar\mu_A^{*}(x)]f_{*}(x)\,dx$, which is @eq-pat-unanchored-bias. Because
+$\mu_A$ depends on $w$ and the conditional laws of $W$ differ, the inner difference is generically nonzero,
+and there is no comparator arm whose identical bias would cancel it in a contrast. By contrast, in the
+anchored case the analogous term enters through the comparator and cancels (@lem-pat-pv-cancellation), which
+is precisely why a purely prognostic imbalance is harmless there and harmful here. $\square$
+:::
+
+::: {.remark}
+**Reader translation, and the shared prognostic factor assumption.** The instruction for an unanchored
+comparison is the anchored one with the safety catch removed: adjust for every imbalanced covariate that
+predicts the outcome, whether or not it modifies any treatment effect. In the model @eq-pat-nmr the
+matching structural hypothesis, the unanchored analogue of SEMA, is that the prognostic main effects are
+shared across the compared treatments' evidence sources; this is the **shared prognostic factor
+assumption** (SPFA) of [Notation](/notation.qmd). Because it constrains the baseline and not just the
+interactions, SPFA is even harder to defend than SEMA. The practical reading of overlap here is the one
+that should worry a health researcher: the target population must not contain patient profiles the source
+never enrolled, because the weight $w_t(x)=f_{*}(x)/f_{\mathrm{src},t}(x)$ is undefined where the source
+density is zero. If the target has sicker patients than any trial subject, the method is extrapolating,
+not transporting, and the guarantee lapses. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**The price of dropping the anchor.** The anchored theorem asked for effect modifiers in $X$; the
+unanchored theorem asks for effect modifiers *and* prognostic variables. By @lem-pat-em-not-pv the second
+demand is strictly stronger: a covariate can be prognostic without modifying any contrast, and such a
+covariate is invisible to the anchored adjustment but must be measured and balanced for the unanchored one.
+In practice this is close to prohibitive, because it requires having measured essentially every driver of
+the outcome. This is the formal reason that unanchored comparison is a method of last resort, reserved for
+disconnected networks (Chapter 26), and that @phillippo2016tsd18 demands extensive sensitivity analysis
+whenever it is used. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Non-collapsibility, again.** Equation @eq-pat-unanchored-recovery recovers the marginal means $m_t$
+themselves, so for a non-collapsible reporting scale the unanchored estimand is the genuine marginal
+effect in $\mathcal P^{*}$, not merely a conditional one. The subtlety of part (c) of the anchored theorem
+does not arise here, because nothing was differenced before applying $h$. What does carry over is that the
+recovered marginal effect is specific to $\mathcal P^{*}$: a non-collapsible marginal effect computed for
+one target does not transport unchanged to another, exactly as in @thm-noncollapsibility-or-hr. The
+untestability of the absolute-constancy assumption (i) is taken up in @prp-testable-untestable-constancy.
+$\blacktriangleleft$
+:::
+
+## The shared effect modifier assumption {#sec-pat-sema}
+
+The anchored theorem assumed the conditional contrasts $\tau^g_{AC}$ and $\tau^g_{BC}$ were both available.
+In the smallest network, one IPD trial of $A$ versus $C$ and one AgD trial of $B$ versus $C$, the IPD
+identifies the interactions for $A$ but the AgD cannot identify the interactions for $B$ separately from
+its main effect. The assumption that restores identifiability is that the active treatments share their
+effect-modifier structure.
+
+::: {#def-sema}
+## Shared effect modifier assumption (SEMA)
+In the model @eq-pat-nmr, the **shared effect modifier assumption** asserts that the treatment-by-covariate
+interactions are the same for the active treatments being compared:
+$$
+\boldsymbol\beta_{2,A}\;=\;\boldsymbol\beta_{2,B}\;=:\;\boldsymbol\beta_{2}.
+$$ {#eq-pat-sema}
+(Corresponds to E.8 in the proof catalogue.) $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation: what SEMA says, and how it differs from conditional constancy.** SEMA says the
+covariates bend the two active treatments' effects *in the same way*. In the anticoagulant example it asks
+that age change the benefit of the new drug $A$ versus warfarin by exactly the amount it changes the
+benefit of the DOAC $B$ versus warfarin, so that when we difference $A$ against $B$ the age term cancels
+and the $A$-versus-$B$ effect stops depending on age. Contrast this with conditional constancy
+(@def-conditional-constancy-relative), which is an assumption *across populations*, the same effect
+function in every trial and the target; SEMA is an assumption *across treatments within one model*, the
+same interaction vector for $A$ and $B$. One is portability of a fixed effect to a new patient mix; the
+other is a shared shape of effect modification between two drugs.
+
+A plausible instance: $A$ and $B$ are two drugs of the same pharmacological class and the only strong
+modifier is disease severity, which blunts any active treatment's advantage over the comparator by a
+similar amount, so severity modifies $A$-versus-$C$ and $B$-versus-$C$ alike and cancels. An implausible
+instance: $A$ is a targeted therapy whose benefit is concentrated in a biomarker-positive subgroup while
+$B$ is a broad-acting comparator whose benefit is flat across that biomarker; then the biomarker modifies
+$A$ but not $B$, SEMA fails, and the active-versus-active contrast genuinely depends on the biomarker mix.
+$\blacktriangleleft$
+:::
+
+::: {#prp-pat-sema-constant}
+## SEMA makes the active-versus-active conditional contrast constant
+Under the model @eq-pat-nmr and SEMA (@def-sema), the conditional effect of $A$ versus $B$ on scale $g$ is
+constant in $x$:
+$$
+\tau^g_{AB}(x)\;=\;\gamma_A-\gamma_B\qquad\text{for all }x .
+$$ {#eq-pat-sema-constant}
+:::
+
+::: {.proof}
+By @eq-pat-tau-linear, $\tau^g_{AC}(x)=\gamma_A+\boldsymbol\beta_{2,A}^\top x$ and
+$\tau^g_{BC}(x)=\gamma_B+\boldsymbol\beta_{2,B}^\top x$. By @lem-pat-conditional-additivity,
+$$
+\tau^g_{AB}(x)=\tau^g_{AC}(x)-\tau^g_{BC}(x)
+=(\gamma_A-\gamma_B)+(\boldsymbol\beta_{2,A}-\boldsymbol\beta_{2,B})^\top x .
+$$
+SEMA @eq-pat-sema sets the interaction difference to zero, leaving the constant $\gamma_A-\gamma_B$.
+$\square$
+:::
+
+Proposition @prp-pat-sema-constant is what links SEMA to part (b) of the anchored theorem: with the
+active-versus-active conditional contrast constant, a *collapsible* aligned reporting scale recovers the
+marginal effect (@thm-collapsible-transport), whereas a *non-collapsible* one still does not
+(@thm-sema-insufficient). SEMA buys identifiability on the linear-predictor scale; it does not by itself
+buy transportability of a non-collapsible marginal effect.
+
+::: {#thm-shared-em-identifiability}
+## Identifiability under SEMA in the smallest network
+Consider one IPD trial on $\{A,C\}$ in $\mathcal P_{AC}$ and one AgD trial on $\{B,C\}$ in
+$\mathcal P_{BC}$, modeled by @eq-pat-nmr under SEMA (@def-sema). Suppose the IPD design has full column
+rank (both arms present and the covariates have nondegenerate within-arm variation) and the AgD reports its
+$B$-versus-$C$ average conditional contrast on scale $g$ together with the covariate mean $\bar x_{BC}$.
+Then the target-population linear-predictor contrast $\gamma_A-\gamma_B$ is identified from the combined
+IPD-plus-AgD likelihood. (Corresponds to E.9 in the proof catalogue.)
+:::
+
+::: {.proof}
+From the IPD trial, the conditional mean model @eq-pat-nmr restricted to arms $A$ and $C$ is a generalized
+linear model with linear predictor $\mu_{AC}+\boldsymbol\beta_1^\top x$ on the $C$ arm and
+$\mu_{AC}+\gamma_A+(\boldsymbol\beta_1+\boldsymbol\beta_{2})^\top x$ on the $A$ arm. With full column rank
+of the design and a strictly monotone link, the coefficients of a generalized linear model are identified
+(Chapter 7), meaning the map from coefficients to the fitted conditional means is injective, so that no two
+distinct coefficient vectors produce the same fit: the $C$ arm identifies $(\mu_{AC},\boldsymbol\beta_1)$,
+and the $A$ arm then identifies
+$(\gamma_A,\boldsymbol\beta_{2})$. In particular the shared interaction vector $\boldsymbol\beta_{2}$ is
+known from the IPD.
+
+From the AgD trial, the reported $B$-versus-$C$ average conditional contrast on scale $g$ is, by
+@eq-pat-trial-contrast and the linear form @eq-pat-tau-linear under SEMA,
+$$
+\tilde d_{BC(\mathcal P_{BC})}=\int\bigl(\gamma_B+\boldsymbol\beta_{2}^\top x\bigr)f_{BC}(x)\,dx
+=\gamma_B+\boldsymbol\beta_{2}^\top\bar x_{BC},
+$$
+a single linear equation in the one unknown $\gamma_B$, since $\boldsymbol\beta_{2}$ is known from the IPD
+and $\bar x_{BC}$ is reported. Solving, $\gamma_B=\tilde d_{BC(\mathcal P_{BC})}-\boldsymbol\beta_{2}^\top\bar x_{BC}$,
+so $\gamma_B$ is identified. Hence $\gamma_A-\gamma_B$ is identified from the joint data. The network is
+connected through the shared comparator $C$, so the rank condition for network identifiability
+(@thm-fe-nma-identifiability) is met trivially. $\square$
+:::
+
+::: {.remark}
+**What identifiability does and does not give.** Theorem @thm-shared-em-identifiability identifies the
+contrast on the linear-predictor scale $g$. It does **not** identify a marginal effect on a non-collapsible
+reporting scale: that requires the joint covariate distribution and the baseline risk of the target,
+through the non-collapsibility of @thm-noncollapsibility-or-hr, and is governed by part (c) of
+@thm-anchored-paic-consistency and by @thm-sema-insufficient. This is the same caveat that recurs whenever
+the odds ratio or hazard ratio is the quoted measure. $\blacktriangleleft$
+:::
+
+## Scale dependence of effect modifier status {#sec-pat-scale-dep}
+
+The conditions of the consistency theorems are stated "on scale $g$," and the qualifier is not decorative:
+whether a covariate is an effect modifier can change with the scale. The following worked counterexample,
+with arithmetic the reader can check by hand, exhibits a covariate that modifies the effect on the logit
+scale but not on the risk-difference scale.
+
+::: {#exm-scale-dependence-em}
+## A covariate that is an effect modifier on the logit scale but not the identity scale
+Let $X\in\{0,1\}$ be binary, let treatment be $t\in\{0,1\}$, and let the outcome be binary with conditional
+risks
+$$
+\mu_0(0)=0.1,\quad \mu_1(0)=0.2,\quad \mu_0(1)=0.5,\quad \mu_1(1)=0.6 .
+$$
+
+**Risk-difference (identity) scale.** The conditional risk differences are
+$$
+\tau^{\mathrm{id}}(0)=\mu_1(0)-\mu_0(0)=0.2-0.1=0.1,\qquad
+\tau^{\mathrm{id}}(1)=\mu_1(1)-\mu_0(1)=0.6-0.5=0.1 .
+$$
+They are equal, so the conditional risk difference does not depend on $x$: by @def-effect-modifier, $X$ is
+**not** an effect modifier on the identity scale.
+
+**Log-odds-ratio (logit) scale.** The conditional log odds ratios are
+$$
+\tau^{\mathrm{logit}}(0)=\operatorname{logit}(0.2)-\operatorname{logit}(0.1)
+=\log\tfrac{0.2/0.8}{0.1/0.9}=\log 2.25\approx 0.8109,
+$$
+$$
+\tau^{\mathrm{logit}}(1)=\operatorname{logit}(0.6)-\operatorname{logit}(0.5)
+=\log\tfrac{0.6/0.4}{0.5/0.5}=\log 1.5\approx 0.4055 .
+$$
+They differ, so by @def-effect-modifier, $X$ **is** an effect modifier on the logit scale.
+
+(Corresponds to E.10 in the proof catalogue.) $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Consequences for practice.** The example shows that "$X$ is not an effect modifier," and therefore the
+entire question "which covariates must be in the adjustment set," is meaningless until the scale is named.
+A SEMA that holds on the identity scale need not hold on the logit scale, and the adjustment that licenses
+an anchored mean-difference comparison need not license an anchored odds-ratio comparison. This is the
+finite, concrete face of the scale specificity that makes the older scale-free "iff" formulations
+untenable, and it is why @thm-anchored-paic-consistency is stated one scale at a time. $\blacktriangleleft$
+:::
+
+## Testable and untestable parts of constancy {#sec-pat-testable}
+
+The constancy assumptions E.4, E.5, and SEMA are the load-bearing hypotheses of population adjustment, and
+it is natural to ask whether the data can check them. The answer divides sharply by network size.
+
+The short answer, and the single most important practical message of the chapter, is that in a two-study
+comparison these assumptions **cannot be checked from the data at all**; they must be argued from external
+knowledge. The reason is a counting mismatch. The AgD trial hands us exactly one number about treatment
+$B$'s effect modification, a single average contrast at a single covariate mean, but the interactions we
+would need to verify are a whole vector, one coefficient per covariate. One number cannot pin down a
+vector. Geometrically, that one equation carves out a flat hyperplane of
+$(\gamma_B,\boldsymbol\beta_{2,B})$ pairs that all reproduce the observed summary; SEMA picks one point on
+that hyperplane, the point where $B$'s interactions match $A$'s, and nothing in the data says whether that
+point is the right one. The proposition makes this precise.
+
+::: {#prp-testable-untestable-constancy}
+## Testability of the shared effect modifier assumption
+In the smallest anchored network of @thm-shared-em-identifiability (one IPD trial on $\{A,C\}$, one AgD
+trial on $\{B,C\}$), SEMA (@def-sema) imposes no restriction on the observable data distribution: the SEMA
+model and the unrestricted model with $\boldsymbol\beta_{2,B}\neq\boldsymbol\beta_{2,A}$ fit the observed
+summaries identically. Hence SEMA is untestable from these data. If instead a second AgD trial on
+$\{B,C\}$ is available at a covariate mean $\bar x_{BC}'\neq\bar x_{BC}$, then SEMA implies the
+over-identifying restriction
+$$
+\tilde d_{BC(\mathcal P_{BC})}-\tilde d_{BC(\mathcal P_{BC}')}\;=\;\boldsymbol\beta_{2}^\top\bigl(\bar x_{BC}-\bar x_{BC}'\bigr),
+$$ {#eq-pat-overid}
+and is therefore testable on the covariate directions spanned by $\bar x_{BC}-\bar x_{BC}'$. (Corresponds
+to E.11 in the proof catalogue.)
+:::
+
+::: {.proof}
+From the AgD trial the only functional of the $B$-versus-$C$ interactions that enters the likelihood is the
+scalar $\tilde d_{BC(\mathcal P_{BC})}=\gamma_B+\boldsymbol\beta_{2,B}^\top\bar x_{BC}$ (the average
+conditional contrast at the reported covariate mean). Given the IPD, which fixes $\boldsymbol\beta_{2}$ and
+the remaining parameters, the set of $(\gamma_B,\boldsymbol\beta_{2,B})$ consistent with the AgD is the
+entire hyperplane $\{(\gamma_B,\boldsymbol\beta_{2,B}):\gamma_B+\boldsymbol\beta_{2,B}^\top\bar x_{BC}=\tilde d_{BC(\mathcal P_{BC})}\}$.
+The SEMA point $(\,\tilde d_{BC(\mathcal P_{BC})}-\boldsymbol\beta_{2}^\top\bar x_{BC},\ \boldsymbol\beta_{2}\,)$
+lies on this hyperplane, but so does every other point; all give the same observable summary. Therefore no
+function of the data distinguishes the SEMA model from an unrestricted one, and SEMA is untestable. The
+target contrast $\gamma_A-\gamma_B$ does depend on which point of the hyperplane is selected, which is why
+SEMA is simultaneously necessary for identification and beyond the reach of the data.
+
+With a second AgD trial at $\bar x_{BC}'$ the data deliver a second scalar
+$\tilde d_{BC(\mathcal P_{BC}')}=\gamma_B+\boldsymbol\beta_{2,B}^\top\bar x_{BC}'$. Under SEMA both must be
+explained by the single, IPD-fixed $\boldsymbol\beta_{2}$, so their difference must equal
+$\boldsymbol\beta_{2}^\top(\bar x_{BC}-\bar x_{BC}')$; any departure of the observed difference from this
+predicted value falsifies SEMA on the spanned direction. This is the over-identifying restriction
+@eq-pat-overid, and it is the node-splitting logic of @def-node-splitting specialized to the regression
+coefficients. $\square$
+:::
+
+::: {.remark}
+**The general principle.** Conditional constancy of relative effects (E.4) and of absolute effects (E.5)
+are likewise testable only when the network carries direct and indirect evidence for the same contrast, so
+that the consistency equation provides an over-identifying restriction (node-splitting,
+@def-node-splitting). In the two-study PAIC setting the model is just-identified for the target contrast,
+no restriction remains, and the assumptions must be defended by domain knowledge: pharmacological
+similarity of $A$ and $B$, mechanistic argument, and sensitivity analysis over plausible violations. This
+is the methodological warning of @phillippo2016tsd18. $\blacktriangleleft$
+:::
+
+## Target-population estimands via the g-formula {#sec-pat-estimands}
+
+We close the abstract development by pinning down the estimands the methods target, and the precise sense
+in which they are identified. Both are g-formula functionals of the conditional means and the target
+covariate distribution; they connect this chapter to the transportability theory of Chapter 12. Much of
+this theorem's content has appeared piecemeal above; the value of stating it once is that it is the clean
+summary of *what* is identified and *when* the two estimands coincide, and it is the statement the method
+chapters cite.
+
+::: {#thm-target-population-estimand}
+## Target-population estimands and their identification
+Fix a target population $\mathcal P^{*}$ and a reporting scale $h$. Define the **target marginal effect**
+$$
+\Delta^{\mathrm{Marg},h}_{ab}(\mathcal P^{*})=h\!\left(\textstyle\int\mu_b(x)f_{*}(x)\,dx\right)-h\!\left(\textstyle\int\mu_a(x)f_{*}(x)\,dx\right)
+$$ {#eq-pat-target-marg}
+and the **target population-average conditional effect**
+$$
+\Delta^{\mathrm{Cond},h}_{ab}(\mathcal P^{*})=\int\bigl[h(\mu_b(x))-h(\mu_a(x))\bigr]f_{*}(x)\,dx .
+$$ {#eq-pat-target-cond}
+Assume within-trial identification (@thm-g-computation-unbiased), the relevant constancy assumption
+(@def-conditional-constancy-relative for a contrast, or @def-conditional-constancy-absolute for the
+separate arms), and overlap (@def-positivity). Then:
+
+**(a) Identification.** Both estimands are identified from the source conditional means and the target
+covariate distribution, by the transport g-formula (@thm-conditional-transportability): @eq-pat-target-marg
+applies the formula to each $\mu_t$, and @eq-pat-target-cond applies it to the function $x\mapsto h(\mu_b(x))-h(\mu_a(x))$.
+
+**(b) Coincidence under collapsibility.** If $h$ is directly collapsible on its scale (the identity scale,
+@prp-emcoll-rd-direct), or if $h$ is collapsible and the conditional contrast is constant on the support
+(the log risk ratio on the log scale, @thm-collapsible-transport), then
+$\Delta^{\mathrm{Marg},h}_{ab}(\mathcal P^{*})=\Delta^{\mathrm{Cond},h}_{ab}(\mathcal P^{*})$.
+
+**(c) Divergence under non-collapsibility.** If $h$ is non-collapsible (logit, log-hazard), the two
+estimands differ in general (@thm-noncollapsibility-or-hr), and the marginal estimand depends on the target
+baseline risk, not only on the transported contrast.
+
+(Corresponds to E.12 in the proof catalogue.)
+:::
+
+::: {.proof}
+**(a).** By within-trial identification and the relevant constancy assumption, the conditional means
+$\mu_t(\cdot)$ (for the unanchored or marginal target) or the conditional contrasts $\tau^h_{ab}(\cdot)$
+(for the conditional target) are population-free functions identified from the source. The transport
+g-formula @thm-conditional-transportability identifies the expectation under $f_{*}$ of any such fixed
+function of $x$: applied to $\mu_b$ and $\mu_a$ it yields the two marginal means $m_b(\mathcal P^{*})$ and
+$m_a(\mathcal P^{*})$, and applying $h$ and differencing gives @eq-pat-target-marg; applied to the function
+$h(\mu_b(\cdot))-h(\mu_a(\cdot))$ it yields @eq-pat-target-cond directly. Overlap guarantees the integrals
+are well defined.
+
+**(b).** Direct collapsibility means, by @def-collapsibility, that the marginal effect equals the
+population-average conditional effect for every covariate distribution. On the identity scale this is
+@prp-emcoll-rd-direct; for the log risk ratio with a constant conditional contrast it is the collapsibility
+of @thm-collapsible-transport. In either case @eq-pat-target-marg equals @eq-pat-target-cond.
+
+**(c).** For a non-collapsible measure there exist, by @thm-noncollapsibility-or-hr, a covariate
+distribution and stratum means with constant conditional effect whose marginal effect differs from it; a
+fortiori @eq-pat-target-marg and @eq-pat-target-cond differ. The marginal odds ratio @eq-pat-target-marg is
+built from the marginal risks $m_t(\mathcal P^{*})$, which depend on the full target covariate distribution
+and hence on the target baseline risk, whereas @eq-pat-target-cond averages stratum contrasts; the two
+coincide only in the collapsible case. $\square$
+:::
+
+::: {.remark}
+**Which estimand to target.** The marginal estimand answers the population-policy question that a health
+technology assessment usually asks: what is the average effect in the target population if everyone
+receives $b$ rather than $a$. The conditional estimand answers the within-stratum question that clinical
+reasoning about a specific patient often uses. The two are different scientific quantities, and on a
+non-collapsible scale they are different numbers; the analyst must state which one is intended before any
+claim of consistency is meaningful. The recurring lesson of this chapter is that a population-adjusted
+method is consistent for a *named estimand on a named scale*, and that naming both is part of the
+specification, not an afterthought. $\blacktriangleleft$
+:::
+
+## A fully worked anchored comparison {#sec-pat-example}
+
+We carry one example from conditional risks to a corrected indirect effect, with every number checkable by
+hand, and use it to show the unadjusted bias, its removal by adjustment, and the scale dependence of the
+conclusion. The outcome is binary and unfavorable, so a larger risk is worse, and we use the
+reference-second convention of Chapter 14 in which a positive contrast means the active treatment lowers
+the risk relative to the comparator.
+
+::: {#exm-pat-anchored}
+## Anchored population adjustment with a binary effect modifier
+This is the anticoagulant scenario of the running example, now with every number. Read $A$ as the new oral
+anticoagulant, $B$ as the standard DOAC, $C$ as warfarin, $X=1$ as age $75$ or over, and the outcome as a
+major bleed, so a larger risk is worse. A single binary covariate $X\in\{0,1\}$ is present. The conditional
+risks, taken to be the same function in
+every population (which makes both constancy assumptions hold and the numbers concrete), are
+
+| $x$ | $\mu_A(x)$ | $\mu_B(x)$ | $\mu_C(x)$ |
+|---|---|---|---|
+| $0$ | $0.20$ | $0.30$ | $0.40$ |
+| $1$ | $0.50$ | $0.30$ | $0.40$ |
+
+The IPD trial $AC$ has $\Pr_{AC}(X=1)=0.25$, the AgD trial $BC$ has $\Pr_{BC}(X=1)=0.75$, and the target
+population $\mathcal P^{*}$ has $\Pr_{*}(X=1)=0.50$.
+
+**Step 1: conditional contrasts on the identity scale.** With $\tau^{\mathrm{id}}_{AC}(x)=\mu_C(x)-\mu_A(x)$,
+$\tau^{\mathrm{id}}_{BC}(x)=\mu_C(x)-\mu_B(x)$, and $\tau^{\mathrm{id}}_{AB}(x)=\mu_B(x)-\mu_A(x)$,
+$$
+\tau^{\mathrm{id}}_{AC}(0)=0.40-0.20=0.20,\qquad \tau^{\mathrm{id}}_{AC}(1)=0.40-0.50=-0.10,
+$$
+$$
+\tau^{\mathrm{id}}_{BC}(0)=0.40-0.30=0.10,\qquad \tau^{\mathrm{id}}_{BC}(1)=0.40-0.30=0.10 .
+$$
+So $X$ is an effect modifier of $A$ versus $C$ (the contrast moves from $0.20$ to $-0.10$) but not of $B$
+versus $C$ (constant at $0.10$). The target contrast $\tau^{\mathrm{id}}_{AB}(x)=\mu_B(x)-\mu_A(x)$ is
+$0.10$ at $x=0$ and $-0.20$ at $x=1$, and indeed equals $\tau^{\mathrm{id}}_{AC}(x)-\tau^{\mathrm{id}}_{BC}(x)$
+as @lem-pat-conditional-additivity requires.
+
+**Step 2: the target.** Standardizing to $f_{*}$ (equal weights $0.5,0.5$),
+$$
+\Delta^{\mathrm{Cond,id}}_{AC}(\mathcal P^{*})=0.5(0.20)+0.5(-0.10)=0.05,\qquad
+\Delta^{\mathrm{Cond,id}}_{BC}(\mathcal P^{*})=0.10,
+$$
+so the target effect of $A$ versus $B$ is
+$\Delta^{\mathrm{Cond,id}}_{AB}(\mathcal P^{*})=0.05-0.10=-0.05$, a risk difference of $-0.05$ ($A$ raises
+the risk by $0.05$ relative to $B$ in the target).
+
+**Step 3: the unadjusted Bucher comparison.** Each trial reports its own average conditional contrast
+@eq-pat-trial-contrast:
+$$
+\tilde d_{AC(\mathcal P_{AC})}=0.75(0.20)+0.25(-0.10)=0.125,\qquad
+\tilde d_{BC(\mathcal P_{BC})}=0.10 .
+$$
+The naive Bucher estimand is $\tilde d_{AC(\mathcal P_{AC})}-\tilde d_{BC(\mathcal P_{BC})}=0.125-0.10=0.025$,
+against a target of $-0.05$. The bias is $0.025-(-0.05)=0.075$. By the decomposition of
+@thm-failure-of-bucher it is $b_{AC}-b_{BC}$ with
+$$
+b_{AC}=\int\tau^{\mathrm{id}}_{AC}(x)[f_{AC}(x)-f_{*}(x)]\,dx=0.20(0.75-0.50)+(-0.10)(0.25-0.50)=0.05+0.025=0.075,
+$$
+and $b_{BC}=0.10\bigl[(0.25-0.50)+(0.75-0.50)\bigr]=0$ because $\tau^{\mathrm{id}}_{BC}$ is constant. The
+entire bias comes from the imbalanced effect modifier in the $A$-versus-$C$ contrast.
+
+**Step 4: the adjusted comparison.** Re-standardize the $AC$ contrast to the target, which is exactly Step 2:
+$\Delta^{\mathrm{Cond,id}}_{AC}(\mathcal P^{*})=0.05$. The adjusted anchored estimand is
+$$
+\theta^{\mathrm{anch}}_{AB}(\mathcal P^{*})=0.05-0.10=-0.05=\Delta^{\mathrm{Cond,id}}_{AB}(\mathcal P^{*}),
+$$
+zero bias, as @thm-anchored-paic-consistency(a) guarantees, and since the identity scale is directly
+collapsible (@prp-emcoll-rd-direct) this is also the target marginal risk difference, by part (b).
+
+**Step 5: weighting realization and effective sample size.** A MAIC reweights the IPD to the target
+covariate distribution. With binary $X$, matching $\Pr(X=1)$ from $0.25$ to $0.50$ uses weights
+proportional to $w_1=0.50/0.25=2$ for the $X=1$ subjects and $w_0=0.50/0.75=2/3$ for the $X=0$ subjects.
+In an IPD sample of $n=200$ with $50$ subjects at $X=1$ and $150$ at $X=0$, the weighted contrast is
+$$
+\frac{w_0\,(150)\,(0.20)+w_1\,(50)\,(-0.10)}{w_0\,(150)+w_1\,(50)}
+=\frac{(2/3)(150)(0.20)+2(50)(-0.10)}{(2/3)(150)+2(50)}
+=\frac{20-10}{100+100}=\frac{10}{200}=0.05,
+$$
+recovering Step 2. The effective sample size (@def-balancing-score and the
+notation of [Notation](/notation.qmd)) is
+$$
+\mathrm{ESS}=\frac{(\sum_i w_i)^2}{\sum_i w_i^2}=\frac{200^2}{50\cdot 2^2+150\cdot(2/3)^2}
+=\frac{40000}{200+200/3}=\frac{40000}{800/3}=150,
+$$
+Intuitively, we are upweighting the $50$ older ($X=1$) subjects by a factor of $2$ so that they stand in
+for the larger older share of the target, and downweighting the $150$ younger subjects; leaning the
+estimate on fewer, heavily weighted subjects is what shrinks the effective sample size. So balancing one
+covariate has cost a quarter of the nominal sample. The ESS is a preview of the variance
+inflation that Chapter 18 studies in detail.
+
+**Step 6: the mismatched scale.** Suppose instead the decision maker wants the marginal **odds ratio** of
+$A$ versus $B$ in $\mathcal P^{*}$. The target marginal risks are
+$m_A(\mathcal P^{*})=0.5(0.20)+0.5(0.50)=0.35$, $m_B(\mathcal P^{*})=0.30$, so the target marginal log odds
+ratio is
+$$
+\Delta^{\mathrm{Marg,logit}}_{AB}(\mathcal P^{*})=\operatorname{logit}(0.30)-\operatorname{logit}(0.35)
+=-0.8473-(-0.6190)=-0.2283,\qquad \mathrm{OR}\approx 0.796 .
+$$
+The population-average **conditional** log odds ratio is
+$$
+\Delta^{\mathrm{Cond,logit}}_{AB}(\mathcal P^{*})=0.5\bigl[\operatorname{logit}(0.30)-\operatorname{logit}(0.20)\bigr]
++0.5\bigl[\operatorname{logit}(0.30)-\operatorname{logit}(0.50)\bigr]=0.5(0.5390)+0.5(-0.8473)=-0.1542,
+$$
+with $\mathrm{OR}\approx 0.857$. The reason the two disagree is the nonlinearity of the logit: the marginal
+odds ratio forms the population risks first and then takes a single ratio, while the conditional odds ratio
+takes a ratio within each age group and then averages, and averaging risks is not the same operation as
+averaging log-odds, so the two odds ratios part company even though not one conditional risk has changed.
+An anchored PAIC fit on the logit link recovers the conditional value
+$-0.1542$ (part (a)), but it does **not** recover the marginal value $-0.2283$: the two differ by the
+collapsibility gap of the odds ratio (@thm-noncollapsibility-or-hr), and no amount of covariate balancing
+on the logit scale closes it (part (c), @thm-sema-insufficient). The identity-scale adjustment of Steps 2
+to 5 is exact for the risk difference because that scale is directly collapsible; the same data adjusted on
+the logit scale identify only the conditional odds ratio. The number you can trust depends on the estimand
+and the scale you asked for. $\blacktriangleleft$
+:::
+
+## How the methods instantiate the theory {#sec-pat-methods-preview}
+
+The three method chapters that follow are three ways to compute the standardized contrasts
+@eq-pat-anchored-estimand and @eq-pat-cond-transport, differing in how they model the conditional means and
+how they average to the target.
+
+- **MAIC** (Chapter 18) uses the reweighting form of @eq-pat-cond-transport: it estimates weights
+  $w(x)=f_{*}(x)/f_{AC}(x)$ by entropy balancing on the covariate moments, then forms the weighted IPD
+  contrast. It is nonparametric in the outcome model and pays for it in effective sample size, as Step 5
+  foreshadows. The density ratio $w(x)=f_{*}(x)/f_{AC}(x)$ is only the theoretical target; because the
+  analyst knows neither density, MAIC does not estimate them, it instead finds weights of the form
+  $w_i=\exp(\alpha+\boldsymbol\beta^\top x_i)$ that force the reweighted IPD covariate moments to match the
+  reported target moments, which is the entropy-balancing solution of Chapter 18. That is how the abstract
+  $f_{*}/f$ of this chapter becomes a computable procedure.
+- **STC** (Chapter 19) uses the integral form: it fits an outcome regression for $\tau^g_{AC}(\cdot)$ on the
+  IPD and averages it over the target covariate distribution. It is parametric in the outcome model and
+  must be marginalized correctly to avoid the conditional-versus-marginal confusion of part (c).
+- **ML-NMR** (Chapter 20) fits the full model @eq-pat-nmr jointly to IPD and AgD by integrating the
+  individual model up to the aggregate likelihood, and standardizes to any target by the g-formula. It is
+  the most general and reduces to the others in special cases.
+
+In one sentence each: MAIC reweights the IPD patients so their covariate profile matches the target, then
+contrasts the weighted outcomes; STC fits an outcome regression on the IPD and reads off the contrast
+predicted at the target covariate profile; ML-NMR writes a single model for both the IPD and the AgD and
+integrates the individual model up to the aggregate level, so it can standardize to any target at once.
+All three compute the same standardized contrast @eq-pat-anchored-estimand; they differ in what they must
+assume about the outcome model and in how much precision they spend.
+
+Each is consistent for its named estimand under the hypotheses of @thm-anchored-paic-consistency or
+@thm-unanchored-paic-consistency; the differences are in efficiency, in robustness to model
+misspecification, and in which estimand they most naturally produce.
+
+## Notes and references {#sec-pat-notes}
+
+The modern theory of population adjustment is due to @phillippo2019thesis, whose thesis introduced the
+effect-modifier framing of the anchored case and the prognostic-variable framing of the unanchored case,
+and to the NICE Technical Support Document of @phillippo2016tsd18, which set the practical guidance on when
+each comparison is admissible. The scale-aware refinement followed here, distinguishing the model link $g$
+from the reporting scale $h$, separating direct from ordinary collapsibility, and replacing the classical
+scale-free "if and only if" with scale-specific sufficiency plus class-wise necessity, is the contribution
+of @chandler2026transport; the present chapter adopts their estimand-based view throughout and is in
+harmony with the transportability development of Chapter 12. The original methods papers, @signorovitch2010maic
+for MAIC and @caro2010stc for STC, predate this theory and motivate it; the multilevel synthesis is
+@phillippo2020mlnmr. The conditional constancy assumptions E.4 and E.5 are the population-adjustment
+analogues of the structural invariance of Chapter 12, and the anchored cancellation of purely prognostic
+covariates is the conditional-level descendant of the baseline cancellation that made Bucher's anchored
+comparison robust in Chapter 14; the connection between balancing scores and reweighting traces to
+@rosenbaum1983.
+
+This chapter corresponds to results E.4 (conditional constancy of relative effects, @def-conditional-constancy-relative),
+E.5 (conditional constancy of absolute effects, @def-conditional-constancy-absolute), E.6a to E.6e (the
+scale-specific anchored consistency theorem, @thm-anchored-paic-consistency), E.7 (unanchored consistency,
+@thm-unanchored-paic-consistency), E.8 (the shared effect modifier assumption, @def-sema), E.9
+(identifiability under SEMA, @thm-shared-em-identifiability), E.10 (scale dependence of effect modifier
+status, @exm-scale-dependence-em), E.11 (testable and untestable constancy, @prp-testable-untestable-constancy),
+and E.12 (target-population estimands, @thm-target-population-estimand) of the proof catalogue in
+`proofs/E_population_adjustment_theory.md`. The base results E.0 to E.3 it builds on are developed in
+Chapters 11 (collapsibility gap and the effect-modifier and prognostic definitions, @def-collapsibility,
+@def-effect-modifier, @def-prognostic-variable), 12 (transportability and scale alignment,
+@thm-conditional-transportability, @def-scale-alignment, @thm-sema-insufficient), and 16 (the
+failure-of-Bucher decomposition, @thm-failure-of-bucher).
+
+Three algebraic cores have machine-checked counterparts in the companion Coq development, in
+`theories/EffectModifiers.v`. The anchored cancellation of a purely prognostic covariate
+(@lem-pat-pv-cancellation) is `Theorem anchored_PV_cancellation`; the strict-stronger relation between
+prognostic and effect-modifier status (@lem-pat-em-not-pv, the same witness that absolute constancy is
+strictly stronger than relative constancy) is `Theorem not_EM_does_not_imply_not_PV`; and the adjusted
+Bucher identity (@cor-pat-anchored-algebra) is `Theorem anchored_unbiased`. The Coq file deliberately does
+not formalize the scale-specific consistency theorems E.6a to E.6e or E.7, which depend on estimand scale,
+collapsibility, target population, imbalance, overlap, and model correctness; it captures the algebraic
+distinction between the anchored and unanchored architectures, which is the invariant that survives all
+the scale-specific case analysis.
+
+## Exercises {#sec-pat-exercises}
+
+A starred exercise ($\star$) has a full worked solution in Appendix F. The first two exercises are
+warm-ups that only ask you to read the running example and the tables; the computational and proof-heavy
+exercises follow.
+
+::: {#exr-pat-warmup-empv}
+**(Warm-up, interpretation.)** In the anticoagulant running example, age raises the bleeding risk on the
+new drug $A$ but not on the DOAC $B$ or warfarin $C$. Using the one-line definitions of @sec-pat-em-pv,
+state whether age is prognostic for $A$, whether it is prognostic for $B$, and whether it is an effect
+modifier of $A$ versus $C$ and of $B$ versus $C$. Then say in one sentence why, in an anchored comparison,
+only its effect-modifier status forces it into the adjustment set.
+:::
+
+::: {#exr-pat-warmup-architecture}
+**(Warm-up, interpretation.)** Suppose instead the new drug $A$ had been approved on a single-arm study
+with no control group, while $B$ remains a warfarin-controlled trial. Which architecture, anchored or
+unanchored, are you now in; which constancy assumption do you need (@def-conditional-constancy-relative or
+@def-conditional-constancy-absolute); and which covariates must enter the adjustment set? Answer from the
+"what changes by architecture" table in @sec-pat-architectures, in three short sentences.
+:::
+
+::: {#exr-pat-additivity}
+**Conditional additivity on three scales.** Verify @lem-pat-conditional-additivity,
+$\tau^g_{AB}(x)=\tau^g_{AC}(x)-\tau^g_{BC}(x)$, directly for the identity, log, and logit links, using the
+conditional risks of @exm-pat-anchored at $x=1$. Then explain in one sentence why the identity is purely
+algebraic and holds on every scale, even though the resulting marginal effects do not subtract the same way
+on a non-collapsible scale.
+:::
+
+::: {#exr-pat-bias-recompute}
+**A different imbalance.** In the setting of @exm-pat-anchored, change the target to
+$\Pr_{*}(X=1)=0.75$ (so $\mathcal P^{*}=\mathcal P_{BC}$, the two-study MAIC case). Recompute the target
+conditional risk difference $\Delta^{\mathrm{Cond,id}}_{AB}(\mathcal P^{*})$, the unadjusted Bucher
+estimand, and the adjusted estimand, and confirm that the adjusted estimand hits the target while the
+unadjusted one does not. Identify the value of $\Pr_{*}(X=1)$ at which the unadjusted Bucher estimand would
+happen to be unbiased, and explain why this is a numerical coincidence rather than a vindication of the
+unadjusted method.
+:::
+
+::: {#exr-pat-pv-cancellation}
+**Purely prognostic covariate.** Augment @exm-pat-anchored with a second binary covariate $W$ that is
+purely prognostic: set $\mu_t(x,w)=\mu_t(x)+0.1\,w$ for all three treatments. Show that $W$ is prognostic
+for every treatment but is not an effect modifier of any contrast on the identity scale, and verify
+numerically that omitting $W$ from the adjustment set leaves the anchored estimand unchanged even when $W$
+is imbalanced ($\Pr_{AC}(W=1)=0.2$, $\Pr_{*}(W=1)=0.8$). Then show that the *unanchored* estimand of
+$\mu_A$ alone does change, illustrating @thm-unanchored-paic-consistency and @lem-pat-em-not-pv.
+:::
+
+::: {#exr-pat-sema-identify}
+**Identification arithmetic under SEMA.** Suppose an IPD trial on $\{A,C\}$ yields $\gamma_A=-0.6$ and a
+shared interaction $\beta_2=0.5$ on a single covariate, and an AgD trial on $\{B,C\}$ reports an average
+conditional contrast $\tilde d_{BC}=-0.1$ at covariate mean $\bar x_{BC}=0.4$. Using
+@thm-shared-em-identifiability, find $\gamma_B$ and the target linear-predictor contrast $\gamma_A-\gamma_B$.
+Then show that if the true interaction for $B$ were $\beta_{2,B}=0.2\neq\beta_2$ (SEMA false) but unknown,
+the same AgD summary would be produced by a different $\gamma_B$, and compute the resulting error in
+$\gamma_A-\gamma_B$.
+:::
+
+::: {#exr-pat-scale-status}
+**Scale dependence both ways.** Construct conditional risks $\mu_0(x),\mu_1(x)$ for binary $x$ such that the
+covariate is an effect modifier on the identity scale but **not** on the logit scale (the reverse of
+@exm-scale-dependence-em). Prove that such a configuration requires the conditional risks to satisfy a
+specific algebraic constraint, and exhibit one explicit numerical solution.
+:::
+
+::: {#exr-pat-unanchored-bias}
+**($\star$) The unanchored bias formula.** Prove @eq-pat-unanchored-bias from first principles, and then
+specialize it to a single binary unadjusted prognostic variable $W$ with $\mu_A(x,w)=\alpha(x)+\rho\,w$,
+$\Pr_{\mathrm{src}}(W=1)=p$, $\Pr_{*}(W=1)=q$, showing the bias of the $A$ marginal mean equals
+$\rho\,(p-q)$. Explain why the corresponding term in an *anchored* comparison would be multiplied by zero,
+and connect this to @lem-pat-pv-cancellation. Discuss why this makes the unanchored adjustment set
+requirement of @thm-unanchored-paic-consistency practically far harder to satisfy than the anchored one.
+:::
+
+::: {#exr-pat-noncollapsible-target}
+**($\star$) Non-collapsibility obstructs marginal transport.** Using the conditional risks of @exm-pat-anchored,
+compute the marginal odds ratio of $A$ versus $B$ in three populations: $\Pr(X=1)\in\{0.25,0.50,0.75\}$.
+Show that the marginal log odds ratio changes across the three even though the conditional risks (hence the
+conditional odds ratios and the SEMA structure) are identical, and that the change is not a difference in
+covariate balance of any effect modifier but a pure non-collapsibility effect. Conclude that, on the odds-ratio
+scale, even a fully adjusted anchored comparison delivers a population-specific number, and relate this to
+part (c) of @thm-anchored-paic-consistency and to @thm-sema-insufficient.
+:::

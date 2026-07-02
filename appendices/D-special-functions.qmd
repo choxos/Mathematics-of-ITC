@@ -1,0 +1,1087 @@
+---
+title: "Special Functions for Numerical Integration"
+---
+
+The numerical machinery of multilevel network meta-regression (ML-NMR) rests on a small library of
+special functions, and the analytic shortcuts that occasionally rescue a closed form rest on the same
+library. This appendix is the proved reference for those functions. It collects, in one place and with
+full derivations, the four objects that Part V calls on repeatedly: the moment generating function of the
+normal, which closes the log-link aggregation integral of @thm-log-link-mgf; the error function, the
+analyst's name for the normal distribution function and the gateway to its series and tail expansions;
+Owen's $T$ function, which evaluates bivariate normal probabilities and, through them, the expected
+squared probit needed for probit-link aggregation; and the radical-inverse function, the arithmetic atom
+of the Sobol' sequences that drive the quasi-Monte Carlo (QMC) integration of @thm-hypercube-integration.
+Two further functions that arise in this circle of ideas, the one-probit and two-probit approximations to
+the logistic function, are derived here because they turn the otherwise non-elementary logit aggregation
+integral of @thm-logit-no-closed-form into an explicit, fast, and surprisingly accurate closed form.
+
+Everything is proved or derived. Where a result is established in the main text we cite it by slug and,
+when it sharpens the reference to restate the derivation, reprove it self-contained. Symbols follow
+[Notation](/notation.qmd): $\Phi$ and $\phi$ are the standard normal distribution and density functions,
+$\mathrm{expit}(z)=e^{z}/(1+e^{z})$ is the inverse logit (also called the logistic sigmoid), $\Phi^{-1}$ is the normal quantile function, and
+$M_X(\mathbf{t})=\mathbb{E}[e^{\mathbf{t}^\top X}]$ is the moment generating function of @def-mgf. Two
+standard facts of real analysis are used without proof: the Gaussian normalization
+$\int_{-\infty}^{\infty}e^{-t^{2}}\,dt=\sqrt{\pi}$ (equivalently $\int\phi=1$), proved by the polar-
+coordinates evaluation of its square, and differentiation under the integral sign, justified by dominated
+convergence (@thm-dominated-convergence) whenever a dominating integrable envelope is exhibited, which we
+do at each use.
+
+## How to use this appendix {#sec-sf-guide}
+
+*Scope, and what is deliberately left out.* This appendix is the proved reference for the five objects that
+the Part V integration machinery calls on: the normal moment generating function, the error function, Owen's
+$T$ function, the one- and two-probit approximations to the logistic, and the radical inverse behind the
+Sobol' point set. It is not a general catalogue of the special functions of statistics. The gamma function,
+its logarithm, the digamma function, and the beta function do appear in Part V, but only as the fixed
+normalizing constants of standard likelihoods, for example the log-gamma terms in the Poisson and binomial
+log-likelihoods of Chapters 21 and 25; they are classical, are not special to indirect comparison, and are
+not reproved here. Everything below, by contrast, is tied to a concrete ML-NMR integration task and is proved
+in full.
+
+*A concrete task to keep in mind.* Picture the setting the whole appendix serves. An aggregate-data (AgD)
+study arm reports an event count and a summary of its patients, say a mean and variance of age, but no
+individual records. The model has a link function $g$, and to predict this arm's event probability the model
+must average the individual probability $g^{-1}(\eta)$ over the arm's covariate distribution. The three
+regimes below are exactly the three ways that average can be computed, and each is the job of one group of
+functions in this appendix.
+
+| Function or object | Section | Feeds (chapter, result) | What it does for the average |
+|---|---|---|---|
+| Normal MGF | @sec-sf-mgf | Chapter 20, @thm-log-link-mgf (catalogue H.6) | gives the log-link average in exact closed form |
+| Error function $\operatorname{erf}$, $\operatorname{erfc}$ | @sec-sf-erf | Chapter 22, @thm-hypercube-integration and @thm-inverse-cdf | how software actually computes $\Phi$ and $\Phi^{-1}$ for every Sobol' node |
+| Owen's $T$ | @sec-sf-owen | Chapter 20 probit aggregation @prp-agg-probit-closed-form | supplies the probit second moment $\mathbb{E}[\Phi(\eta)^2]$ |
+| One- and two-probit approximation | @sec-sf-probit-logit | Chapter 22 logit aggregation @thm-logit-no-closed-form | a fast explicit approximation to the logit average |
+| Radical inverse, Sobol' construction | @sec-sf-sobol | Chapters 22 and 25, @thm-hypercube-integration | builds the low-discrepancy points for the general numerical average |
+
+Read the table as a decision tree for the averaging task: the log link is a closed form (the MGF); the
+probit link has a closed form for the first moment and an Owen's $T$ closed form for the second; the logit
+link has no closed form but an accurate explicit probit approximation; and every remaining case, including
+the survival and ordinal likelihood kernels of Chapter 25, is handled by Sobol' quasi-Monte Carlo, whose
+points are built from the radical inverse and pushed onto the covariate scale through $\Phi^{-1}$, that is,
+through $\operatorname{erf}^{-1}$. The sections are ordered from the easiest regime to the most general, and
+they rise in difficulty: the MGF section is short and gentle, the error-function section is moderate, Owen's
+$T$ is the hardest section and carries the Plackett partial differential equation, and the Sobol' section is
+moderate but dense with quasi-Monte Carlo (QMC) vocabulary. A reader who wants only the applied picture can
+take the closed forms and the worked examples from each section and leave the digital-net algebra of
+@sec-sf-sobol to software.
+
+## The moment generating function of the normal {#sec-sf-mgf}
+
+The moment generating function (MGF) of @def-mgf turns the average of an exponential into an algebraic
+expression. Because the log link sends a linear predictor $\eta$ to the mean $e^{\eta}$, and because a
+linear predictor in jointly normal covariates is itself normal, the aggregate mean on the log scale is
+the expectation of an exponential of a normal, that is, a normal MGF evaluated at $t=1$. This is the one
+nonlinear link for which ML-NMR has an exact closed form, and the MGF is the reason.
+
+The name "moment generating" comes from a fact we do not actually use but which explains the terminology:
+differentiating $M_X(t)=\mathbb{E}[e^{tX}]$ a total of $k$ times and setting $t=0$ returns the $k$-th moment
+$\mathbb{E}[X^{k}]$, because each derivative brings down one factor of $X$. We exploit the MGF for a different
+reason. The log link sets the mean equal to $e^{\eta}$, so an aggregate mean on the log scale is literally
+$\mathbb{E}[e^{W}]$ for the (normal) linear predictor $W$; that is the MGF evaluated at $t=1$, not a
+derivative at $t=0$. This is why the log link, alone among the common nonlinear links, yields a closed form:
+its inverse link is the exponential, and the exponential of a normal is exactly what the normal MGF
+integrates.
+
+::: {#thm-normal-mgf}
+## Moment generating function of the normal
+Let $X\sim\mathcal{N}(\mu,\sigma^{2})$ be univariate normal. Then the MGF of $X$ is finite for every
+$t\in\mathbb{R}$ and
+$$
+M_X(t)=\mathbb{E}\big[e^{tX}\big]=\exp\!\Big(\mu t+\tfrac12\sigma^{2}t^{2}\Big).
+$$ {#eq-sf-normal-mgf}
+More generally, let $\mathbf{X}\sim\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})$ be $p$-variate
+normal with $\boldsymbol{\Sigma}\succeq 0$ (positive semidefinite). Then for every $\mathbf{t}\in\mathbb{R}^{p}$,
+$$
+M_{\mathbf{X}}(\mathbf{t})=\mathbb{E}\big[e^{\mathbf{t}^\top\mathbf{X}}\big]
+=\exp\!\Big(\mathbf{t}^\top\boldsymbol{\mu}+\tfrac12\,\mathbf{t}^\top\boldsymbol{\Sigma}\,\mathbf{t}\Big).
+$$ {#eq-sf-mvn-mgf}
+:::
+
+::: {.proof}
+*Univariate case.* Fix $t\in\mathbb{R}$. Writing the density of $\mathcal{N}(\mu,\sigma^{2})$ and
+collecting the exponent,
+$$
+\mathbb{E}\big[e^{tX}\big]
+=\int_{-\infty}^{\infty}e^{tx}\,\frac{1}{\sqrt{2\pi}\,\sigma}\,
+e^{-\frac{(x-\mu)^{2}}{2\sigma^{2}}}\,dx
+=\frac{1}{\sqrt{2\pi}\,\sigma}\int_{-\infty}^{\infty}
+\exp\!\Big(-\frac{(x-\mu)^{2}-2\sigma^{2}tx}{2\sigma^{2}}\Big)\,dx .
+$$
+Complete the square in $x$. The numerator of the exponent is
+$$
+(x-\mu)^{2}-2\sigma^{2}tx
+=\big(x-(\mu+\sigma^{2}t)\big)^{2}-2\sigma^{2}t\mu-\sigma^{4}t^{2},
+$$
+which one verifies by expanding the completed square,
+$\big(x-(\mu+\sigma^{2}t)\big)^{2}=x^{2}-2\mu x-2\sigma^{2}tx+\mu^{2}+2\mu\sigma^{2}t+\sigma^{4}t^{2}$: then
+subtracting the two constants $2\sigma^{2}t\mu$ and $\sigma^{4}t^{2}$ cancels the final two terms and leaves
+$x^{2}-2\mu x-2\sigma^{2}tx+\mu^{2}=(x-\mu)^{2}-2\sigma^{2}tx$, the left side. Substituting and factoring out
+the constant terms,
+$$
+\mathbb{E}\big[e^{tX}\big]
+=e^{\mu t+\frac12\sigma^{2}t^{2}}\cdot
+\frac{1}{\sqrt{2\pi}\,\sigma}\int_{-\infty}^{\infty}
+e^{-\frac{(x-(\mu+\sigma^{2}t))^{2}}{2\sigma^{2}}}\,dx
+=e^{\mu t+\frac12\sigma^{2}t^{2}},
+$$
+the remaining integral being that of a $\mathcal{N}(\mu+\sigma^{2}t,\sigma^{2})$ density, which equals
+$1$. The expectation is finite for every $t$ because the integrand is a positive constant times a Gaussian
+density. This is @eq-sf-normal-mgf.
+
+*Multivariate case.* The law $\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})$ is defined in @def-mvn
+through exactly the MGF @eq-sf-mvn-mgf, so the statement is the consistency of that definition, which we
+reprove for reference. Let $\boldsymbol{\Sigma}^{1/2}$ be the symmetric positive semidefinite square root
+of $\boldsymbol{\Sigma}$ (@thm-spectral-theorem), let $\mathbf{Z}=(Z_1,\dots,Z_p)^\top$ have independent
+standard normal entries, and set $\mathbf{X}=\boldsymbol{\mu}+\boldsymbol{\Sigma}^{1/2}\mathbf{Z}$, which
+has mean $\boldsymbol{\mu}$ and, since $\boldsymbol{\Sigma}^{1/2}$ is symmetric with
+$\boldsymbol{\Sigma}^{1/2}\boldsymbol{\Sigma}^{1/2}=\boldsymbol{\Sigma}$, covariance
+$\boldsymbol{\Sigma}^{1/2}I_p\boldsymbol{\Sigma}^{1/2}=\boldsymbol{\Sigma}$.
+By independence and the univariate MGF $\mathbb{E}[e^{sZ_i}]=e^{s^{2}/2}$ from @eq-sf-normal-mgf,
+$$
+\mathbb{E}\big[e^{\mathbf{t}^\top\mathbf{X}}\big]
+=e^{\mathbf{t}^\top\boldsymbol{\mu}}\prod_{i=1}^{p}\mathbb{E}\big[e^{(\boldsymbol{\Sigma}^{1/2}\mathbf{t})_i Z_i}\big]
+=e^{\mathbf{t}^\top\boldsymbol{\mu}}\exp\!\Big(\tfrac12\big\|\boldsymbol{\Sigma}^{1/2}\mathbf{t}\big\|_2^{2}\Big)
+=\exp\!\Big(\mathbf{t}^\top\boldsymbol{\mu}+\tfrac12\mathbf{t}^\top\boldsymbol{\Sigma}\mathbf{t}\Big),
+$$
+using $\|\boldsymbol{\Sigma}^{1/2}\mathbf{t}\|_2^{2}=\mathbf{t}^\top\boldsymbol{\Sigma}^{1/2}\boldsymbol{\Sigma}^{1/2}\mathbf{t}=\mathbf{t}^\top\boldsymbol{\Sigma}\mathbf{t}$.
+This is @eq-sf-mvn-mgf, identical to @eq-mvn-mgf. $\square$
+:::
+
+*Reader's translation.* @eq-sf-normal-mgf says the average of $e^{tX}$ over a normal $X$ is itself an
+exponential, with the variance entering through the quadratic $\tfrac12\sigma^{2}t^{2}$. That single formula
+is the entire reason the log-link aggregate mean has a closed form; the next corollary reads it off at $t=1$.
+
+The aggregation payoff is immediate. An aggregate mean on the log scale is the expectation of an
+exponential of a linear predictor; when the covariates are jointly normal the linear predictor is normal,
+and @eq-sf-normal-mgf evaluates the expectation at $t=1$.
+
+::: {#cor-sf-log-link}
+## Closed-form log-link aggregation
+Let the inverse link be $g^{-1}(z)=e^{z}$ (the log link) and let the covariates in study $j$ be jointly
+normal, $X\sim\mathcal{N}(\bar{\mathbf{x}}_j,\boldsymbol{\Sigma}_j)$. Write
+$\boldsymbol{\beta}_{\mathrm{tot},k}=\boldsymbol{\beta}_1+\boldsymbol{\beta}_{2,k}$ for the total slope on
+arm $k$ and $W=\eta_{jk}(X)=\mu_j+\gamma_k+X^\top\boldsymbol{\beta}_{\mathrm{tot},k}$ for the linear
+predictor. Then $W\sim\mathcal{N}(m,v)$ with
+$$
+m=\mu_j+\gamma_k+\bar{\mathbf{x}}_j^\top\boldsymbol{\beta}_{\mathrm{tot},k},
+\qquad
+v=\boldsymbol{\beta}_{\mathrm{tot},k}^\top\boldsymbol{\Sigma}_j\,\boldsymbol{\beta}_{\mathrm{tot},k},
+$$
+and the aggregate mean is
+$$
+\theta_{\bullet jk}=\mathbb{E}\big[e^{W}\big]=M_W(1)=\exp\!\Big(m+\tfrac12 v\Big)
+=\theta^{\mathrm{naive}}_{\bullet jk}\cdot e^{\,v/2},
+\qquad
+\theta^{\mathrm{naive}}_{\bullet jk}=e^{m}.
+$$ {#eq-sf-log-link}
+This is the closed form @eq-agg-log-mgf of @thm-log-link-mgf; the multiplicative correction $e^{v/2}\ge 1$
+is the exact downward bias of the plug-in mean, with equality if and only if
+$\boldsymbol{\Sigma}_j\boldsymbol{\beta}_{\mathrm{tot},k}=\mathbf{0}$.
+:::
+
+::: {.proof}
+The linear predictor $W$ is an affine function of the normal vector $X$, hence univariate normal by the
+affine-image theorem @thm-mvn-linear, with the stated mean $m$ and variance
+$v=\boldsymbol{\beta}_{\mathrm{tot},k}^\top\boldsymbol{\Sigma}_j\boldsymbol{\beta}_{\mathrm{tot},k}$. The
+aggregate mean of @def-aggregate-model is $\theta_{\bullet jk}=\mathbb{E}[g^{-1}(W)]=\mathbb{E}[e^{W}]$,
+which is $M_W(1)$ by @def-mgf. Evaluating @eq-sf-normal-mgf at $t=1$ gives
+$M_W(1)=\exp(m+\tfrac12 v)$. Finally $e^{m+v/2}=e^{m}e^{v/2}=\theta^{\mathrm{naive}}_{\bullet jk}e^{v/2}$,
+and $v\ge 0$ because $\boldsymbol{\Sigma}_j\succeq 0$ (@thm-cov-psd), with $v=0$ exactly when
+$\boldsymbol{\beta}_{\mathrm{tot},k}$ lies in the null space of $\boldsymbol{\Sigma}_j$. $\square$
+:::
+
+::: {#exm-sf-log-link}
+## A multivariate log-link aggregate by hand
+Take two covariates, $X\sim\mathcal{N}(\bar{\mathbf{x}}_j,\boldsymbol{\Sigma}_j)$ with
+$\bar{\mathbf{x}}_j=(2,1)^\top$ and
+$\boldsymbol{\Sigma}_j=\left(\begin{smallmatrix}1&0.5\\0.5&2\end{smallmatrix}\right)$, total slope
+$\boldsymbol{\beta}_{\mathrm{tot},k}=(0.4,0.3)^\top$, and intercept-plus-treatment $\mu_j+\gamma_k=-1$.
+The mean linear predictor is
+$m=-1+\bar{\mathbf{x}}_j^\top\boldsymbol{\beta}_{\mathrm{tot},k}=-1+(2)(0.4)+(1)(0.3)=0.1$. The variance is
+the quadratic form
+$$
+v=\boldsymbol{\beta}_{\mathrm{tot},k}^\top\boldsymbol{\Sigma}_j\boldsymbol{\beta}_{\mathrm{tot},k}
+=(0.4,0.3)\begin{pmatrix}0.55\\0.80\end{pmatrix}=(0.4)(0.55)+(0.3)(0.80)=0.46,
+$$
+where $\boldsymbol{\Sigma}_j\boldsymbol{\beta}_{\mathrm{tot},k}=(0.55,0.80)^\top$. By @eq-sf-log-link the
+exact aggregate rate is $\theta_{\bullet jk}=e^{0.1+0.23}=e^{0.33}=1.3910$, against the plug-in
+$\theta^{\mathrm{naive}}_{\bullet jk}=e^{0.1}=1.1052$. The covariance off-diagonal enters only through $v$:
+the same margins with $\boldsymbol{\Sigma}_j$ diagonal would give $v=(0.16)(1)+(0.09)(2)=0.34$ and
+$\theta_{\bullet jk}=e^{0.27}=1.3100$, so the positive covariance inflates the aggregate by the factor
+$e^{(0.46-0.34)/2}=e^{0.06}=1.0618$. The MGF makes the dependence on the full covariance matrix exact and
+explicit. $\blacktriangleleft$
+:::
+
+## The error function {#sec-sf-erf}
+
+The normal distribution function has no elementary antiderivative, so numerical analysis works with a
+rescaled, standardized version of it called the error function. Software computes $\Phi$ and $\Phi^{-1}$
+through $\operatorname{erf}$ and $\operatorname{erf}^{-1}$, and the series and asymptotic expansions of the
+error function are the practical tools for evaluating tail probabilities and normal quantiles.
+
+This is not decorative. In the Chapter 22 integration pipeline every Sobol' node is a point $u\in(0,1)$ that
+must be pushed onto the covariate scale through the normal quantile $\Phi^{-1}(u)$ (the inverse-CDF transform
+of @thm-inverse-cdf), and $\Phi^{-1}$ is computed as $\sqrt{2}\,\operatorname{erf}^{-1}(2u-1)$. Every normal
+probability the fitted model reports, including the small tail probabilities that arise for rare events, is
+computed as an $\operatorname{erf}$ or $\operatorname{erfc}$ value. Stable evaluation of these functions is
+therefore part of what makes the integration numerically reliable, which is why they earn a section of their
+own rather than hiding inside a call to $\Phi$.
+
+::: {#def-error-function}
+## Error function and complementary error function
+The **error function** is
+$$
+\operatorname{erf}(x)=\frac{2}{\sqrt{\pi}}\int_{0}^{x}e^{-t^{2}}\,dt,\qquad x\in\mathbb{R},
+$$ {#eq-sf-erf-def}
+and the **complementary error function** is
+$\operatorname{erfc}(x)=1-\operatorname{erf}(x)=\dfrac{2}{\sqrt{\pi}}\displaystyle\int_{x}^{\infty}e^{-t^{2}}\,dt$.
+$\blacktriangleleft$
+:::
+
+*Reader's translation.* The error function is the normal distribution function in disguise: it integrates the
+same Gaussian bump $e^{-t^{2}}$, but centered at $0$, scaled so that $\operatorname{erf}(\pm\infty)=\pm1$,
+and measured from the center outward. The complement $\operatorname{erfc}=1-\operatorname{erf}$ is what you
+use when the interesting probability is a small tail, because it is computed directly instead of by
+subtracting two nearly equal numbers.
+
+::: {#prp-erf-phi}
+## The error function and the normal distribution function
+The error function is odd, $\operatorname{erf}(-x)=-\operatorname{erf}(x)$, with $\operatorname{erf}(0)=0$
+and $\operatorname{erf}(\pm\infty)=\pm 1$. It is related to the standard normal distribution function by
+$$
+\Phi(x)=\frac12\Big(1+\operatorname{erf}\!\big(x/\sqrt{2}\big)\Big)
+=\frac12\operatorname{erfc}\!\big(-x/\sqrt{2}\big),
+\qquad
+\operatorname{erf}(x)=2\Phi\!\big(x\sqrt{2}\big)-1,
+$$ {#eq-sf-erf-phi}
+and the quantile functions are related by
+$$
+\Phi^{-1}(p)=\sqrt{2}\,\operatorname{erf}^{-1}(2p-1),\qquad p\in(0,1).
+$$ {#eq-sf-erfinv-phiinv}
+The densities satisfy $\phi(x)=\frac{1}{\sqrt{2\pi}}e^{-x^{2}/2}$ and
+$\operatorname{erf}'(x)=\frac{2}{\sqrt{\pi}}e^{-x^{2}}$, consistent with @eq-sf-erf-phi by the chain rule.
+:::
+
+::: {.proof}
+Oddness is immediate from @eq-sf-erf-def, since $t\mapsto e^{-t^{2}}$ is even, so reversing the sign of the
+upper limit reverses the sign of the integral; $\operatorname{erf}(0)=0$ is the empty integral, and
+$\operatorname{erf}(+\infty)=\frac{2}{\sqrt{\pi}}\int_0^\infty e^{-t^2}\,dt=\frac{2}{\sqrt\pi}\cdot\frac{\sqrt\pi}{2}=1$
+by the Gaussian normalization, with $\operatorname{erf}(-\infty)=-1$ by oddness.
+
+For @eq-sf-erf-phi, start from $\Phi(x)=\int_{-\infty}^{x}\phi(u)\,du=\frac12+\int_{0}^{x}\frac{1}{\sqrt{2\pi}}e^{-u^{2}/2}\,du$,
+the constant $\frac12$ being $\Phi(0)$ by the symmetry of $\phi$. Substitute $u=\sqrt{2}\,t$, so
+$du=\sqrt{2}\,dt$ and the upper limit becomes $x/\sqrt{2}$:
+$$
+\Phi(x)=\frac12+\int_{0}^{x/\sqrt{2}}\frac{1}{\sqrt{2\pi}}e^{-t^{2}}\sqrt{2}\,dt
+=\frac12+\frac{1}{\sqrt{\pi}}\int_{0}^{x/\sqrt{2}}e^{-t^{2}}\,dt
+=\frac12+\frac12\operatorname{erf}\!\big(x/\sqrt{2}\big),
+$$
+using $\frac{1}{\sqrt\pi}=\frac12\cdot\frac{2}{\sqrt\pi}$ to recognize @eq-sf-erf-def. This is the first
+equality of @eq-sf-erf-phi; the second is $\operatorname{erf}=1-\operatorname{erfc}$ together with
+oddness, and inverting $p=\frac12(1+\operatorname{erf}(x/\sqrt2))$ for $x$ gives @eq-sf-erfinv-phiinv. The
+density identity $\operatorname{erf}'(x)=\frac{2}{\sqrt\pi}e^{-x^{2}}$ is the fundamental theorem of
+calculus applied to @eq-sf-erf-def, and differentiating @eq-sf-erf-phi reproduces
+$\phi(x)=\frac{1}{\sqrt 2}\cdot\frac12\operatorname{erf}'(x/\sqrt2)=\frac{1}{\sqrt{2\pi}}e^{-x^{2}/2}$. $\square$
+:::
+
+::: {.remark}
+**What the error function does in health statistics.** Every normal probability a health technology
+assessment (HTA) reports is an error-function value in disguise. Three tasks recur.
+
+| Health-statistics task | Function used |
+|---|---|
+| a normal $p$-value or a confidence-limit tail | $\Phi$, $\operatorname{erfc}$ |
+| turning a Sobol' uniform $u$ into a normal covariate | $\Phi^{-1}$, hence $\operatorname{erf}^{-1}$ |
+| avoiding numerical underflow in an extreme tail | $\operatorname{erfc}$ or $\operatorname{erfcx}$ |
+
+For a concrete instance, the familiar two-sided $95\%$ cutoff $1.96$ satisfies, by @eq-sf-erf-phi,
+$\Phi(1.96)=\tfrac12\big(1+\operatorname{erf}(1.96/\sqrt2)\big)=\tfrac12\big(1+\operatorname{erf}(1.3859)\big)=\tfrac12(1+0.9500)=0.9750$,
+and the upper tail is
+$1-\Phi(1.96)=\tfrac12\operatorname{erfc}(1.3859)=\tfrac12(0.0500)=0.0250$. The tail form earns its keep far
+out: $1-\Phi(10)=\tfrac12\operatorname{erfc}(10/\sqrt2)\approx 7.6\times10^{-24}$ is returned accurately by
+$\operatorname{erfc}$, whereas forming $\Phi(10)\approx 1$ first and subtracting would return $0$ by
+cancellation. This is the sense in which the tail-safe functions are part of the pipeline, not an ornament.
+$\blacktriangleleft$
+:::
+
+For evaluation one needs a convergent series near the origin and an asymptotic expansion in the tail. Both
+follow from @eq-sf-erf-def by elementary calculus.
+
+::: {#prp-erf-expansions}
+## Series and tail expansions
+The error function has the everywhere-convergent Maclaurin series
+$$
+\operatorname{erf}(x)=\frac{2}{\sqrt{\pi}}\sum_{n=0}^{\infty}\frac{(-1)^{n}x^{2n+1}}{n!\,(2n+1)}
+=\frac{2}{\sqrt{\pi}}\Big(x-\frac{x^{3}}{3}+\frac{x^{5}}{10}-\frac{x^{7}}{42}+\cdots\Big),
+$$ {#eq-sf-erf-series}
+and the complementary error function has the asymptotic expansion, as $x\to+\infty$,
+$$
+\operatorname{erfc}(x)=\frac{e^{-x^{2}}}{x\sqrt{\pi}}\Big(1-\frac{1}{2x^{2}}+\frac{3}{4x^{4}}-\cdots\Big),
+$$ {#eq-sf-erfc-asymptotic}
+which translates, through @eq-sf-erf-phi, into the normal-tail statement (the Mills ratio is the
+tail-to-density ratio $(1-\Phi(x))/\phi(x)$)
+$1-\Phi(x)=\phi(x)\big(\tfrac{1}{x}-\tfrac{1}{x^{3}}+\tfrac{3}{x^{5}}-\cdots\big)$ as $x\to+\infty$, so in
+particular $1-\Phi(x)\sim\phi(x)/x$, where the symbol $\sim$ means the ratio of the two sides tends to $1$.
+:::
+
+::: {.proof}
+The series @eq-sf-erf-series is the termwise integration of the everywhere-convergent power series
+$e^{-t^{2}}=\sum_{n\ge0}(-1)^{n}t^{2n}/n!$, legitimate because the series converges uniformly on every
+bounded interval; integrating $t^{2n}$ from $0$ to $x$ gives $x^{2n+1}/(2n+1)$ and the factor
+$\frac{2}{\sqrt\pi}$ from @eq-sf-erf-def.
+
+For @eq-sf-erfc-asymptotic, integrate by parts in
+$\operatorname{erfc}(x)=\frac{2}{\sqrt\pi}\int_x^\infty e^{-t^{2}}\,dt$, writing
+$e^{-t^{2}}=\frac{1}{-2t}\,\frac{d}{dt}e^{-t^{2}}$:
+$$
+\int_x^\infty e^{-t^{2}}\,dt
+=\Big[-\frac{e^{-t^{2}}}{2t}\Big]_x^\infty-\int_x^\infty\frac{e^{-t^{2}}}{2t^{2}}\,dt
+=\frac{e^{-x^{2}}}{2x}-\frac12\int_x^\infty\frac{e^{-t^{2}}}{t^{2}}\,dt .
+$$
+Iterating the same step on the remainder integral generates the alternating series in inverse powers of
+$x$; the expansion is asymptotic rather than convergent because the integrated-by-parts remainder, after
+$N$ steps, is bounded by a constant times $e^{-x^{2}}x^{-(2N+1)}$, which is smaller than the last retained
+term but does not tend to zero as $N\to\infty$ at fixed $x$. Multiplying by $\frac{2}{\sqrt\pi}$ gives
+@eq-sf-erfc-asymptotic. The Mills ratio statement is @eq-sf-erfc-asymptotic rewritten through
+$1-\Phi(x)=\frac12\operatorname{erfc}(x/\sqrt2)$ and $\phi(x)=\frac{1}{\sqrt{2\pi}}e^{-x^{2}/2}$:
+substituting $x\mapsto x/\sqrt2$ and simplifying $\frac12\cdot\frac{e^{-x^{2}/2}}{(x/\sqrt2)\sqrt\pi}=\frac{e^{-x^{2}/2}}{x\sqrt{2\pi}}=\phi(x)/x$
+identifies the leading term, and the subsequent coefficients follow likewise. $\square$
+:::
+
+::: {.remark}
+**Convergent versus asymptotic, and why the tail series is still useful.** The two expansions of
+@prp-erf-expansions behave oppositely. The Maclaurin series @eq-sf-erf-series is *convergent*: fix $x$, keep
+adding terms, and the partial sums approach $\operatorname{erf}(x)$ without limit, so more terms always mean
+more accuracy. The tail expansion @eq-sf-erfc-asymptotic is *asymptotic*: for a fixed large $x$ the terms
+first shrink, reach a smallest term, and then grow, so the series diverges if pushed too far. One uses it by
+stopping at the smallest term, which for large $x$ already gives extraordinary accuracy. The practical rule
+is: near the origin use the convergent series, in the tail truncate the asymptotic series at its smallest
+term. This is exactly how library routines for $\Phi$ and $\operatorname{erfc}$ switch regimes.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why software standardizes on $\operatorname{erf}$.** The change of variable $u=\sqrt2\,t$ that produced
+@eq-sf-erf-phi is the only difference between $\Phi$ and $\operatorname{erf}$: they are the same function
+up to an affine rescaling of the argument and the range. Numerical libraries implement
+$\operatorname{erf}$, $\operatorname{erfc}$, and $\operatorname{erf}^{-1}$ as primitives, often with the
+scaled complement $\operatorname{erfcx}(x)=e^{x^{2}}\operatorname{erfc}(x)$ to avoid overflow in the tail,
+and obtain $\Phi$, $1-\Phi$, and $\Phi^{-1}$ by @eq-sf-erf-phi and @eq-sf-erfinv-phiinv. Every appearance
+of $\Phi$ or $\Phi^{-1}$ in the ML-NMR pipeline of @thm-hypercube-integration, in the Gaussian copula
+@eq-qmc-gaussian-copula, and in the inverse-CDF transform @thm-inverse-cdf, is computed this way.
+$\blacktriangleleft$
+:::
+
+## Owen's $T$ function {#sec-sf-owen}
+
+The error function evaluates one-dimensional normal integrals. The two-dimensional analogue, the bivariate
+normal probability, has no reduction to a single error function; the irreducible new ingredient is Owen's
+$T$ function (@owen1956). We define it, give its probabilistic meaning, prove the bivariate normal
+probability identity that motivated Owen's tables, and then prove the identity for the expected squared
+normal distribution function that probit-link aggregation needs.
+
+Before the formal definition, here is the picture and the purpose, because both are easy to lose once the
+integral appears.
+
+*The picture.* Owen's $T$ measures the probability that a random point lands in a wedge. Take two independent
+standard normal draws $X$ and $Y$ and plot the point $(X,Y)$ in the plane. Owen's $T(h,a)$, for $h\ge 0$ and
+$a\ge 0$, is the chance that this point falls into the wedge bounded on the left by the vertical line at $h$
+and above by the ray $Y=aX$ through the origin, the region $\{X>h,\ 0<Y<aX\}$. So $h$ sets a vertical cutoff
+for the first variable and $a$ sets the slope of the sloped edge for the second: larger $h$ pushes the wedge
+to the right and shrinks it, larger $a$ tilts the sloped edge upward and enlarges it. The integral in the
+definition below is simply the analytic formula for the normal-probability content of that wedge.
+
+*The purpose.* We need this wedge because of probit aggregation. When the link is the probit, the aggregate
+binomial likelihood of an AgD arm depends on the response through both its mean and its variance, and a
+Bernoulli response with success probability $\Phi(\eta)$ has variance $\Phi(\eta)(1-\Phi(\eta))$. Averaging
+over the covariate distribution, the aggregate needs both the first moment $\mathbb{E}[\Phi(\eta)]$, which
+@prp-agg-probit-closed-form gives as a single $\Phi$, and the second moment $\mathbb{E}[\Phi(\eta)^{2}]$. That
+second moment turns out to be a bivariate normal probability, and Owen's $T$ is precisely the function that
+reduces a bivariate normal probability to a one-dimensional integral. This is why the error function, which
+handled one-dimensional normal integrals, cannot finish the job alone.
+
+*One analytic signpost.* Several proofs below differentiate under the integral sign, meaning they move a
+derivative inside an integral. This is a genuine theorem, not a formality: it is licensed whenever the
+integrand's derivative is bounded by a fixed integrable function (a dominating envelope), which we display at
+each use. A reader can treat each such step as permitted once the envelope is shown.
+
+::: {#def-owens-t}
+## Owen's $T$ function
+For $h\in\mathbb{R}$ and $a\in\mathbb{R}$, **Owen's $T$ function** is
+$$
+T(h,a)=\frac{1}{2\pi}\int_{0}^{a}\frac{\exp\!\big(-\tfrac12 h^{2}(1+x^{2})\big)}{1+x^{2}}\,dx .
+$$ {#eq-sf-owens-t-def}
+$\blacktriangleleft$
+:::
+
+Three structural facts are read directly off @eq-sf-owens-t-def: $T(h,0)=0$ for all $h$; $T(h,a)=T(-h,a)$,
+because the integrand depends on $h$ only through $h^{2}$, so $T(h,a)=T(|h|,a)$; and $T(h,-a)=-T(h,a)$ by
+reversing the limits. The next lemma gives the probabilistic content.
+
+::: {#lem-owens-t-representation}
+## Integral and probabilistic representation
+For all $h\in\mathbb{R}$ and $a\ge 0$,
+$$
+T(h,a)=\int_{h}^{\infty}\phi(x)\,\Big(\Phi(ax)-\tfrac12\Big)\,dx .
+$$ {#eq-sf-owens-t-rep}
+If moreover $h\ge 0$, then $T(h,a)$ is the probability that two independent standard normals
+$X,Y\sim\mathcal{N}(0,1)$ fall in the wedge $\{X>h,\ 0<Y<aX\}$:
+$$
+T(h,a)=P\big(X>h,\ 0<Y<aX\big),\qquad h\ge 0,\ a\ge 0 .
+$$ {#eq-sf-owens-t-prob}
+:::
+
+::: {.proof}
+Both sides of @eq-sf-owens-t-rep vanish at $a=0$: the left by $T(h,0)=0$, the right because
+$\Phi(0)-\frac12=0$. It therefore suffices to show their derivatives in $a$ agree for $a>0$. The left side,
+by the fundamental theorem of calculus applied to the upper limit of @eq-sf-owens-t-def,
+$$
+\partial_a T(h,a)=\frac{1}{2\pi}\,\frac{e^{-\frac12 h^{2}(1+a^{2})}}{1+a^{2}} .
+$$ {#eq-sf-owens-t-da}
+For the right side, differentiate under the integral (the integrand's $a$-derivative
+$\phi(x)\,x\,\phi(ax)$ is dominated by the integrable $|x|\phi(x)\cdot\frac{1}{\sqrt{2\pi}}$):
+$$
+\partial_a\int_h^\infty\phi(x)\big(\Phi(ax)-\tfrac12\big)\,dx
+=\int_h^\infty\phi(x)\,x\,\phi(ax)\,dx
+=\frac{1}{2\pi}\int_h^\infty x\,e^{-\frac12 x^{2}(1+a^{2})}\,dx .
+$$
+The last integral is elementary: an antiderivative of $x\,e^{-\frac12 x^{2}(1+a^{2})}$ is
+$-\frac{1}{1+a^{2}}e^{-\frac12 x^{2}(1+a^{2})}$, which vanishes at $+\infty$ and equals
+$-\frac{1}{1+a^{2}}e^{-\frac12 h^{2}(1+a^{2})}$ at $x=h$, for every real $h$. Hence the integral equals
+$\frac{1}{1+a^{2}}e^{-\frac12 h^{2}(1+a^{2})}$, and the derivative of the right side is
+$\frac{1}{2\pi}\frac{e^{-\frac12 h^{2}(1+a^{2})}}{1+a^{2}}$, matching @eq-sf-owens-t-da. The two sides of
+@eq-sf-owens-t-rep agree at $a=0$ and have equal derivatives, so they are equal for all $a\ge 0$.
+
+For @eq-sf-owens-t-prob with $h\ge 0$, observe that for $x>h\ge 0$ the inner probability
+$P(0<Y<ax)=\Phi(ax)-\Phi(0)=\Phi(ax)-\frac12$ is the genuine probability of the interval $(0,ax)$, so
+$$
+P(X>h,\ 0<Y<aX)=\int_h^\infty\phi(x)\,P(0<Y<ax)\,dx=\int_h^\infty\phi(x)\big(\Phi(ax)-\tfrac12\big)\,dx
+=T(h,a)
+$$
+by @eq-sf-owens-t-rep. (For $h<0$ the same integral @eq-sf-owens-t-rep remains valid as an analytic
+identity, but its integrand is negative on $(h,0)$ and it is no longer the probability of a wedge.) $\square$
+:::
+
+Two special values follow at once and will be needed below.
+
+::: {#lem-owens-t-special}
+## Special values of Owen's $T$
+For every $h\in\mathbb{R}$,
+$$
+T(h,1)=\tfrac12\,\Phi(h)\big(1-\Phi(h)\big),
+\qquad
+\lim_{a\to\infty}T(h,a)=\tfrac12\big(1-\Phi(|h|)\big).
+$$ {#eq-sf-owens-t-special}
+:::
+
+::: {.proof}
+Set $a=1$ in @eq-sf-owens-t-rep: $T(h,1)=\int_h^\infty\phi(x)\big(\Phi(x)-\tfrac12\big)\,dx
+=\int_h^\infty\phi(x)\Phi(x)\,dx-\tfrac12\int_h^\infty\phi(x)\,dx$. In the first integral,
+$\frac{d}{dx}\big[\tfrac12\Phi(x)^{2}\big]=\Phi(x)\phi(x)$, so
+$\int_h^\infty\phi\Phi=\tfrac12\Phi(x)^{2}\big|_h^\infty=\tfrac12\big(1-\Phi(h)^{2}\big)$; the second is
+$\tfrac12\big(1-\Phi(h)\big)$. Subtracting,
+$T(h,1)=\tfrac12(1-\Phi(h)^{2})-\tfrac12(1-\Phi(h))=\tfrac12\Phi(h)\big(1-\Phi(h)\big)$. For the limit, use
+$T(h,a)=T(|h|,a)$ and @eq-sf-owens-t-prob with $|h|\ge 0$: as $a\to\infty$ the wedge $\{X>|h|,0<Y<aX\}$
+increases to $\{X>|h|,Y>0\}$, whose probability is $P(X>|h|)P(Y>0)=\big(1-\Phi(|h|)\big)\cdot\tfrac12$ by
+independence. $\square$
+:::
+
+The bridge from Owen's $T$ to bivariate normal probabilities is a classical partial differential equation
+for the bivariate normal density, due to Plackett: the density's derivative in the correlation equals its
+mixed second derivative in the two coordinates.
+
+Why differentiate in the correlation $\rho$? Because it lets us build the bivariate probability we want out
+of a case we already know. At $\rho=0$ the two coordinates are independent and the joint probability
+factorizes into $\Phi(\lambda)^{2}$; at the target $\rho$ it is the quantity we are after. Sliding $\rho$
+continuously from $0$ to its target and accumulating the change reduces the unknown probability to an
+integral of its $\rho$-derivative. Plackett's identity @eq-sf-biv-pde is what makes this tractable: it says
+that $\rho$-derivative is nothing but the corner value of the density, a quantity we can write down
+explicitly. The lemma is the engine; the theorem after it turns the crank.
+
+::: {#lem-bivariate-normal-pde}
+## The correlation heat equation for the bivariate normal
+Let $f(x,y;\rho)=\dfrac{1}{2\pi\sqrt{1-\rho^{2}}}\exp\!\Big(-\dfrac{x^{2}-2\rho xy+y^{2}}{2(1-\rho^{2})}\Big)$
+be the standard bivariate normal density with correlation $\rho\in(-1,1)$. Then
+$$
+\frac{\partial f}{\partial\rho}=\frac{\partial^{2} f}{\partial x\,\partial y}.
+$$ {#eq-sf-biv-pde}
+:::
+
+::: {.proof}
+Write $D=1-\rho^{2}$, $Q=x^{2}-2\rho xy+y^{2}$, and $g=e^{-Q/(2D)}$, so $f=(2\pi)^{-1}D^{-1/2}g$. For the
+right side, $\partial_x g=g\cdot\big(-(x-\rho y)/D\big)$ and then
+$$
+\partial_y\partial_x g
+=g\Big(-\tfrac{y-\rho x}{D}\Big)\Big(-\tfrac{x-\rho y}{D}\Big)+g\cdot\tfrac{\rho}{D}
+=g\Big[\tfrac{(x-\rho y)(y-\rho x)}{D^{2}}+\tfrac{\rho}{D}\Big],
+$$
+so $\partial_x\partial_y f=(2\pi)^{-1}D^{-1/2}g\big[(x-\rho y)(y-\rho x)/D^{2}+\rho/D\big]$. For the left
+side, $\partial_\rho D^{-1/2}=\rho D^{-3/2}$ and, since $\partial_\rho Q=-2xy$,
+$\partial_\rho g=g\,\partial_\rho(-Q/2D)=g\big(xy/D-\rho Q/D^{2}\big)$, whence
+$\partial_\rho f=(2\pi)^{-1}D^{-1/2}g\big[\rho/D+xy/D-\rho Q/D^{2}\big]$. The two expressions agree if and
+only if $xyD-\rho Q=(x-\rho y)(y-\rho x)$. Expanding both sides,
+$$
+(x-\rho y)(y-\rho x)=(1+\rho^{2})xy-\rho(x^{2}+y^{2}),\qquad
+xyD-\rho Q=(1-\rho^{2})xy-\rho(x^{2}-2\rho xy+y^{2})=(1+\rho^{2})xy-\rho(x^{2}+y^{2}),
+$$
+which are equal. $\square$
+:::
+
+We can now prove the bivariate normal probability identity on the diagonal, which is exactly the case
+probit aggregation requires.
+
+::: {#thm-owens-t-identity}
+## Bivariate normal probability via Owen's $T$
+Let $(V_1,V_2)$ be standard bivariate normal with correlation $\rho\in(-1,1)$, and let $\lambda\in\mathbb{R}$.
+Then
+$$
+P\big(V_1\le\lambda,\ V_2\le\lambda\big)
+=\Phi(\lambda)-2\,T\!\Big(\lambda,\ \sqrt{\tfrac{1-\rho}{1+\rho}}\Big).
+$$ {#eq-sf-owens-t-identity}
+:::
+
+*Roadmap for the proof.* The strategy is the deformation just described. Both sides are checked to agree at
+$\rho=0$ (the independent base case, where the probability is $\Phi(\lambda)^{2}$), and then both sides are
+shown to have the same derivative in $\rho$. Two functions that start equal and change at the same rate stay
+equal, so they coincide for every $\rho$. The one technical point is a change of variable
+$a(\rho)=\sqrt{(1-\rho)/(1+\rho)}$ that carries $\rho$ into the second argument of $T$; the checkpoint
+$1+a(\rho)^{2}=2/(1+\rho)$ is what makes the algebra collapse.
+
+::: {.proof}
+Write $\Psi(\rho)=P(V_1\le\lambda,V_2\le\lambda)=\int_{-\infty}^{\lambda}\int_{-\infty}^{\lambda}f(x,y;\rho)\,dx\,dy$
+for fixed $\lambda$. Differentiating in $\rho$ and using @eq-sf-biv-pde,
+$$
+\Psi'(\rho)=\int_{-\infty}^{\lambda}\int_{-\infty}^{\lambda}\partial_\rho f\,dx\,dy
+=\int_{-\infty}^{\lambda}\int_{-\infty}^{\lambda}\partial_x\partial_y f\,dx\,dy
+=f(\lambda,\lambda;\rho),
+$$
+the double integral of the mixed derivative collapsing by the fundamental theorem of calculus in each
+variable, since $f$ and its first derivatives vanish as either argument tends to $-\infty$. Evaluating the
+density on the diagonal, with $x^{2}-2\rho xy+y^{2}=2\lambda^{2}(1-\rho)$ at $x=y=\lambda$ and
+$1-\rho^{2}=(1-\rho)(1+\rho)$,
+$$
+f(\lambda,\lambda;\rho)=\frac{1}{2\pi\sqrt{1-\rho^{2}}}\exp\!\Big(-\frac{2\lambda^{2}(1-\rho)}{2(1-\rho^{2})}\Big)
+=\frac{1}{2\pi\sqrt{1-\rho^{2}}}\,e^{-\lambda^{2}/(1+\rho)} .
+$$ {#eq-sf-biv-diagonal}
+At $\rho=0$ the coordinates are independent, so $\Psi(0)=\Phi(\lambda)^{2}$, and by
+@eq-sf-owens-t-special the base case can be written
+$\Psi(0)=\Phi(\lambda)-2T(\lambda,1)$, since $2T(\lambda,1)=\Phi(\lambda)(1-\Phi(\lambda))$ gives
+$\Phi(\lambda)-2T(\lambda,1)=\Phi(\lambda)\Phi(\lambda)=\Phi(\lambda)^2$. Define
+$a(\rho)=\sqrt{(1-\rho)/(1+\rho)}$, a decreasing bijection from $(-1,1)$ onto $(0,\infty)$ with $a(0)=1$.
+We claim $G(\rho):=\Phi(\lambda)-2T(\lambda,a(\rho))$ has the same derivative as $\Psi$ and the same value at
+$\rho=0$, hence equals $\Psi$ throughout.
+
+The value at $\rho=0$ matches by construction. For the derivative, by the chain rule and @eq-sf-owens-t-da,
+$$
+G'(\rho)=-2\,\partial_a T(\lambda,a)\big|_{a=a(\rho)}\,a'(\rho)
+=-2\cdot\frac{1}{2\pi}\frac{e^{-\frac12\lambda^{2}(1+a(\rho)^{2})}}{1+a(\rho)^{2}}\cdot a'(\rho).
+$$
+Now $1+a^{2}=1+\frac{1-\rho}{1+\rho}=\frac{2}{1+\rho}$, so $\frac12\lambda^{2}(1+a^{2})=\frac{\lambda^{2}}{1+\rho}$
+and $\frac{1}{1+a^{2}}=\frac{1+\rho}{2}$. Differentiating $a(\rho)^{2}=(1-\rho)/(1+\rho)$ gives
+$2a\,a'=\frac{-(1+\rho)-(1-\rho)}{(1+\rho)^{2}}=\frac{-2}{(1+\rho)^{2}}$, so
+$a'(\rho)=\frac{-1}{a(1+\rho)^{2}}$ with $a=\sqrt{(1-\rho)/(1+\rho)}$, that is
+$a'(\rho)=\frac{-1}{(1+\rho)^{2}}\sqrt{\frac{1+\rho}{1-\rho}}=\frac{-1}{(1+\rho)^{3/2}(1-\rho)^{1/2}}=\frac{-1}{(1+\rho)\sqrt{1-\rho^{2}}}$.
+Substituting,
+$$
+G'(\rho)=-\frac{1}{\pi}\,e^{-\lambda^{2}/(1+\rho)}\cdot\frac{1+\rho}{2}\cdot\frac{-1}{(1+\rho)\sqrt{1-\rho^{2}}}
+=\frac{1}{2\pi\sqrt{1-\rho^{2}}}\,e^{-\lambda^{2}/(1+\rho)}=f(\lambda,\lambda;\rho)=\Psi'(\rho),
+$$
+matching @eq-sf-biv-diagonal. Since $G$ and $\Psi$ agree at $\rho=0$ and have equal derivatives on
+$(-1,1)$, they are equal, which is @eq-sf-owens-t-identity. $\square$
+:::
+
+::: {.remark}
+**Where this identity is used, and where it is not.** @eq-sf-owens-t-identity is the workhorse behind the
+probit second moment of the next theorem, and it is the right tool whenever one needs an analytic bivariate
+normal probability, for instance to check a probit-link fit by hand. It is not needed to generate the
+quasi-Monte Carlo covariate nodes of Chapter 22: sampling from a Gaussian copula requires only the marginal
+quantile $\Phi^{-1}$, not the bivariate distribution function, so ML-NMR fitting never evaluates the full
+copula CDF. The identity explains and checks the bivariate object; it does not sit on the sampling path.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**The general Owen reduction.** Off the diagonal, the same differentiate-in-$\rho$ argument yields Owen's
+general formula for the standard bivariate normal distribution function $\Phi_2(h,k;\rho)=P(V_1\le h,V_2\le k)$,
+$$
+\Phi_2(h,k;\rho)=\tfrac12\Phi(h)+\tfrac12\Phi(k)
+-T\!\Big(h,\tfrac{k-\rho h}{h\sqrt{1-\rho^{2}}}\Big)
+-T\!\Big(k,\tfrac{h-\rho k}{k\sqrt{1-\rho^{2}}}\Big)-\varepsilon,
+$$ {#eq-sf-owen-general}
+where $\varepsilon=\tfrac12$ when exactly one of $h,k$ is negative and $\varepsilon=0$ otherwise; this is
+the identity that Owen's tables (@owen1956) tabulate, and @eq-sf-owens-t-identity is its specialization to
+$h=k=\lambda$, where the two $T$-terms coincide and $\varepsilon=0$. We use only the diagonal case, which
+we have proved in full; the general formula is stated for reference. $\blacktriangleleft$
+:::
+
+The probit-link aggregate likelihood needs not only the first moment of a probit response, the closed form
+$\mathbb{E}[\Phi(a+bZ)]=\Phi(a/\sqrt{1+b^{2}})$ of @prp-agg-probit-closed-form, but also its second
+moment, which Owen's $T$ supplies.
+
+::: {#thm-expected-squared-probit}
+## Expected squared normal distribution function
+Let $Z\sim\mathcal{N}(0,1)$ and let $a,b\in\mathbb{R}$. With $\lambda=a/\sqrt{1+b^{2}}$,
+$$
+\mathbb{E}\big[\Phi(a+bZ)^{2}\big]
+=\Phi(\lambda)-2\,T\!\Big(\lambda,\ \frac{1}{\sqrt{1+2b^{2}}}\Big).
+$$ {#eq-sf-expected-squared-probit}
+Consequently the variance contribution $\mathbb{E}[\Phi(a+bZ)(1-\Phi(a+bZ))]$, the response-scale
+Bernoulli variance averaged over the linear predictor, equals
+$\Phi(\lambda)-\mathbb{E}[\Phi(a+bZ)^{2}]=2\,T\big(\lambda,1/\sqrt{1+2b^{2}}\big)$.
+:::
+
+*Roadmap for the proof.* The key move is to read a squared probability as a joint probability. Since
+$\Phi(a+bZ)$ is itself the probability that a fresh standard normal $U$ falls below $a+bZ$, its square is the
+probability that two independent such draws $U_1,U_2$ both fall below $a+bZ$. Both comparisons share the same
+random threshold $a+bZ$, so once we average over $Z$ the two draws become correlated through their common
+dependence on $Z$. That turns $\mathbb{E}[\Phi(a+bZ)^{2}]$ into a bivariate normal probability, which
+@thm-owens-t-identity has already evaluated. In three words: square, condition, correlate.
+
+::: {.proof}
+Let $U_1,U_2,Z$ be independent standard normals. For fixed $Z$, the definition of $\Phi$ gives
+$\Phi(a+bZ)=P(U_i\le a+bZ\mid Z)$ for each $i$, and by conditional independence of $U_1,U_2$,
+$$
+\Phi(a+bZ)^{2}=P\big(U_1\le a+bZ,\ U_2\le a+bZ\mid Z\big).
+$$
+Taking expectations over $Z$ and rearranging the inequalities,
+$$
+\mathbb{E}\big[\Phi(a+bZ)^{2}\big]=P\big(U_1-bZ\le a,\ U_2-bZ\le a\big).
+$$
+The pair $(W_1,W_2)=(U_1-bZ,U_2-bZ)$ is bivariate normal with mean $\mathbf{0}$, equal variances
+$\mathrm{Var}(W_i)=1+b^{2}$, and covariance $\mathrm{Cov}(W_1,W_2)=b^{2}\,\mathrm{Var}(Z)=b^{2}$, hence
+correlation $\rho=b^{2}/(1+b^{2})$. Standardizing, $V_i=W_i/\sqrt{1+b^{2}}$ are standard normal with
+correlation $\rho$, and $P(W_1\le a,W_2\le a)=P(V_1\le\lambda,V_2\le\lambda)$ with
+$\lambda=a/\sqrt{1+b^{2}}$. By @thm-owens-t-identity,
+$$
+\mathbb{E}\big[\Phi(a+bZ)^{2}\big]=\Phi(\lambda)-2\,T\!\Big(\lambda,\sqrt{\tfrac{1-\rho}{1+\rho}}\Big).
+$$
+Finally $\dfrac{1-\rho}{1+\rho}=\dfrac{1-\frac{b^{2}}{1+b^{2}}}{1+\frac{b^{2}}{1+b^{2}}}=\dfrac{1}{1+2b^{2}}$,
+so $\sqrt{(1-\rho)/(1+\rho)}=1/\sqrt{1+2b^{2}}$, giving @eq-sf-expected-squared-probit. The variance
+statement follows by subtracting from the first moment $\mathbb{E}[\Phi(a+bZ)]=\Phi(\lambda)$ of
+@prp-agg-probit-closed-form. $\square$
+:::
+
+::: {#exm-sf-owen}
+## A probit second moment by hand
+Take $a=0.5$, $b=1$, so a probit linear predictor $\eta=0.5+Z$ with $Z\sim\mathcal{N}(0,1)$, that is
+$\eta\sim\mathcal{N}(0.5,1)$. The first moment is $\mathbb{E}[\Phi(\eta)]=\Phi(0.5/\sqrt{2})=\Phi(0.3536)=0.6382$
+by @prp-agg-probit-closed-form. For the second moment, $\lambda=0.5/\sqrt{2}=0.3536$ and
+$1/\sqrt{1+2}=1/\sqrt3=0.5774$, so by @eq-sf-expected-squared-probit
+$$
+\mathbb{E}\big[\Phi(\eta)^{2}\big]=\Phi(0.3536)-2\,T(0.3536,\,0.5774)=0.6382-2(0.0778)=0.4826 .
+$$
+The averaged Bernoulli variance is then $\mathbb{E}[\Phi(\eta)]-\mathbb{E}[\Phi(\eta)^{2}]=0.6382-0.4826=0.1556$,
+and the variance of the probit response itself is
+$\mathbb{E}[\Phi(\eta)^{2}]-\mathbb{E}[\Phi(\eta)]^{2}=0.4826-0.6382^{2}=0.4826-0.4073=0.0753$. Both numbers
+are exact closed forms in $\Phi$ and $T$; direct numerical integration of
+$\int\Phi(0.5+z)^{2}\phi(z)\,dz$ returns $0.4826$, confirming the identity. The Owen value itself is
+reproducible with standard tools: a Simpson's rule on the definition integral
+$T(h,a)=\frac{1}{2\pi}\int_{0}^{a} e^{-\frac12 h^{2}(1+x^{2})}/(1+x^{2})\,dx$ over $[0,0.5774]$ returns
+$0.0778$, as does the `T.Owen` function of the R package `sn`. $\blacktriangleleft$
+:::
+
+## Probit approximations to the logistic function {#sec-sf-probit-logit}
+
+The logit aggregation integral $J(m,\tau)=\mathbb{E}[\mathrm{expit}(m+\sqrt\tau\,Z)]$ of @eq-agg-logit-integral
+has no elementary closed form (@thm-logit-no-closed-form), whereas its probit sibling does, by the Gaussian
+probit integral @eq-limits-probit-integral. This asymmetry invites a strategy: approximate the logistic
+inverse-link $\mathrm{expit}$ by one or two probit terms, for each of which the aggregation integral
+collapses to a $\Phi$, and obtain a fast explicit approximation to $J$. We derive both the one-probit and
+the two-probit approximation.
+
+The two approximations share an exact representation that makes their structure transparent. The standard
+logistic distribution is a scale mixture of normals: there is a probability density $w(s)$ on $(0,\infty)$
+with $\mathrm{expit}(z)=\int_0^\infty\Phi(z/s)\,w(s)\,ds$. Approximating this mixture by a one-point or
+two-point rule, $\mathrm{expit}(z)\approx\sum_{i}\omega_i\Phi(\kappa_i z)$ with $\kappa_i=1/s_i$, is exactly
+the one-probit and two-probit construction. The mixture is motivation for the *shape* only, a positively
+weighted sum of probits; the density $w(s)$ is never needed, and the numbers below are not read off $w$ by
+quadrature but come from Taylor matching. We pin the nodes and weights not from $w$ directly but from the
+equivalent and elementary requirement that the approximation match the Taylor expansion of $\mathrm{expit}$
+at the origin. The expansion, obtained from $\mathrm{expit}(z)=\tfrac12\big(1+\tanh(z/2)\big)$ and the
+series $\tanh(x)=x-\tfrac{x^{3}}{3}+\tfrac{2x^{5}}{15}-\cdots$, is
+$$
+\mathrm{expit}(z)=\tfrac12+\tfrac{1}{4}z-\tfrac{1}{48}z^{3}+\tfrac{1}{480}z^{5}-\cdots,
+$$ {#eq-sf-expit-taylor}
+an odd function of $z$ about the value $\tfrac12$. The probit term has the matching odd expansion
+$\Phi(\kappa z)-\tfrac12=\tfrac{1}{\sqrt{2\pi}}\big(\kappa z-\tfrac{(\kappa z)^{3}}{6}+\tfrac{(\kappa z)^{5}}{40}-\cdots\big)$,
+from @eq-sf-erf-series through @eq-sf-erf-phi.
+
+::: {#thm-probit-logit-approximation}
+## One-probit approximation and one-probit logit aggregation
+Let $\kappa=\sqrt{\pi/8}=0.62666\ldots$ Then $\mathrm{expit}(z)\approx\Phi(\kappa z)$ is the unique
+one-probit approximation matching $\mathrm{expit}$ in value, first derivative, and second derivative at
+$z=0$; the constant $\kappa$ is fixed by the slope condition
+$$
+\kappa\,\phi(0)=\frac{\kappa}{\sqrt{2\pi}}=\mathrm{expit}'(0)=\frac14 .
+$$ {#eq-sf-one-probit-kappa}
+Substituting into the logit aggregation integral and applying the Gaussian probit integral
+@eq-limits-probit-integral gives the explicit one-probit aggregate
+$$
+J(m,\tau)=\mathbb{E}\big[\mathrm{expit}(m+\sqrt\tau\,Z)\big]
+\approx\Phi\!\Big(\frac{\kappa\,m}{\sqrt{1+\kappa^{2}\tau}}\Big).
+$$ {#eq-sf-one-probit-aggregate}
+:::
+
+::: {.proof}
+Both $\mathrm{expit}(z)-\tfrac12$ and $\Phi(\kappa z)-\tfrac12$ are odd, so they automatically agree in
+value at $0$ (both $\tfrac12$) and in every even derivative (all zero); matching is therefore a condition on
+the odd derivatives. The first-derivative match requires $\frac{d}{dz}\Phi(\kappa z)\big|_0=\kappa\phi(0)$
+to equal $\mathrm{expit}'(0)=\mathrm{expit}(0)(1-\mathrm{expit}(0))=\tfrac14$. Since $\phi(0)=1/\sqrt{2\pi}$,
+this is $\kappa/\sqrt{2\pi}=\tfrac14$, that is $\kappa=\sqrt{2\pi}/4=\sqrt{\pi/8}$, which is
+@eq-sf-one-probit-kappa; the second-derivative match is the vacuous identity $0=0$. For the aggregate,
+write $\eta=m+\sqrt\tau\,Z$ with $Z\sim\mathcal{N}(0,1)$ and substitute the approximation:
+$$
+J(m,\tau)\approx\mathbb{E}\big[\Phi(\kappa\,\eta)\big]=\mathbb{E}\big[\Phi(\kappa m+\kappa\sqrt\tau\,Z)\big]
+=\Phi\!\Big(\frac{\kappa m}{\sqrt{1+\kappa^{2}\tau}}\Big),
+$$
+applying @eq-limits-probit-integral with $a=\kappa m$, $b=\kappa\sqrt\tau$, and $Z\sim\mathcal{N}(0,1)$,
+for which $\mathbb{E}[\Phi(a+bZ)]=\Phi(a/\sqrt{1+b^{2}})$. This is @eq-sf-one-probit-aggregate. $\square$
+:::
+
+::: {.remark}
+**Accuracy and an alternative constant.** The slope-matched one-probit approximation
+$\mathrm{expit}(z)\approx\Phi(\sqrt{\pi/8}\,z)$ has maximum absolute error $0.0177$ over all $z$, attained
+in the shoulders near $|z|\approx 2$. If instead one minimizes the maximum error over $z$ rather than
+matching the slope, the optimal constant is $\kappa^{\star}\approx 0.5876$, with maximum error $0.0095$;
+this $\kappa^\star$ is the value tabulated in the logistic-versus-normal literature. The slope-matched
+$\kappa=\sqrt{\pi/8}$ is the natural choice for aggregation because it makes the approximation exact to
+second order at the center of the covariate distribution, where most of the integrating mass of
+@eq-sf-one-probit-aggregate sits, and because it is the constant used in @thm-logit-no-closed-form. The
+substitution is an approximation, not an identity; ML-NMR fits use exact numerical integration
+(@thm-hypercube-integration), and the probit form serves as a fast initializer and analytic check.
+$\blacktriangleleft$
+:::
+
+A single probit cannot reproduce the heavier tails of the logistic, which is the source of the residual
+$0.0177$ error. A second probit term, with its own scale, corrects the next odd order.
+
+::: {#prp-two-probit-logit}
+## Two-probit approximation and two-probit logit aggregation
+Seek $\mathrm{expit}(z)\approx\omega_1\Phi(\kappa_1 z)+\omega_2\Phi(\kappa_2 z)$ with
+$\omega_1+\omega_2=1$. Matching the Taylor coefficients @eq-sf-expit-taylor at orders $1$, $3$, and $5$
+gives the moment conditions
+$$
+\sum_{i}\omega_i\kappa_i=\frac{\sqrt{2\pi}}{4},\qquad
+\sum_{i}\omega_i\kappa_i^{3}=\frac{\sqrt{2\pi}}{8},\qquad
+\sum_{i}\omega_i\kappa_i^{5}=\frac{\sqrt{2\pi}}{12},
+$$ {#eq-sf-two-probit-moments}
+whose solution is
+$$
+\omega_1=0.7371,\quad\kappa_1=0.5191,\qquad
+\omega_2=0.2629,\quad\kappa_2=0.9282 .
+$$ {#eq-sf-two-probit-coeffs}
+The resulting approximation has maximum absolute error $0.0040$, a fourfold improvement on the one-probit
+rule, and yields the explicit two-probit aggregate
+$$
+J(m,\tau)\approx\sum_{i=1}^{2}\omega_i\,\Phi\!\Big(\frac{\kappa_i\,m}{\sqrt{1+\kappa_i^{2}\tau}}\Big).
+$$ {#eq-sf-two-probit-aggregate}
+:::
+
+::: {.proof}
+With $\omega_1+\omega_2=1$ the approximation is automatically exact in value at $0$. Subtracting $\tfrac12$
+from both sides and equating the odd Taylor coefficients of
+$\sum_i\omega_i\big(\Phi(\kappa_i z)-\tfrac12\big)=\frac{1}{\sqrt{2\pi}}\sum_i\omega_i\big(\kappa_i z-\tfrac{\kappa_i^{3}z^{3}}{6}+\tfrac{\kappa_i^{5}z^{5}}{40}-\cdots\big)$
+with those of @eq-sf-expit-taylor: the $z^{1}$ coefficient gives
+$\frac{1}{\sqrt{2\pi}}\sum_i\omega_i\kappa_i=\tfrac14$; the $z^{3}$ coefficient gives
+$\frac{1}{\sqrt{2\pi}}\sum_i\omega_i\kappa_i^{3}/6=\tfrac{1}{48}$; and the $z^{5}$ coefficient gives
+$\frac{1}{\sqrt{2\pi}}\sum_i\omega_i\kappa_i^{5}/40=\tfrac{1}{480}$. Clearing constants gives the three
+conditions @eq-sf-two-probit-moments. Together with $\omega_2=1-\omega_1$ this is a system of three
+equations in the three unknowns $(\omega_1,\kappa_1,\kappa_2)$; solving it numerically yields
+@eq-sf-two-probit-coeffs. This is a numerical construction, not a hand derivation: the system is nonlinear,
+one solves it with a standard root finder (for example Newton's method seeded near the one-probit constant
+$\kappa=\sqrt{\pi/8}$), and the real solution with $0<\kappa_1<\kappa_2$ is unique up to swapping the two
+labels. Substituting back confirms the three moment equations to the displayed
+precision. The maximum-error claim is verified by evaluating
+$|\mathrm{expit}(z)-\omega_1\Phi(\kappa_1 z)-\omega_2\Phi(\kappa_2 z)|$ on a fine grid, where the supremum
+is $0.0040$. The aggregate @eq-sf-two-probit-aggregate follows by linearity of expectation and applying
+@eq-sf-one-probit-aggregate to each term: with the approximation in hand,
+$J(m,\tau)\approx\sum_i\omega_i\mathbb{E}[\Phi(\kappa_i\eta)]=\sum_i\omega_i\Phi\big(\kappa_i m/\sqrt{1+\kappa_i^{2}\tau}\big)$. $\square$
+:::
+
+::: {#exm-sf-probit-logit}
+## Approximating the worked logit integral of Chapter 22
+The QMC worked example @exm-qmc-logit evaluates $J(0.5,1)=\int\mathrm{expit}(0.5+x)\phi(x)\,dx$, with
+high-accuracy reference value $0.6020$. The one-probit aggregate @eq-sf-one-probit-aggregate gives, with
+$\kappa=0.62666$ and $\kappa^{2}=0.39270$,
+$$
+J(0.5,1)\approx\Phi\!\Big(\frac{0.62666\cdot 0.5}{\sqrt{1+0.39270}}\Big)
+=\Phi\!\Big(\frac{0.31333}{1.18014}\Big)=\Phi(0.26550)=0.6047,
+$$
+an error of $+0.0027$. The two-probit aggregate @eq-sf-two-probit-aggregate gives
+$$
+J(0.5,1)\approx 0.7371\,\Phi\!\Big(\tfrac{0.5191\cdot0.5}{\sqrt{1+0.2695}}\Big)
++0.2629\,\Phi\!\Big(\tfrac{0.9282\cdot0.5}{\sqrt{1+0.8616}}\Big)
+=0.7371\,\Phi(0.23035)+0.2629\,\Phi(0.34020)=0.6022,
+$$
+an error of $+0.0002$, an order of magnitude smaller and indistinguishable from the QMC reference at the
+precision a health technology assessment reports. The two-probit closed form thus reproduces, with two
+evaluations of $\Phi$, the integral that @sec-qmc-example computes with a Sobol' net. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Two different error scales.** The maximum errors quoted above, $0.0177$ for one probit and $0.0040$ for
+two, are worst-case errors in $\mathrm{expit}(z)$ itself, pointwise on the probability scale and before any
+averaging. The error that actually matters for a fitted model is the error in the aggregate $J(m,\tau)$ after
+integrating over the covariate distribution, and it is typically smaller, because the pointwise overshoots
+and undershoots partly cancel under the average. The worked example makes this concrete: the one-probit
+pointwise maximum is $0.0177$, yet the one-probit aggregate error at $J(0.5,1)$ is only $0.0027$, and the
+two-probit aggregate error is $0.0002$. One caveat runs the other way. The matching is done at the center
+$z=0$, so the approximation is at its best for event probabilities near $\tfrac12$ and least accurate in the
+shoulders, which is worth remembering when the linear predictor sits far in a tail. $\blacktriangleleft$
+:::
+
+## Sobol' sequences and the radical inverse {#sec-sf-sobol}
+
+The Sobol' point set of @def-sobol-net is built coordinate by coordinate from a single arithmetic
+operation on the index $n$: the radical inverse, which reflects the base-$b$ digits of $n$ about the radix
+point. We define it, prove the exact equidistribution that makes its one-dimensional version (the van der
+Corput sequence) a low-discrepancy sequence, and then give the digital construction of the full Sobol'
+sequence through generating matrices over the field $\mathbb{F}_2$, of which the radical inverse is the
+identity-matrix case.
+
+*Why quasi-Monte Carlo at all.* The aggregation integrals of Part V are averages over a covariate
+distribution, and the honest way to compute a $d$-dimensional average with no closed form is to sample points
+and average the integrand. Independent random points (plain Monte Carlo) give a root-mean-square error of
+order $N^{-1/2}$ in the number of points $N$ (@thm-mc-rmse): to halve the error you must quadruple the
+sample. Sobol' points are chosen deterministically to be spread out rather than random, and they achieve an
+error of order $(\log N)^{d}/N$ (@thm-hypercube-integration), which for a fixed dimension beats $N^{-1/2}$ for
+all large $N$. In the low dimensions typical once ML-NMR reduces to a handful of effect-modifying covariates,
+this is often an order-of-magnitude gain at the same $N$, which is why the model integrates with Sobol'
+points and not random ones.
+
+*What to retain, and what software handles.* The rest of this section proves why the construction works, and
+it uses the vocabulary of digital nets: the field $\mathbb{F}_2=\{0,1\}$ with arithmetic modulo $2$ (where
+addition is the exclusive-or, $1\oplus1=0$), generating matrices, direction numbers, and primitive
+polynomials. For applied ML-NMR work almost none of this needs to be carried in the head. What to retain is
+the applied picture: Sobol' points fill the unit cube evenly, leaving no large empty region, so that after
+the inverse-CDF and copula transforms of Chapter 22 the covariate space is covered without gaps. The
+generating-matrix algebra below is implementation detail that established libraries, with the tabulated
+direction numbers of Joe and Kuo, handle once and for all. Read the proofs for understanding; you need not
+reimplement them. Finally, the same point set serves every Part V integrand without change: the integrand may
+be a mean (Chapter 20), a Bernoulli or binomial likelihood contribution, a censored survival likelihood
+$h^{\delta}S$, or an ordinal category probability (Chapter 25). The dimension $d$ is the number of integrated
+covariates, only the integrand changes, and the Sobol' machinery is the same throughout.
+
+::: {#def-radical-inverse}
+## Radical inverse and the van der Corput sequence
+Fix an integer base $b\ge 2$. Every nonnegative integer $n$ has a unique finite base-$b$ expansion
+$n=\sum_{\ell\ge 0}a_\ell(n)\,b^{\ell}$ with digits $a_\ell(n)\in\{0,1,\dots,b-1\}$. The **radical inverse**
+of $n$ in base $b$ is obtained by reflecting these digits about the radix point (the radix point is the
+base-$b$ analogue of the decimal point, the marker separating the integer digits from the fractional digits),
+$$
+\varphi_b(n)=\sum_{\ell\ge 0}a_\ell(n)\,b^{-\ell-1}\in[0,1).
+$$ {#eq-sf-radical-inverse}
+The **van der Corput sequence** in base $b$ is $\big(\varphi_b(n)\big)_{n\ge 0}$, and its base-$2$ instance
+is the first coordinate of the Sobol' sequence. $\blacktriangleleft$
+:::
+
+*Reader's translation.* In base $2$ the index $n=6=(110)_2$ has its digits reflected to $0.011_2=\tfrac14+\tfrac18=\tfrac38$.
+Feeding $n=1,2,3,\dots$ through $\varphi_2$ therefore lays down the points $\tfrac12,\tfrac14,\tfrac34,\tfrac18,\dots$,
+each new one dropped into the largest remaining gap. That is the whole idea of a low-discrepancy sequence:
+successive points avoid where the earlier ones already sit.
+
+::: {#prp-radical-inverse-net}
+## Exact equidistribution of the radical inverse
+Fix $b\ge 2$ and $m\ge 1$, and let $N=b^{m}$. The first $N$ radical-inverse points
+$\{\varphi_b(n):0\le n<b^{m}\}$ are exactly the $b^{m}$ left endpoints of the equal subintervals of length
+$b^{-m}$,
+$$
+\big\{\varphi_b(n):0\le n<b^{m}\big\}=\Big\{0,\ \tfrac{1}{b^{m}},\ \tfrac{2}{b^{m}},\ \dots,\ \tfrac{b^{m}-1}{b^{m}}\Big\}.
+$$ {#eq-sf-radical-net}
+Consequently this point set is a $(0,m,1)$-net in base $b$ in the sense of @def-sobol-net: every elementary
+interval $[c\,b^{-d},(c+1)b^{-d})$ with $0\le d\le m$ contains exactly $b^{m-d}$ of the points. Its star
+discrepancy (the largest mismatch between the fraction of points inside a box $[0,u)$ and the box's own
+length $u$, a single number measuring how unevenly the points are spread) is $D_N^{*}=b^{-m}=1/N$.
+:::
+
+::: {.proof}
+For $0\le n<b^{m}$ only the digits $a_0(n),\dots,a_{m-1}(n)$ can be nonzero, so by @eq-sf-radical-inverse
+$$
+\varphi_b(n)=\sum_{\ell=0}^{m-1}a_\ell(n)\,b^{-\ell-1}
+=b^{-m}\sum_{\ell=0}^{m-1}a_\ell(n)\,b^{\,m-1-\ell}=\frac{r(n)}{b^{m}},
+\qquad r(n):=\sum_{\ell=0}^{m-1}a_\ell(n)\,b^{\,m-1-\ell}.
+$$
+The map $n\mapsto r(n)$ replaces the digit string $(a_0,a_1,\dots,a_{m-1})$ by the integer with reversed
+digit string $(a_{m-1},\dots,a_1,a_0)$. Digit reversal is a bijection of the set of $m$-digit base-$b$
+strings onto itself, hence $n\mapsto r(n)$ is a bijection of $\{0,1,\dots,b^{m}-1\}$ onto itself. Therefore
+$\{\varphi_b(n):0\le n<b^{m}\}=\{r/b^{m}:0\le r<b^{m}\}$, which is @eq-sf-radical-net.
+
+For the net property, an elementary interval $[c\,b^{-d},(c+1)b^{-d})$ of length $b^{-d}$ with $d\le m$ is
+the union of exactly $b^{m-d}$ of the grid cells $[r b^{-m},(r+1)b^{-m})$, namely those with
+$c\,b^{m-d}\le r<(c+1)b^{m-d}$. Since @eq-sf-radical-net places exactly one point at each grid left
+endpoint $r/b^{m}$, the interval contains exactly $b^{m-d}$ points, which is $b^{t}$ with $t=0$; this is the
+defining property of a $(0,m,1)$-net (@def-sobol-net). For the star discrepancy, the local discrepancy
+$\Delta_N(u)=\frac1N\#\{n:\varphi_b(n)<u\}-u$ of the grid $\{r/N\}$ satisfies, for
+$u\in\big(\tfrac{j}{N},\tfrac{j+1}{N}\big]$, $\#\{r/N<u\}=j+1$ or $j$ depending on whether $u$ exceeds the
+right cell endpoint, so $|\Delta_N(u)|\le 1/N$, attained as $u\uparrow (j+1)/N$; hence
+$D_N^{*}=\sup_u|\Delta_N(u)|=1/N$ (@def-star-discrepancy). $\square$
+:::
+
+::: {.remark}
+**From the exact net to the sequence rate.** @prp-radical-inverse-net controls the point set of size
+exactly $N=b^{m}$. For an arbitrary truncation length $N$, not a power of $b$, the van der Corput sequence
+has star discrepancy $D_N^{*}=O\big((\log N)/N\big)$, the one-dimensional low-discrepancy rate; the proof
+decomposes $N$ into its base-$b$ digits and applies the exact-net bound on each dyadic block, the $\log N$
+factor counting the blocks. This is the $d=1$ case of the Sobol' rate $D_N^{*}=O((\log N)^{d}/N)$ quoted in
+@def-sobol-net, and it is realized in the seven-point worked example below. The contrast with the $N^{-1/2}$
+spread of independent uniform points (@thm-mc-rmse) is the quasi-Monte Carlo advantage. $\blacktriangleleft$
+:::
+
+The full Sobol' sequence replaces the digit-reversal of @eq-sf-radical-inverse, which is multiplication of
+the digit vector by the identity matrix, with multiplication by a carefully chosen matrix over
+$\mathbb{F}_2=\{0,1\}$, a different matrix per coordinate. This is the digital construction.
+
+::: {#def-sobol-construction}
+## Digital nets and the Sobol' generating matrices
+Work in base $b=2$ and identify a point $u\in[0,1)$ with its binary digit vector
+$u=\sum_{k\ge 1}y_k 2^{-k}$, $y_k\in\mathbb{F}_2$. For each coordinate $i=1,\dots,s$ fix a **generating
+matrix** $C_i\in\mathbb{F}_2^{\,w\times w}$ (entries in $\mathbb{F}_2$, with $w$ the working bit depth). The
+$i$-th coordinate of the $n$-th digital point is defined by carrying the binary digits of $n$ through
+$C_i$ with arithmetic over $\mathbb{F}_2$: writing $n=\sum_{\ell\ge 0}a_\ell(n)2^{\ell}$ and
+$\mathbf{a}(n)=(a_0(n),a_1(n),\dots)^\top$,
+$$
+\mathbf{y}^{(i)}=C_i\,\mathbf{a}(n)\ \ (\text{mod }2),\qquad
+u_{n,i}=\sum_{k\ge 1}y^{(i)}_k\,2^{-k}.
+$$ {#eq-sf-digital-point}
+Taking $C_i=I$ (the identity) recovers the radical inverse $u_{n,i}=\varphi_2(n)$ of @eq-sf-radical-inverse.
+The **Sobol' sequence** is the digital sequence whose $i$-th generating matrix $C_i$ has, as its columns,
+the binary expansions of the **direction numbers** $v_{i,\ell}=m_{i,\ell}2^{-\ell}$ (a fixed list of dyadic
+fractions, one per bit level $\ell$, that encodes how coordinate $i$ is scrambled) generated from a
+**primitive polynomial** over $\mathbb{F}_2$ (an irreducible polynomial whose root generates every nonzero
+element of a binary field, the standard device for producing a maximal-length binary recurrence) by the
+recurrence of @eq-qmc-sobol-point; with that choice @eq-sf-digital-point reproduces
+$u_{n,i}=\bigoplus_{\ell:\,a_\ell(n)=1}v_{i,\ell}$, the exclusive-or of the selected direction numbers.
+$\blacktriangleleft$
+:::
+
+::: {#exm-sf-digital-2d}
+## A four-point digital net in two dimensions
+The smallest example that shows "balanced in every box" beyond one dimension uses base $2$, resolution $m=2$,
+and $s=2$ coordinates, so $N=2^{2}=4$ points. Take the first coordinate to be the radical inverse,
+$C_1=I_2$, and the second to be generated by
+$$
+C_2=\begin{pmatrix}1&1\\0&1\end{pmatrix}\ \ (\text{over }\mathbb{F}_2).
+$$
+Running $n=0,1,2,3$ with index bits $\mathbf{a}(n)=(a_0,a_1)^\top$ through @eq-sf-digital-point gives the
+four points
+$$
+(0,0),\quad\Big(\tfrac12,\tfrac12\Big),\quad\Big(\tfrac14,\tfrac34\Big),\quad\Big(\tfrac34,\tfrac14\Big).
+$$
+This set is a $(0,2,2)$-net: every elementary box of area $2^{-2}=\tfrac14$ holds exactly one point. There
+are three shapes of such box, one per split $(d_1,d_2)$ of the two available resolution levels. The four
+vertical quarter-strips $[j/4,(j+1)/4)\times[0,1)$ each catch one point, because the $x$-coordinates are the
+four distinct quarters $\{0,\tfrac14,\tfrac12,\tfrac34\}$; the four horizontal strips likewise, because the
+$y$-coordinates are the same four quarters; and the four half-by-half boxes each catch one, as one checks by
+listing: $(0,0)$ and $(\tfrac14,\tfrac34)$ lie in the left half, $(\tfrac12,\tfrac12)$ and $(\tfrac34,\tfrac14)$
+in the right, with one high and one low in each. No box of area $\tfrac14$ is empty and none holds two: that
+is exactly the even coverage the rank condition of @prp-digital-net-rank guarantees, here because the row
+stack $\left(\begin{smallmatrix}1&0\\1&1\end{smallmatrix}\right)$ of the first row of $C_1$ over the first
+row of $C_2$, together with $C_1$ and $C_2$ themselves, are each full rank over $\mathbb{F}_2$.
+$\blacktriangleleft$
+:::
+
+::: {#prp-digital-net-rank}
+## The digital-net equidistribution condition
+Let a base-$2$ digital point set $\{(u_{n,1},\dots,u_{n,s}):0\le n<2^{m}\}$ be generated by matrices
+$C_1,\dots,C_s\in\mathbb{F}_2^{\,m\times m}$ as in @eq-sf-digital-point (using the low-order $m$ bits). The
+set is a $(t,m,s)$-net in base $2$ (every elementary interval of volume $2^{t-m}$ holds exactly $2^{t}$
+points) provided that for every choice of nonnegative integers $d_1,\dots,d_s$ with
+$d_1+\cdots+d_s=m-t$, the $(m-t)\times m$ matrix obtained by stacking the **first $d_i$ rows** of each $C_i$
+has rank $m-t$ over $\mathbb{F}_2$. For $s=1$ and $C_1=I$ the condition holds with $t=0$, recovering
+@prp-radical-inverse-net.
+:::
+
+::: {.proof}
+We prove the rank condition is sufficient; the $s=1$ identity case is then immediate and is exactly
+@prp-radical-inverse-net. Fix $d_1,\dots,d_s$ with $\sum_i d_i=m-t$ and consider the elementary interval
+$$
+E=\prod_{i=1}^{s}\big[c_i\,2^{-d_i},(c_i+1)2^{-d_i}\big),\qquad 0\le c_i<2^{d_i},
+$$
+of volume $2^{-(d_1+\cdots+d_s)}=2^{t-m}$. The condition $u_{n,i}\in[c_i 2^{-d_i},(c_i+1)2^{-d_i})$
+constrains exactly the leading $d_i$ binary digits $y^{(i)}_1,\dots,y^{(i)}_{d_i}$ of the $i$-th coordinate
+to equal the binary digits of $c_i$. By @eq-sf-digital-point each such digit $y^{(i)}_k$ is the inner
+product over $\mathbb{F}_2$ of the $k$-th row of $C_i$ with the index vector $\mathbf{a}(n)\in\mathbb{F}_2^{m}$.
+Collecting the $\sum_i d_i=m-t$ constrained digits over all coordinates gives a linear system
+$A\,\mathbf{a}(n)=\mathbf{c}\ (\text{mod }2)$, where $A\in\mathbb{F}_2^{(m-t)\times m}$ is precisely the
+stack of the first $d_i$ rows of each $C_i$ and $\mathbf{c}\in\mathbb{F}_2^{m-t}$ encodes the box
+$(c_1,\dots,c_s)$. By hypothesis $\mathrm{rank}(A)=m-t$, so $A$ is surjective and the solution set
+$\{\mathbf{a}\in\mathbb{F}_2^{m}:A\mathbf{a}=\mathbf{c}\}$ is an affine subspace of dimension
+$m-(m-t)=t$, containing exactly $2^{t}$ vectors. As $n$ ranges over $\{0,\dots,2^{m}-1\}$ the index vector
+$\mathbf{a}(n)$ ranges over all of $\mathbb{F}_2^{m}$ bijectively, so exactly $2^{t}$ indices $n$ land in
+$E$. Since the box $E$ was an arbitrary elementary interval of volume $2^{t-m}$, the point set is a
+$(t,m,s)$-net (@def-sobol-net). For $s=1$, $C_1=I_m$: any single $d_1=m$ selects the first $m$ rows of $I_m$,
+which is $I_m$, of rank $m=m-0$, so $t=0$ and the net is $(0,m,1)$, as in @prp-radical-inverse-net. $\square$
+:::
+
+::: {.remark}
+**What the rank condition buys, and where Sobol' directions come from.** @prp-digital-net-rank reduces the
+geometric demand of low discrepancy, exact balance in every dyadic box, to a linear-algebra demand on the
+generating matrices, full rank of every admissible row-stack over $\mathbb{F}_2$. The art of constructing a
+good Sobol' sequence is choosing the direction numbers so that the resulting matrices $C_i$ keep the net
+quality parameter $t$ small simultaneously across many coordinates and many resolutions $m$; the primitive-
+polynomial recurrence of @eq-qmc-sobol-point guarantees full rank within each single coordinate, and the
+tabulated initial direction numbers of Joe and Kuo (2008) optimize the joint two-dimensional projections.
+The whole apparatus serves the one purpose of @thm-hypercube-integration: a point set whose star
+discrepancy attains $O((\log N)^{d}/N)$, so that the Koksma-Hlawka bound @thm-koksma-hlawka delivers
+near-$1/N$ integration error for the aggregation integral. The same guarantee carries over unchanged when the
+integrand is a survival or ordinal likelihood kernel rather than a mean, which is the setting of Chapter 25:
+the points and the bound do not know what they are integrating. $\blacktriangleleft$
+:::
+
+::: {#exm-sf-vandercorput}
+## The seven-point van der Corput set
+Take $b=2$ and list $\varphi_2(n)$ for $n=1,\dots,7$ by reflecting binary digits about the radix point:
+$n=1=(1)_2\mapsto 0.1_2=\tfrac12$; $n=2=(10)_2\mapsto 0.01_2=\tfrac14$; $n=3=(11)_2\mapsto 0.11_2=\tfrac34$;
+$n=4=(100)_2\mapsto 0.001_2=\tfrac18$; and likewise $\tfrac58,\tfrac38,\tfrac78$ for $n=5,6,7$. As a set
+this is $\{\tfrac18,\tfrac28,\tfrac38,\tfrac48,\tfrac58,\tfrac68,\tfrac78\}$, the seven interior eighths,
+matching the worked Sobol' example of @sec-qmc-sobol. Its star discrepancy is $D_7^{*}=\tfrac18$: the
+largest gap between the empirical fraction $\frac1N\#\{\varphi_2(n)<u\}$ and $u$ occurs as $u\uparrow k/8$,
+where the fraction is $\frac{k-1}{7}$ against the volume $\frac{k}{8}$, and the maximum of
+$\big|\frac{k}{8}-\frac{k-1}{7}\big|$ over $k=1,\dots,7$ is $\tfrac18$ at $k=7$. This is close to $1/N$ and
+far below the $1/\sqrt7\approx 0.38$ typical of seven independent uniform draws, the discrepancy gap that
+@prp-radical-inverse-net explains and that drives the QMC error advantage of @thm-hypercube-integration.
+$\blacktriangleleft$
+:::
+
+## Notes and references {#sec-sf-notes}
+
+The moment generating function and the normal MGF @eq-sf-normal-mgf are developed in Chapter 4
+(@def-mgf, @def-mvn, @eq-mvn-mgf); the log-link aggregation corollary @cor-sf-log-link restates
+@thm-log-link-mgf of Chapter 20 (catalogue H.6), whose proof is the same MGF-at-$t=1$ computation. The
+log-normal mean $\mathbb{E}[e^{W}]=e^{m+v/2}$ is classical. The error function and its relation to $\Phi$
+are standard special-function material; the series @eq-sf-erf-series and the asymptotic expansion
+@eq-sf-erfc-asymptotic, with the Mills ratio $1-\Phi(x)\sim\phi(x)/x$, are in Abramowitz and Stegun,
+*Handbook of Mathematical Functions* (Chapter 7), and the integration-by-parts derivation given here is the
+textbook one.
+
+Owen's $T$ function, its tables, and the bivariate normal probability reduction @eq-sf-owen-general are due
+to @owen1956; the function @eq-sf-owens-t-def and the wedge representation @eq-sf-owens-t-prob are his. The
+correlation heat equation @eq-sf-biv-pde for the bivariate normal density is Plackett's identity (R. L.
+Plackett, *Biometrika* 1954); the differentiate-in-$\rho$ proof of the diagonal identity
+@eq-sf-owens-t-identity is the standard route and is given here in full. The expected-squared-probit
+identity @eq-sf-expected-squared-probit is the second-moment companion of the probit aggregation result
+@prp-agg-probit-closed-form of Chapter 20, which is itself the Gaussian probit integral
+@lem-limits-probit-integral of Chapter 16; the conditioning argument $\Phi(a+bZ)=P(U\le a+bZ\mid Z)$ is the
+same device used there.
+
+The probit approximations to the logistic function have a long history in psychometrics and in the
+logistic-versus-probit literature. The slope-matched constant $\kappa=\sqrt{\pi/8}$ of
+@thm-probit-logit-approximation is the one quoted in @thm-logit-no-closed-form; the maximum-error-optimal
+constant $\kappa^\star\approx 0.5876$ noted in the remark is from the approximation literature (Page,
+*Journal of Statistical Computation and Simulation* 1977). The scale-mixture viewpoint underlying the
+two-probit construction @prp-two-probit-logit, that the logistic distribution is a Gaussian scale mixture
+and that a two-point quadrature of the mixing law yields a sum of two probits, follows Monahan and
+Stefanski (in *Handbook of the Logistic Distribution*, 1992); the coefficients @eq-sf-two-probit-coeffs are
+derived here by Taylor matching and verified numerically, and the two-probit aggregate
+@eq-sf-two-probit-aggregate reproduces the Chapter 22 worked integral @exm-qmc-logit to four decimals.
+
+The radical inverse @eq-sf-radical-inverse and the van der Corput sequence are the base case of the
+low-discrepancy theory of Chapter 22; the exact-equidistribution result @prp-radical-inverse-net and its
+$(0,m,1)$-net reading are elementary and self-contained here, and the general digital-net rank condition
+@prp-digital-net-rank is the base-$2$ case of Niederreiter's theory of $(t,m,s)$-nets (Niederreiter,
+*Random Number Generation and Quasi-Monte Carlo Methods*, 1992, Chapter 4). The Sobol' construction
+@def-sobol-construction, the direction-number recurrence, and the discrepancy rate are from @sobol1967, with
+the modern direction tables of Joe and Kuo (2008); the construction is consistent with @def-sobol-net of
+Chapter 22, of which it is the generating-matrix formulation. None of the special-function material of this
+appendix is part of the Coq development, which formalizes the population-adjustment and causal core of the
+book and not the numerical-integration theory; no machine-checked tags are claimed.

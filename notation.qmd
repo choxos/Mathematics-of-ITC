@@ -1,0 +1,166 @@
+# Notation and Conventions {#sec-notation .unnumbered}
+
+This chapter is the single source of truth for the symbols used throughout the book. Symbols listed
+here are used in later chapters without reintroduction. The notation extends the system of the
+companion proof catalogue so that the two can be read together.
+
+## Conventions
+
+1. Bold lowercase letters such as $\mathbf{x}$ and $\boldsymbol{\beta}$ denote vectors. Bold uppercase
+letters such as $\mathbf{X}$ and $\boldsymbol{\Sigma}$ denote matrices. Plain letters denote scalars or
+abstract elements.
+2. Random variables are capitalized when the distinction from a realized value matters, as in $X$
+versus $x$. Vectors of random variables follow the same rule.
+3. Integrals $\int f(x)\,dx$ are taken over the natural domain, with respect to Lebesgue measure unless
+stated otherwise. For discrete covariates, sums replace integrals throughout.
+4. A probability statement without an explicit subscript refers to the population under discussion in
+the current section. When several populations are in play they are named explicitly.
+5. The word "effect" without qualification means the relative effect on the linear-predictor scale,
+that is, the contrast in the linear predictor $\eta$. The marginal versus conditional distinction and
+the identity-scale versus link-scale distinction are made explicit wherever they matter.
+6. The symbol $\square$ marks the end of a proof. The symbol $\blacktriangleleft$ marks the end of a
+definition, example, or remark when needed for clarity.
+7. A theorem with a machine-checked counterpart carries a tag of the form
+`[machine-checked: theories/File.v, Theorem name]`, referring to the companion Coq development.
+
+## Linear algebra and matrices
+
+| Symbol | Meaning |
+|---|---|
+| $\mathbb{R}, \mathbb{R}^n, \mathbb{R}^{m\times n}$ | reals, real $n$-vectors, real $m \times n$ matrices |
+| $V, W$ | vector spaces over $\mathbb{R}$ |
+| $\dim V$, $\mathrm{span}(S)$ | dimension of $V$, linear span of a set $S$ |
+| $\mathbf{e}_i$ | $i$-th standard basis vector |
+| $\mathbf{1}_n$, $\mathbf{0}_n$ | $n$-vectors of ones and of zeros |
+| $I_n$, $J_n = \mathbf{1}_n\mathbf{1}_n^\top$ | $n\times n$ identity, $n\times n$ all-ones matrix |
+| $A^\top$, $A^{-1}$, $A^{+}$ | transpose, inverse, Moore–Penrose pseudoinverse |
+| $\mathrm{rank}(A)$, $\det(A)$, $\mathrm{tr}(A)$ | rank, determinant, trace |
+| $\mathcal{C}(A)$, $\mathcal{N}(A)$ | column space and null space of $A$ |
+| $\langle \mathbf{x},\mathbf{y}\rangle = \mathbf{x}^\top\mathbf{y}$ | Euclidean inner product |
+| $\|\mathbf{x}\|_2 = \sqrt{\mathbf{x}^\top\mathbf{x}}$ | Euclidean norm; $\|\mathbf{x}\|_A=\sqrt{\mathbf{x}^\top A\,\mathbf{x}}$ a quadratic-form norm |
+| $P_{\mathcal{M}}$, $P^{\perp}_{\mathcal{M}}=I-P_{\mathcal{M}}$ | orthogonal projection onto subspace $\mathcal{M}$ and its complement |
+| $A \succeq 0$, $A \succ 0$ | positive semidefinite, positive definite |
+| $\lambda_i(A)$, $\sigma_i(A)$ | $i$-th eigenvalue, $i$-th singular value of $A$ |
+| $A = Q\Lambda Q^\top$, $A=U\Sigma V^\top$ | spectral decomposition, singular value decomposition |
+
+## Regression and least squares
+
+| Symbol | Meaning |
+|---|---|
+| $\mathbf{X} \in \mathbb{R}^{n\times p}$ | design (model) matrix; rows are observations, columns are regressors |
+| $\mathbf{y}$, $\hat{\mathbf{y}}$ | response vector, fitted values |
+| $\boldsymbol{\beta}$, $\hat{\boldsymbol{\beta}}$ | regression coefficient vector and its estimator |
+| $\boldsymbol{\varepsilon}$, $\mathbf{r}=\mathbf{y}-\hat{\mathbf{y}}$ | error vector, residual vector |
+| $H = \mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$ | hat matrix (orthogonal projection onto $\mathcal{C}(\mathbf{X})$) |
+| $M = I - H$ | residual maker (projection onto the orthogonal complement) |
+| $\mathrm{RSS}$, $\mathrm{TSS}$, $\mathrm{ESS}_{\mathrm{reg}}$ | residual, total, and explained sums of squares |
+| $\sigma^2$, $s^2$ | error variance and its unbiased estimator |
+| $R^2$ | coefficient of determination |
+
+The abbreviation $\mathrm{ESS}_{\mathrm{reg}}$ for the explained regression sum of squares is written
+with a subscript to distinguish it from the effective sample size $\mathrm{ESS}$ of weighting methods,
+defined below.
+
+## Probability and random variables
+
+| Symbol | Meaning |
+|---|---|
+| $(\Omega,\mathcal{F},P)$ | probability space: sample space, $\sigma$-algebra, probability measure |
+| $\mathbb{E}[X]$, $\mathbb{E}[X\mid Z]$ | expectation, conditional expectation |
+| $\mathrm{Var}(X)$, $\mathrm{Cov}(X,Y)$, $\boldsymbol{\Sigma}$ | variance, covariance, covariance matrix |
+| $X \perp Y \mid Z$ | conditional independence of $X$ and $Y$ given $Z$ |
+| $\mathcal{N}(\mu,\sigma^2)$, $\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})$ | univariate and $p$-variate normal |
+| $\mathrm{Bin}(n,p)$, $\mathrm{Poi}(\lambda)$, $\mathrm{Ber}(p)$ | binomial, Poisson, Bernoulli |
+| $\mathrm{PoBin}(\mathbf{p})$ | Poisson binomial with success-probability vector $\mathbf{p}$ |
+| $F_X$, $F_X^{-1}$ | cumulative distribution function and its generalized inverse (quantile) |
+| $\Phi$, $\phi$ | standard normal distribution function and density |
+| $M_X(\mathbf{t})=\mathbb{E}[e^{\mathbf{t}^\top X}]$ | moment generating function |
+| $\|\mu-\nu\|_{\mathrm{TV}}$ | total variation distance between measures $\mu$ and $\nu$ |
+| $\xrightarrow{p}$, $\xrightarrow{d}$, $\xrightarrow{\text{a.s.}}$ | convergence in probability, in distribution, almost surely |
+| $O_p$, $o_p$, $O(\cdot)$, $o(\cdot)$ | stochastic and deterministic order symbols |
+
+## Statistical inference
+
+| Symbol | Meaning |
+|---|---|
+| $L(\boldsymbol{\theta})$, $\ell(\boldsymbol{\theta})=\log L(\boldsymbol{\theta})$ | likelihood and log-likelihood |
+| $\mathbf{s}(\boldsymbol{\theta})=\nabla\ell(\boldsymbol{\theta})$ | score function |
+| $\mathcal{I}(\boldsymbol{\theta})$ | Fisher information matrix |
+| $\hat{\boldsymbol{\theta}}_{\mathrm{MLE}}$ | maximum likelihood estimator |
+| $\mathbb{V}$ | sandwich or robust variance estimator (M-estimation) |
+
+## Causal inference
+
+| Symbol | Meaning |
+|---|---|
+| $Y(0), Y(1)$ | potential outcomes under control and active treatment |
+| $T \in \{0,1\}$ | treatment indicator |
+| $Y = TY(1)+(1-T)Y(0)$ | observed outcome (consistency under SUTVA) |
+| $X \in \mathcal{X}$ | baseline covariates |
+| $e(x)=P(T=1\mid X=x)$ | propensity score |
+| $\mu_t(x)=\mathbb{E}[Y(t)\mid X=x]$ | conditional mean outcome under treatment $t$ |
+| $\tau(x)=\mu_1(x)-\mu_0(x)$ | conditional average treatment effect |
+| $\tau=\mathbb{E}[\tau(X)]$ | average treatment effect |
+| $S$ | study or population membership indicator (used in transportability) |
+
+## Studies, treatments, and populations
+
+| Symbol | Meaning |
+|---|---|
+| $j$ | study index, for example $j=AB,\,BC$ |
+| $k$ | treatment index, or arm |
+| $i$ | individual index within a study or arm |
+| $\mathcal{P}, \mathcal{P}^{*}$ | populations; a population is a distribution over $\mathcal{X}$, with density $f_{\mathcal{P}}$ |
+| $f_j(x)$, $F_j(x)$ | covariate density and distribution function in study $j$ |
+| $\bar{\mathbf{x}}_j=\int \mathbf{x}\,f_j(x)\,dx$, $\boldsymbol{\Sigma}_j$ | covariate mean and covariance in study $j$ |
+| $d_{ab(\mathcal{P})}$ | marginal relative effect of treatment $b$ versus $a$ in population $\mathcal{P}$ on a stated scale |
+| $\hat d_{ab(j)}$ | estimator of $d_{ab}$ from study $j$ |
+| $\delta_{j,\,t_1 t_k}$ | study-$j$ contrast of treatment $t_k$ versus $t_1$ |
+
+## Outcome models and likelihoods
+
+| Symbol | Meaning |
+|---|---|
+| $g$, $g^{-1}$ | link function and its inverse |
+| $\eta_{ijk}$ | linear predictor for individual $i$ in study $j$ on arm $k$ |
+| $\theta_{ijk}=g^{-1}(\eta_{ijk})$ | conditional mean on the outcome scale |
+| $\mu_j$ | study-$j$ baseline (intercept) |
+| $\boldsymbol{\beta}_1$ | main (prognostic) covariate effects |
+| $\boldsymbol{\beta}_{2,k}$ | treatment-by-covariate interactions for arm $k$ (effect modification) |
+| $\gamma_k$ | treatment main effect relative to the reference treatment |
+| $L_i(\boldsymbol{\xi};y_i)$, $\bar L_j(\boldsymbol{\xi};\bar y_j)$ | individual and aggregate-level likelihood contributions |
+| $\boldsymbol{\xi}$ | full parameter vector |
+
+## Population adjustment: MAIC, STC, ML-NMR, ML-UMR
+
+| Symbol | Meaning |
+|---|---|
+| $w_i$, $w(x)$ | matching weight for individual $i$, or weight function at $x$ |
+| $\mathrm{ESS}=\left(\sum_i w_i\right)^2 / \sum_i w_i^2$ | effective sample size of a weighted sample |
+| $\alpha, \boldsymbol{\beta}$ | matching-weight parameters in $w_i=\exp(\alpha+\boldsymbol{\beta}^\top \mathbf{x}_i)$ |
+| $\hat\mu_t^{\mathrm{STC}}$ | simulated treatment comparison predicted mean under treatment $t$ |
+| $C(u_1,\dots,u_d)$ | copula |
+| $C_\Omega(\mathbf{u})=\Phi_\Omega\!\big(\Phi^{-1}(u_1),\dots,\Phi^{-1}(u_d)\big)$ | Gaussian copula with correlation matrix $\Omega$ |
+| $V_{\mathrm{HK}}(f)$ | Hardy–Krause variation of $f$ |
+| $D_N^{*}(P)$ | star discrepancy of a point set $P$ |
+| SEMA, SPFA | shared effect modifier assumption, shared prognostic factor assumption |
+
+## Abbreviations
+
+| Short form | Expansion |
+|---|---|
+| ITC | indirect treatment comparison |
+| PAIC | population-adjusted indirect comparison |
+| (N)MA | (network) meta-analysis |
+| MAIC | matching-adjusted indirect comparison |
+| STC | simulated treatment comparison |
+| ML-NMR | multilevel network meta-regression |
+| ML-UMR | multilevel unanchored meta-regression |
+| IPD, AgD | individual patient data, aggregate data |
+| EM, PV | effect modifier, prognostic variable |
+| ATE, CATE | average treatment effect, conditional average treatment effect |
+| IPW, AIPW | inverse probability weighting, augmented inverse probability weighting |
+| OR, RR, HR, RD | odds ratio, risk ratio, hazard ratio, risk difference |
+| RMST | restricted mean survival time |
+| QMC | quasi-Monte Carlo |
+| HTA | health technology assessment |

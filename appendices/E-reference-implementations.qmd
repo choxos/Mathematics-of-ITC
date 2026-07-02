@@ -1,0 +1,819 @@
+---
+title: "Reference Implementations: multinma, mlumr, and uitc"
+---
+
+## Purpose and scope {#sec-impl-scope}
+
+The preceding thirty chapters built the mathematics of indirect treatment comparison from linear algebra
+to machine-checked proof. This appendix is the bridge to computation. It maps the objects the book
+*defines and proves* onto the functions, arguments, and Stan model files that *evaluate* them in three R
+packages: `multinma` for multilevel network meta-regression (ML-NMR) on connected networks
+[@phillippo2020mlnmr], `mlumr` for multilevel unanchored meta-regression (ML-UMR) on disconnected
+two-treatment evidence [@chandler2025mlumr], and `uitc`, an umbrella for unanchored
+population-adjusted indirect comparison (PAIC) that bundles matching-adjusted indirect comparison
+(MAIC), simulated treatment comparison (STC), a doubly-robust estimator, and quantitative bias analysis
+(QBA). All three estimate their Bayesian models in Stan [@carpenter2017stan].
+
+This is a map, not a tutorial. Code is kept to the minimum needed to locate each mathematical object in
+the software; the package vignettes are the place to learn the workflows end to end. Symbols follow
+[Notation](/notation.qmd) throughout: $\eta_{ijk}$ is the linear predictor, $g^{-1}$ the inverse link,
+$\theta_{ijk}=g^{-1}(\eta_{ijk})$ the conditional mean on the outcome scale, $f_j$ the covariate density
+in study $j$, $\bar{\mathbf{x}}_j$ and $\boldsymbol{\Sigma}_j$ its mean and covariance, and $d_{ab(\mathcal{P})}$
+the marginal relative effect of $b$ versus $a$ in target population $\mathcal{P}$.
+
+::: {.remark}
+The correspondence in this appendix is at the level of mathematical object, not source line. Package
+versions move; the function signatures shown were read from `multinma`, `mlumr`, and `uitc` at the time
+of writing and may drift. What does not drift is the underlying mathematics: each computational object
+named below implements a specific definition, equation, or theorem proved in the chapters, and that
+linkage is what the tables record. Where a formula is reproduced here it is reproduced exactly; verify
+argument names against the installed help pages before relying on them.
+:::
+
+## Orientation for the first-time reader {#sec-impl-orientation}
+
+Read this appendix *alongside* the chapters, not instead of them. Each chapter answers *why* a method is
+built the way it is and *proves* that it works; this appendix answers *where* that mathematics lives in
+the software and *which* function evaluates it. The intended use is lookup and verification: when you have
+read the aggregation theorem of Chapter 20 and want to see the line of Stan that computes it, or when you
+are about to call `nma()` and want to know which equation each argument controls, this is the page to
+open. A few subsections (the Stan-file inventories, the adjusted-binomial reparametrization) are there
+mainly for readers checking that the code faithfully implements the proofs; a first-time user can skim
+them and return later. Everything else is meant to be read on a first pass.
+
+If you are new to these methods, a good order is: read this orientation, choose your package from the
+decision guide in @sec-impl-which-package, read that package's pipeline table, and follow the prose
+pointers back into the chapters whenever a term or symbol is unfamiliar. The three object-to-code maps
+(@sec-impl-multinma-map, @sec-impl-mlumr-map, @sec-impl-uitc-map) are the reference cards to return to
+once you know the workflow.
+
+::: {.remark}
+**A running example, used throughout.** To keep the symbols attached to something concrete, we carry one
+small scenario through the appendix. The outcome is a binary treatment response (PASI 75, meaning at
+least a 75 percent reduction in a psoriasis severity score at week 12: `1` if achieved, `0` if not). The
+covariates are patient `age` in years (continuous) and `sex` (binary, coded `1` for female). Three
+treatments appear: drug `A`, our new treatment, for which we hold individual patient data (IPD, one row
+per patient); drug `B`, a competitor, for which we have only a published aggregate summary (mean age,
+percent female, and responders out of total); and placebo `P`, a possible common comparator. The goal is
+the relative effect of `A` versus `B` in a decision target population with mean age 48 and 40 percent
+female. Two data situations recur:
+
+- *Connected (anchored) network:* trial 1 reports IPD on `A` versus `P`; trial 2 reports aggregate data
+  (AgD) on `B` versus `P`. They share the placebo arm `P`, so the network is *connected* and the `A`
+  versus `B` contrast is *anchored* through `P`. This is the `multinma` setting.
+- *Disconnected (unanchored) network:* trial 1 reports IPD on `A`, trial 2 reports AgD on `B`, and the
+  two share no common arm. The network is *disconnected*, the contrast is *unanchored*, and it is
+  identified only by adjusting the IPD to the comparator population. This is the `mlumr` and `uitc`
+  setting.
+:::
+
+Two words recur and decide everything below, so fix them here. An *anchored* comparison estimates `A`
+versus `B` indirectly through a shared reference arm that both trials contain (in the example, placebo
+`P`); the shared arm cancels study-level nuisance terms, which is why a connected network can be analyzed
+with the trial-level contrasts of Chapter 14 and Chapter 15. An *unanchored* comparison has no shared
+arm, so nothing cancels; the entire between-study difference in outcomes must be explained by adjusting
+for covariates, a much stronger assumption (Chapter 12, Chapter 26). Whenever the appendix says
+"anchored" or "unanchored" it means exactly this.
+
+### Which package answers which question {#sec-impl-which-package}
+
+Choose the package from the shape of your evidence, not from the method name. The rule is the network
+structure, summarized here and repeated as a routing table in @sec-impl-together.
+
+| Your situation (running example) | Network | Method | Package |
+|---|---|---|---|
+| IPD on `A` vs `P`, AgD on `B` vs `P`, shared arm `P` | connected, anchored | ML-NMR | `multinma` |
+| IPD on `A`, AgD on `B`, no shared arm | disconnected, unanchored | ML-UMR | `mlumr` |
+| Same unanchored data, but you also want MAIC, STC, doubly-robust, and a bias analysis side by side | unanchored | PAIC and QBA | `uitc` |
+
+In health-technology-assessment (HTA) terms, the three packages answer three versions of the same
+submission question, "what is the effect of our drug `A` versus competitor `B` in the population our
+decision is about?"
+
+- **`multinma` (ML-NMR).** You have at least one IPD trial and the network of trials is connected through
+  shared treatments. You want the anchored `A` versus `B` effect, transported to a chosen target
+  population. Reach for `multinma`. This is the statistically strongest situation, because the shared arm
+  protects you.
+- **`mlumr` (ML-UMR).** Your IPD trial and the competitor's trial share no arm, so the network is broken.
+  You must lean entirely on covariate adjustment to bridge the gap. Reach for `mlumr`, and expect to
+  defend the adjustment assumptions carefully, because there is no anchor to fall back on.
+- **`uitc` (PAIC plus QBA).** The same broken network, but you want to run the established
+  population-adjustment methods (MAIC, STC), a doubly-robust combination, and a quantitative bias analysis
+  on one data object, so you can report an estimate next to its sensitivity analysis. Reach for `uitc`.
+
+### What data each method needs {#sec-impl-data-needed}
+
+Before any of these calls will run, the data must be in a specific shape. The following table answers the
+practical question "what do I need in hand?" Details of each field appear with the relevant pipeline
+below.
+
+| Method (package) | Network | IPD needed | AgD outcome summary | Covariate summary | Survival input | Main output |
+|---|---|---|---|---|---|---|
+| ML-NMR (`multinma`) | connected | one row per patient: study, treatment, outcome, covariates | per arm: responders `r` and arm size `n` (or mean and standard error) | for each AgD covariate: a distribution, e.g. mean and standard deviation, or a proportion | KM curve digitized to pseudo-IPD via `set_agd_surv()` | anchored contrasts and transported marginal effects |
+| ML-UMR (`mlumr`) | disconnected | one row per patient on index treatment `A`: outcome, covariates | comparator `B` only: responders and total (or mean, standard error) | comparator covariate means, and a type per covariate (`continuous`/`binary`) | digitized KM curve for `B` via `set_agd_surv()` | unanchored marginal `A` vs `B` effect in each population |
+| MAIC (`uitc`) | disconnected | index `A` IPD: outcome, covariates | comparator `B` outcome summary | comparator covariate *means* to match | (as `mlumr`) | weighted effect, effective sample size, balance diagnostics |
+| STC (`uitc`/`mlumr`) | disconnected | index `A` IPD: outcome, covariates | comparator `B` outcome summary | comparator covariate means (and covariance if simulating) | (as `mlumr`) | G-computation effect |
+| Doubly-robust (`uitc`) | disconnected | index `A` IPD: outcome, covariates | comparator `B` outcome summary | comparator covariate means and covariance | not applicable | doubly-robust effect with bootstrap interval |
+| QBA (`uitc`) | any | the fitted estimate and its inputs | as for the base method | as for the base method, plus a hypothesized unmeasured covariate | as for the base method | E-value, tipping point, or probabilistic bias interval |
+
+### Terms used in this appendix {#sec-impl-glossary}
+
+Every term here is defined and used in the chapters; this table is a one-line reminder so the appendix
+reads without flipping back. Each row points to the chapter that develops it.
+
+| Term | One-line meaning | Developed in |
+|---|---|---|
+| IPD, AgD | individual patient data (one row per patient) versus aggregate data (per-arm summaries) | Chapter 17 |
+| anchored / unanchored | with / without a shared reference arm linking the two treatments | Chapter 14, Chapter 26 |
+| connected / disconnected network | the trials do / do not form one linked graph of shared treatments | Chapter 15, Chapter 16 |
+| effect modifier (EM) | a covariate that changes the *treatment effect*, so it must be balanced across populations | Chapter 11 |
+| prognostic variable (PV) | a covariate that predicts *outcome* regardless of treatment | Chapter 11 |
+| SPFA | shared prognostic factor assumption: prognostic effects are the same under both treatments | Chapter 26 |
+| SEMA | shared effect modifier assumption: effect-modifier interactions are shared across studies | Chapter 17 |
+| conditional effect | a contrast for patients with fixed covariate values (a within-subgroup effect) | Chapter 11, Chapter 23 |
+| marginal effect | a contrast averaged over a whole target population | Chapter 11, Chapter 23 |
+| collapsible / non-collapsible | whether the marginal effect equals the average of conditional effects on that scale | Chapter 11 |
+| G-computation | fit the outcome model on IPD, then average its predictions over a target covariate distribution | Chapter 19 |
+| effective sample size (ESS) | the equivalent number of unweighted patients after weighting, $(\sum_i w_i)^2/\sum_i w_i^2$ | Chapter 18 |
+| QMC | quasi-Monte Carlo, a low-discrepancy grid used to average a model over a covariate distribution | Chapter 22 |
+
+## multinma: multilevel network meta-regression {#sec-impl-multinma}
+
+`multinma` fits the ML-NMR model of Chapters 20 to 25: one individual-level regression
+$$
+g\big(\theta_{ijk}\big)=\eta_{ijk}=\mu_j+\boldsymbol{\beta}_1^\top\mathbf{x}_{ij}+\big(\boldsymbol{\beta}_{2,k}^\top\mathbf{x}_{ij}+\gamma_k\big)
+$$ {#eq-impl-mlnmr-model}
+shared across a *connected* network, fitted to individual patient data (IPD) directly and to aggregate
+data (AgD) through the aggregation integral. The package is the reference implementation accompanying
+@phillippo2020mlnmr and its survival extension @phillippo2025general.
+
+Read @eq-impl-mlnmr-model one term at a time; it is the whole model, and every `multinma` argument sets
+one of its pieces. The left side $g(\theta_{ijk})$ is the response of patient $i$ in study $j$ on
+treatment $k$, mapped to the linear-predictor scale by the link $g$ (for a binary outcome $g$ is the
+logit, so $\eta_{ijk}$ is a log-odds). The right side builds that log-odds from four parts.
+
+| Term | Name | What it does (running example) | `multinma` |
+|---|---|---|---|
+| $\mu_j$ | study baseline | the outcome level in study $j$'s control arm; a separate intercept per trial | fitted per study automatically |
+| $\boldsymbol{\beta}_1^\top\mathbf{x}_{ij}$ | prognostic effects | how age and sex shift outcome *regardless of treatment* | main effects added via `regression =` |
+| $\boldsymbol{\beta}_{2,k}^\top\mathbf{x}_{ij}$ | effect modification | how age and sex shift the *treatment* effect of arm $k$ | the `:.trt` interaction in `regression =` |
+| $\gamma_k$ | treatment effect | the effect of treatment $k$ versus the network reference, at the reference covariate values | the treatment coefficients |
+
+In words: a patient's modeled log-odds of response is their study's baseline, plus a prognostic shift for
+being older or female, plus (only on an active arm) an effect-modifying shift and the drug's own effect.
+The single most important feature is that *the same* $\boldsymbol{\beta}_1$, $\boldsymbol{\beta}_{2,k}$,
+and $\gamma_k$ are shared across every study in the network; that sharing is what lets an IPD trial and an
+AgD trial inform one regression, and it is licensed by the shared-effect-modifier assumption (SEMA) of
+Chapter 17. When a covariate modifies the effect (its $\boldsymbol{\beta}_{2,k}$ is nonzero), the `A`
+versus `B` contrast genuinely depends on the population's age and sex mix, which is the entire reason
+population adjustment is needed.
+
+### The pipeline {#sec-impl-multinma-pipeline}
+
+Six functions carry an analysis from data to fitted model. Each one realizes a construction from the
+book.
+
+| Function | Mathematical role |
+|---|---|
+| `set_ipd()` | Register an IPD study: rows are individuals, with outcome and covariates entering @eq-impl-mlnmr-model directly. |
+| `set_agd_arm()` | Register an arm-based AgD study: summary outcomes per arm, to be matched by the aggregation integral (@thm-aggregation). |
+| `set_agd_contrast()` | Register a contrast-based AgD study: relative effects with a covariance, the meta-analytic likelihood of Chapter 13. |
+| `set_agd_surv()` | Register AgD with reconstructed survival data (Kaplan-Meier curves digitized to pseudo-IPD), the general-likelihood survival branch of Chapter 25. |
+| `combine_network()` | Assemble the registered studies into one network object; checks connectivity (the precondition removed only in Chapter 26). |
+| `add_integration()` | Attach quasi-Monte Carlo (QMC) integration points to every AgD study (Chapter 22). |
+| `nma()` | Build the Stan data, choose the likelihood and link, and sample the posterior (Chapter 24). |
+
+Before any of this runs, the data must be in the shape those functions expect: IPD is one row per
+patient, arm-based AgD is one row per arm. For the running example the two inputs look like this (a few
+rows shown; the column names are what matter).
+
+```r
+# ipd_data: one row per patient in the IPD trial of A vs P
+  study    trt   r  age  sex
+  Trial1     P   0   52    0
+  Trial1     A   1   47    1
+  Trial1     A   0   61    0
+# ... one row per patient ...
+
+# agd_data: one row per arm in the AgD trial of B vs P
+  study    trt    r    n  age_mean  age_sd  sex_prop
+  Trial2     P   58  200      49.1    11.8      0.42
+  Trial2     B   96  201      48.6    12.1      0.39
+```
+
+Here `r` is the outcome column (a responder indicator `1`/`0` per patient in IPD, a responder *count* per
+arm in AgD), `n` is the arm size, `study` and `trt` are the study and treatment labels, and the `age_*`
+and `sex_prop` columns are the covariate summaries the AgD trial publishes. The canonical call sequence is
+
+```r
+net <- combine_network(
+  set_ipd(ipd_data, study, trt, r = r),
+  set_agd_arm(agd_data, study, trt, r = r, n = n)
+)
+net <- add_integration(net, age = distr(qnorm, mean = age_mean, sd = age_sd),
+                            sex = distr(qbern, prob = sex_prop), n_int = 64L)
+fit <- nma(net, regression = ~ (age + sex):.trt, likelihood = "bernoulli2",
+           link = "logit", trt_effects = "fixed")
+```
+
+The regression formula `~ (age + sex):.trt` encodes the effect-modifier interactions
+$\boldsymbol{\beta}_{2,k}$; the special term `.trt` is the treatment factor. Prognostic main effects
+$\boldsymbol{\beta}_1$ are added automatically with `center = TRUE`.
+
+Each argument of that call controls one modeling choice. In ordinary trial language:
+
+| Argument | Plain meaning |
+|---|---|
+| `study`, `trt` | the columns naming the study and the treatment arm |
+| `r = r` | set the model's responder input to the data column named `r`; the left `r` is the fixed argument name, the right `r` is your column name |
+| `n = n` | the arm size column (AgD only; IPD has one patient per row) |
+| `regression = ~ (age + sex):.trt` | which covariates are effect modifiers; `.trt` is the placeholder for the treatment factor, so `(age + sex):.trt` means "let age and sex modify the treatment effect" |
+| `likelihood = "bernoulli2"` | the outcome family; `bernoulli2` is the two-parameter binary likelihood of @sec-impl-multinma-aggregation |
+| `link = "logit"` | the link $g$; `logit` makes $\eta$ a log-odds |
+| `trt_effects = "fixed"` | fixed-effect (common-effect) treatment effects, one $\gamma_k$ shared across studies, as opposed to `"random"` for treatment effects that vary by study |
+
+The note that main effects are added "with `center = TRUE`" means the covariates are centered before
+entering the model, so that the treatment coefficients $\gamma_k$ read as effects *at the average
+covariate values of the network*, not at age zero. Centering does not change the fitted contrasts in any
+target population; it only fixes what the raw $\gamma_k$ mean and improves the sampler's geometry. Which
+population the final estimand refers to is set later, by `relative_effects()` and `marginal_effects()`
+(@sec-impl-multinma-estimand), not by centering.
+
+### The aggregation integral {#sec-impl-multinma-aggregation}
+
+Start with the reason this section exists. The obvious way to predict an aggregate arm's response rate is
+to plug the arm's *mean* covariates into the fitted model: evaluate $g^{-1}$ at mean age and percent
+female. For any nonlinear link (a logit, a log) this is *wrong*, and Chapter 20 proves it is wrong; the
+error is @thm-aggregation-bias. Averaging a curved function is not the same as the function of the
+average. So `multinma` never does that; instead it averages *patient-level* predictions, which is the
+content of @thm-aggregation.
+
+Concretely, the correct aggregate-level mean is the *average of the inverse-linked individual means*, not
+the inverse link of the average linear predictor. For an arm $k$ in AgD study $j$,
+$$
+\bar\theta_{jk}=\int_{\mathcal{X}} g^{-1}\!\big(\eta_{jk}(\mathbf{x})\big)\,f_j(\mathbf{x})\,d\mathbf{x}
+\;\approx\;\frac{1}{N}\sum_{m=1}^{N} g^{-1}\!\big(\eta_{jk}(\mathbf{x}^{(m)})\big),
+\qquad \mathbf{x}^{(m)}\sim f_j ,
+$$ {#eq-impl-aggregation}
+which is @eq-agg-aggregate-mean evaluated at the $N$ integration points of @sec-impl-multinma-qmc. Read
+the right side as a recipe: generate $N$ synthetic patients whose covariates follow the AgD study's
+reported distribution $f_j$, predict each one's response probability from the shared regression, then
+average those probabilities. That average, not the prediction at the average patient, is what the arm's
+observed responder count is matched to. In `inst/stan/binomial_1par.stan` this is the single line (the
+comments are ours)
+
+```stan
+// theta_agd_arm_ii stacks every arm's N per-patient predicted probabilities end to end.
+// This slice pulls out the block belonging to AgD arm i, then averages it: exactly the integral above.
+theta_agd_arm_bar[i] = mean(theta_agd_arm_ii[(1 + (i-1)*nint):(i*nint)]);
+// "~" is Stan's sampling statement (a likelihood contribution, not an assignment):
+// the observed responder count is binomial with size n and the integrated probability.
+agd_arm_r ~ binomial(agd_arm_n, theta_agd_arm_bar);
+```
+
+where `theta_agd_arm_ii` holds the $N$ values $g^{-1}(\eta_{jk}(\mathbf{x}^{(m)}))$ and `nint` is $N$.
+(The index arithmetic `(1 + (i-1)*nint):(i*nint)` is just "rows $(i-1)N+1$ through $iN$," the contiguous
+block for the $i$-th arm in a stacked array.)
+
+The two-parameter file `binomial_2par.stan` refines the likelihood, and the reason is a variance mismatch
+worth spelling out. The aggregate arm is a *mixture*: the model assigns patients with different covariates
+different response probabilities $\theta_m$, so summarizing the arm by the single number $\bar\theta_{jk}$
+discards the spread of those probabilities. A plain binomial with probability $\bar\theta_{jk}$ ignores
+that spread and can understate the dispersion. The first two moments of the per-patient probabilities are
+$$
+\bar\theta_{jk}=\frac1N\sum_m\theta_m,\qquad \overline{\theta^2}_{jk}=\frac1N\sum_m\theta_m^2,
+$$
+and their gap $\overline{\theta^2}_{jk}-\bar\theta_{jk}^{\,2}\ge 0$ is precisely the variance of those
+probabilities (zero only if every patient has the same $\theta$). To carry that extra dispersion while
+keeping the same mean, `binomial_2par.stan` matches both moments with an adjusted binomial,
+$$
+n'_{jk}=n_{jk}\,\frac{\bar\theta_{jk}^{\,2}}{\overline{\theta^2}_{jk}},
+\qquad
+p'_{jk}=\frac{\overline{\theta^2}_{jk}}{\bar\theta_{jk}},
+\qquad\text{so that } n'_{jk}\,p'_{jk}=n_{jk}\,\bar\theta_{jk},
+$$ {#eq-impl-adjusted-binomial}
+which preserves the integrated mean $n_{jk}\bar\theta_{jk}$ (the product $n'p'$ is unchanged) while using
+$p'_{jk}=\overline{\theta^2}_{jk}/\bar\theta_{jk}\ge\bar\theta_{jk}$ to widen the variance toward the
+mixture's. This is the implementation of the aggregate likelihood @eq-agg-aggregate-likelihood. Contrast
+all of this with the *naive* plug-in $g^{-1}(\eta_{jk}(\bar{\mathbf{x}}_j))$ of @eq-agg-naive, whose bias
+@thm-aggregation-bias quantifies; `multinma` never forms the naive quantity for a nonlinear link.
+
+### Quasi-Monte Carlo integration {#sec-impl-multinma-qmc}
+
+Here is the practical problem this machinery solves. A published trial almost never releases its
+patients' covariates; it reports summaries, a mean age, a standard deviation, a percent female, sometimes
+a correlation. To evaluate the aggregation integral @eq-impl-aggregation we nonetheless need a *cloud of
+covariate profiles* that reproduces those summaries. `add_integration()` manufactures exactly that: a grid
+of $N$ synthetic covariate vectors whose marginal distributions and correlations match the reported
+summaries, so that averaging model predictions across the grid approximates averaging over the real (but
+unpublished) patient distribution. "Quasi-Monte Carlo" (QMC) just means the grid is a cleverly spread
+low-discrepancy set rather than random draws, which makes the average converge faster.
+
+`add_integration()` builds the points $\{\mathbf{x}^{(m)}\}_{m=1}^N$ that turn @eq-impl-aggregation into a
+finite sum. It implements the pipeline of Chapter 22: a Sobol' net (@def-sobol-net) pushed through a
+Gaussian copula (@def-gaussian-copula) and the marginal quantile functions (@thm-inverse-cdf),
+$$
+\mathbf{x}^{(m)}=\Big(F_{j,1}^{-1}\big(u_1^{(m)}\big),\dots,F_{j,d}^{-1}\big(u_d^{(m)}\big)\Big),
+\qquad
+u_q^{(m)}=\Phi\!\big((L\,\mathbf{z}^{(m)})_q\big),\quad
+\mathbf{z}^{(m)}=\Phi^{-1}\!\big(\mathbf{a}^{(m)}\big),
+$$ {#eq-impl-qmc}
+where $\{\mathbf{a}^{(m)}\}\subset[0,1)^d$ is the Sobol' sequence and $LL^\top=\Omega$ is the Cholesky
+factor of the copula correlation matrix (this is @eq-qmc-pipeline). Written as nested transformations the
+display is dense, so read it as a four-step pipeline, each step feeding the next in the order the data
+flows.
+
+| Step | Transformation | Produces | Set by |
+|---|---|---|---|
+| 1. spread | $\mathbf{a}^{(m)}\in[0,1)^d$, a Sobol' low-discrepancy point | an evenly spread point in the unit cube | `n_int` (how many points $N$) |
+| 2. to normal scores | $\mathbf{z}^{(m)}=\Phi^{-1}(\mathbf{a}^{(m)})$ | independent standard-normal coordinates | (internal) |
+| 3. correlate, back to uniform | $u_q^{(m)}=\Phi\big((L\mathbf{z}^{(m)})_q\big)$, with $LL^\top=\Omega$ | correlated uniforms with the target dependence | `cor`, `cor_adjust` (build $\Omega$, then $L$) |
+| 4. to covariate scale | $x_q^{(m)}=F_{j,q}^{-1}(u_q^{(m)})$ | a synthetic patient's covariate values | `<cov> = distr(qfun, ...)` (the marginal $F_{j,q}^{-1}$) |
+
+The Gaussian copula (step 3) is the device that lets us glue *arbitrary* marginal distributions (age
+maybe normal, a biomarker maybe skewed) together with a *chosen* correlation: it imposes the dependence
+in a normal latent space, then maps each coordinate back to its own marginal in step 4. If the copula is
+new to you, read it as "a correlation structure applied to uniforms, so any marginals can be attached
+afterward," and see the picture in Chapter 22. The pieces map to arguments as follows.
+
+| Argument of `add_integration()` | Mathematical object |
+|---|---|
+| `<cov> = distr(qfun, ...)` | the marginal quantile function $F_{j,q}^{-1}$ of covariate $q$ (`distr` wraps a base-R `q*` function). |
+| `n_int` | the number of integration points $N$; error decays like $N^{-1}(\log N)^d$ by Koksma-Hlawka (@thm-koksma-hlawka), beating the $N^{-1/2}$ Monte Carlo rate (@cor-tensor-quadrature-curse). |
+| `cor` | the input covariate correlation matrix used to build $\Omega$. |
+| `cor_adjust` | the rule converting `cor` (Spearman or Pearson) to the Gaussian-copula correlation $\Omega$ (Sklar's theorem, @thm-sklar). |
+
+The `distr()` wrapper deserves a word, since it appears with no introduction in the call above.
+`distr(qfun, ...)` bundles a base-R quantile function with its parameters into the marginal
+$F_{j,q}^{-1}$ that step 4 needs. For instance `distr(qnorm, mean = 48, sd = 12)` represents an age
+marginal that is normal with mean 48 and standard deviation 12: given a uniform $u$ it returns
+`qnorm(u, mean = 48, sd = 12)`, the age at quantile $u$. Likewise `distr(qbern, prob = 0.40)` encodes a
+binary covariate that is female with probability 0.40. You supply one `distr()` per covariate, using the
+summaries the AgD trial reported.
+
+How many points? `n_int` is $N$, and 64 is a common default. Because the Koksma-Hlawka rate
+(@thm-koksma-hlawka) is roughly $N^{-1}$ up to a log factor that grows with the covariate dimension $d$,
+more covariates need more points; the honest way to choose $N$ is empirical. Fit with `n_int = 64L`,
+refit with it doubled, and confirm the estimand you care about moves by less than your tolerance;
+`plot_integration_error()` automates this check as the empirical analogue of the Koksma-Hlawka bound.
+Cost grows linearly in $N$, so doubling the points doubles the integration work, not more.
+
+### The target-population estimand {#sec-impl-multinma-estimand}
+
+A fitted `stan_nma` object stores the conditional parameters $(\mu_j,\boldsymbol{\beta}_1,\boldsymbol{\beta}_{2,k},\gamma_k)$.
+The estimand machinery of Chapter 23 turns these into a contrast in *any* target population, via the
+target-population integral @thm-target-population-integral.
+
+Two kinds of answer come out of the same fit, and confusing them is a common error, so fix the
+distinction first (if it is unclear, reread Chapter 23 before calling these functions). A *conditional*
+effect is for patients with *given* covariates: the `A` versus `B` log-odds ratio for a 55-year-old
+woman. A *marginal* effect is *averaged over a whole population*: the `A` versus `B` effect seen across
+the entire target population's age and sex mix. On a nonlinear scale such as the odds ratio these differ,
+because the odds ratio is non-collapsible (Chapter 11); the population-average effect is not the average
+of subgroup effects. For an HTA submission the reported number is almost always the *marginal* effect in
+the decision population, since that is the effect a payer would experience in practice. So
+`relative_effects()` gives the conditional building blocks, and `marginal_effects()` gives the reportable
+population summary.
+
+| Function | Returns | Book object |
+|---|---|---|
+| `relative_effects()` | conditional contrasts $\delta_{j,\,t_1 t_k}$ in a study or `newdata` population | @eq-mlnmr-est-cond, the conditional estimand of @def-mlnmr-target-contrast |
+| `predict()` | absolute outcomes $\bar\theta$ on the response scale (`type = "response"`) in a target population | the population mean of @eq-impl-aggregation in $\mathcal{P}^{*}$ |
+| `marginal_effects()` | marginal contrasts $d_{ab(\mathcal{P}^{*})}$ (difference, ratio, or link scale) | @eq-mlnmr-est-marg, the marginal estimand |
+
+In the running example, `relative_effects()` might report a conditional log-odds ratio for `A` versus `B`
+of, say, $-0.82$ (95 percent credible interval $-1.21$ to $-0.43$) at the network's average covariates,
+`predict(type = "response")` the absolute response probabilities in each arm of the target population, and
+`marginal_effects()` the population-averaged `A` versus `B` contrast to put in the submission. (These
+numbers are illustrative, not from a real fit.)
+
+Supplying `newdata` (with its own `add_integration()` points) is exactly the change of target population
+$\mathcal{P}\mapsto\mathcal{P}^{*}$ that @thm-target-population-integral licenses; with no `newdata` the
+estimand defaults to each study's own population. So the *same* fitted model produces different reported
+effects for different target populations, and choosing that population is a substantive decision, not a
+default.
+
+::: {.remark}
+**Sanity check: ML-NMR contains NMA.** When every study is AgD and no covariates enter the regression, the
+aggregation integral is trivial and the model collapses to standard network meta-analysis; a call like
+`nma(net, trt_effects = "fixed")` with no `regression =` reproduces the Chapter 15 estimator. This is the
+computational witness of @thm-mlnmr-generalizes-nma, and it is a good first check that a network is set up
+correctly: turn off the regression and confirm you recover the familiar NMA result.
+:::
+
+### Object-to-code map {#sec-impl-multinma-map}
+
+| Book object | Chapter result | `multinma` |
+|---|---|---|
+| Individual model @eq-impl-mlnmr-model | @def-individual-model | `nma(regression = ...)` |
+| Aggregation integral $\bar\theta_{jk}$ | @thm-aggregation, @eq-agg-aggregate-mean | `theta_agd_arm_bar` in the Stan files |
+| Adjusted aggregate likelihood | @eq-agg-aggregate-likelihood | `binomial_2par.stan` ($n',p'$) |
+| QMC points and copula | @def-sobol-net, @def-gaussian-copula, @eq-qmc-pipeline | `add_integration()` |
+| Integration error control | @thm-koksma-hlawka | `n_int`, `plot_integration_error()` |
+| Conditional estimand | @eq-mlnmr-est-cond | `relative_effects()` |
+| Marginal / target-population estimand | @thm-target-population-integral, @eq-mlnmr-est-marg | `marginal_effects(newdata=)`, `predict()` |
+| Posterior sampling and diagnostics | Chapter 24 | `nma(...)`, `as.stanfit()` |
+
+### Stan model files {#sec-impl-multinma-stan}
+
+This subsection is for readers verifying implementation fidelity or extending the package; an ordinary
+user never edits these files, because `nma()` selects the right one automatically. It is listed so that a
+reader checking the book's theorems against the code knows exactly which file to open. The likelihood is
+selected by `nma(likelihood = , link = )`; each choice loads one model file under `inst/stan/`.
+
+| File | Outcome family | Used for |
+|---|---|---|
+| `binomial_1par.stan` | Bernoulli (IPD) and binomial (AgD) | binary outcomes, integrated mean probability |
+| `binomial_2par.stan` | as above with variance matching | binary outcomes, adjusted binomial @eq-impl-adjusted-binomial |
+| `normal.stan` | Gaussian | continuous outcomes (identity link is exact, @thm-identity-link-exact) |
+| `poisson.stan` | Poisson | rates and counts with time at risk |
+| `ordered_multinomial.stan` | ordered multinomial | ordered categorical outcomes |
+| `survival_param.stan` | parametric survival | exponential, Weibull, Gompertz, generalized gamma, and AFT families (Chapter 25) |
+| `survival_mspline.stan` | M-spline baseline hazard | flexible time-to-event baseline; `rmst_mspline()` returns restricted mean survival time |
+
+Shared blocks live in `inst/stan/include/`: `transformed_parameters_common.stan` assembles
+$\eta$ and the integrated means for both IPD and AgD, and `prior_select.stan` implements the prior
+families exported by `normal()`, `half_normal()`, `cauchy()`, and the rest.
+
+## mlumr: multilevel unanchored meta-regression {#sec-impl-mlumr}
+
+`mlumr` implements ML-UMR (Chapter 26): the unanchored, two-treatment specialization of ML-NMR for a
+*disconnected* network (@def-unanchored-network), IPD on one index treatment $A$, AgD on one comparator
+$B$, and no common arm. It reuses the QMC and copula machinery of `multinma` and adds Stan likelihoods
+for the unanchored problem [@chandler2025mlumr].
+
+Recall from @sec-impl-orientation what *unanchored* means here: the index IPD trial (drug `A`) and the
+comparator AgD trial (drug `B`) share no arm, so there is no reference treatment to difference away the
+study-level baselines. Everything separating the two trials' outcomes, prognosis and effect modification
+alike, must be explained by covariate adjustment. That is a strong assumption, and it is why ML-UMR needs
+both the shared-prognostic-factor machinery below and the honest caveats of Chapter 26. The
+`add_integration()` step is the same construction as in `multinma` (@sec-impl-multinma-qmc), but its job
+is narrower here: rather than integrating several AgD studies across a connected network, it builds the
+single covariate cloud that represents the *comparator* population $f_B$, the population the index data
+must be bridged to.
+
+### The pipeline {#sec-impl-mlumr-pipeline}
+
+| Function | Mathematical role |
+|---|---|
+| `set_ipd()` | Register the index IPD: individual outcomes and covariates for the individual model @eq-mlumr-model-ind. |
+| `set_agd()` | Register the comparator AgD: summary outcome and covariate moments $(\bar{\mathbf{x}}_B,\boldsymbol{\Sigma}_B)$. |
+| `set_agd_surv()` | Register comparator survival pseudo-IPD reconstructed from a digitized KM curve (@thm-pseudo-ipd-reconstruction). |
+| `combine_data()` | Bind index and comparator into one `mlumr_data`. |
+| `add_integration()` | Generate the QMC points over $f_B$ (the same construction as @eq-impl-qmc). |
+| `mlumr()` | Fit the SPFA or relaxed Bayesian model via Stan. |
+
+```r
+ipd <- set_ipd(ipd_df, treatment = "trt", outcome = "y",
+               covariates = c("age", "sex"))
+agd <- set_agd(agd_df, treatment = "trt", outcome_n = "n", outcome_r = "r",
+               cov_means = c("age_mean", "sex_mean"),
+               cov_types = c("continuous", "binary"))
+dat <- add_integration(combine_data(ipd, agd), n_int = 64L,
+                       age = distr(qnorm, mean = age_mean, sd = age_sd),
+                       sex = distr(qbern, prob = sex_mean))
+fit <- mlumr(dat, model = "spfa")
+```
+
+### SPFA and relaxed models {#sec-impl-mlumr-models}
+
+The two model strings select the identification assumption of Chapter 26. The assumption is not a
+technical switch; it encodes what you are willing to believe about how covariates act across treatments,
+so decide it deliberately. The *shared prognostic factor assumption* (SPFA) says that a covariate affects
+*outcome* the same way under both treatments: if age raises risk, it raises it by the same amount under
+`A` and under `B`. Under SPFA a single coefficient vector $\boldsymbol{\beta}$ serves both arms. The
+*relaxed* model drops that and lets prognosis differ by treatment, carrying separate
+$\boldsymbol{\beta}_A$ and $\boldsymbol{\beta}_B$; the gap $\Delta\boldsymbol{\beta}=\boldsymbol{\beta}_A-\boldsymbol{\beta}_B$
+is exactly effect modification (a covariate whose influence differs by treatment is, by definition, an
+effect modifier). Concretely: if age predicts response similarly whether a patient took `A` or `B`, the
+SPFA is reasonable and `model = "spfa"` is the primary analysis; if you believe age helps under `A` but
+not under `B`, that difference is what `model = "relaxed"` is trying to estimate.
+
+| `model =` | Assumption | Coefficients | Book object |
+|---|---|---|---|
+| `"spfa"` | shared prognostic factors, no effect modification | one $\boldsymbol{\beta}$ for both treatments | @def-spfa, @eq-spfa |
+| `"relaxed"` | treatment-specific prognostic effects | $\boldsymbol{\beta}_A,\boldsymbol{\beta}_B$, with $\Delta\boldsymbol{\beta}=\boldsymbol{\beta}_A-\boldsymbol{\beta}_B$ | @thm-spfa-relaxation, @eq-spfa-relaxed-agg |
+
+In `inst/stan/mlumr_binary_spfa.stan` the comparator AgD likelihood is the aggregation integral
+@eq-impl-aggregation written for one comparator arm,
+
+```stan
+// Xq_int[k] is the N-by-p matrix of integration points for comparator arm k, and beta_tilde the shared
+// coefficient vector, so Xq_int[k] * beta_tilde is the N linear predictors; inv_link_binary_vec applies
+// g^{-1} (here the inverse logit) to each, giving the N per-patient probabilities p_int.
+vector[n_int] p_int = inv_link_binary_vec(Xq_int[k] * beta_tilde, link);
+// "~" is a sampling statement: the comparator responder count is binomial with size n_agd[k] and the
+// integrated (averaged) probability mean(p_int), i.e. the aggregation integral for one arm.
+r_agd[k] ~ binomial(n_agd[k], mean(p_int));
+```
+
+which is @eq-mlumr-model-agg and the joint likelihood of @thm-mlumr-joint-likelihood (the IPD Bernoulli
+term times this integrated binomial term). The relaxed file carries a second coefficient block and
+reports `delta_beta = beta_index - beta_comparator`, the estimated effect modification of
+@thm-spfa-relaxation; its prior is set with `prior_beta_comparator`, since $\boldsymbol{\beta}_B$ is
+identified only through the AgD. Both files compute, in their `generated quantities`, the response-scale
+population means in *both* target populations, the index (IPD covariates) and the comparator (integration
+points weighted by AgD sample size), and from them the marginal log odds ratio, risk difference, and risk
+ratio. This is @eq-mlumr-estimand and the target functionals @eq-mlumr-target-functionals; the choice is
+exposed through `marginal_effects(fit, population = , effect = )`. `conditional_effects()` returns the
+covariate-conditional contrasts instead.
+
+What to look at after a fit: `marginal_effects(fit, population = , effect = )` is the headline, the
+marginal `A` versus `B` contrast (as a log odds ratio, risk difference, or risk ratio) in whichever
+population you name; `conditional_effects()` gives the covariate-conditional version if you need it. Fit
+under `model = "spfa"` for the primary estimate, and if you also fit `"relaxed"`, inspect `delta_beta`: a
+credible interval comfortably covering zero supports the SPFA, while one clearly away from zero warns that
+effect modification is present and the SPFA estimate may be biased.
+
+### The benchmarks: naive and stc {#sec-impl-mlumr-benchmarks}
+
+| Function | Method | Book object |
+|---|---|---|
+| `naive()` | unadjusted comparison of crude outcome summaries | the naive estimator @eq-agg-naive (and the bias it incurs, @thm-aggregation-bias) |
+| `stc()` | frequentist parametric G-computation with delta-method standard errors | STC (Chapter 19); @prp-stc-gcomp, the marginal estimand @eq-stc-marg-mean |
+
+"G-computation," the phrase attached to `stc()`, is causal-inference shorthand for a two-step recipe: fit
+the outcome model on the IPD, then average its predictions over the target (here, comparator) covariate
+distribution. It is the frequentist sibling of what the Bayesian model does inside its `generated
+quantities` block.
+
+`stc()` fits the outcome regression on the IPD and integrates the fitted model over the comparator
+covariate distribution, the G-computation form @prp-stc-gcomp; @thm-mlumr-stc-equivalence shows that
+ML-UMR under SPFA and STC target the same estimand, so the two should agree up to Monte Carlo and
+posterior error when the SPFA holds. Always run `naive()` alongside the adjusted methods as the
+unadjusted reference point.
+
+How to read the three together. Treat `naive()` as the unadjusted baseline, `stc()` and
+`mlumr(model = "spfa")` as two routes to the *same* adjusted estimand (@thm-mlumr-stc-equivalence), and
+`mlumr(model = "relaxed")` as the stress test. Reassuring pattern: `stc()` and `mlumr("spfa")` agree (they
+should, when the SPFA holds), and both differ from `naive()` in the direction the covariate imbalance
+predicts, showing the adjustment did something. Concerning pattern: `stc()` and `mlumr("spfa")` disagree
+materially, which points to a modeling or convergence problem since they target one estimand; or the
+`"relaxed"` fit moves the estimate a lot and its `delta_beta` excludes zero, signaling effect modification
+the SPFA ignores. None of these is a hypothesis test; they are consistency checks that tell you whether to
+trust the adjusted number or investigate further.
+
+### Survival outcomes {#sec-impl-mlumr-survival}
+
+This subsection locates the survival functions; it is dense because each piece is a chapter of its own.
+If you are implementing a survival ITC for the first time, read Chapter 25 (general likelihoods and
+survival) and the `mlumr` survival vignette before relying on the calls below. The shape of the workflow
+is as follows.
+
+The input problem is that a published survival trial reports a *Kaplan-Meier curve* (a step plot of the
+fraction still event-free over time), not patient records. `set_agd_surv()` reconstructs approximate
+patient-level data from it: you supply points read off the curve (time and survival-probability pairs,
+typically extracted with a plot digitizer) together with the numbers at risk printed under the axis, and
+the function inverts the curve into individual event and censoring times. This reconstruction is
+@thm-pseudo-ipd-reconstruction, the inversion @eq-km-inversion; more digitized points and reported
+at-risk tables give a more faithful reconstruction. The result is *pseudo-IPD* for the comparator arm,
+which the model then treats like real IPD.
+
+The hazard is modeled with one of nine parametric families (`distribution = "weibull"`, `"gompertz"`,
+accelerated-failure-time variants, and so on) or a flexible baseline (`"mspline"`, an M-spline hazard, or
+`"pexp"`, a piecewise-exponential hazard), with spline knots placed by `make_knots()`. As a rule of
+thumb: a simple parametric family is easiest to interpret and extrapolate but assumes a rigid hazard
+shape; the flexible `"mspline"` and `"pexp"` baselines fit curved or non-monotone hazards at the cost of
+extra parameters. Choose by checking fit against the reconstructed curve and by how far beyond the
+observed follow-up you must extrapolate.
+
+The reporting is shaped by *collapsibility*. The hazard ratio (HR) is *non-collapsible* (Chapter 11): the
+population-average HR is not the average of subgroup HRs, and it can drift over time even under a constant
+treatment effect, so a single number understates the story. Accordingly
+`marginal_effects(fit, effect = "hr")` reports the HR at the start of follow-up, and the time-varying
+curve comes from `predict(type = "loghr")`. Restricted mean survival time (RMST, the average event-free
+time up to a horizon) is *collapsible* and transports more cleanly, which is why it is often the better
+headline for an HTA: `predict(type = "rmst")` and the RMST difference and ratio implement the transported
+restricted-mean functionals @thm-mlumr-target-survival and @eq-mlumr-rmst-transport. When in doubt, report
+an RMST contrast at a clinically meaningful horizon alongside the HR.
+
+### Object-to-code map {#sec-impl-mlumr-map}
+
+| Book object | Chapter result | `mlumr` |
+|---|---|---|
+| Unanchored network | @def-unanchored-network | `combine_data(ipd, agd)` |
+| Individual model | @eq-mlumr-model-ind | `set_ipd(...)`, `mlumr()` |
+| SPFA aggregate model | @def-spfa, @eq-mlumr-model-agg | `mlumr(model = "spfa")` |
+| Relaxed model and effect modification | @thm-spfa-relaxation | `mlumr(model = "relaxed")`, `delta_beta` |
+| Joint likelihood | @thm-mlumr-joint-likelihood | the Stan `model` block |
+| QMC marginalization | @eq-mlumr-qmc | `add_integration()` |
+| Marginal estimands in two populations | @eq-mlumr-estimand, @eq-mlumr-target-functionals | `marginal_effects(population=)` |
+| STC equivalence | @thm-mlumr-stc-equivalence | `stc()` vs `mlumr(model = "spfa")` |
+| KM reconstruction, RMST | @thm-pseudo-ipd-reconstruction, @thm-mlumr-target-survival | `set_agd_surv()`, `predict(type = "rmst")` |
+
+Stan files live in `inst/stan/` as `mlumr_<family>_<model>.stan` for `<family>` in
+`{binary, normal, poisson, survival, survival_mspline}` and `<model>` in `{spfa, relaxed}`, ten files in
+all; shared blocks (`numerical_functions.stan`, `priors_functions.stan`, `survival_functions.stan`) are
+in `inst/stan/include/`.
+
+## uitc: unanchored PAIC and bias analysis {#sec-impl-uitc}
+
+`uitc` is an umbrella over the unanchored PAIC methods, with a single dispatcher and a QBA toolkit. It
+maps onto Chapter 18 (MAIC), Chapter 19 (STC), the augmented estimators of Chapter 10, and Chapter 28
+(QBA).
+
+Note the change of purpose here. `multinma` and `mlumr` each fit *one* Bayesian model; `uitc` is instead
+an organizer that runs *several* unanchored adjustment and sensitivity workflows around the same
+comparator problem, so you can lay an estimate next to its alternatives and its bias analysis. Its input
+is an `mlumr_data` object, the same bundle `mlumr::combine_data()` produces: it holds the index IPD, the
+comparator AgD summary, the covariate definitions, and (after `add_integration()`) the integration points.
+Because every `uitc` method reads that one object, a single data setup feeds MAIC, STC, ML-UMR, naive,
+doubly-robust, and QBA in turn.
+
+### The dispatcher {#sec-impl-uitc-dispatch}
+
+```r
+uitc(dat, method = c("maic", "stc", "mlumr", "naive", "dr"))
+```
+
+`dat` is an `mlumr_data` object built by `mlumr::combine_data()`. The `stc`, `mlumr`, and `naive`
+methods delegate to `mlumr` (mapped in @sec-impl-mlumr); the `maic` and `dr` methods are native to
+`uitc` and are described next. All delegated methods return a standardized `uitc_result` with
+`estimate`, `se`, and an interval.
+
+### MAIC (Chapter 18) {#sec-impl-uitc-maic}
+
+MAIC reweights the IPD so that its weighted covariate moments match the comparator's, then estimates the
+treatment effect on the reweighted sample.
+
+| Function | Mathematical role |
+|---|---|
+| `prepare_maic()` / `estimate_weights()` | Solve the entropy-balancing (method-of-moments) problem for the weights. |
+| `check_weights()` | Report the effective sample size and weight diagnostics. |
+| `calculate_balance_smd()` / `balance_table()` / `love_plot()` | Standardized mean differences before and after weighting. |
+| `maic_unanchored()` | Fit the weighted outcome model and return the effect with a robust standard error. |
+
+The weights are the exponential-tilting solution @thm-maic-exponential-weights: after centering the IPD
+covariates on the comparator means, $w_i=\exp(\boldsymbol{\beta}^\top \mathbf{x}_i^{c})$, where
+$\boldsymbol{\beta}$ minimizes the strictly convex dual objective $Q(\boldsymbol{\beta})=\sum_i \exp(\boldsymbol{\beta}^\top \mathbf{x}_i^{c})$
+(@eq-maic-dual), whose stationary condition is exactly the moment balance @eq-maic-moment-balance;
+existence and uniqueness are @thm-maic-existence-uniqueness. `estimate_weights(method = "BFGS")` performs
+this minimization. In pseudocode the whole solve is short (the package does this internally; you never
+write it, but seeing it demystifies "call BFGS"):
+
+```r
+Xc    <- sweep(X_ipd, 2, comparator_means)              # center IPD covariates on comparator means: x_i^c
+Q     <- function(b) sum(exp(Xc %*% b))                 # the convex dual objective Q(beta)
+grad  <- function(b) colSums(as.vector(exp(Xc %*% b)) * Xc)  # gradient = weighted covariate imbalance
+b_hat <- optim(rep(0, ncol(Xc)), Q, grad, method = "BFGS")$par
+w     <- exp(Xc %*% b_hat)                              # the MAIC weights w_i = exp(beta^T x_i^c)
+```
+
+At the optimum the gradient is zero, and the `grad` line set to zero says $\sum_i w_i\mathbf{x}_i^{c}=\mathbf 0$:
+the weighted covariate means equal the comparator means, which *is* the moment balance
+@eq-maic-moment-balance. So minimizing $Q$ and balancing the covariates are the same act, the content of
+@thm-maic-exponential-weights. The reported effective sample size $\mathrm{ESS}=(\sum_i w_i)^2/\sum_i w_i^2$ is
+@def-maic-ess and @eq-maic-ess, with the upper bound of @thm-maic-ess-bound. `maic_unanchored()` returns
+the sandwich (robust) standard error of @thm-maic-sandwich-variance, the correct accounting for the
+estimated weights. The unanchored point estimate it targets, and the conditional-constancy assumption it
+needs, are @thm-unanchored-maic-consistency.
+
+Two diagnostics decide whether to trust a MAIC. The *effective sample size* (ESS) is the equivalent number
+of unweighted patients the weighted sample is worth, $(\sum_i w_i)^2/\sum_i w_i^2$; it falls below the
+actual sample size whenever the weights are uneven, and a small ESS (a large drop) warns that a few
+patients dominate and the estimate is fragile. `check_weights()` reports it. *Covariate balance* is the
+other: `balance_table()` and `love_plot()` show the standardized mean difference (SMD) of each covariate
+between the weighted IPD and the comparator, before and after weighting. A love plot is a dot plot of
+those SMDs; you want every after-weighting point pulled close to zero, with a common rule of thumb of
+$|\mathrm{SMD}|<0.1$. Good balance together with an adequate ESS is the license to report the
+`maic_unanchored()` effect; poor balance or a collapsed ESS is a signal to drop a covariate or reconsider
+the comparison.
+
+### STC and the doubly-robust estimator (Chapters 19, 10) {#sec-impl-uitc-dr}
+
+`method = "stc"` delegates to `mlumr::stc()` (Chapter 19, mapped in @sec-impl-mlumr-benchmarks).
+
+`dr_estimator()` (also `method = "dr"`) combines the two adjustment strategies into one estimator that
+is consistent if *either* the weighting model or the outcome model is correctly specified, the
+double-robustness property of the augmented inverse-probability-weighting (AIPW) estimator of Chapter 10.
+Plainly, it gives you *two chances to be right*: if either the weighting model or the outcome model is
+correct, the estimate is consistent. A minimal call is
+
+```r
+dr <- dr_estimator(dat,
+                   weighting    = "maic",           # get weights from MAIC (Chapter 18)
+                   augmentation = "weighted_gcomp",  # correct with a G-computation term (Chapter 19)
+                   cor_method   = "spearman",        # correlation used by the NORTA comparator simulation
+                   n_sim        = 1000,              # NORTA draws of the comparator covariate profile
+                   n_boot       = 1000)              # bootstrap resamples for the standard error
+```
+
+| Argument | Mathematical role |
+|---|---|
+| `weighting = c("maic", "iow")` | the propensity-type model: MAIC entropy weights (Chapter 18) or inverse-odds weights. |
+| `augmentation = c("residual", "weighted_gcomp")` | the outcome-regression correction: the G-computation term of Chapter 19. |
+| `cor_method`, `n_sim` | the NORTA simulation of the comparator covariate profile (the Gaussian-copula construction @thm-norta-copula) used to evaluate the augmentation. |
+
+The point estimate is the weighting estimate plus a mean-zero (under either model) augmentation; the
+weighting piece is @thm-maic-exponential-weights and the augmentation piece is the G-computation
+functional @prp-stc-gcomp. Standard errors come from the bootstrap (`n_boot`).
+
+The two `augmentation` choices are two ways to write the same correction: `"residual"` adds the weighted
+mean IPD residual from the outcome model, while `"weighted_gcomp"` forms the G-computation prediction over
+the simulated comparator covariates and corrects toward it; both have mean zero when the outcome model is
+correct, so they agree in large samples and differ mainly in finite-sample behavior. The two integer knobs
+serve different stages and should not be confused: `n_sim` sets how many comparator covariate profiles the
+NORTA step simulates to evaluate the augmentation, whereas `n_int` (from `add_integration()`) sets the QMC
+grid used inside the Bayesian fits; raising either reduces a different Monte Carlo error.
+
+### Quantitative bias analysis (Chapter 28) {#sec-impl-uitc-qba}
+
+Two families of QBA ship with `uitc`. The ITC-specific functions act on the unanchored estimand and ask
+how an *unmeasured* covariate would move it; the classical functions act on a $2\times2$ table. In
+practice the QBA functions form a ladder you climb only as far as you need: start with the E-value as a
+one-number screening calculation (how strong would an unmeasured confounder have to be to overturn the
+result?); if that is not reassuring, run an explicit sensitivity analysis with `qba_unmeasured_itc()` or
+`qba_tipping_itc()`; and if you can put priors on the bias, escalate to the probabilistic analysis
+`qba_prob_itc()`. The classical $2\times2$ functions are for the separate case of a single contingency
+table rather than the unanchored estimand.
+
+| Function | Method | Book object |
+|---|---|---|
+| `confounders_evalue()` | E-value for the minimum unmeasured association that could explain away the effect | @def-itc-evalue, @thm-evalue-derivation, @eq-qba-evalue |
+| `qba_unmeasured_itc()` | simulate an unmeasured confounder jointly with the measured covariates by NORTA, re-estimate | @thm-norta-copula, @eq-qba-norta, the correction @eq-qba-correction |
+| `qba_tipping_itc()` | find the sensitivity-parameter value at which the corrected estimate crosses a threshold | @def-tipping-point, @eq-qba-tipping, monotone @prp-qba-tipping-monotone |
+| `qba_prob_itc()` | probabilistic bias analysis: priors on the bias parameters, Monte Carlo over the bias-corrected estimand | @def-probabilistic-bias-analysis, @thm-qba-pba-convergence |
+| `probsens()`, `confounders()`, `misclass()`, `selection()` | classical epidemiologic QBA on a $2\times2$ table | @def-quantitative-bias-analysis, the bias factor @eq-qba-bias-factor |
+
+For the E-value, `confounders_evalue(case, type = "RR")` returns $E=\mathrm{RR}+\sqrt{\mathrm{RR}(\mathrm{RR}-1)}$
+for $\mathrm{RR}\ge 1$ (and the reciprocal-scale version otherwise), the closed form derived in
+@thm-evalue-derivation. The NORTA procedure `qba_unmeasured_itc()` draws an unmeasured covariate with a
+prescribed correlation to the measured ones through a Gaussian copula, exactly the construction whose
+validity is @thm-norta-copula, then propagates it through the unanchored estimand @eq-qba-unanchored-estimand.
+Tipping-point and probabilistic outputs are visualized with `plot_tipping_curve()`,
+`plot_sensitivity_curve()`, and `plot_sensitivity_contour()`.
+
+The distinction between `qba_tipping_itc()` and `qba_prob_itc()` is load-bearing and easy to miss. A
+*tipping-point* analysis is deterministic root-finding: it varies a single sensitivity parameter (say the
+strength of the unmeasured confounder) and reports the exact value at which the corrected estimate crosses
+a threshold, for example loses significance; there is one number, "it tips here" (@def-tipping-point,
+@eq-qba-tipping), and its monotone behavior is @prp-qba-tipping-monotone. A *probabilistic bias analysis*
+instead puts a prior distribution on the bias parameters and Monte-Carlos over it, returning a whole
+distribution of bias-corrected estimates and an interval that folds in bias uncertainty
+(@def-probabilistic-bias-analysis, @thm-qba-pba-convergence). Use tipping when you want a single crisp
+"how bad would it have to be" answer; use probabilistic when you can express honest uncertainty about the
+bias and want that propagated.
+
+Comparator selection by covariate distance (Chapter 27) is also available: `covariate_distance()` and
+`match_comparator()` compute the Euclidean, standardized, Mahalanobis, and Gower distances of
+@def-distance-variants, the Mahalanobis whitening of @thm-mahalanobis-whitening being the scale-invariant
+choice (@thm-distance-scale-invariance). As Chapter 27 stresses, these are diagnostics for closeness, not
+certificates of validity (@prp-distance-diagnostic-not-validity).
+
+### Object-to-code map {#sec-impl-uitc-map}
+
+| Book object | Chapter result | `uitc` |
+|---|---|---|
+| MAIC weights | @thm-maic-exponential-weights, @eq-maic-dual | `estimate_weights()`, `prepare_maic()` |
+| Effective sample size | @def-maic-ess | `check_weights()` |
+| MAIC robust variance | @thm-maic-sandwich-variance | `maic_unanchored()` |
+| STC G-computation | @prp-stc-gcomp | `uitc(method = "stc")` |
+| Doubly-robust (AIPW) | Chapter 10; @thm-maic-exponential-weights + @prp-stc-gcomp | `dr_estimator()` |
+| E-value | @thm-evalue-derivation, @eq-qba-evalue | `confounders_evalue()` |
+| NORTA bias analysis | @thm-norta-copula, @eq-qba-norta | `qba_unmeasured_itc()` |
+| Tipping point | @def-tipping-point, @eq-qba-tipping | `qba_tipping_itc()` |
+| Probabilistic bias analysis | @thm-qba-pba-convergence | `qba_prob_itc()`, `probsens()` |
+| Comparator distance | @def-distance-variants, @thm-mahalanobis-whitening | `covariate_distance()`, `match_comparator()` |
+
+## Using the three packages together {#sec-impl-together}
+
+The packages partition the problem by network type, and that partition is the decision rule for which to
+load.
+
+| Network | Method | Package |
+|---|---|---|
+| Connected, anchored, IPD and AgD | ML-NMR | `multinma` |
+| Disconnected, unanchored, two treatments | ML-UMR | `mlumr` |
+| Unanchored, with MAIC, STC, doubly-robust, and QBA in one umbrella | PAIC and QBA | `uitc` (delegating the Bayesian fits to `mlumr`) |
+
+When you run several unanchored estimates on one `uitc` data object, read them as a panel, not a menu to
+pick a winner from after the fact. `naive()` is the unadjusted anchor point; MAIC, STC, ML-UMR under the
+SPFA, and the doubly-robust estimator are four adjusted routes that should land near one another *if* their
+shared assumptions hold, because they target the same marginal estimand by different means (weighting,
+outcome regression, a Bayesian joint model, and a combination). Broad agreement among the adjusted methods,
+all shifted away from `naive()` in the direction the covariate imbalance predicts, is reassuring. Wide
+disagreement is diagnostic: MAIC drifting from STC points to weight instability (check the ESS and the love
+plot of @sec-impl-uitc-maic); the doubly-robust estimate sitting apart from both suggests one of its two
+models is misspecified; and the `relaxed` ML-UMR fit moving far from `spfa` flags effect modification the
+simpler methods assume away. Pre-specify the primary method, use the others as sensitivity analyses, and
+report the spread.
+
+Because `mlumr` deliberately reuses `multinma`'s function names (`set_ipd()`, `set_agd()`,
+`add_integration()`, `distr()`, `marginal_effects()`), the safe practice is one package per session,
+matched to the network type, or namespacing with `multinma::` and `mlumr::` when both must be attached.
+`uitc` consumes `mlumr_data` objects directly, so a single `combine_data()` result feeds MAIC, STC,
+ML-UMR, naive, doubly-robust, and the QBA sensitivity analyses in turn, which is the recommended way to
+run the adjusted estimate and its bias analysis side by side.
+
+## Notes and references {#sec-impl-notes}
+
+`multinma` is the reference implementation of ML-NMR [@phillippo2020mlnmr] and its general-likelihood and
+survival extension [@phillippo2025general]; the QMC and copula integration it shares with `mlumr` follows
+the Sobol' sequence of @sobol1967 and the copula construction of @sklar1959 (Chapter 22). `mlumr`
+implements ML-UMR [@chandler2025mlumr] for disconnected two-treatment evidence, with the Kaplan-Meier
+reconstruction of @guyot2012 for survival comparators (Chapter 25, Chapter 26). `uitc` collects the
+matching method of @signorovitch2010maic (Chapter 18), the simulated treatment comparison of
+@caro2010stc (Chapter 19), and the bias-analysis machinery of @lash2021qba and the E-value of
+@vanderweele2017evalue (Chapter 28). All three estimate their Bayesian models in Stan [@carpenter2017stan]
+(Chapter 24). The mathematics each package computes is proved in the chapters cited in the maps above;
+this appendix only records the correspondence.

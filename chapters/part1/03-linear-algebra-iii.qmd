@@ -1,0 +1,1806 @@
+---
+title: "Linear Algebra III: Spectral Theory and Quadratic Forms"
+---
+
+## Why spectral theory matters for indirect comparison {#sec-la3-intro}
+
+The first two linear-algebra chapters built the stage: vector spaces, linear maps, rank, the four
+fundamental subspaces (@thm-four-subspaces), orthogonality, and the projection theorem
+(@thm-projection-theorem). Those chapters answer questions about *where* vectors live and *how* to
+project onto a subspace. The present chapter answers a different and deeper question: given a linear
+map represented by a matrix, are there special directions along which the map acts simply, by mere
+scaling? The answer, for the symmetric matrices that dominate statistics, is an emphatic yes, and the
+resulting *spectral theorem* is arguably the single most useful structural result in applied
+mathematics.
+
+Every quantity that controls the precision of an indirect treatment comparison is, at bottom, an
+eigenvalue or a singular value of some matrix.
+
+- The covariance matrix of an estimator, for instance $\mathrm{Cov}(\hat{\boldsymbol{\beta}})$ for a
+  vector of regression coefficients, is symmetric and positive semidefinite. Its eigenvalues are the
+  variances of the estimator along its principal axes, and the variance of any linear contrast
+  $\mathbf{a}^\top\hat{\boldsymbol{\beta}}$, which is exactly the form an indirect-comparison estimand
+  takes, is the quadratic form $\mathbf{a}^\top\mathrm{Cov}(\hat{\boldsymbol{\beta}})\,\mathbf{a}$.
+- The Gram matrix $\mathbf{X}^\top\mathbf{X}$ of a design must be positive definite for the
+  least-squares and maximum-likelihood problems of later chapters to have a unique well-conditioned
+  solution. When it is only positive semidefinite, because covariates are collinear or because a study
+  reports fewer data points than parameters, the *singular value decomposition* and the *Moore-Penrose
+  pseudoinverse* of this chapter supply the minimum-norm solution that the inverse can no longer
+  provide.
+- The *matrix square root*, also constructed here, whitens correlated data: it turns a general
+  covariance into the identity. This is the algebraic backbone of standardization, of the Mahalanobis
+  distance used by the matching and distance methods of Part V, and of the Gaussian-copula
+  constructions used for numerical integration.
+
+We develop the theory in dependency order. We begin with eigenvalues, eigenvectors, the characteristic
+polynomial, and diagonalization for a general square matrix. We then specialize to symmetric matrices,
+proving the spectral theorem in full. From the spectral theorem we read off the theory of quadratic
+forms and positive definiteness, the variational (Rayleigh) characterization of eigenvalues, the
+singular value decomposition, the pseudoinverse, and the matrix square root. We close by noting that
+covariance matrices are symmetric and positive semidefinite, which is the bridge into the probability
+chapter (@thm-cov-psd). Throughout, the reference for standard linear-algebra background is
+@strang2016.
+
+### A running example we will reuse at every step
+
+Before any abstraction, here is a small, concrete object to keep in mind. We will return to it after
+almost every definition and theorem, so that each piece of machinery has an immediate meaning you can
+check by hand.
+
+::: {#exm-la3-contrast-covariance}
+## Two correlated treatment-effect estimates
+
+Two trials share a common comparator $A$. The first reports the log odds ratio of treatment $B$ versus
+$A$, with estimate $\hat y_{AB}$; the second reports the log odds ratio of $C$ versus $A$, with estimate
+$\hat y_{AC}$. When the two relative effects are estimated together in a network, the estimates are
+correlated. Suppose their joint covariance matrix, in convenient units chosen to keep the arithmetic
+clean, is
+$$
+\boldsymbol{\Sigma}=\mathrm{Cov}\!\begin{pmatrix}\hat y_{AB}\\ \hat y_{AC}\end{pmatrix}
+=\begin{pmatrix} 2 & 1\\ 1 & 2\end{pmatrix}.
+$$
+The Bucher indirect comparison of $C$ versus $B$ is the contrast
+$\hat d_{BC}=\hat y_{AB}-\hat y_{AC}$, which is $\mathbf{a}^\top(\hat y_{AB},\hat y_{AC})^\top$ for the
+contrast vector $\mathbf{a}=(1,-1)^\top$. Everything an indirect comparison cares about, namely the
+uncertainty of $\hat d_{BC}$ and the directions of large and small uncertainty in
+$(\hat y_{AB},\hat y_{AC})$, will turn out to be an eigenvalue, an eigenvector, or a quadratic form of
+this one matrix $\boldsymbol{\Sigma}$. $\blacktriangleleft$
+:::
+
+This is exactly the matrix carried through the fully worked example at the end of the chapter
+(@sec-la3-example), so the threads tie together there.
+
+### What each object in this chapter means for an indirect comparison
+
+The chapter introduces a dozen linear-algebra objects. The following table is a map from each object to
+the statistical role it plays, so that you always know why it is in the book. Skim it now and refer back
+to it; nothing here needs to be understood yet.
+
+| Object (this chapter) | What it is | Role in regression, NMA, or ITC |
+|---|---|---|
+| eigenvalue $\lambda_i$ | a scaling factor of the matrix | variance along a principal axis of an estimator |
+| eigenvector $\mathbf{q}_i$ | a direction the matrix only scales | a principal direction of uncertainty or of covariate variation |
+| quadratic form $\mathbf{a}^\top\boldsymbol{\Sigma}\mathbf{a}$ | a weighted sum of squares | the variance of a contrast such as the indirect estimate $\hat d_{BC}$ |
+| positive definite $A\succ 0$ | every direction has positive value | every contrast has strictly positive variance; normal equations have a unique solution |
+| spectral decomposition $A=Q\Lambda Q^\top$ | rotation to independent axes | principal component analysis of a covariance matrix |
+| singular value $\sigma_i$ | a stretching factor of a rectangular matrix | how well the data support a model direction |
+| SVD $A=U\Sigma V^\top$ | rotate, stretch, rotate | structure theorem for a design matrix |
+| condition number $\sigma_1/\sigma_r$ | ratio of largest to smallest stretch | how much collinearity inflates the variance of $\hat{\boldsymbol{\beta}}$ |
+| pseudoinverse $A^{+}$ | best stand-in for an inverse | solves least squares when the design is collinear or rank-deficient |
+| matrix square root $A^{1/2}$ | a symmetric square root | whitening and the Mahalanobis distance of Part V |
+
+### Which results are core and which are deeper support
+
+Not every result below carries the same weight for the rest of the book. On a first reading, focus on
+the core results; the supporting ones can be taken on faith and revisited later.
+
+| Result | Priority | Why |
+|---|---|---|
+| Spectral theorem (@thm-spectral-theorem) | core | every covariance and information matrix decomposes into independent axes |
+| Definiteness and its eigenvalue test (@thm-pd-characterization) | core | positive definiteness is the condition for unique, stable estimation |
+| Quadratic forms (@def-quadratic-form) | core | contrast variances are quadratic forms |
+| Matrix square root (@prp-matrix-square-root) | core | whitening and Mahalanobis distance |
+| Singular value decomposition (@thm-svd) | core | the structure theorem for rectangular design matrices |
+| Pseudoinverse (@def-pseudoinverse) | core | least squares without an invertible Gram matrix |
+| Covariance bridge (@sec-la3-covariance) | core | connects all of the above to statistics |
+| Rayleigh quotient (@thm-rayleigh) | core | variance in a chosen direction; entry point to PCA |
+| Trace and determinant from the spectrum (@lem-trace-det-eigenvalues) | supporting | total and generalized variance, used in summaries |
+| Sylvester's criterion (@thm-sylvester-criterion) | supporting | a cheap arithmetic check for positive definiteness |
+| Courant-Fischer min-max (@thm-courant-fischer) | supporting | interior eigenvalues, stability, and dimension reduction |
+
+## Eigenvalues, eigenvectors, and the characteristic polynomial {#sec-la3-eigen}
+
+**Why care about eigenvalues at all.** When a matrix $A$ describes how some system transforms vectors,
+most directions get both rotated and stretched, which is hard to picture. An *eigenvector* is a special
+direction that the matrix only stretches, never rotates; the stretch factor is its *eigenvalue*. In
+statistics the "system" is a covariance or information matrix, and its eigenvectors are the independent
+axes of variation, with the eigenvalues telling us how much variance lies along each axis. For the
+running covariance $\boldsymbol{\Sigma}$ of @exm-la3-contrast-covariance, we will find one axis along
+which the two estimates vary a lot together and one along which they vary little; those axes are the
+eigenvectors and the amounts are the eigenvalues.
+
+Because a real matrix can fail to have real eigenvalues, the cleanest setting in which to define
+eigenvalues is the complex one. We work with $\mathbb{C}^n$, equipped with the conjugate-linear inner
+product $\langle\mathbf{x},\mathbf{y}\rangle = \mathbf{x}^*\mathbf{y}$, where $\mathbf{x}^* =
+\bar{\mathbf{x}}^\top$ is the conjugate transpose. Every real matrix $A\in\mathbb{R}^{n\times n}$ is in
+particular a complex matrix, so the definitions below apply to it.
+
+::: {.remark}
+**A one-paragraph complex-number refresher (you can skip the details).** A complex number $z=a+bi$ has
+conjugate $\bar z=a-bi$, and $z\bar z=a^2+b^2\ge 0$ is its squared magnitude. For a complex vector
+$\mathbf{x}=(x_1,\dots,x_n)^\top$, the **conjugate transpose** $\mathbf{x}^*=\bar{\mathbf{x}}^\top$ is
+the row vector of conjugates. We use it instead of the plain transpose because
+$\mathbf{x}^*\mathbf{x}=\sum_i \bar{x}_i x_i=\sum_i |x_i|^2\ge 0$ is a genuine squared length, whereas
+$\mathbf{x}^\top\mathbf{x}=\sum_i x_i^2$ could be negative or even complex. That is the only reason the
+conjugate appears. The good news for a health researcher: the matrices we actually care about, namely
+symmetric covariance and Fisher information matrices, always have *real* eigenvalues and *real*
+eigenvectors (we prove this in @lem-sym-real-eigenvalues), so the complex numbers are a temporary
+technical device that disappears the moment we specialize to symmetric matrices. For a real matrix the
+conjugate transpose $A^*$ is just the ordinary transpose $A^\top$. $\blacktriangleleft$
+:::
+
+::: {#def-eigenvalue}
+## Eigenvalue and eigenvector
+
+Let $A\in\mathbb{R}^{n\times n}$. A scalar $\lambda\in\mathbb{C}$ is an **eigenvalue** of $A$ if there
+exists a nonzero vector $\mathbf{v}\in\mathbb{C}^n$ with
+$$
+A\mathbf{v} = \lambda\mathbf{v}.
+$$
+Any such $\mathbf{v}$ is an **eigenvector** of $A$ associated with $\lambda$. For a fixed eigenvalue
+$\lambda$, the set
+$$
+E_\lambda = \{\mathbf{v}\in\mathbb{C}^n : A\mathbf{v} = \lambda\mathbf{v}\} = \mathcal{N}(A-\lambda I)
+$$
+is the **eigenspace** of $\lambda$; it is a subspace. The set of all eigenvalues is the **spectrum** of
+$A$, written $\mathrm{spec}(A)$.
+:::
+
+The dimension of the eigenspace is itself a named quantity that we will use repeatedly. To avoid burying
+it, we state it on its own.
+
+::: {#def-geometric-multiplicity}
+## Geometric multiplicity
+
+The **geometric multiplicity** of an eigenvalue $\lambda$ is the dimension $\dim E_\lambda\ge 1$ of its
+eigenspace, that is, the number of linearly independent eigenvectors associated with $\lambda$.
+:::
+
+**Reader translation.** An eigenvector is a direction on which $A$ acts as plain multiplication by a
+number, the eigenvalue. The eigenspace collects every such direction for one fixed eigenvalue, and the
+geometric multiplicity counts how many genuinely independent such directions there are. For a covariance
+matrix, an eigenvalue is a variance and its eigenvector is the direction in which that variance is felt.
+
+To see the definition work, take the running matrix
+$\boldsymbol{\Sigma}=\begin{pmatrix}2&1\\1&2\end{pmatrix}$ and the candidate direction
+$\mathbf{v}=(1,1)^\top$. Then
+$$
+\boldsymbol{\Sigma}\mathbf{v}=\begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}1\\1\end{pmatrix}
+=\begin{pmatrix}3\\3\end{pmatrix}=3\begin{pmatrix}1\\1\end{pmatrix}=3\,\mathbf{v},
+$$
+so $(1,1)^\top$ is an eigenvector with eigenvalue $3$: along the direction where both estimates move
+together, the variance is large. We will find the other eigenvalue, $1$, along $(1,-1)^\top$, which is
+exactly the indirect-contrast direction.
+
+The defining equation $A\mathbf{v}=\lambda\mathbf{v}$ rearranges to $(A-\lambda I)\mathbf{v}=\mathbf{0}$.
+A nonzero solution $\mathbf{v}$ exists if and only if $A-\lambda I$ is singular, that is, if and only
+if $\det(A-\lambda I)=0$. This turns the search for eigenvalues into a problem about a single
+polynomial.
+
+::: {#def-characteristic-polynomial}
+## Characteristic polynomial
+
+The **characteristic polynomial** of $A\in\mathbb{R}^{n\times n}$ is
+$$
+\chi_A(t) = \det(tI - A).
+$$ {#eq-char-poly}
+:::
+
+**Reader translation.** Finding eigenvalues by hand would mean searching all directions for one that
+$A$ merely scales. The characteristic polynomial turns that geometric search into a single algebra
+problem: its roots are exactly the eigenvalues. For a $2\times 2$ matrix this is just a quadratic, which
+is why our running example is solvable on paper.
+
+By the Leibniz expansion of the determinant, $\chi_A$ is a monic polynomial in $t$ of degree exactly
+$n$, with real coefficients when $A$ is real. The next lemma is the bridge between the algebraic object
+$\chi_A$ and the geometric object $E_\lambda$.
+
+::: {#lem-eigen-char-poly}
+## Eigenvalues are the roots of the characteristic polynomial
+
+For $A\in\mathbb{R}^{n\times n}$ and $\lambda\in\mathbb{C}$, the scalar $\lambda$ is an eigenvalue of
+$A$ if and only if $\chi_A(\lambda)=0$. Consequently $A$ has at least one and at most $n$ distinct
+eigenvalues, and counted with the multiplicities defined by the factorization
+$\chi_A(t)=\prod_{i=1}^n (t-\lambda_i)$ it has exactly $n$ eigenvalues in $\mathbb{C}$.
+:::
+
+::: {.proof}
+By @def-eigenvalue, $\lambda$ is an eigenvalue if and only if $\mathcal{N}(A-\lambda I)\ne\{\mathbf{0}\}$,
+that is, if and only if $A-\lambda I$ is not invertible. A square matrix is invertible if and only if
+its determinant is nonzero (a standard fact about determinants; see @strang2016). Hence $\lambda$ is an
+eigenvalue if and only if $\det(A-\lambda I)=0$. Since $\det(A-\lambda I) = (-1)^n\det(\lambda I - A) =
+(-1)^n\chi_A(\lambda)$, this is equivalent to $\chi_A(\lambda)=0$.
+
+The polynomial $\chi_A$ has degree $n$, so it has at most $n$ distinct roots. By the fundamental
+theorem of algebra it factors over $\mathbb{C}$ as $\chi_A(t)=\prod_{i=1}^n (t-\lambda_i)$ with the
+$\lambda_i\in\mathbb{C}$ repeated according to multiplicity, giving exactly $n$ eigenvalues counted
+this way. $\square$
+:::
+
+**Why this matters.** This lemma is what makes eigenvalues computable: every variance axis of a
+covariance matrix, every curvature of a log-likelihood, is a root of one polynomial. An $n\times n$
+matrix has exactly $n$ eigenvalues (with repeats), so an estimator with $n$ parameters has exactly $n$
+principal variance directions to account for.
+
+The multiplicity of $\lambda$ as a root of $\chi_A$ is the **algebraic multiplicity** of $\lambda$. The
+geometric and algebraic multiplicities need not agree, but they are ordered.
+
+::: {#lem-geo-le-alg}
+## Geometric multiplicity does not exceed algebraic multiplicity
+
+For every eigenvalue $\lambda_0$ of $A\in\mathbb{R}^{n\times n}$,
+$$
+1 \le \dim E_{\lambda_0} \le (\text{algebraic multiplicity of } \lambda_0).
+$$
+:::
+
+::: {.proof}
+Write $g=\dim E_{\lambda_0}\ge 1$ and choose a basis $\mathbf{v}_1,\dots,\mathbf{v}_g$ of $E_{\lambda_0}$.
+Extend it to a basis $\mathbf{v}_1,\dots,\mathbf{v}_n$ of $\mathbb{C}^n$ (every linearly independent
+set extends to a basis; see @def-basis and @strang2016) and assemble the columns into an invertible
+matrix $S=[\mathbf{v}_1\ \cdots\ \mathbf{v}_n]$. Because $A\mathbf{v}_i=\lambda_0\mathbf{v}_i$ for
+$i\le g$, the matrix $S^{-1}AS$ is block upper triangular,
+$$
+S^{-1}AS = \begin{pmatrix} \lambda_0 I_g & B \\ \mathbf{0} & C \end{pmatrix},
+$$
+for some blocks $B$ and $C$. To see why the lower-left block is zero, read $S^{-1}AS$ column by column.
+Its first $g$ columns are $S^{-1}(A\mathbf{v}_i)=S^{-1}(\lambda_0\mathbf{v}_i)=\lambda_0\,S^{-1}\mathbf{v}_i
+=\lambda_0\mathbf{e}_i$ for $i\le g$, because $S^{-1}\mathbf{v}_i=\mathbf{e}_i$ (the $i$-th column of
+$S^{-1}S=I$). The vector $\lambda_0\mathbf{e}_i$ has zeros in rows $g+1,\dots,n$, so the first $g$
+columns of $S^{-1}AS$ are exactly the first $g$ columns of $\mathrm{diag}(\lambda_0 I_g, C)$ with $B$
+sitting on top; that is the displayed block form. Similar matrices share a characteristic polynomial,
+since
+$\det(tI - S^{-1}AS) = \det\!\big(S^{-1}(tI-A)S\big)=\det(tI-A)$ by multiplicativity of the
+determinant. The determinant of a block upper-triangular matrix is the product of the determinants of
+its diagonal blocks, so
+$$
+\chi_A(t) = \det(tI - S^{-1}AS) = (t-\lambda_0)^g\,\det(tI_{n-g}-C).
+$$
+Thus $(t-\lambda_0)^g$ divides $\chi_A$, so the algebraic multiplicity of $\lambda_0$ is at least $g$.
+$\square$
+:::
+
+**Why this matters.** The gap between the two multiplicities is exactly the trouble. When the geometric
+multiplicity is strictly smaller than the algebraic one, a repeated eigenvalue does not supply enough
+independent directions to build a coordinate system, and the matrix cannot be diagonalized. The spectral
+theorem (@thm-spectral-theorem) will show that this pathology never occurs for symmetric matrices, which
+is why covariance and information matrices are always so well behaved.
+
+Eigenvectors belonging to *distinct* eigenvalues carry independent information. The following lemma is
+the engine behind diagonalization.
+
+::: {#lem-eigvec-independent}
+## Eigenvectors for distinct eigenvalues are independent
+
+Let $\lambda_1,\dots,\lambda_k$ be distinct eigenvalues of $A$ with associated eigenvectors
+$\mathbf{v}_1,\dots,\mathbf{v}_k$. Then $\mathbf{v}_1,\dots,\mathbf{v}_k$ are linearly independent.
+:::
+
+::: {.proof}
+We argue by induction on $k$. For $k=1$ the single eigenvector $\mathbf{v}_1$ is nonzero, hence
+independent. Assume the claim for $k-1$ and suppose
+$$
+c_1\mathbf{v}_1 + c_2\mathbf{v}_2 + \cdots + c_k\mathbf{v}_k = \mathbf{0}.
+\tag{$\ast$}
+$$
+Apply $A$ to ($\ast$) and use $A\mathbf{v}_i=\lambda_i\mathbf{v}_i$:
+$$
+c_1\lambda_1\mathbf{v}_1 + c_2\lambda_2\mathbf{v}_2 + \cdots + c_k\lambda_k\mathbf{v}_k = \mathbf{0}.
+$$
+Subtract $\lambda_k$ times ($\ast$) from this equation; the $\mathbf{v}_k$ term cancels, leaving
+$$
+c_1(\lambda_1-\lambda_k)\mathbf{v}_1 + \cdots + c_{k-1}(\lambda_{k-1}-\lambda_k)\mathbf{v}_{k-1}
+= \mathbf{0}.
+$$
+By the inductive hypothesis $\mathbf{v}_1,\dots,\mathbf{v}_{k-1}$ are independent, so each coefficient
+vanishes: $c_i(\lambda_i-\lambda_k)=0$ for $i\le k-1$. Since the eigenvalues are distinct,
+$\lambda_i-\lambda_k\ne 0$, forcing $c_i=0$ for $i\le k-1$. Then ($\ast$) reduces to
+$c_k\mathbf{v}_k=\mathbf{0}$, and $\mathbf{v}_k\ne\mathbf{0}$ gives $c_k=0$. All coefficients vanish, so
+the eigenvectors are independent. $\square$
+:::
+
+## Diagonalization {#sec-la3-diag}
+
+::: {#def-diagonalizable}
+## Diagonalizable and similar matrices
+
+Two matrices $A,B\in\mathbb{R}^{n\times n}$ are **similar** if $B=S^{-1}AS$ for some invertible
+$S\in\mathbb{R}^{n\times n}$ (or $\mathbb{C}^{n\times n}$). The matrix $A$ is **diagonalizable** if it
+is similar to a diagonal matrix, that is, if there exist an invertible $S$ and a diagonal $D$ with
+$S^{-1}AS=D$.
+:::
+
+**Reader translation.** Two similar matrices are the *same* linear map written in two coordinate
+systems; $S$ is the dictionary that translates between them. (Similarity is an equivalence relation, and
+similar matrices share rank, determinant, trace, and spectrum, so these quantities describe the map, not
+the coordinates.) To diagonalize is to find a coordinate system in which the map acts independently along
+each axis: no axis leaks into another, and the map is just a list of scalings. That is the cleanest
+possible description of a matrix, and the rest of the chapter is about when it is achievable.
+
+::: {#thm-diagonalization-criterion}
+## Diagonalization criterion
+
+A matrix $A\in\mathbb{R}^{n\times n}$ is diagonalizable if and only if $\mathbb{C}^n$ has a basis
+consisting of eigenvectors of $A$, equivalently if and only if $A$ has $n$ linearly independent
+eigenvectors. When $S=[\mathbf{s}_1\ \cdots\ \mathbf{s}_n]$ has these eigenvectors as columns, then
+$S^{-1}AS=\mathrm{diag}(\lambda_1,\dots,\lambda_n)$, where $A\mathbf{s}_i=\lambda_i\mathbf{s}_i$.
+:::
+
+::: {.proof}
+Suppose $A$ is diagonalizable, with $S^{-1}AS=D=\mathrm{diag}(d_1,\dots,d_n)$ for an invertible $S$
+with columns $\mathbf{s}_1,\dots,\mathbf{s}_n$. Multiplying on the left by $S$ gives $AS=SD$. Reading
+this equality column by column, $A\mathbf{s}_i=d_i\mathbf{s}_i$ for each $i$. Because $S$ is invertible
+its columns are linearly independent and nonzero, so each $\mathbf{s}_i$ is an eigenvector and they form
+a basis of $\mathbb{C}^n$.
+
+Conversely, suppose $\mathbf{s}_1,\dots,\mathbf{s}_n$ are linearly independent eigenvectors,
+$A\mathbf{s}_i=\lambda_i\mathbf{s}_i$. Form $S=[\mathbf{s}_1\ \cdots\ \mathbf{s}_n]$, which is invertible
+because its columns are independent. Then the $i$-th column of $AS$ is $A\mathbf{s}_i=\lambda_i\mathbf{s}_i$,
+which is the $i$-th column of $S\Lambda$ with $\Lambda=\mathrm{diag}(\lambda_1,\dots,\lambda_n)$. Hence
+$AS=S\Lambda$, so $S^{-1}AS=\Lambda$ is diagonal. $\square$
+:::
+
+**Why this matters.** Diagonalizability is not symbol manipulation; it is the existence of a coordinate
+system in which the matrix becomes a diagonal list of eigenvalues. Once we reach symmetric matrices, this
+coordinate system will be an orthonormal one (a pure rotation), which is what lets us interpret a
+covariance matrix as independent variances along perpendicular axes.
+
+::: {#cor-distinct-eigenvalues-diagonalizable}
+## Distinct eigenvalues force diagonalizability
+
+If $A\in\mathbb{R}^{n\times n}$ has $n$ distinct eigenvalues, then $A$ is diagonalizable.
+:::
+
+::: {.proof}
+Choose one eigenvector for each of the $n$ distinct eigenvalues. By @lem-eigvec-independent these $n$
+eigenvectors are linearly independent, so they form a basis of $\mathbb{C}^n$. Apply
+@thm-diagonalization-criterion. $\square$
+:::
+
+The converse of the corollary is false, and not every matrix is diagonalizable.
+
+::: {#def-defective}
+## Defective matrix
+
+A matrix $A\in\mathbb{R}^{n\times n}$ is **defective** if it does not have $n$ linearly independent
+eigenvectors, equivalently if some eigenvalue has geometric multiplicity strictly less than its
+algebraic multiplicity. By @thm-diagonalization-criterion a defective matrix is not diagonalizable.
+:::
+
+**Reader translation.** A defective matrix has a repeated eigenvalue that did not bring enough
+independent directions with it, so there is no full set of axes to diagonalize in. The next example
+shows the smallest one. The payoff of the spectral theorem is that symmetric matrices, and therefore all
+covariance and information matrices, are *never* defective.
+
+::: {.remark}
+Distinct eigenvalues are sufficient but not necessary: the identity $I_n$ has the single eigenvalue $1$
+with multiplicity $n$ yet is already diagonal. Diagonalizability can also fail outright. The matrix
+$$
+N=\begin{pmatrix} 0 & 1 \\ 0 & 0 \end{pmatrix}
+$$
+has $\chi_N(t)=t^2$, so its only eigenvalue is $0$ with algebraic multiplicity $2$, but
+$E_0=\mathcal{N}(N)=\mathrm{span}\{\mathbf{e}_1\}$ has dimension $1$. The geometric multiplicity is
+strictly less than the algebraic multiplicity, so $N$ has only one independent eigenvector and, by
+@thm-diagonalization-criterion, is **not** diagonalizable; it is defective in the sense of
+@def-defective. The spectral theorem below shows that symmetric matrices are never defective.
+$\blacktriangleleft$
+:::
+
+## Trace and determinant as symmetric functions of the eigenvalues {#sec-la3-trace-det}
+
+Two scalar summaries of a matrix, the trace $\mathrm{tr}(A)=\sum_i a_{ii}$ and the determinant
+$\det(A)$, turn out to be the simplest symmetric functions of the eigenvalues. These two numbers are not
+idle curiosities for a statistician. For a covariance matrix the trace is the *total variance* (the sum
+of the variances along the principal axes), and the determinant is the *generalized variance*, which is
+the squared volume of the confidence ellipsoid. The results below say both are read directly off the
+eigenvalues, which is exactly why principal component analysis can speak of the share of total variance
+"explained" by each axis. We first record a small but heavily used fact.
+
+::: {#lem-trace-cyclic}
+## Cyclic invariance of the trace
+
+For $B\in\mathbb{R}^{m\times n}$ and $C\in\mathbb{R}^{n\times m}$,
+$\mathrm{tr}(BC)=\mathrm{tr}(CB)$. In particular $\mathrm{tr}(S^{-1}AS)=\mathrm{tr}(A)$, so the trace is
+a similarity invariant.
+:::
+
+::: {.proof}
+Compute directly:
+$$
+\mathrm{tr}(BC)=\sum_{i=1}^m (BC)_{ii}=\sum_{i=1}^m\sum_{j=1}^n B_{ij}C_{ji}
+=\sum_{j=1}^n\sum_{i=1}^m C_{ji}B_{ij}=\sum_{j=1}^n (CB)_{jj}=\mathrm{tr}(CB).
+$$
+Applying this with $B=S^{-1}A$ and $C=S$ gives $\mathrm{tr}(S^{-1}AS)=\mathrm{tr}(ASS^{-1})=\mathrm{tr}(A)$.
+$\square$
+:::
+
+::: {#lem-trace-det-eigenvalues}
+## Trace and determinant from the spectrum
+
+Let $A\in\mathbb{R}^{n\times n}$ have eigenvalues $\lambda_1,\dots,\lambda_n\in\mathbb{C}$ listed with
+algebraic multiplicity. Then
+$$
+\mathrm{tr}(A)=\sum_{i=1}^n \lambda_i,
+\qquad
+\det(A)=\prod_{i=1}^n \lambda_i .
+$$
+:::
+
+::: {.proof}
+By @lem-eigen-char-poly we may factor $\chi_A(t)=\prod_{i=1}^n (t-\lambda_i)$. Expanding,
+$$
+\prod_{i=1}^n (t-\lambda_i) = t^n - \Big(\sum_i\lambda_i\Big)t^{n-1} + \cdots + (-1)^n\prod_i\lambda_i .
+\tag{1}
+$$
+We now compute the same coefficients from $\chi_A(t)=\det(tI-A)$ using the Leibniz expansion
+$$
+\det(tI-A)=\sum_{\pi\in S_n}\mathrm{sgn}(\pi)\prod_{i=1}^n\big(t\,\delta_{i,\pi(i)}-a_{i,\pi(i)}\big),
+$$
+where $S_n$ is the set of permutations of $\{1,\dots,n\}$. A factor $t\,\delta_{i,\pi(i)}-a_{i,\pi(i)}$
+contains the variable $t$ only when $\pi(i)=i$, so the degree in $t$ of the term indexed by $\pi$ equals
+the number of fixed points of $\pi$ (a permutation $\pi$ contributes one factor of $t$ for each index it
+leaves fixed).
+
+It helps to see the pattern for $n=2$ before the general count. There the two permutations are the
+identity, contributing $(t-a_{11})(t-a_{22})=t^2-(a_{11}+a_{22})t+a_{11}a_{22}$, and the swap, with no
+fixed points, contributing $-a_{12}a_{21}$ (degree $0$ in $t$). So $\chi_A(t)=t^2-\mathrm{tr}(A)\,t+
+\det(A)$: the identity alone produces the $t^{n-1}$ coefficient, exactly the claim we now prove in
+general.
+
+*Constant term.* Set $t=0$: $\chi_A(0)=\det(-A)=(-1)^n\det(A)$. Comparing with (1) evaluated at $t=0$,
+namely $(-1)^n\prod_i\lambda_i$, gives $\det(A)=\prod_i\lambda_i$.
+
+*Coefficient of $t^{n-1}$.* A permutation contributes to $t^{n}$ or $t^{n-1}$ only if it has at least
+$n-1$ fixed points. No permutation has exactly $n-1$ fixed points, because fixing $n-1$ of the $n$
+symbols forces the last one to be fixed as well (a permutation is a bijection, so once $n-1$ outputs are
+pinned the remaining input has only one possible output left). Hence the only contributor is the identity
+permutation, whose term is $\prod_{i=1}^n (t-a_{ii})$. The coefficient of $t^{n-1}$ in this product is
+$-\sum_i a_{ii}=-\mathrm{tr}(A)$. Comparing with (1), $\mathrm{tr}(A)=\sum_i\lambda_i$. $\square$
+:::
+
+**Why this matters.** Read for a covariance matrix, this lemma says total variance
+$\mathrm{tr}(\boldsymbol{\Sigma})=\sum_i\lambda_i$ is the sum of the principal-axis variances, and
+generalized variance $\det(\boldsymbol{\Sigma})=\prod_i\lambda_i$ is their product. A single zero
+eigenvalue makes the determinant zero, the signature of a perfectly collinear direction with no
+variation; principal component analysis "explains" variance precisely by reporting each $\lambda_i$ as a
+share of $\mathrm{tr}(\boldsymbol{\Sigma})$.
+
+For the symmetric matrices treated next, both identities have a one-line proof from the spectral
+decomposition $A=Q\Lambda Q^\top$: by @lem-trace-cyclic, $\mathrm{tr}(A)=\mathrm{tr}(\Lambda Q^\top
+Q)=\mathrm{tr}(\Lambda)=\sum_i\lambda_i$, and by multiplicativity of the determinant together with
+$\det(Q)^2=\det(Q^\top Q)=\det(I)=1$, $\det(A)=\det(Q)\det(\Lambda)\det(Q^\top)=\det(\Lambda)=\prod_i\lambda_i$.
+
+## Symmetric matrices and the spectral theorem {#sec-la3-spectral}
+
+Recall from Chapter 2 that a matrix $Q\in\mathbb{R}^{n\times n}$ is **orthogonal** if $Q^\top Q=I_n$,
+equivalently $QQ^\top=I_n$, equivalently the columns of $Q$ form an orthonormal basis of $\mathbb{R}^n$.
+Orthogonal matrices preserve inner products and norms: $\langle Q\mathbf{x},Q\mathbf{y}\rangle =
+\mathbf{x}^\top Q^\top Q\mathbf{y}=\langle\mathbf{x},\mathbf{y}\rangle$. A matrix $A$ is **symmetric**
+if $A^\top=A$.
+
+Symmetric matrices are the best-behaved matrices in all of linear algebra. We prove three facts in
+sequence: their eigenvalues are real, eigenvectors for distinct eigenvalues are automatically
+orthogonal, and there is always a full orthonormal basis of eigenvectors. The last statement is the
+spectral theorem.
+
+**Why this matters, stated up front.** It is worth knowing the payoff before grinding through the proof.
+The spectral theorem is the reason every covariance matrix can be rotated into independent variances
+(this is principal component analysis), the reason a covariance matrix has a well-defined square root
+(this is whitening and the Mahalanobis distance), and the reason the quadratic forms of the next section
+reduce to simple weighted sums of squares. Because $A^\top=A$ describes covariance, correlation, Gram,
+Hessian, and Fisher information matrices alike, this one theorem underwrites almost every precision
+calculation in the book. (A reminder of two symbols from the [Notation](/notation.qmd) chapter:
+$\mathcal{N}(A)$ is the null space of $A$ and $\mathcal{C}(A)$ is its column space.)
+
+::: {#lem-sym-real-eigenvalues}
+## Real eigenvalues and a real eigenvector
+
+Let $A\in\mathbb{R}^{n\times n}$ be symmetric. Then every eigenvalue of $A$ is real, and every
+eigenvalue has a real eigenvector.
+:::
+
+::: {.proof}
+Let $\lambda\in\mathbb{C}$ be an eigenvalue with eigenvector $\mathbf{v}\in\mathbb{C}^n$,
+$\mathbf{v}\ne\mathbf{0}$. Consider the scalar $\mathbf{v}^*A\mathbf{v}$, where $\mathbf{v}^*=
+\bar{\mathbf{v}}^\top$. Because $A$ is real and symmetric, $A^*=\bar A^\top=A^\top=A$ (for a real matrix
+the conjugate transpose is just the transpose), so, using that the conjugate transpose of a product
+reverses the order, $(\mathbf{v}^*A\mathbf{v})^* = \mathbf{v}^*A^*(\mathbf{v}^*)^*$ with
+$(\mathbf{v}^*)^*=\mathbf{v}$, giving
+$$
+(\mathbf{v}^*A\mathbf{v})^* = \mathbf{v}^*A^*\mathbf{v} = \mathbf{v}^*A\mathbf{v}.
+$$
+A scalar equal to its own conjugate is real, so $\mathbf{v}^*A\mathbf{v}\in\mathbb{R}$. Likewise
+$\mathbf{v}^*\mathbf{v}=\sum_i|v_i|^2=\|\mathbf{v}\|^2$ is a positive real number. From
+$A\mathbf{v}=\lambda\mathbf{v}$ we get $\mathbf{v}^*A\mathbf{v}=\lambda\,\mathbf{v}^*\mathbf{v}$, so
+$$
+\lambda = \frac{\mathbf{v}^*A\mathbf{v}}{\mathbf{v}^*\mathbf{v}}
+$$
+is a ratio of two real numbers, hence real.
+
+Since $\lambda$ is real and $A$ is real, the matrix $A-\lambda I$ is a real matrix that is singular (by
+@lem-eigen-char-poly its determinant is zero). A real singular matrix has a nonzero real vector in its
+null space, namely a real solution of the real homogeneous system $(A-\lambda I)\mathbf{x}=\mathbf{0}$.
+That vector is a real eigenvector for $\lambda$. $\square$
+:::
+
+::: {#lem-sym-orthogonal-eigenvectors}
+## Orthogonality of eigenvectors for distinct eigenvalues
+
+Let $A\in\mathbb{R}^{n\times n}$ be symmetric, and let $A\mathbf{u}=\lambda\mathbf{u}$,
+$A\mathbf{w}=\mu\mathbf{w}$ with $\lambda\ne\mu$. Then $\mathbf{u}^\top\mathbf{w}=0$.
+:::
+
+::: {.proof}
+Using $A^\top=A$,
+$$
+\lambda\,\mathbf{u}^\top\mathbf{w}=(\lambda\mathbf{u})^\top\mathbf{w}=(A\mathbf{u})^\top\mathbf{w}
+=\mathbf{u}^\top A^\top\mathbf{w}=\mathbf{u}^\top A\mathbf{w}=\mathbf{u}^\top(\mu\mathbf{w})
+=\mu\,\mathbf{u}^\top\mathbf{w}.
+$$
+Hence $(\lambda-\mu)\mathbf{u}^\top\mathbf{w}=0$, and since $\lambda\ne\mu$ we conclude
+$\mathbf{u}^\top\mathbf{w}=0$. $\square$
+:::
+
+We now prove the central theorem of the chapter. The proof is by induction on $n$ and uses only the
+existence of one real eigenvector (@lem-sym-real-eigenvalues), the invariance of the orthogonal
+complement, and the ability to extend an orthonormal set to an orthonormal basis (Gram-Schmidt,
+@thm-gram-schmidt).
+
+::: {#thm-spectral-theorem}
+## Spectral theorem for real symmetric matrices
+
+Let $A\in\mathbb{R}^{n\times n}$ be symmetric. Then there exist an orthogonal matrix
+$Q=[\mathbf{q}_1\ \cdots\ \mathbf{q}_n]\in\mathbb{R}^{n\times n}$ and a real diagonal matrix
+$\Lambda=\mathrm{diag}(\lambda_1,\dots,\lambda_n)$ such that
+$$
+A = Q\Lambda Q^\top = \sum_{i=1}^n \lambda_i\,\mathbf{q}_i\mathbf{q}_i^\top .
+$$ {#eq-spectral-decomposition}
+The columns $\mathbf{q}_1,\dots,\mathbf{q}_n$ form an orthonormal basis of $\mathbb{R}^n$ consisting of
+eigenvectors of $A$, with $A\mathbf{q}_i=\lambda_i\mathbf{q}_i$, and the $\lambda_i$ are exactly the
+eigenvalues of $A$ repeated with multiplicity. In particular every real symmetric matrix is
+diagonalizable, by an orthogonal change of basis, and is never defective.
+:::
+
+The proof is the longest in the chapter, so here is the plan before the details. It is an induction on
+the size $n$, peeling off one eigenvector at a time.
+
+| Step | What happens |
+|---|---|
+| Base case | a $1\times 1$ matrix is already diagonal |
+| Step 1: first eigenvector | a real unit eigenvector $\mathbf{q}_1$ exists by @lem-sym-real-eigenvalues |
+| Step 2: invariant complement | the hyperplane $\mathbf{q}_1^\perp$ is mapped into itself by $A$ |
+| Step 3: shrink the problem | $A$ restricted to that hyperplane is a smaller symmetric matrix; apply the inductive hypothesis |
+| Step 4: assemble | glue $\mathbf{q}_1$ to the smaller orthonormal eigenbasis to get the full one |
+
+::: {.proof}
+*Base case.* We induct on $n$. For $n=1$ the matrix $A=(a_{11})$ is already diagonal, with $Q=(1)$ and
+$\Lambda=(a_{11})$.
+
+*Step 1: the first eigenvector.* Assume the theorem for all symmetric matrices of size $n-1$, and let
+$A$ be symmetric of size $n$. By @lem-sym-real-eigenvalues, $A$ has a real eigenvalue $\lambda_1$ with a
+real eigenvector, which we scale to unit length: $A\mathbf{q}_1=\lambda_1\mathbf{q}_1$,
+$\|\mathbf{q}_1\|=1$.
+
+*Step 2: the invariant complement.* Let
+$$
+W=\mathbf{q}_1^\perp=\{\mathbf{x}\in\mathbb{R}^n:\mathbf{q}_1^\top\mathbf{x}=0\},
+$$
+a subspace of dimension $n-1$ by @thm-rank-nullity. The subspace $W$ is **$A$-invariant**, meaning that
+once a vector lies in $W$, applying $A$ keeps it in $W$: if $\mathbf{x}\in W$ then, using symmetry,
+$$
+\mathbf{q}_1^\top(A\mathbf{x})=(A\mathbf{q}_1)^\top\mathbf{x}
+=\lambda_1\mathbf{q}_1^\top\mathbf{x}=0,
+$$
+so $A\mathbf{x}\in W$. This is what lets us reduce the problem to one dimension lower.
+
+*Step 3: shrink the problem.* Recall $W$ has dimension $n-1$. By @thm-gram-schmidt choose an orthonormal
+basis of $W$ and assemble it as the columns of a matrix
+$Q_1\in\mathbb{R}^{n\times(n-1)}$, so that $Q_1^\top Q_1=I_{n-1}$, the columns of $Q_1$ span $W$, and
+$Q_1^\top\mathbf{q}_1=\mathbf{0}$ because the columns of $Q_1$ lie in $W=\mathbf{q}_1^\perp$. Define the
+$(n-1)\times(n-1)$ matrix
+$$
+B=Q_1^\top A Q_1 .
+$$
+It is symmetric, since $B^\top=Q_1^\top A^\top Q_1=Q_1^\top A Q_1=B$. By the inductive hypothesis there
+are an orthogonal $R\in\mathbb{R}^{(n-1)\times(n-1)}$ and a real diagonal
+$\Lambda'=\mathrm{diag}(\lambda_2,\dots,\lambda_n)$ with $B=R\Lambda'R^\top$.
+
+*Step 4: assemble.* Set $\tilde Q=[\mathbf{q}_1\ \mid\ Q_1R]$. Its columns are orthonormal: $\mathbf{q}_1$ has unit norm, the
+columns of $Q_1R$ have the form $Q_1\mathbf{r}$ for orthonormal $\mathbf{r}$ and satisfy
+$(Q_1R)^\top(Q_1R)=R^\top Q_1^\top Q_1 R=R^\top R=I_{n-1}$, and they are orthogonal to $\mathbf{q}_1$
+because $(Q_1R)^\top\mathbf{q}_1=R^\top Q_1^\top\mathbf{q}_1=\mathbf{0}$. Hence $\tilde Q$ is orthogonal.
+Compute
+$$
+\tilde Q^\top A\tilde Q
+=\begin{pmatrix}\mathbf{q}_1^\top A\mathbf{q}_1 & \mathbf{q}_1^\top A Q_1 R\\
+(Q_1R)^\top A\mathbf{q}_1 & (Q_1R)^\top A Q_1 R\end{pmatrix}.
+$$
+The diagonal scalar is $\mathbf{q}_1^\top A\mathbf{q}_1=\lambda_1\mathbf{q}_1^\top\mathbf{q}_1=\lambda_1$.
+The off-diagonal blocks vanish: since $A\mathbf{q}_1=\lambda_1\mathbf{q}_1$ and $Q_1^\top\mathbf{q}_1=
+\mathbf{0}$,
+$$
+(Q_1R)^\top A\mathbf{q}_1=R^\top Q_1^\top(\lambda_1\mathbf{q}_1)=\lambda_1 R^\top Q_1^\top\mathbf{q}_1
+=\mathbf{0},
+$$
+and the upper block is its transpose, also zero. The lower-right block is
+$(Q_1R)^\top A(Q_1R)=R^\top(Q_1^\top A Q_1)R=R^\top B R=\Lambda'$. Therefore
+$$
+\tilde Q^\top A\tilde Q=\begin{pmatrix}\lambda_1 & \mathbf{0}^\top\\\mathbf{0}&\Lambda'\end{pmatrix}
+=\mathrm{diag}(\lambda_1,\lambda_2,\dots,\lambda_n)=:\Lambda,
+$$
+which rearranges to $A=\tilde Q\Lambda\tilde Q^\top$. Taking $Q=\tilde Q$ completes the induction. The
+identity $A=\sum_i\lambda_i\mathbf{q}_i\mathbf{q}_i^\top$ is the column-wise expansion of $Q\Lambda
+Q^\top$, and reading $AQ=Q\Lambda$ column by column shows $A\mathbf{q}_i=\lambda_i\mathbf{q}_i$, so each
+$\mathbf{q}_i$ is an eigenvector and each $\lambda_i$ an eigenvalue. That the listed $\lambda_i$ are all
+the eigenvalues with multiplicity follows because $\chi_A=\chi_\Lambda=\prod_i(t-\lambda_i)$ by
+similarity. $\square$
+:::
+
+The expansion @eq-spectral-decomposition deserves a second reading, and the interpretation is important
+enough to record as a proposition.
+
+::: {#prp-spectral-projections}
+## Spectral decomposition as a sum of orthogonal projections
+
+Let $A=Q\Lambda Q^\top$ be a spectral decomposition of a symmetric matrix, with orthonormal eigenvectors
+$\mathbf{q}_1,\dots,\mathbf{q}_n$. Each rank-one matrix $P_i=\mathbf{q}_i\mathbf{q}_i^\top$ is the
+orthogonal projection onto the eigenline $\mathrm{span}\{\mathbf{q}_i\}$, and
+$$
+A=\sum_{i=1}^n\lambda_i P_i=\sum_{\lambda\in\mathrm{spec}(A)}\lambda\,P_{E_\lambda},
+$$
+where $P_{E_\lambda}$ is the orthogonal projection onto the eigenspace $E_\lambda$. The eigenspaces are
+mutually orthogonal, and every vector of $\mathbb{R}^n$ splits uniquely into one piece in each
+eigenspace.
+:::
+
+::: {.proof}
+Each $P_i$ is symmetric and idempotent, $P_i^2=\mathbf{q}_i(\mathbf{q}_i^\top\mathbf{q}_i)
+\mathbf{q}_i^\top=P_i$, so by the projection theorem (@thm-projection-theorem) and the
+orthonormal-basis formula for an orthogonal projection matrix (@def-projection-matrix) it is exactly the
+orthogonal projection onto $\mathrm{span}\{\mathbf{q}_i\}$. Summing the rank-one expansion
+@eq-spectral-decomposition gives $A=\sum_i\lambda_i P_i$. Grouping the terms with a common eigenvalue
+$\lambda$, the corresponding $\mathbf{q}_i$ span $E_\lambda$ and their rank-one projections add to
+$P_{E_\lambda}$, yielding the grouped form. Distinct eigenspaces are orthogonal by
+@lem-sym-orthogonal-eigenvectors, and since the $n$ eigenvectors form a basis, every vector decomposes
+uniquely across the eigenspaces. (In the language of @sec-la3-spectral, this last property is summarized
+by saying the eigenspaces form a **direct sum** equal to $\mathbb{R}^n$, written with the direct-sum
+symbol as $\mathbb{R}^n=\bigoplus_\lambda E_\lambda$: a direct sum is a sum of subspaces in which each
+vector has exactly one decomposition.) $\square$
+:::
+
+**Why this matters.** This is the bridge from abstract algebra to geometry. A symmetric matrix is nothing
+more than a set of perpendicular directions, each with a number attached: it scales the part of any
+vector lying along $\mathbf{q}_i$ by $\lambda_i$ and adds the results. For a covariance matrix the
+$\mathbf{q}_i$ are the principal axes of the data cloud and the $\lambda_i$ are the variances along them.
+
+::: {.remark}
+**Reader checkpoint.** If you retain one thing from this section, retain this: a symmetric matrix can be
+rotated into a set of independent perpendicular axes; the eigenvalues tell you the strength, or variance,
+along each axis; and nothing is lost in the rotation. This is precisely why covariance matrices, however
+large, are manageable, and it is the engine of principal component analysis. The proofs above are there
+for rigor; on a first reading you may use the result and move on. $\blacktriangleleft$
+:::
+
+For the running covariance $\boldsymbol{\Sigma}=\begin{pmatrix}2&1\\1&2\end{pmatrix}$ the proposition
+reads, with $\mathbf{q}_+=\tfrac{1}{\sqrt2}(1,1)^\top$ and $\mathbf{q}_-=\tfrac{1}{\sqrt2}(1,-1)^\top$,
+$$
+\boldsymbol{\Sigma}=3\,\mathbf{q}_+\mathbf{q}_+^\top+1\,\mathbf{q}_-\mathbf{q}_-^\top
+=3\cdot\tfrac12\begin{pmatrix}1&1\\1&1\end{pmatrix}+1\cdot\tfrac12\begin{pmatrix}1&-1\\-1&1\end{pmatrix}
+=\begin{pmatrix}2&1\\1&2\end{pmatrix}.
+$$
+The "both estimates move together" axis carries variance $3$; the indirect-contrast axis $(1,-1)$ carries
+variance $1$ per unit length.
+
+::: {.remark}
+**Functions of a symmetric matrix.** Once $A=Q\Lambda Q^\top$ is in hand, any function
+$f:\mathbb{R}\to\mathbb{R}$ defined on the eigenvalues extends to $A$ by acting on the spectrum:
+$$
+f(A):=Q\,f(\Lambda)\,Q^\top,\qquad f(\Lambda)=\mathrm{diag}\big(f(\lambda_1),\dots,f(\lambda_n)\big).
+$$
+The idea is that $A$ does nothing but scale along its axes, so to apply a function to $A$ we apply the
+function to those scalings and leave the axes alone. The smallest instance: if
+$A=Q\,\mathrm{diag}(4,9)\,Q^\top$, then its square root is $A^{1/2}=Q\,\mathrm{diag}(2,3)\,Q^\top$ and its
+inverse is $A^{-1}=Q\,\mathrm{diag}(\tfrac14,\tfrac19)\,Q^\top$; one simply takes $\sqrt{\cdot}$ or
+$1/(\cdot)$ of each eigenvalue. This is legitimate, and not just a convenient definition: it agrees with
+the algebraic meaning whenever $f$ is a polynomial, because $A^k=Q\Lambda^k Q^\top$ (the $Q^\top Q=I$
+in the middle collapses), and it is independent of the choice of $Q$ because $f(A)$ acts as
+multiplication by $f(\lambda)$ on each eigenspace $E_\lambda$. We use the cases $f(t)=t^{-1}$ (the
+inverse, when all $\lambda_i\ne 0$) and $f(t)=\sqrt{t}$ (the square root, when all $\lambda_i\ge 0$)
+below. $\blacktriangleleft$
+:::
+
+## Quadratic forms and definiteness {#sec-la3-quadratic}
+
+::: {#def-quadratic-form}
+## Quadratic form
+
+A **quadratic form** on $\mathbb{R}^n$ is a function $q:\mathbb{R}^n\to\mathbb{R}$ of the shape
+$$
+q(\mathbf{x})=\mathbf{x}^\top A\,\mathbf{x}=\sum_{i=1}^n\sum_{j=1}^n a_{ij}x_i x_j,
+$$
+where $A\in\mathbb{R}^{n\times n}$. The matrix $A$ may always be taken symmetric, and the symmetric
+matrix representing a given $q$ is unique.
+:::
+
+::: {.proof}
+We justify the two claims in the definition. For any $M$, since $\mathbf{x}^\top M\mathbf{x}$ is a
+scalar it equals its own transpose, $\mathbf{x}^\top M\mathbf{x}=\mathbf{x}^\top M^\top\mathbf{x}$, so
+$$
+\mathbf{x}^\top M\mathbf{x}=\mathbf{x}^\top\Big(\tfrac{M+M^\top}{2}\Big)\mathbf{x},
+$$
+and the **symmetric part** $\tfrac{1}{2}(M+M^\top)$ represents the same form. For uniqueness, suppose
+symmetric matrices $A$ and $A'$ satisfy $\mathbf{x}^\top A\mathbf{x}=\mathbf{x}^\top A'\mathbf{x}$ for
+all $\mathbf{x}$, and set $D=A-A'$, which is symmetric with $\mathbf{x}^\top D\mathbf{x}=0$ for all
+$\mathbf{x}$. Taking $\mathbf{x}=\mathbf{e}_i$ gives $D_{ii}=0$; taking
+$\mathbf{x}=\mathbf{e}_i+\mathbf{e}_j$ gives $D_{ii}+2D_{ij}+D_{jj}=0$, hence $D_{ij}=0$. So $D=0$ and
+$A=A'$. $\square$
+:::
+
+**Reader translation.** A quadratic form is a weighted sum of squares and cross-products of the
+coordinates; the matrix $A$ just stores the weights. The statistical instance to keep in mind is
+$A=\boldsymbol{\Sigma}$: the quadratic form $\mathbf{a}^\top\boldsymbol{\Sigma}\mathbf{a}$ is the
+variance of the linear combination $\mathbf{a}^\top\mathbf{X}$ (we prove this in @sec-la3-covariance).
+For our running example with $\mathbf{a}=(1,-1)^\top$,
+$$
+\mathbf{a}^\top\boldsymbol{\Sigma}\mathbf{a}
+=\begin{pmatrix}1&-1\end{pmatrix}\begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}1\\-1\end{pmatrix}
+=2-1-1+2=2,
+$$
+which is the variance of the indirect comparison $\hat d_{BC}=\hat y_{AB}-\hat y_{AC}$. Quadratic forms
+are how every variance in this book is computed.
+
+From now on the matrix of a quadratic form is symmetric. Definiteness classifies a symmetric matrix by
+the sign of its quadratic form.
+
+::: {#def-definiteness}
+## Definiteness
+
+A symmetric matrix $A\in\mathbb{R}^{n\times n}$ is
+
+- **positive definite**, written $A\succ 0$, if $\mathbf{x}^\top A\mathbf{x}>0$ for every
+  $\mathbf{x}\ne\mathbf{0}$;
+- **positive semidefinite**, written $A\succeq 0$, if $\mathbf{x}^\top A\mathbf{x}\ge 0$ for every
+  $\mathbf{x}$;
+- **negative definite** ($A\prec 0$) or **negative semidefinite** ($A\preceq 0$) if $-A$ is positive
+  definite or positive semidefinite;
+- **indefinite** if $\mathbf{x}^\top A\mathbf{x}$ takes both signs.
+
+For symmetric $A,B$ we write $A\succeq B$ to mean $A-B\succeq 0$, and likewise $A\succ B$.
+:::
+
+**Reader translation.** Definiteness is the sign of the quadratic form, read as a verdict on every
+direction at once. Positive definite means every direction has strictly positive value: for a covariance
+matrix, every contrast has strictly positive variance, and for a curvature (Hessian) matrix, the surface
+curves up in every direction. Positive *semi*definite weakens this to "nonnegative", allowing a flat
+direction; a flat direction in a covariance matrix is a linear combination with zero variance, that is, a
+perfectly collinear direction. Indefinite means the form goes up in some directions and down in others, a
+saddle. The smallest indefinite matrix is
+$$
+B=\begin{pmatrix}1&0\\0&-1\end{pmatrix},\qquad \mathbf{x}^\top B\mathbf{x}=x_1^2-x_2^2,
+$$
+with eigenvalues $+1$ and $-1$; the form is positive along $\mathbf{e}_1$ and negative along
+$\mathbf{e}_2$. The notation $A\succeq B$ extends the symbol $\succeq 0$ from the [Notation](/notation.qmd)
+chapter: read $A\succeq B$ as "$A-B$ is positive semidefinite", which for covariance matrices means $A$ is
+at least as variable as $B$ in every direction.
+
+The spectral theorem reduces every question about a quadratic form to a question about signs of
+eigenvalues, because an orthogonal change of variables turns the form into a weighted sum of squares.
+
+::: {#thm-pd-characterization}
+## Eigenvalue characterization of definiteness
+
+Let $A\in\mathbb{R}^{n\times n}$ be symmetric with eigenvalues $\lambda_1,\dots,\lambda_n$ (all real by
+@lem-sym-real-eigenvalues). Then
+
+1. $A\succ 0$ if and only if $\lambda_i>0$ for every $i$;
+2. $A\succeq 0$ if and only if $\lambda_i\ge 0$ for every $i$;
+3. $A$ is indefinite if and only if $A$ has both a positive and a negative eigenvalue.
+
+Consequently a positive definite matrix is invertible with $\det(A)=\prod_i\lambda_i>0$, and a positive
+semidefinite matrix has $\det(A)\ge 0$ and $\mathrm{tr}(A)\ge 0$.
+:::
+
+::: {.proof}
+Write $A=Q\Lambda Q^\top$ by @thm-spectral-theorem and change variables $\mathbf{y}=Q^\top\mathbf{x}$.
+Because $Q$ is orthogonal, the map $\mathbf{x}\mapsto\mathbf{y}$ is a bijection of $\mathbb{R}^n$ with
+$\mathbf{x}=Q\mathbf{y}$, and $\mathbf{x}=\mathbf{0}$ if and only if $\mathbf{y}=\mathbf{0}$. Then
+$$
+\mathbf{x}^\top A\mathbf{x}=\mathbf{x}^\top Q\Lambda Q^\top\mathbf{x}
+=\mathbf{y}^\top\Lambda\mathbf{y}=\sum_{i=1}^n\lambda_i y_i^2 .
+$$ {#eq-quadratic-diagonalized}
+
+*Claim 1.* If every $\lambda_i>0$ and $\mathbf{x}\ne\mathbf{0}$, then $\mathbf{y}\ne\mathbf{0}$, so
+$\sum_i\lambda_i y_i^2>0$. Conversely, if some $\lambda_k\le 0$, take $\mathbf{x}=\mathbf{q}_k$, the
+$k$-th column of $Q$, so that $\mathbf{y}=Q^\top\mathbf{q}_k=\mathbf{e}_k$ and
+$\mathbf{x}^\top A\mathbf{x}=\lambda_k\le 0$ with $\mathbf{x}\ne\mathbf{0}$, contradicting positive
+definiteness.
+
+*Claim 2.* If every $\lambda_i\ge 0$ then $\sum_i\lambda_i y_i^2\ge 0$ for all $\mathbf{y}$. Conversely,
+if some $\lambda_k<0$ then $\mathbf{x}=\mathbf{q}_k$ gives $\mathbf{x}^\top A\mathbf{x}=\lambda_k<0$,
+contradicting positive semidefiniteness.
+
+*Claim 3.* By @eq-quadratic-diagonalized the range of $\mathbf{x}^\top A\mathbf{x}$ over
+$\mathbf{x}\ne\mathbf{0}$ is contained in $[\min_i\lambda_i,\ \max_i\lambda_i]$ and contains both
+endpoints (attained at the corresponding $\mathbf{q}_i$). It takes both signs if and only if
+$\min_i\lambda_i<0<\max_i\lambda_i$, that is, if and only if $A$ has eigenvalues of both signs.
+
+The final statements follow from @lem-trace-det-eigenvalues: $\det(A)=\prod_i\lambda_i$ and
+$\mathrm{tr}(A)=\sum_i\lambda_i$, with the stated signs read off the eigenvalues. $\square$
+:::
+
+**Why this matters.** This theorem turns "is every contrast informative?" into "are all eigenvalues
+positive?". A positive definite covariance matrix means every contrast, including the indirect
+comparison $\mathbf{a}=(1,-1)^\top$, has strictly positive variance, and a positive definite Gram matrix
+is exactly what makes the regression of Chapter 6 have a unique, stable solution. The borderline case is
+the informative one: a zero eigenvalue (positive semidefinite but not definite) is the algebraic
+fingerprint of a real data problem, namely a covariate direction carrying no independent information, a
+collinear design matrix, or a linear combination of estimates with no variation at all.
+
+::: {.remark}
+The same change of variables proves a fact we use repeatedly: a symmetric matrix $A$ is positive
+semidefinite if and only if $A=B^\top B$ for some matrix $B$, namely $B=\Lambda^{1/2}Q^\top$ when
+$A\succeq 0$, while conversely $\mathbf{x}^\top B^\top B\mathbf{x}=\|B\mathbf{x}\|^2\ge 0$ always. The
+Gram matrix $\mathbf{X}^\top\mathbf{X}$ of any matrix $\mathbf{X}$ is therefore positive semidefinite,
+and it is positive definite exactly when $\mathbf{X}$ has full column rank, since then
+$\mathbf{X}\mathbf{x}=\mathbf{0}$ forces $\mathbf{x}=\mathbf{0}$. This is the algebraic reason the normal
+equations of Chapter 6 have a unique solution. $\blacktriangleleft$
+:::
+
+The eigenvalue test requires diagonalizing $A$, which means finding all its eigenvalues. A second, purely
+arithmetic, test reads positive definiteness off determinants of small submatrices instead. This is worth
+having because computing eigenvalues is hard (it is, in general, root-finding), whereas computing
+determinants of small top-left blocks is easy and exact. First we name those submatrices.
+
+::: {#def-principal-minor}
+## Principal minors and leading principal minors
+
+For $A\in\mathbb{R}^{n\times n}$ and an index set $\emptyset\ne S\subseteq\{1,\dots,n\}$, the
+**principal minor** indexed by $S$ is the determinant of the submatrix of $A$ keeping only the rows and
+columns in $S$. The **leading principal minor** of order $k$ is the special case $S=\{1,\dots,k\}$,
+namely $\Delta_k=\det(A_k)$ where $A_k$ is the top-left $k\times k$ submatrix.
+:::
+
+**Reader translation.** A leading principal minor just chops $A$ down to its top-left corner of a given
+size and takes the determinant. "Leading" means the corner always starts at position $(1,1)$; a general
+"principal" minor may use any subset of the coordinates, not just the first $k$. The distinction matters
+below: the positive *definite* test needs only the leading minors, but the positive *semidefinite* test
+needs all principal minors.
+
+We prove the criterion in full. Plan of proof: the forward direction is a one-line restriction argument;
+for the converse we induct on $n$, get $A_{n-1}\succ 0$ from the inductive hypothesis, and rule out a
+negative eigenvalue by a dimension-count contradiction.
+
+::: {#thm-sylvester-criterion}
+## Sylvester's criterion (leading principal minors)
+
+For a symmetric $A\in\mathbb{R}^{n\times n}$, let $A_k$ denote the top-left $k\times k$ submatrix and
+$\Delta_k=\det(A_k)$ its leading principal minor, $k=1,\dots,n$. Then
+$$
+A\succ 0 \quad\Longleftrightarrow\quad \Delta_k>0 \text{ for every } k=1,\dots,n .
+$$
+:::
+
+::: {.proof}
+($\Rightarrow$) Suppose $A\succ 0$. Fix $k$ and let $\mathbf{z}\in\mathbb{R}^k$ be nonzero. Pad it with
+zeros to $\mathbf{x}=(\mathbf{z}^\top,\mathbf{0}^\top)^\top\in\mathbb{R}^n$; then $\mathbf{x}\ne
+\mathbf{0}$ and $\mathbf{x}^\top A\mathbf{x}=\mathbf{z}^\top A_k\mathbf{z}>0$. Hence $A_k\succ 0$, so by
+@thm-pd-characterization all eigenvalues of $A_k$ are positive and $\Delta_k=\det(A_k)=\prod(\text{its
+eigenvalues})>0$.
+
+($\Leftarrow$) We induct on $n$. For $n=1$, $\Delta_1=a_{11}>0$ means $A=(a_{11})\succ 0$. Assume the
+implication for symmetric matrices of size $n-1$, and suppose all leading principal minors of the
+$n\times n$ matrix $A$ are positive. The leading principal minors of $A_{n-1}$ are exactly
+$\Delta_1,\dots,\Delta_{n-1}$, all positive, so by the inductive hypothesis $A_{n-1}\succ 0$. It remains
+to upgrade this to $A\succ 0$ using $\det(A)=\Delta_n>0$.
+
+Suppose, for contradiction, that $A$ is not positive definite. By @thm-spectral-theorem, $A$ has an
+orthonormal eigenbasis $\mathbf{q}_1,\dots,\mathbf{q}_n$ with real eigenvalues $\lambda_1\le\cdots\le
+\lambda_n$. Since $\det(A)=\prod_i\lambda_i=\Delta_n>0$, no eigenvalue is zero. Since $A\not\succ 0$,
+@thm-pd-characterization gives some $\lambda_i\le 0$, hence $\lambda_1<0$. A product of nonzero reals is
+positive only with an even number of negative factors, so there are at least two negative eigenvalues;
+thus $\lambda_2<0$ as well. Let
+$$
+U=\mathrm{span}\{\mathbf{q}_1,\mathbf{q}_2\},\qquad V=\{\mathbf{x}\in\mathbb{R}^n:x_n=0\}.
+$$
+The choice of $V$ is not special to the last coordinate: we only need *some* $(n-1)$-dimensional subspace
+on which $A$ is positive definite, and the slice $x_n=0$ is one because restricting $A$ to it gives
+$A_{n-1}\succ 0$. Any other such subspace would serve. On $U$ the form is negative and on $V$ it is
+positive, and a dimension count will force these two subspaces to share a nonzero vector, the
+contradiction. For nonzero $\mathbf{x}=c_1\mathbf{q}_1+c_2\mathbf{q}_2\in U$, orthonormality gives
+$\mathbf{x}^\top A\mathbf{x}=\lambda_1 c_1^2+\lambda_2 c_2^2<0$. For nonzero $\mathbf{x}=(\mathbf{z}^\top,0)^\top\in V$,
+we have $\mathbf{z}\ne\mathbf{0}$ and $\mathbf{x}^\top A\mathbf{x}=\mathbf{z}^\top A_{n-1}\mathbf{z}>0$
+because $A_{n-1}\succ 0$. Now $\dim U=2$ and $\dim V=n-1$, so by the dimension formula for subspaces
+(@thm-rank-nullity),
+$$
+\dim(U\cap V)\ge \dim U+\dim V-n = 2+(n-1)-n = 1 .
+$$
+Pick a nonzero $\mathbf{x}\in U\cap V$. Then $\mathbf{x}^\top A\mathbf{x}<0$ because $\mathbf{x}\in U$,
+and $\mathbf{x}^\top A\mathbf{x}>0$ because $\mathbf{x}\in V$, a contradiction. Therefore $A\succ 0$,
+completing the induction. $\square$
+:::
+
+**Why this matters.** This is the test you actually run on a small matrix by hand or quickly in code: to
+check that an estimated covariance matrix, a Hessian, or a Fisher information matrix is positive definite,
+compute a few determinants of top-left blocks rather than all the eigenvalues. It is a supporting result,
+not a conceptual one; its value is computational convenience.
+
+::: {.remark}
+Sylvester's criterion is for *positive definiteness* only. The analogous statement for *positive
+semidefiniteness* requires **all** principal minors to be nonnegative, not merely the leading ones; the
+leading minors alone do not suffice, as the matrix $\mathrm{diag}(0,-1)$ shows, whose leading minors are
+$0$ and $0$ yet which is not positive semidefinite. We use the eigenvalue characterization
+(@thm-pd-characterization) whenever semidefiniteness is at issue. $\blacktriangleleft$
+:::
+
+We can now construct the matrix square root, the function $f(t)=\sqrt t$ from the remark above, and
+prove that it is unique among symmetric positive semidefinite roots. Why would a statistician want the
+square root of a matrix? Because $\boldsymbol{\Sigma}^{1/2}$ is the tool that *whitens* correlated data:
+applying $\boldsymbol{\Sigma}^{-1/2}$ to a random vector with covariance $\boldsymbol{\Sigma}$ turns its
+covariance into the identity, removing all correlation and unequal scaling. That same root defines the
+Mahalanobis distance used by the matching methods of Part V. We construct it here and cash out both uses
+in @sec-la3-covariance.
+
+::: {#prp-matrix-square-root}
+## Symmetric positive semidefinite square root
+
+Let $A\in\mathbb{R}^{n\times n}$ be symmetric positive semidefinite. Then there is a unique symmetric
+positive semidefinite matrix $A^{1/2}$ with $(A^{1/2})^2=A$, namely
+$A^{1/2}=Q\,\mathrm{diag}(\sqrt{\lambda_1},\dots,\sqrt{\lambda_n})\,Q^\top$ for any spectral
+decomposition $A=Q\Lambda Q^\top$. If $A\succ 0$ then $A^{1/2}\succ 0$ and is invertible, and we write
+$A^{-1/2}=(A^{1/2})^{-1}$.
+:::
+
+::: {.proof}
+*Existence.* By @thm-pd-characterization, $A\succeq 0$ gives $\lambda_i\ge 0$, so $\sqrt{\lambda_i}$ is
+real. Put $S=Q\,\mathrm{diag}(\sqrt{\lambda_i})\,Q^\top$. It is symmetric, its eigenvalues
+$\sqrt{\lambda_i}\ge 0$ make it positive semidefinite, and
+$$
+S^2=Q\,\mathrm{diag}(\sqrt{\lambda_i})\,Q^\top Q\,\mathrm{diag}(\sqrt{\lambda_i})\,Q^\top
+=Q\,\mathrm{diag}(\lambda_i)\,Q^\top=A .
+$$
+
+*Uniqueness.* Let $B$ be symmetric positive semidefinite with $B^2=A$. By @thm-spectral-theorem write
+$B=\sum_j\mu_j\,\mathbf{p}_j\mathbf{p}_j^\top$ with $\mu_j\ge 0$ and $\{\mathbf{p}_j\}$ an orthonormal
+basis. Orthonormality gives $B^2=\sum_j\mu_j^2\,\mathbf{p}_j\mathbf{p}_j^\top$, so $A=B^2$ has each
+$\mathbf{p}_j$ as an eigenvector with eigenvalue $\mu_j^2$. The matrix $S=A^{1/2}$ constructed above acts
+on each eigenvector of $A$ by multiplying by the nonnegative square root of the corresponding
+eigenvalue, since $S$ restricts to $\sqrt{\lambda}\,\mathrm{Id}$ on each eigenspace $E_\lambda(A)$. Hence
+$$
+S\mathbf{p}_j=\sqrt{\mu_j^2}\,\mathbf{p}_j=\mu_j\mathbf{p}_j=B\mathbf{p}_j
+$$
+for every $j$. Two matrices that agree on the basis $\{\mathbf{p}_j\}$ are equal, so $B=S=A^{1/2}$.
+
+If $A\succ 0$ then all $\lambda_i>0$, so all $\sqrt{\lambda_i}>0$, making $A^{1/2}$ positive definite
+and invertible by @thm-pd-characterization. $\square$
+:::
+
+**Why this matters.** A unique symmetric positive semidefinite square root is what makes whitening
+well defined: there is exactly one natural $\boldsymbol{\Sigma}^{1/2}$, so the standardized vector
+$\boldsymbol{\Sigma}^{-1/2}(\mathbf{X}-\boldsymbol{\mu})$ and the Mahalanobis distance built from it are
+unambiguous. Standardization, the Mahalanobis distance, and the Gaussian-copula constructions of Part V
+all rest on this one proposition.
+
+## The Rayleigh quotient and the variational characterization of eigenvalues {#sec-la3-rayleigh}
+
+The eigenvalues of a symmetric matrix are not only roots of a polynomial; they are solutions of
+optimization problems. The object that does the work is the Rayleigh quotient, which for a covariance
+matrix answers a concrete question: "how much variance do I see if I look in this particular direction?".
+The largest and smallest answers are the extreme eigenvalues, attained along the corresponding
+eigenvectors. This variational viewpoint is what makes eigenvalues stable under perturbation and is the
+entry point to principal component analysis and to the conditioning bounds used throughout statistics.
+
+::: {#def-rayleigh-quotient}
+## Rayleigh quotient
+
+For a symmetric $A\in\mathbb{R}^{n\times n}$ and $\mathbf{x}\ne\mathbf{0}$, the **Rayleigh quotient** is
+$$
+R_A(\mathbf{x})=\frac{\mathbf{x}^\top A\,\mathbf{x}}{\mathbf{x}^\top\mathbf{x}}.
+$$
+It is invariant under nonzero rescaling, $R_A(c\mathbf{x})=R_A(\mathbf{x})$ for $c\ne 0$, so it is
+determined by the direction of $\mathbf{x}$ and equals $\mathbf{x}^\top A\mathbf{x}$ on the unit sphere
+$\|\mathbf{x}\|=1$.
+:::
+
+**Reader translation.** Dividing by $\mathbf{x}^\top\mathbf{x}=\|\mathbf{x}\|^2$ cancels the length of
+$\mathbf{x}$, so the Rayleigh quotient depends only on the *direction* you point in. With $A=
+\boldsymbol{\Sigma}$ it is the variance per unit length in that direction. Sweeping the direction around,
+the largest value you can reach is the top eigenvalue and the smallest is the bottom eigenvalue: the most
+and least uncertain directions of the estimator.
+
+::: {#thm-rayleigh}
+## Variational characterization of the extreme eigenvalues
+
+Let $A\in\mathbb{R}^{n\times n}$ be symmetric with eigenvalues ordered $\lambda_1\le\lambda_2\le\cdots
+\le\lambda_n$ and corresponding orthonormal eigenvectors $\mathbf{q}_1,\dots,\mathbf{q}_n$. Then for
+every $\mathbf{x}\ne\mathbf{0}$,
+$$
+\lambda_1\le R_A(\mathbf{x})\le\lambda_n,
+$$ {#eq-rayleigh-bounds}
+and
+$$
+\lambda_1=\min_{\mathbf{x}\ne\mathbf{0}}R_A(\mathbf{x})=R_A(\mathbf{q}_1),\qquad
+\lambda_n=\max_{\mathbf{x}\ne\mathbf{0}}R_A(\mathbf{x})=R_A(\mathbf{q}_n).
+$$
+The minimum is attained exactly on the eigenspace $E_{\lambda_1}$, and the maximum exactly on
+$E_{\lambda_n}$.
+:::
+
+::: {.proof}
+Expand $\mathbf{x}$ in the orthonormal eigenbasis, $\mathbf{x}=\sum_{i=1}^n c_i\mathbf{q}_i$ with
+$c_i=\mathbf{q}_i^\top\mathbf{x}$. Orthonormality gives $\mathbf{x}^\top\mathbf{x}=\sum_i c_i^2$ and,
+using $A\mathbf{q}_i=\lambda_i\mathbf{q}_i$,
+$$
+\mathbf{x}^\top A\mathbf{x}=\sum_{i=1}^n\lambda_i c_i^2 .
+$$
+Hence
+$$
+R_A(\mathbf{x})=\frac{\sum_i\lambda_i c_i^2}{\sum_i c_i^2},
+$$
+a weighted average of the eigenvalues with weights $w_i=c_i^2/\sum_j c_j^2\ge 0$ summing to $1$. Any
+weighted average lies between the smallest and largest values, giving @eq-rayleigh-bounds. Equality on
+the right, $R_A(\mathbf{x})=\lambda_n$, forces all weight onto coordinates with $\lambda_i=\lambda_n$,
+that is, $c_i=0$ whenever $\lambda_i<\lambda_n$, which says exactly $\mathbf{x}\in E_{\lambda_n}$;
+taking $\mathbf{x}=\mathbf{q}_n$ shows the value $\lambda_n$ is attained. The minimum statement is the
+same argument with the inequality reversed. $\square$
+:::
+
+A one-line numeric check on the running matrix $\boldsymbol{\Sigma}=\begin{pmatrix}2&1\\1&2\end{pmatrix}$,
+whose eigenvalues are $1$ and $3$: pointing along $\mathbf{e}_1=(1,0)^\top$ gives
+$R_{\boldsymbol{\Sigma}}(\mathbf{e}_1)=\frac{2}{1}=2$, strictly inside $[1,3]$ as @eq-rayleigh-bounds
+demands; pointing along the contrast $(1,-1)^\top$ gives $R_{\boldsymbol{\Sigma}}=\frac{2}{2}=1=\lambda_1$,
+so the indirect-comparison direction is exactly the *minimum-variance* direction, and pointing along
+$(1,1)^\top$ gives $\frac{6}{2}=3=\lambda_2$, the maximum.
+
+::: {.remark}
+**Rayleigh and principal component analysis.** Principal component analysis (PCA) looks for the direction
+$\mathbf{x}$ with $\|\mathbf{x}\|=1$ that maximizes the variance $\mathrm{Var}(\mathbf{x}^\top\mathbf{X})=
+\mathbf{x}^\top\boldsymbol{\Sigma}\mathbf{x}$ of the projected data. By @thm-rayleigh that maximizer is the
+top eigenvector $\mathbf{q}_n$ of $\boldsymbol{\Sigma}$, and the maximal variance is the top eigenvalue
+$\lambda_n$. The first principal component is therefore an eigenvector, which is the link between this
+theorem and the one eigenvalue idea most health researchers have already met. $\blacktriangleleft$
+:::
+
+**Why this matters.** @eq-rayleigh-bounds says the variance of *any* contrast lies between the smallest
+and largest eigenvalues of the covariance matrix, so the extreme eigenvalues bracket every possible
+indirect-comparison variance at once. The top eigenvalue and eigenvector are exactly the first principal
+component.
+
+The extreme eigenvalues solve an unconstrained problem. The *interior* eigenvalues solve a min-max
+problem over subspaces, the Courant-Fischer theorem, which we also prove in full. It needs no calculus,
+only the spectral theorem and a dimension count. This is a supporting result; a first reader can take its
+statement on faith and skip the proof.
+
+In words, the first formula below says: among all $k$-dimensional subspaces $S$, look inside each one for
+the *largest* Rayleigh value it contains, then pick the $S$ that makes that largest value as *small* as
+possible; the answer is the $k$-th eigenvalue $\lambda_k$, achieved by the span of the bottom $k$
+eigenvectors. The reason to care about these interior eigenvalues is that they control the middle
+principal components and underlie the eigenvalue interlacing results used in dimension reduction and in
+the stability analysis of estimated covariance matrices.
+
+::: {#thm-courant-fischer}
+## Courant-Fischer min-max theorem
+
+Let $A\in\mathbb{R}^{n\times n}$ be symmetric with eigenvalues $\lambda_1\le\cdots\le\lambda_n$. For
+each $k\in\{1,\dots,n\}$,
+$$
+\lambda_k=\min_{\substack{S\subseteq\mathbb{R}^n\\ \dim S=k}}\ \max_{\substack{\mathbf{x}\in S\\
+\mathbf{x}\ne\mathbf{0}}}R_A(\mathbf{x})
+=\max_{\substack{S\subseteq\mathbb{R}^n\\ \dim S=n-k+1}}\ \min_{\substack{\mathbf{x}\in S\\
+\mathbf{x}\ne\mathbf{0}}}R_A(\mathbf{x}),
+$$ {#eq-courant-fischer}
+where $S$ ranges over subspaces of the stated dimension.
+:::
+
+::: {.proof}
+Let $\mathbf{q}_1,\dots,\mathbf{q}_n$ be orthonormal eigenvectors with $A\mathbf{q}_i=\lambda_i
+\mathbf{q}_i$. We prove the first equality; the second follows by applying the first to $-A$, whose
+eigenvalues are $-\lambda_n\le\cdots\le-\lambda_1$.
+
+*Upper bound.* Take the particular subspace $S_0=\mathrm{span}\{\mathbf{q}_1,\dots,\mathbf{q}_k\}$, of
+dimension $k$. Every $\mathbf{x}\in S_0$ is $\mathbf{x}=\sum_{i\le k}c_i\mathbf{q}_i$, and as in
+@thm-rayleigh,
+$$
+R_A(\mathbf{x})=\frac{\sum_{i\le k}\lambda_i c_i^2}{\sum_{i\le k}c_i^2}\le\lambda_k,
+$$
+because every $\lambda_i$ with $i\le k$ satisfies $\lambda_i\le\lambda_k$. Hence
+$\max_{\mathbf{0}\ne\mathbf{x}\in S_0}R_A(\mathbf{x})\le\lambda_k$, so the minimum over all $k$-dimensional
+$S$ is at most $\lambda_k$.
+
+*Lower bound.* Let $S$ be any $k$-dimensional subspace and let $T=\mathrm{span}\{\mathbf{q}_k,
+\mathbf{q}_{k+1},\dots,\mathbf{q}_n\}$, of dimension $n-k+1$. By the dimension formula
+(@thm-rank-nullity),
+$$
+\dim(S\cap T)\ge\dim S+\dim T-n=k+(n-k+1)-n=1,
+$$
+so there is a nonzero $\mathbf{x}\in S\cap T$. Since $\mathbf{x}\in T$, $\mathbf{x}=\sum_{i\ge k}c_i
+\mathbf{q}_i$ and
+$$
+R_A(\mathbf{x})=\frac{\sum_{i\ge k}\lambda_i c_i^2}{\sum_{i\ge k}c_i^2}\ge\lambda_k,
+$$
+because every $\lambda_i$ with $i\ge k$ satisfies $\lambda_i\ge\lambda_k$. Therefore
+$\max_{\mathbf{0}\ne\mathbf{x}\in S}R_A(\mathbf{x})\ge R_A(\mathbf{x})\ge\lambda_k$ for this particular
+$\mathbf{x}$, and since $S$ was arbitrary, the minimum over all $k$-dimensional $S$ is at least
+$\lambda_k$.
+
+The two bounds coincide, giving the first equality in @eq-courant-fischer. $\square$
+:::
+
+::: {.remark}
+The Rayleigh principle is the source of two facts used later; both can be deferred on a first reading.
+The **operator $2$-norm** $\|A\|_2=\max_{\|\mathbf{x}\|=1}\|A\mathbf{x}\|$ is the largest factor by which
+$A$ can stretch any unit vector. First, for symmetric $A$ this operator $2$-norm equals the largest
+eigenvalue in magnitude, $\|A\|_2=\max_i|\lambda_i|$, while $\max_{\|\mathbf{x}\|=1}\mathbf{x}^\top
+A\mathbf{x}=\lambda_n$; the two agree when $A\succeq 0$. Second, Courant-Fischer yields Weyl's monotonicity inequality, that
+adding a positive semidefinite perturbation can only raise eigenvalues, which underlies the stability of
+estimated covariance matrices. Both are pursued in the exercises. The bound @eq-rayleigh-bounds is also
+a quantitative companion to the Cauchy-Schwarz inequality (@thm-cauchy-schwarz-ip), specialized from
+the standard inner product to the quadratic-form geometry of $A$. $\blacktriangleleft$
+:::
+
+## The singular value decomposition {#sec-la3-svd}
+
+We now return to the situation that actually occurs in regression and evidence synthesis, where the data
+matrix is not square and symmetric. A design matrix has one row per patient or per study-arm summary and
+one column per covariate or model term, so it is rectangular, and the spectral theorem, which applies only
+to symmetric and hence square matrices, does not reach it. We need a structure theorem for an arbitrary
+$A\in\mathbb{R}^{m\times n}$. The singular value decomposition supplies it, and it follows from the
+spectral theorem applied to the symmetric positive semidefinite matrix $A^\top A$. Its singular values
+will tell us, in plain terms, whether the available data actually support the directions in covariate
+space that we are trying to estimate.
+
+::: {#lem-ata-psd}
+## $A^\top A$ is symmetric positive semidefinite
+
+For any $A\in\mathbb{R}^{m\times n}$, the matrix $A^\top A\in\mathbb{R}^{n\times n}$ is symmetric and
+positive semidefinite, so its eigenvalues are real and nonnegative. Moreover $\mathcal{N}(A^\top A)=
+\mathcal{N}(A)$, hence $\mathrm{rank}(A^\top A)=\mathrm{rank}(A)$.
+:::
+
+::: {.proof}
+Symmetry is $(A^\top A)^\top=A^\top A$. For any $\mathbf{x}$, $\mathbf{x}^\top(A^\top A)\mathbf{x}=
+(A\mathbf{x})^\top(A\mathbf{x})=\|A\mathbf{x}\|^2\ge 0$, so $A^\top A\succeq 0$, and
+@thm-pd-characterization gives nonnegative eigenvalues. If $A\mathbf{x}=\mathbf{0}$ then $A^\top
+A\mathbf{x}=\mathbf{0}$; conversely if $A^\top A\mathbf{x}=\mathbf{0}$ then $0=\mathbf{x}^\top A^\top
+A\mathbf{x}=\|A\mathbf{x}\|^2$ forces $A\mathbf{x}=\mathbf{0}$. Thus the null spaces coincide, and by
+the rank-nullity theorem (@thm-rank-nullity) the ranks agree. $\square$
+:::
+
+::: {#thm-svd}
+## Singular value decomposition
+
+Let $A\in\mathbb{R}^{m\times n}$ have rank $r$. Then there exist orthogonal matrices
+$U\in\mathbb{R}^{m\times m}$ and $V\in\mathbb{R}^{n\times n}$ and a matrix $\Sigma\in\mathbb{R}^{m\times
+n}$ that is zero off the main diagonal, with diagonal entries
+$$
+\sigma_1\ge\sigma_2\ge\cdots\ge\sigma_r>0=\sigma_{r+1}=\cdots=\sigma_{\min(m,n)},
+$$
+such that
+$$
+A=U\Sigma V^\top .
+$$ {#eq-svd}
+The numbers $\sigma_i$, the **singular values** of $A$, are uniquely determined by $A$ as
+$\sigma_i=\sqrt{\lambda_i(A^\top A)}$ with the eigenvalues of $A^\top A$ in decreasing order. The columns
+of $V$ (the **right singular vectors**) are orthonormal eigenvectors of $A^\top A$, and the columns of
+$U$ (the **left singular vectors**) are orthonormal eigenvectors of $AA^\top$.
+:::
+
+Before the proof, here is the story the three matrices tell. Read $A=U\Sigma V^\top$ right to left as a
+pipeline acting on an input vector. The rotation $V^\top$ lines up the special *input* directions, the
+right singular vectors $\mathbf{v}_j$, with the coordinate axes; $\Sigma$ stretches the $j$-th axis by
+the factor $\sigma_j$, or annihilates it when $\sigma_j=0$; and the rotation $U$ places the stretched
+axes along the *output* directions, the left singular vectors $\mathbf{u}_j$. The net effect is that $A$
+sends each input direction $\mathbf{v}_j$ to $\sigma_j\mathbf{u}_j$: input axis in, stretched output axis
+out. The singular values are the stretch factors, and a small $\sigma_j$ means $A$ barely moves that
+input direction, the signature of a direction the data weakly support. The definition
+$\mathbf{u}_j=\sigma_j^{-1}A\mathbf{v}_j$ in the proof is just this sentence written as an equation.
+
+::: {.proof}
+By @lem-ata-psd the matrix $A^\top A$ is symmetric positive semidefinite, so by @thm-spectral-theorem
+there is an orthogonal $V=[\mathbf{v}_1\ \cdots\ \mathbf{v}_n]$ with
+$$
+A^\top A=V\Lambda V^\top,\qquad \Lambda=\mathrm{diag}(\lambda_1,\dots,\lambda_n),\quad
+\lambda_1\ge\cdots\ge\lambda_n\ge 0 .
+$$
+By @lem-ata-psd, $\mathrm{rank}(A^\top A)=\mathrm{rank}(A)=r$, and the rank of a diagonalized symmetric
+matrix is the number of nonzero eigenvalues, so exactly $\lambda_1,\dots,\lambda_r>0$ and
+$\lambda_{r+1}=\cdots=\lambda_n=0$. Define $\sigma_i=\sqrt{\lambda_i}$, so $\sigma_1\ge\cdots\ge\sigma_r
+>0$.
+
+For $i=1,\dots,r$ define $\mathbf{u}_i=\sigma_i^{-1}A\mathbf{v}_i\in\mathbb{R}^m$. These are orthonormal:
+$$
+\mathbf{u}_i^\top\mathbf{u}_j=\frac{1}{\sigma_i\sigma_j}\mathbf{v}_i^\top A^\top A\mathbf{v}_j
+=\frac{1}{\sigma_i\sigma_j}\mathbf{v}_i^\top(\lambda_j\mathbf{v}_j)
+=\frac{\lambda_j}{\sigma_i\sigma_j}\,\delta_{ij}=\frac{\sigma_j^2}{\sigma_i\sigma_j}\,\delta_{ij}
+=\delta_{ij},
+$$
+using $A^\top A\mathbf{v}_j=\lambda_j\mathbf{v}_j$ and $\mathbf{v}_i^\top\mathbf{v}_j=\delta_{ij}$.
+Extend $\mathbf{u}_1,\dots,\mathbf{u}_r$ to an orthonormal basis $\mathbf{u}_1,\dots,\mathbf{u}_m$ of
+$\mathbb{R}^m$ by Gram-Schmidt (@thm-gram-schmidt), and set $U=[\mathbf{u}_1\ \cdots\ \mathbf{u}_m]$,
+which is orthogonal. Let $\Sigma\in\mathbb{R}^{m\times n}$ have $\Sigma_{ii}=\sigma_i$ for $i\le r$ and
+all other entries zero.
+
+We verify $AV=U\Sigma$, which is equivalent to @eq-svd after multiplying on the right by $V^\top$. The
+$j$-th column of $AV$ is $A\mathbf{v}_j$. For $j\le r$, $A\mathbf{v}_j=\sigma_j\mathbf{u}_j$ by the
+definition of $\mathbf{u}_j$. For $j>r$, $\lambda_j=0$, so $\|A\mathbf{v}_j\|^2=\mathbf{v}_j^\top A^\top
+A\mathbf{v}_j=\lambda_j=0$, giving $A\mathbf{v}_j=\mathbf{0}$. The $j$-th column of $U\Sigma$ is
+$\sigma_j\mathbf{u}_j$ for $j\le r$ and $\mathbf{0}$ for $j>r$. The columns match, so $AV=U\Sigma$ and
+$A=U\Sigma V^\top$.
+
+*Uniqueness of the singular values.* From @eq-svd, $A^\top A=V\Sigma^\top U^\top U\Sigma V^\top=
+V(\Sigma^\top\Sigma)V^\top$, and $\Sigma^\top\Sigma=\mathrm{diag}(\sigma_1^2,\dots,\sigma_r^2,0,\dots,0)$.
+This exhibits the $\sigma_i^2$ as the eigenvalues of $A^\top A$, which depend only on $A$; hence the
+$\sigma_i=\sqrt{\lambda_i(A^\top A)}$ are determined by $A$. Finally $AA^\top=U\Sigma V^\top V\Sigma^\top
+U^\top=U(\Sigma\Sigma^\top)U^\top$ shows the columns of $U$ are orthonormal eigenvectors of $AA^\top$,
+with the same nonzero eigenvalues $\sigma_i^2$. $\square$
+:::
+
+::: {.remark}
+**Geometry and the four subspaces.** The decomposition @eq-svd says that, in the right orthonormal
+input basis $\{\mathbf{v}_j\}$ and output basis $\{\mathbf{u}_i\}$, $A$ acts diagonally: it stretches by
+$\sigma_i$ along paired axes and annihilates the rest. The image of the unit sphere under $A$ is an
+ellipsoid with semi-axes $\sigma_1,\dots,\sigma_r$ along $\mathbf{u}_1,\dots,\mathbf{u}_r$, so
+$\sigma_1=\|A\|_2$ is the operator norm and $\sigma_r$ measures how close $A$ is to dropping rank. The
+singular vectors lay bare the four fundamental subspaces of @thm-four-subspaces:
+$\{\mathbf{u}_1,\dots,\mathbf{u}_r\}$ is an orthonormal basis of the column space $\mathcal{C}(A)$,
+$\{\mathbf{u}_{r+1},\dots,\mathbf{u}_m\}$ of the left null space $\mathcal{N}(A^\top)$,
+$\{\mathbf{v}_1,\dots,\mathbf{v}_r\}$ of the row space $\mathcal{C}(A^\top)$, and
+$\{\mathbf{v}_{r+1},\dots,\mathbf{v}_n\}$ of the null space $\mathcal{N}(A)$. $\blacktriangleleft$
+:::
+
+The same four-subspaces correspondence is easier to hold in a table.
+
+| Fundamental subspace | Lives in | Spanned by | Dimension | Plain meaning |
+|---|---|---|---|---|
+| column space $\mathcal{C}(A)$ | $\mathbb{R}^m$ | $\mathbf{u}_1,\dots,\mathbf{u}_r$ | $r$ | output directions $A$ can reach |
+| left null space $\mathcal{N}(A^\top)$ | $\mathbb{R}^m$ | $\mathbf{u}_{r+1},\dots,\mathbf{u}_m$ | $m-r$ | output directions never reached |
+| row space $\mathcal{C}(A^\top)$ | $\mathbb{R}^n$ | $\mathbf{v}_1,\dots,\mathbf{v}_r$ | $r$ | input directions that matter |
+| null space $\mathcal{N}(A)$ | $\mathbb{R}^n$ | $\mathbf{v}_{r+1},\dots,\mathbf{v}_n$ | $n-r$ | input directions $A$ ignores |
+
+To picture the "unit sphere maps to an ellipsoid" claim without a figure, track a few unit inputs through
+the symmetric matrix $\begin{pmatrix}2&1\\1&2\end{pmatrix}$, whose singular values equal its eigenvalues
+$3$ and $1$. The output lengths trace out an ellipse with semi-axes $3$ and $1$.
+
+| Unit input direction | Output | Output length |
+|---|---|---|
+| $(1,1)/\sqrt2$ | $(3,3)/\sqrt2$ | $3$ (long axis) |
+| $(1,0)$ | $(2,1)$ | $\sqrt5\approx 2.24$ |
+| $(1,-1)/\sqrt2$ | $(1,-1)/\sqrt2$ | $1$ (short axis) |
+
+The longest stretch is $\sigma_1=3$ and the shortest is $\sigma_r=1$; their ratio is the single most
+useful diagnostic in applied regression, so we name it.
+
+::: {#def-condition-number}
+## Condition number
+
+For $A\in\mathbb{R}^{m\times n}$ of rank $r$ with singular values $\sigma_1\ge\cdots\ge\sigma_r>0$, the
+**condition number** (in the $2$-norm) is
+$$
+\kappa(A)=\frac{\sigma_1}{\sigma_r}.
+$$
+For a full-rank square $A$ this equals $\|A\|_2\,\|A^{-1}\|_2$.
+:::
+
+**Reader translation.** The condition number compares the largest stretch to the smallest. When it is
+close to $1$, $A$ treats all directions evenly and is easy to invert; when it is large, some input
+direction is barely stretched, so undoing $A$ blows up tiny errors in that direction.
+
+**Why this matters.** This is the fact a health researcher fitting a regression most needs. A design
+matrix $\mathbf{X}$ with two nearly collinear covariates has a tiny smallest singular value, hence a huge
+$\kappa(\mathbf{X})$. Because $\kappa(\mathbf{X}^\top\mathbf{X})=\kappa(\mathbf{X})^2$, the Gram matrix is
+then nearly singular, and the variance of $\hat{\boldsymbol{\beta}}$, which scales with
+$(\mathbf{X}^\top\mathbf{X})^{-1}$, is inflated along the ill-supported direction. Large condition number
+is the linear-algebra name for collinearity and variance inflation.
+
+One more size measure, used in the exercises, fits naturally here. The **Frobenius norm** of
+$A\in\mathbb{R}^{m\times n}$ is $\|A\|_F=\sqrt{\sum_{i,j}a_{ij}^2}=\sqrt{\sum_i\sigma_i^2}$, the Euclidean
+length of $A$ when its entries are read as one long vector; the second equality, which expresses it
+through the singular values, is proved in @exr-frobenius-singular.
+
+## The Moore-Penrose pseudoinverse {#sec-la3-pseudoinverse}
+
+When $A$ is square and invertible, $A^{-1}$ solves $A\mathbf{x}=\mathbf{b}$ uniquely. When $A$ is
+rectangular or rank-deficient, no inverse exists, yet we still want a canonical operator that "best
+undoes" $A$. This is the everyday situation in evidence synthesis: the design has too few independent
+data directions to pin down every coefficient, the covariates are collinear, or several coefficient
+vectors fit the data equally well. The pseudoinverse is the principled replacement for the missing
+inverse in all three cases. The singular value decomposition delivers it by inverting only the nonzero
+stretching factors and leaving the unsupported directions alone. The formal four-equation
+characterization comes after the definition, but the practical message is exactly this paragraph.
+
+::: {#def-pseudoinverse}
+## Moore-Penrose pseudoinverse
+
+Let $A\in\mathbb{R}^{m\times n}$ have singular value decomposition $A=U\Sigma V^\top$ as in @thm-svd.
+The **Moore-Penrose pseudoinverse** of $A$ is
+$$
+A^{+}=V\Sigma^{+}U^\top\in\mathbb{R}^{n\times m},
+$$ {#eq-pseudoinverse}
+where $\Sigma^{+}\in\mathbb{R}^{n\times m}$ is the matrix with $(\Sigma^{+})_{ii}=\sigma_i^{-1}$ for
+$i=1,\dots,r$ and all other entries zero. Equivalently $A^{+}=\sum_{i=1}^r\sigma_i^{-1}\mathbf{v}_i
+\mathbf{u}_i^\top$.
+:::
+
+**Reader translation.** The pseudoinverse runs the SVD pipeline backwards, but only on the directions
+that were genuinely stretched. It un-rotates with $U^\top$, divides by $\sigma_i$ on the $r$ supported
+axes and does nothing on the rest (you cannot divide by the zero stretch of an unsupported direction),
+then un-rotates with $V$. It inverts what can be inverted and quietly leaves the null directions alone.
+
+The formula uses a particular singular value decomposition, of which there may be many. The next
+proposition shows the result does not depend on that choice, by characterizing $A^{+}$ intrinsically
+through four equations.
+
+::: {#prp-pseudoinverse-penrose}
+## The Penrose equations characterize $A^{+}$
+
+The matrix $X=A^{+}$ of @def-pseudoinverse satisfies the four **Penrose equations**
+$$
+\text{(P1) } AXA=A,\quad \text{(P2) } XAX=X,\quad \text{(P3) } (AX)^\top=AX,\quad \text{(P4) }
+(XA)^\top=XA,
+$$
+and it is the only matrix that does so. In particular $A^{+}$ is independent of the chosen singular
+value decomposition. If $A$ is invertible then $A^{+}=A^{-1}$.
+:::
+
+::: {.proof}
+*Existence.* With $A=U\Sigma V^\top$ and $X=V\Sigma^{+}U^\top$, orthogonality of $U,V$ gives
+$$
+AX=U\Sigma\Sigma^{+}U^\top,\qquad XA=V\Sigma^{+}\Sigma V^\top .
+$$
+Now $\Sigma\Sigma^{+}=\mathrm{diag}(I_r,\mathbf{0})\in\mathbb{R}^{m\times m}$ and $\Sigma^{+}\Sigma=
+\mathrm{diag}(I_r,\mathbf{0})\in\mathbb{R}^{n\times n}$ are diagonal with $0/1$ entries, hence
+symmetric, so $AX$ and $XA$ are symmetric, giving (P3) and (P4). Because
+$\Sigma\Sigma^{+}\Sigma=\Sigma$ and $\Sigma^{+}\Sigma\Sigma^{+}=\Sigma^{+}$ (a $0/1$ diagonal scaling
+fixes the matched diagonal entries), we get $AXA=U\Sigma\Sigma^{+}\Sigma V^\top=U\Sigma V^\top=A$, which
+is (P1), and $XAX=V\Sigma^{+}\Sigma\Sigma^{+}U^\top=V\Sigma^{+}U^\top=X$, which is (P2).
+
+*Uniqueness.* Suppose $G$ and $H$ each satisfy (P1) to (P4) for $A$. We take the chains one short step at
+a time, writing the rule used on the right. First we show $AG=AH$:
+$$
+\begin{aligned}
+AG &= (AG)^\top && \text{(P3 for }G\text{)}\\
+   &= G^\top A^\top && \text{(transpose of a product)}\\
+   &= G^\top (AHA)^\top && \text{(P1 for }H\text{: }A=AHA)\\
+   &= G^\top A^\top H^\top A^\top && \text{(transpose of a product)}\\
+   &= (AG)^\top (AH)^\top && \text{(regroup }G^\top A^\top,\ H^\top A^\top)\\
+   &= (AG)(AH) && \text{(P3 for }G\text{ and }H)\\
+   &= (AGA)H = AH && \text{(P1 for }G).
+\end{aligned}
+$$
+Symmetrically, using (P4) and (P1), we show $GA=HA$:
+$$
+\begin{aligned}
+GA &= (GA)^\top && \text{(P4 for }G\text{)}\\
+   &= A^\top G^\top && \text{(transpose of a product)}\\
+   &= (AHA)^\top G^\top && \text{(P1 for }H\text{: }A=AHA)\\
+   &= A^\top H^\top A^\top G^\top && \text{(transpose of a product)}\\
+   &= (HA)^\top (GA)^\top && \text{(regroup }A^\top H^\top,\ A^\top G^\top)\\
+   &= (HA)(GA) && \text{(P4 for }H\text{ and }G)\\
+   &= H(AGA) = HA && \text{(P1 for }G).
+\end{aligned}
+$$
+Now combine with (P2):
+$$
+\begin{aligned}
+G &= GAG && \text{(P2 for }G\text{)}\\
+  &= G(AG) = G(AH) && \text{(}AG=AH\text{ above)}\\
+  &= (GA)H = (HA)H && \text{(}GA=HA\text{ above)}\\
+  &= H(AH) = HAH = H && \text{(P2 for }H).
+\end{aligned}
+$$
+Hence the matrix satisfying the four equations is unique; since $A^{+}$ satisfies them and they do not
+mention the decomposition, $A^{+}$ is well defined. If $A$ is invertible, $X=A^{-1}$ satisfies all four
+equations (each reduces to a trivial identity), so by uniqueness $A^{+}=A^{-1}$. $\square$
+:::
+
+**Why this matters.** The four equations pin down $A^{+}$ with no reference to any particular singular
+value decomposition, so "the pseudoinverse" is a single well-defined object rather than an artifact of a
+choice. And because it collapses to $A^{-1}$ whenever the ordinary inverse exists, it is a genuine
+extension of the inverse, safe to use as a drop-in replacement throughout regression.
+
+The pseudoinverse is intimately tied to orthogonal projection, which is where Chapter 2 re-enters.
+
+::: {#prp-pseudoinverse-projection}
+## Pseudoinverse and orthogonal projection
+
+For $A\in\mathbb{R}^{m\times n}$, the matrix $AA^{+}$ is the orthogonal projection of $\mathbb{R}^m$
+onto the column space $\mathcal{C}(A)$, and $A^{+}A$ is the orthogonal projection of $\mathbb{R}^n$
+onto the row space $\mathcal{C}(A^\top)$. When $A$ has full column rank $r=n$, the Gram matrix
+$A^\top A$ is invertible and
+$$
+A^{+}=(A^\top A)^{-1}A^\top,\qquad AA^{+}=A(A^\top A)^{-1}A^\top .
+$$
+:::
+
+::: {.proof}
+With $A=U\Sigma V^\top$, write $U_r=[\mathbf{u}_1\ \cdots\ \mathbf{u}_r]$ for the first $r$ left singular
+vectors. From the proof of @prp-pseudoinverse-penrose, $AA^{+}=U\,\mathrm{diag}(I_r,\mathbf{0})\,U^\top=
+U_rU_r^\top$. The columns of $U_r$ are orthonormal and, by the remark after @thm-svd, form a basis of
+$\mathcal{C}(A)$. By the projection theorem (@thm-projection-theorem) and the orthonormal-basis formula
+for a projection matrix (@def-projection-matrix), $U_rU_r^\top$ is exactly the orthogonal projection
+onto $\mathrm{span}\{\mathbf{u}_1,\dots,\mathbf{u}_r\}=\mathcal{C}(A)$. The same argument applied to
+$A^{+}A=V_rV_r^\top$ identifies it with the orthogonal projection onto
+$\mathrm{span}\{\mathbf{v}_1,\dots,\mathbf{v}_r\}=\mathcal{C}(A^\top)$.
+
+If $r=n$, then $A^\top A\succ 0$ by @lem-ata-psd and the remark after @thm-pd-characterization, hence
+invertible. The matrix $M=(A^\top A)^{-1}A^\top$ satisfies the four Penrose equations: $AM=A(A^\top
+A)^{-1}A^\top$ is symmetric and $MA=(A^\top A)^{-1}A^\top A=I_n$ is symmetric, giving (P3), (P4);
+$AMA=A(A^\top A)^{-1}A^\top A=A$ gives (P1); and $MAM=I_n M=M$ gives (P2). By the uniqueness in
+@prp-pseudoinverse-penrose, $A^{+}=M=(A^\top A)^{-1}A^\top$, and $AA^{+}=A(A^\top A)^{-1}A^\top$. $\square$
+:::
+
+**Why this matters.** Multiplying by $A^{+}$ and then by $A$ is geometry: $AA^{+}$ projects onto the
+column space (the fitted values a model can produce), and $A^{+}A$ projects onto the row space (the part
+of the coefficients the data can identify). This is the bridge from the abstract pseudoinverse to the
+familiar machinery of least squares.
+
+The formula $A(A^\top A)^{-1}A^\top$ is precisely the hat matrix of least squares, which Chapter 6
+studies in depth; here it appears as a special case of the pseudoinverse. The pseudoinverse also solves
+the general least-squares problem, even when the solution is not unique, by selecting the solution of
+minimum norm.
+
+::: {#prp-pseudoinverse-lstsq}
+## Minimum-norm least-squares solution
+
+For $A\in\mathbb{R}^{m\times n}$ and $\mathbf{b}\in\mathbb{R}^m$, the vector $\mathbf{x}^\star=A^{+}
+\mathbf{b}$ minimizes $\|A\mathbf{x}-\mathbf{b}\|$ over all $\mathbf{x}\in\mathbb{R}^n$, and among all
+minimizers it is the unique one of smallest Euclidean norm.
+:::
+
+::: {.proof}
+Using the orthogonal $U$, $\|A\mathbf{x}-\mathbf{b}\|=\|U^\top(A\mathbf{x}-\mathbf{b})\|=\|\Sigma
+V^\top\mathbf{x}-U^\top\mathbf{b}\|$. Put $\mathbf{z}=V^\top\mathbf{x}$ (a bijective change of variable
+preserving norm, since $\|\mathbf{x}\|=\|\mathbf{z}\|$) and $\mathbf{c}=U^\top\mathbf{b}$. Then
+$$
+\|A\mathbf{x}-\mathbf{b}\|^2=\sum_{i=1}^r(\sigma_i z_i-c_i)^2+\sum_{i=r+1}^m c_i^2 .
+$$
+The second sum is fixed. The first is minimized, to zero, exactly by $z_i=c_i/\sigma_i$ for $i\le r$;
+the coordinates $z_{r+1},\dots,z_n$ are free and do not affect the residual. Among these minimizers,
+$\|\mathbf{x}\|^2=\|\mathbf{z}\|^2=\sum_{i\le r}(c_i/\sigma_i)^2+\sum_{i>r}z_i^2$ is smallest exactly
+when the free coordinates are zero. That choice gives $\mathbf{z}=\Sigma^{+}\mathbf{c}$, hence
+$\mathbf{x}^\star=V\mathbf{z}=V\Sigma^{+}U^\top\mathbf{b}=A^{+}\mathbf{b}$, and it is unique. $\square$
+:::
+
+**Reader translation.** "Minimum norm" is not arbitrary. When several coefficient vectors fit the data
+equally well, they differ only by directions the data cannot see (the null space of $A$). Among all those
+equally good fits, the pseudoinverse returns the one of smallest Euclidean length, which is the one that
+adds nothing in the unsupported directions. It is the honest answer: it refuses to invent coefficient
+values that the data do not constrain.
+
+## Covariance matrices are symmetric and positive semidefinite {#sec-la3-covariance}
+
+The objects of this chapter are not abstract: the covariance matrix of any random vector is symmetric
+positive semidefinite, which is why the entire spectral machinery transfers directly to statistics.
+
+::: {.remark}
+**Bridge to Chapter 4.** Let $\mathbf{X}\in\mathbb{R}^n$ be a random vector with finite second moments
+and mean $\boldsymbol{\mu}=\mathbb{E}[\mathbf{X}]$. Its covariance matrix
+$$
+\boldsymbol{\Sigma}=\mathrm{Cov}(\mathbf{X})=\mathbb{E}\!\big[(\mathbf{X}-\boldsymbol{\mu})
+(\mathbf{X}-\boldsymbol{\mu})^\top\big]
+$$
+is symmetric, because $\boldsymbol{\Sigma}^\top=\boldsymbol{\Sigma}$ entrywise, and positive
+semidefinite, because for any fixed $\mathbf{a}\in\mathbb{R}^n$,
+$$
+\mathbf{a}^\top\boldsymbol{\Sigma}\,\mathbf{a}
+=\mathbb{E}\!\big[\big(\mathbf{a}^\top(\mathbf{X}-\boldsymbol{\mu})\big)^2\big]
+=\mathrm{Var}(\mathbf{a}^\top\mathbf{X})\ge 0 .
+$$
+This is proved as @thm-cov-psd in Chapter 4. Three consequences of the present chapter then apply
+verbatim. By @thm-spectral-theorem, $\boldsymbol{\Sigma}=Q\Lambda Q^\top$ has an orthonormal eigenbasis;
+the eigenvectors are the principal axes of variation and the eigenvalues the variances along them, which
+is principal component analysis. By @prp-matrix-square-root, $\boldsymbol{\Sigma}$ has a symmetric
+positive semidefinite square root, and when $\boldsymbol{\Sigma}\succ 0$ the whitening transform
+$\mathbf{Z}=\boldsymbol{\Sigma}^{-1/2}(\mathbf{X}-\boldsymbol{\mu})$ has covariance
+$\boldsymbol{\Sigma}^{-1/2}\boldsymbol{\Sigma}\,\boldsymbol{\Sigma}^{-1/2}=I_n$. The induced norm
+$\|\mathbf{x}\|_{\boldsymbol{\Sigma}^{-1}}=\sqrt{\mathbf{x}^\top\boldsymbol{\Sigma}^{-1}\mathbf{x}}$ is
+the Mahalanobis distance that the matching methods of Part V use to compare covariate profiles across
+studies. In words, it is the standardized distance that accounts for correlation and unequal variances:
+two covariate profiles that differ by one raw unit count as far apart along directions in which the study
+has little variation, and close along directions in which it has a lot. Whitening makes this precise,
+since $\|\mathbf{x}\|_{\boldsymbol{\Sigma}^{-1}}=\|\boldsymbol{\Sigma}^{-1/2}\mathbf{x}\|_2$ is ordinary
+Euclidean distance after the data have been whitened. $\blacktriangleleft$
+:::
+
+## A fully worked example {#sec-la3-example}
+
+We carry one small symmetric matrix through the whole theory, then treat a rank-deficient rectangular
+matrix to see the singular value decomposition and pseudoinverse in action. Every number below is
+checkable by hand.
+
+**A symmetric $2\times 2$ matrix.** Let
+$$
+A=\begin{pmatrix} 2 & 1\\ 1 & 2\end{pmatrix}.
+$$
+This is exactly the running covariance $\boldsymbol{\Sigma}$ of @exm-la3-contrast-covariance for the two
+correlated log-odds-ratio estimates $(\hat y_{AB},\hat y_{AC})$; we call it $A$ here to match the
+eigen-computation notation and read each result back as a statement about the indirect comparison.
+
+*Eigenvalues.* The characteristic polynomial is
+$$
+\chi_A(t)=\det\!\begin{pmatrix} t-2 & -1\\ -1 & t-2\end{pmatrix}=(t-2)^2-1=t^2-4t+3=(t-1)(t-3),
+$$
+so $\lambda_1=1$ and $\lambda_2=3$. As a check, $\mathrm{tr}(A)=2+2=4=1+3$ and
+$\det(A)=4-1=3=1\cdot 3$, matching @lem-trace-det-eigenvalues.
+
+*Eigenvectors and the spectral decomposition.* For $\lambda=3$, $(A-3I)\mathbf{v}=\begin{pmatrix}-1&1\\
+1&-1\end{pmatrix}\mathbf{v}=\mathbf{0}$ gives $\mathbf{v}\propto(1,1)$; for $\lambda=1$, $(A-I)\mathbf{v}=
+\begin{pmatrix}1&1\\1&1\end{pmatrix}\mathbf{v}=\mathbf{0}$ gives $\mathbf{v}\propto(1,-1)$. The two are
+orthogonal, as @lem-sym-orthogonal-eigenvectors promises. Normalizing,
+$$
+\mathbf{q}_{3}=\tfrac{1}{\sqrt2}\begin{pmatrix}1\\1\end{pmatrix},\qquad
+\mathbf{q}_{1}=\tfrac{1}{\sqrt2}\begin{pmatrix}1\\-1\end{pmatrix},\qquad
+Q=\tfrac{1}{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix},\qquad
+\Lambda=\begin{pmatrix}3&0\\0&1\end{pmatrix},
+$$
+and one verifies $Q\Lambda Q^\top=A$ directly: $Q\Lambda=\tfrac{1}{\sqrt2}\begin{pmatrix}3&1\\3&-1
+\end{pmatrix}$, and $(Q\Lambda)Q^\top=\tfrac12\begin{pmatrix}3&1\\3&-1\end{pmatrix}\begin{pmatrix}1&1\\
+1&-1\end{pmatrix}=\tfrac12\begin{pmatrix}4&2\\2&4\end{pmatrix}=A$.
+
+*Definiteness.* Both eigenvalues are positive, so $A\succ 0$ by @thm-pd-characterization. The leading
+principal minors are $\Delta_1=2>0$ and $\Delta_2=\det A=3>0$, confirming positive definiteness through
+@thm-sylvester-criterion as well.
+
+*Rayleigh quotient.* By @thm-rayleigh, $R_A$ ranges over $[\lambda_1,\lambda_2]=[1,3]$. The maximum is
+attained at $\mathbf{q}_3$: with $\mathbf{x}=(1,1)$, $\mathbf{x}^\top A\mathbf{x}=(1,1)\binom{3}{3}=6$
+and $\|\mathbf{x}\|^2=2$, so $R_A=3$. The minimum is attained at $\mathbf{q}_1$: with $\mathbf{x}=
+(1,-1)$, $\mathbf{x}^\top A\mathbf{x}=(1,-1)\binom{1}{-1}=2$ and $\|\mathbf{x}\|^2=2$, so $R_A=1$. A
+generic direction sits strictly inside: $\mathbf{x}=(1,0)$ gives $R_A=2/1=2\in(1,3)$.
+
+*Square root.* By @prp-matrix-square-root, $A^{1/2}=Q\,\mathrm{diag}(\sqrt3,1)\,Q^\top$. Writing
+$a=\tfrac{\sqrt3+1}{2}$ and $b=\tfrac{\sqrt3-1}{2}$,
+$$
+A^{1/2}=\begin{pmatrix} a & b\\ b & a\end{pmatrix}.
+$$
+We confirm $(A^{1/2})^2=A$ by hand: $a^2+b^2=\tfrac{(\sqrt3+1)^2+(\sqrt3-1)^2}{4}=\tfrac{8}{4}=2$ and
+$2ab=2\cdot\tfrac{(\sqrt3+1)(\sqrt3-1)}{4}=2\cdot\tfrac{2}{4}=1$, so
+$(A^{1/2})^2=\begin{pmatrix}a^2+b^2 & 2ab\\ 2ab & a^2+b^2\end{pmatrix}=\begin{pmatrix}2&1\\1&2
+\end{pmatrix}=A$.
+
+*Indirect-comparison reading.* Now read these numbers as facts about the two correlated estimates
+$(\hat y_{AB},\hat y_{AC})$ with covariance $A=\boldsymbol{\Sigma}$. The two estimates have correlation
+$\boldsymbol{\Sigma}_{12}/\sqrt{\boldsymbol{\Sigma}_{11}\boldsymbol{\Sigma}_{22}}=1/2$. The variance of
+the Bucher indirect comparison $\hat d_{BC}=\hat y_{AB}-\hat y_{AC}$ is the quadratic form along the
+contrast $\mathbf{a}=(1,-1)^\top$,
+$$
+\mathrm{Var}(\hat d_{BC})=\mathbf{a}^\top\boldsymbol{\Sigma}\mathbf{a}
+=\begin{pmatrix}1&-1\end{pmatrix}\begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}1\\-1\end{pmatrix}=2 .
+$$
+The two eigenpairs are the principal axes of uncertainty: the high-variance axis $\mathbf{q}_3=(1,1)/
+\sqrt2$ with variance $\lambda=3$ is the direction in which both estimates move together, and the
+low-variance axis $\mathbf{q}_1=(1,-1)/\sqrt2$ with variance $\lambda=1$ is the contrast direction. The
+indirect comparison therefore lies on the *better-determined* axis of the pair. The condition number is
+$\kappa(\boldsymbol{\Sigma})=\sigma_1/\sigma_2=3/1=3$, comfortably small, so this two-estimate problem is
+well conditioned. For the Mahalanobis distance and whitening, invert and take the square root through the
+spectrum:
+$$
+\boldsymbol{\Sigma}^{-1}=\frac{1}{\det A}\begin{pmatrix}2&-1\\-1&2\end{pmatrix}
+=\frac13\begin{pmatrix}2&-1\\-1&2\end{pmatrix},\qquad
+\boldsymbol{\Sigma}^{-1/2}=Q\,\mathrm{diag}\!\big(\tfrac{1}{\sqrt3},1\big)\,Q^\top ,
+$$
+so the whitened vector $\boldsymbol{\Sigma}^{-1/2}(\hat{\mathbf y}-\boldsymbol{\mu})$ has covariance
+$I_2$: whitening rescales the variance-$3$ axis and the variance-$1$ axis to equal variance $1$, removing
+the correlation. This single matrix has now illustrated eigenvalues, the spectral decomposition,
+definiteness, the Rayleigh bounds, the square root, contrast variance, conditioning, and the Mahalanobis
+metric, each as a concrete statement about an indirect comparison.
+
+**A rank-deficient matrix.** Let
+$$
+C=\begin{pmatrix} 1 & 2\\ 2 & 4\end{pmatrix},
+$$
+whose rows are proportional, so $\mathrm{rank}(C)=1$.
+
+*Singular values and vectors.* Compute $C^\top C=\begin{pmatrix}5&10\\10&20\end{pmatrix}$, with
+$\mathrm{tr}=25$ and $\det=100-100=0$, hence eigenvalues $\lambda=25$ and $\lambda=0$. The single
+nonzero singular value is $\sigma_1=\sqrt{25}=5$. The right singular vector solves
+$(C^\top C-25I)\mathbf{v}=\begin{pmatrix}-20&10\\10&-5\end{pmatrix}\mathbf{v}=\mathbf{0}$, giving
+$\mathbf{v}_1=\tfrac{1}{\sqrt5}(1,2)$. The left singular vector is $\mathbf{u}_1=\sigma_1^{-1}C
+\mathbf{v}_1=\tfrac{1}{5}\cdot\tfrac{1}{\sqrt5}\binom{1+4}{2+8}=\tfrac{1}{\sqrt5}\binom{1}{2}$.
+
+*Pseudoinverse.* By @def-pseudoinverse, $C^{+}=\sigma_1^{-1}\mathbf{v}_1\mathbf{u}_1^\top=
+\tfrac{1}{5}\cdot\tfrac{1}{\sqrt5}\binom{1}{2}\cdot\tfrac{1}{\sqrt5}(1\ \ 2)=\tfrac{1}{25}
+\begin{pmatrix}1&2\\2&4\end{pmatrix}=\tfrac{1}{25}C$. We verify the Penrose identity (P1) of
+@prp-pseudoinverse-penrose. Since $C^2=\begin{pmatrix}5&10\\10&20\end{pmatrix}=5C$, we have $C^3=5C^2=
+25C$, so
+$$
+CC^{+}C=C\cdot\tfrac{1}{25}C\cdot C=\tfrac{1}{25}C^3=\tfrac{1}{25}(25C)=C,
+$$
+as required. The projection $CC^{+}=\tfrac{1}{25}C^2=\tfrac{1}{25}(5C)=\tfrac15 C=\tfrac15
+\begin{pmatrix}1&2\\2&4\end{pmatrix}$ is symmetric and idempotent, and it is the orthogonal projection
+onto $\mathcal{C}(C)=\mathrm{span}\{(1,2)\}$, in agreement with @prp-pseudoinverse-projection.
+
+*Conditioning reading.* The matrix $C$ has singular values $\sigma_1=5$ and $\sigma_2=0$, so its
+condition number is infinite: the two rows are exactly proportional, and the data carry no information at
+all along the second input direction $\mathbf{v}_2=(2,-1)/\sqrt5$. This is perfect collinearity, the
+extreme case of @def-condition-number. A real design matrix with two *nearly* collinear covariates would
+have a small but nonzero $\sigma_2$, hence a large finite condition number, and the variance of the
+corresponding coefficient would be inflated by roughly $1/\sigma_2^2$. The pseudoinverse keeps the
+problem well posed by simply declining to invert the zero (or near-zero) direction.
+
+## Notes and references {#sec-la3-notes}
+
+The material of this chapter is classical linear algebra. The eigenvalue and diagonalization theory,
+the spectral theorem for symmetric matrices, positive definite matrices and Sylvester's criterion, the
+singular value decomposition, and the pseudoinverse are all developed in @strang2016, which is our
+standing reference for the field; the determinant facts and the existence and extension of bases that we
+cite without proof are established there. The fundamental theorem of algebra, used once to guarantee
+that the characteristic polynomial has a complex root, is the only genuinely analytic prerequisite and
+is standard.
+
+The inductive proof of the spectral theorem given here, peeling off one real eigenvector and restricting
+to its $A$-invariant orthogonal complement, is the most self-contained route and avoids the machinery of
+Schur factorization. The variational results, @thm-rayleigh and the Courant-Fischer theorem
+@thm-courant-fischer, are proved by elementary weighted-average and dimension-count arguments rather
+than by Lagrange multipliers, keeping the chapter free of calculus. Sylvester's criterion is proved by
+an eigenvalue and dimension-count argument; an alternative proof through the $LDL^\top$ factorization,
+in which the pivots equal the ratios of successive leading minors, is outlined in @strang2016.
+
+These linear-algebra primitives have no separate counterpart in the companion `ITC_Coq` development,
+whose formalized theorems live at the causal and statistical layer rather than at the level of matrix
+factorizations; accordingly, none of the results here carries a machine-checked tag. The downstream uses
+foreshadowed in @sec-la3-covariance, namely the positive semidefiniteness of covariance matrices and the
+Mahalanobis distance, reappear in the probability chapter and in the distance-matching methods of
+Part V.
+
+## Exercises {#sec-la3-exercises}
+
+An exercise marked with a star $\star$ has a full worked solution in Appendix F. The set is ordered
+roughly from warm-up and interpretation through computation to proof, so start at the top and stop where
+the difficulty outruns your current need.
+
+::: {#exr-la3-eigen-warmup}
+## Warm-up: check an eigenpair without the characteristic polynomial
+
+(Warm-up.) Let $\boldsymbol{\Sigma}=\begin{pmatrix}2&1\\1&2\end{pmatrix}$. By direct multiplication only,
+verify that $(1,1)^\top$ and $(1,-1)^\top$ are eigenvectors and read off their eigenvalues. Which of the
+two directions carries the larger variance, and which one is the indirect-contrast direction
+$\mathbf{a}=(1,-1)^\top$? You should not need to compute a determinant.
+:::
+
+::: {#exr-la3-contrast-variance}
+## Interpretation: covariance of two log-odds-ratio estimates
+
+(Interpretation and computation.) Two trials sharing comparator $A$ give log-odds-ratio estimates with
+covariance matrix
+$$
+\boldsymbol{\Sigma}=\begin{pmatrix}0.05 & 0.02\\ 0.02 & 0.05\end{pmatrix}
+$$
+(in convenient units). (a) Compute the correlation between the two estimates. (b) Using the quadratic
+form $\mathbf{a}^\top\boldsymbol{\Sigma}\mathbf{a}$ with $\mathbf{a}=(1,-1)^\top$, find the variance and
+the standard error of the indirect comparison $\hat d_{BC}=\hat y_{AB}-\hat y_{AC}$. (c) Confirm
+$\boldsymbol{\Sigma}\succ 0$ with Sylvester's criterion (@thm-sylvester-criterion). (d) Find the
+eigenvalues and eigenvectors, and state in one sentence which direction in the
+$(\hat y_{AB},\hat y_{AC})$ plane is the most uncertain and which is the least.
+:::
+
+::: {#exr-la3-collinear-design}
+## Interpretation: collinearity and the condition number
+
+(Interpretation and computation.) Two covariates are standardized and have sample correlation $r=0.99$,
+so their (scaled) Gram matrix is $G=\begin{pmatrix}1 & 0.99\\ 0.99 & 1\end{pmatrix}$. (a) Find the
+eigenvalues of $G$ (recall that $\begin{pmatrix}a&b\\b&a\end{pmatrix}$ has eigenvalues $a\pm b$). (b)
+Compute the condition number $\kappa(G)=\lambda_{\max}/\lambda_{\min}$ of @def-condition-number. (c)
+Explain in one or two sentences what the small eigenvalue says about how precisely the coefficient of the
+$(1,-1)^\top$ direction can be estimated, and connect this to variance inflation under collinearity.
+:::
+
+::: {#exr-diagonalize-symmetric}
+## Spectral decomposition by hand
+
+Let $A=\begin{pmatrix}3&1\\1&3\end{pmatrix}$. Find the eigenvalues and an orthonormal eigenbasis, write
+the spectral decomposition $A=Q\Lambda Q^\top$, and verify $\mathrm{tr}(A)=\sum_i\lambda_i$ and
+$\det(A)=\prod_i\lambda_i$. Compute $A^{1/2}$ and check that its square is $A$.
+:::
+
+::: {#exr-definiteness-test}
+## Two definiteness tests
+
+For each matrix decide whether it is positive definite, positive semidefinite but not definite, or
+indefinite, using both the eigenvalue characterization (@thm-pd-characterization) and, where it
+applies, Sylvester's criterion (@thm-sylvester-criterion):
+$$
+B_1=\begin{pmatrix}2&-1\\-1&2\end{pmatrix},\qquad
+B_2=\begin{pmatrix}1&1\\1&1\end{pmatrix},\qquad
+B_3=\begin{pmatrix}1&2\\2&1\end{pmatrix}.
+$$
+Explain why Sylvester's criterion alone cannot certify the semidefinite case $B_2$.
+:::
+
+::: {#exr-svd-pseudoinverse}
+## Singular value decomposition and pseudoinverse
+
+Let $A=\begin{pmatrix}1&0\\0&0\\0&2\end{pmatrix}\in\mathbb{R}^{3\times 2}$. Compute $A^\top A$, its
+eigenvalues and eigenvectors, the singular values, a full singular value decomposition $A=U\Sigma
+V^\top$, and the pseudoinverse $A^{+}$. Verify all four Penrose equations and confirm that $AA^{+}$ is
+the orthogonal projection onto $\mathcal{C}(A)$.
+:::
+
+::: {#exr-matrix-power-eigenvalues}
+## Eigenvalues of powers and inverses
+
+Let $A$ be symmetric with eigenpairs $(\lambda_i,\mathbf{q}_i)$. Prove that for every integer $k\ge 1$
+the matrix $A^k$ is symmetric with eigenpairs $(\lambda_i^k,\mathbf{q}_i)$, and that if $A$ is invertible
+then $A^{-1}$ has eigenpairs $(\lambda_i^{-1},\mathbf{q}_i)$. Deduce that $\mathrm{tr}(A^k)=\sum_i
+\lambda_i^k$.
+:::
+
+::: {#exr-inverse-pd}
+## Positive definiteness is inherited by the inverse and the root
+
+Let $A\succ 0$ be symmetric. Prove that $A$ is invertible, that $A^{-1}\succ 0$, and that
+$A^{1/2}\succ 0$. Prove moreover that if $A\succeq B\succeq 0$ with $A$ invertible then
+$B^{1/2}A^{-1}B^{1/2}\preceq I$, and conclude $\det(B)\le\det(A)$.
+:::
+
+::: {#exr-rayleigh-max}
+## Rayleigh maximization and uniqueness of the maximizer
+
+Let $A$ be symmetric with largest eigenvalue $\lambda_n$. Prove that $\lambda_n=\max_{\|\mathbf{x}\|=1}
+\mathbf{x}^\top A\mathbf{x}$ and that the maximizer is unique up to sign if and only if $\lambda_n$ has
+algebraic multiplicity one. Give an explicit symmetric $2\times 2$ matrix for which the maximizer is not
+unique.
+:::
+
+::: {#exr-la3-penrose-rank-one}
+## Computation: the Penrose equations for a rank-one matrix
+
+(Computation.) Let $C=\begin{pmatrix}1&2\\2&4\end{pmatrix}$, the rank-one matrix of the worked example,
+whose pseudoinverse is $C^{+}=\tfrac{1}{25}C$. Verify all four Penrose equations (P1) to (P4) of
+@prp-pseudoinverse-penrose directly, using $C^2=5C$. Then confirm that $CC^{+}$ is symmetric and
+idempotent, so it is an orthogonal projection, and identify the subspace it projects onto. This is the
+concrete warm-up for the abstract uniqueness argument and the starred exercises that follow.
+:::
+
+::: {#exr-ata-aat-spectrum}
+## Shared spectrum of $A^\top A$ and $AA^\top$ (starred)
+
+$\star$ (Proof.) Let $A\in\mathbb{R}^{m\times n}$. Prove that $A^\top A$ and $AA^\top$ have exactly
+the same nonzero eigenvalues, with the same multiplicities, and that $\mathbf{v}\mapsto A\mathbf{v}$ maps
+the eigenspace of $A^\top A$ for a nonzero $\lambda$ isomorphically onto the eigenspace of $AA^\top$ for
+$\lambda$. Conclude that the nonzero singular values of $A$ and of $A^\top$ coincide, and that
+$\|A\|_F^2:=\sum_{i,j}a_{ij}^2=\sum_i\sigma_i^2=\mathrm{tr}(A^\top A)$.
+:::
+
+::: {#exr-weyl-inequality}
+## Weyl's inequality from the Rayleigh principle (starred)
+
+$\star$ (Proof.) Let $A,B\in\mathbb{R}^{n\times n}$ be symmetric with eigenvalues written in
+increasing order, $\lambda_1(\cdot)\le\cdots\le\lambda_n(\cdot)$. Using the Courant-Fischer theorem
+(@thm-courant-fischer), prove Weyl's inequality
+$$
+\lambda_k(A)+\lambda_1(B)\le\lambda_k(A+B)\le\lambda_k(A)+\lambda_n(B),\qquad k=1,\dots,n.
+$$
+Deduce that if $B\succeq 0$ then $\lambda_k(A+B)\ge\lambda_k(A)$ for every $k$ (adding a positive
+semidefinite matrix cannot decrease any eigenvalue), and that
+$|\lambda_k(A+B)-\lambda_k(A)|\le\|B\|_2$ for every $k$.
+:::
+
+::: {#exr-frobenius-singular}
+## Rank, Frobenius norm, and the best low-rank approximation
+
+Let $A=U\Sigma V^\top$ have singular values $\sigma_1\ge\cdots\ge\sigma_r>0$. Prove that
+$\mathrm{rank}(A)$ equals the number of nonzero singular values and that $\|A\|_F^2=\sum_i\sigma_i^2$.
+Define $A_k=\sum_{i=1}^k\sigma_i\mathbf{u}_i\mathbf{v}_i^\top$ for $k<r$. Prove directly that
+$\|A-A_k\|_F^2=\sum_{i>k}\sigma_i^2$, and explain in one sentence why $A_k$ is a natural rank-$k$
+approximation of $A$.
+:::
+
+::: {#exr-correlation-psd}
+## Covariance and correlation matrices
+
+Let $\mathbf{X}\in\mathbb{R}^n$ have covariance matrix $\boldsymbol{\Sigma}$. Prove from the definition
+that $\boldsymbol{\Sigma}$ is symmetric positive semidefinite, and that $\boldsymbol{\Sigma}\succ 0$
+unless some nontrivial linear combination $\mathbf{a}^\top\mathbf{X}$ is almost surely constant. Show
+that the correlation matrix $R$ with $R_{ij}=\boldsymbol{\Sigma}_{ij}/\sqrt{\boldsymbol{\Sigma}_{ii}
+\boldsymbol{\Sigma}_{jj}}$ is also positive semidefinite, and conclude that every correlation satisfies
+$|R_{ij}|\le 1$.
+:::

@@ -1,0 +1,1375 @@
+---
+title: "Transportability: The Estimand-Based Theory"
+---
+
+## Introduction {#sec-transport-intro}
+
+A randomized trial answers a question about the patients it enrolled. A reimbursement decision asks a
+question about a different group of patients: the population that will receive the drug if it is approved.
+The two groups are almost never the same. Trials recruit through eligibility criteria, run at specialized
+centers, and finish years before the decision is made; the decision population is broader, older, sicker,
+or simply distributed differently across the prognostic and effect-modifying covariates that govern how
+the treatment works. The central practical problem of health technology assessment (HTA,
+[Notation](/notation.qmd)) is therefore not estimation but *transport*: given an effect measured in one
+population, what can we say about the effect in another?
+
+The previous three chapters built the machinery to estimate causal effects cleanly within a single
+population: potential outcomes and the identification of the average treatment effect (Chapter 9), the
+adjustment methods that recover it from observational or reweighted data (Chapter 10), and the distinction
+between conditional and marginal estimands together with the collapsibility that separates them
+(Chapter 11). This chapter asks the next question. An effect is a number attached to a population. Move to
+a new population and the number can change, even when nothing about the biology, the treatment, or the
+conditional response has changed at all. When may we carry the number across unchanged, and when must we
+recompute it?
+
+The answer is sharper, and more uncomfortable, than the folklore of indirect comparison suggests. The
+folklore says: if the same variables modify the treatment effect in both populations, and we have matched
+or adjusted for them, then the relative effect is "the same in any population" and may be transported at
+will. We will prove that this is true for some effect measures and false for others, and that the dividing
+line is exactly the property studied in Chapter 11. For a *collapsible* measure on its natural scale, the
+mean difference, the risk ratio, the rate ratio, a shared effect modifier structure does make the relative
+effect transportable. For a *non-collapsible* measure, the odds ratio and the hazard ratio, it does not:
+the marginal effect stays tied to the covariate distribution of the population in which it was averaged, so
+that the very same conditional model produces different marginal odds ratios in different populations.
+Because the odds ratio and the hazard ratio are the two effect measures HTA uses most, the result is a
+genuine paradox. The measures we most want to transport are precisely the ones that resist transport.
+
+The chapter develops this in five movements. First we make the objects precise: a population is a
+probability distribution over covariates, an estimand is a functional of that distribution, and
+transportability is a statement that an estimand defined in a target population is recoverable from a
+source. We separate *generalizability* (does a sample represent its own source population?) from
+*transportability* (does a result move to a different population?). Second we define *direct
+transportability*, the estimand is numerically identical in source and target, and *conditional
+transportability*, the estimand is recoverable after adjusting for covariates, and we prove the transport
+g-formula that makes the latter operational. Third we dissect the pairwise population-adjusted indirect
+comparison (PAIC) and show that it secretly performs *two* transports, not one, and that standard guidance
+justifies only the first. Fourth we tie transportability to collapsibility and to a second, subtler
+condition, *scale alignment*, and prove the joint characterization of when a marginal relative effect is
+directly transportable. Fifth we work three numerical examples, continuous, binary, and time-to-event,
+whose every digit the reader can reproduce, and which exhibit the success of the collapsible aligned case
+and the two distinct ways transport fails.
+
+The development follows the estimand-based framework of @chandler2026transport, which recasts population
+adjustment as a transportability problem, and draws the identification scaffolding from @hernan2020whatif,
+whose treatment of transport via a population indicator and the g-formula we adopt. Everything is proved.
+The only results imported without proof are the within-population identification theorems of Chapters 9
+and 10 and the collapsibility facts of Chapter 11, all stated there in full.
+
+::: {#exm-transport-running}
+## A running example: one submission, three populations
+Picture a health technology assessment (HTA) comparing two active drugs, $B$ and $C$, for a chronic
+inflammatory disease. Neither trial compared $B$ against $C$ head to head; each was run against a common
+comparator $A$, so any statement about $B$ versus $C$ must be assembled *indirectly*.
+
+- The **index trial** studied $A$ versus $B$ and reports **individual patient data** (IPD): we know each
+  enrolled patient's covariates and outcome. It recruited mostly younger, biologic-naive patients. Call its
+  covariate distribution $f_{AB}$.
+- The **comparator trial** studied $A$ versus $C$ and reports only **aggregate data** (AgD): published
+  summary means and event counts, no individual records. It recruited mostly older, biologic-experienced
+  patients. Call its covariate distribution $f_{AC}$.
+- The **reimbursement decision** concerns neither trial's enrollees but the **decision population**
+  $\mathcal P^{*}$: everyone who would receive the drug under the approved label, a broad mix of both kinds
+  of patient.
+
+To keep arithmetic in view, compress the single most important effect-modifying covariate into a binary
+indicator $X$: set $X=1$ for a biologic-experienced patient and $X=0$ for a biologic-naive one. The three
+populations then differ only in how much weight they place on $X=1$:
+
+| Population | Role in the comparison | Data available | $P(X=1)$ |
+|---|---|---|---|
+| $f_{AB}$ (index trial) | source: has outcomes on $A$ and $B$ | IPD | $0.10$ |
+| $f_{AC}$ (comparator trial) | comparator: has outcomes on $A$ and $C$ | AgD | $0.90$ |
+| $\mathcal P^{*}$ (decision population) | target: the effect we actually want | covariates only | $0.50$ |
+
+Here is the whole chapter in one sentence. A *population* is not the roster of patients in a trial; it is
+the *distribution* of their covariates, summarized here by the single number $P(X=1)$. A treatment-effect
+number is attached to one such distribution, and the chapter asks what happens to that number when we try
+to move it from one row of this table to another. For some effect measures the number survives the move
+unchanged; for others it does not. The two trial populations $f_{AB}$ and $f_{AC}$ return as $\mathcal P_1$
+and $\mathcal P_2$ in the worked examples of @sec-transport-worked, with exactly these covariate
+frequencies. $\blacktriangleleft$
+:::
+
+## Populations, estimands, and the structural model {#sec-transport-setup}
+
+Throughout, a population is a probability distribution. We make this the foundation.
+
+Why a *distribution*, and not simply "the patients in trial $X$"? Because two trials with identical
+eligibility criteria can still enroll patients who differ systematically in age, severity, prior treatment,
+or biomarkers, and it is that covariate *mix*, not the list of names, that every formula below operates on.
+In @exm-transport-running the three populations share the same disease and differ only in the single number
+$P(X=1)$, and that difference is the entire input to the transport problem.
+
+Before the formal objects start appearing in combination, here is a compact glossary of the symbols this
+chapter leans on. Each is defined in full at first use; this table is a quick reference, not a substitute.
+
+| Symbol | Read it as | Meaning |
+|---|---|---|
+| $\mathcal P$, $\mathcal P^{*}$ | "a population", "the target population" | a distribution of covariates; $\mathcal P^{*}$ is the one we want an answer for |
+| $f_{\mathcal P}(x)$ | "the covariate density" | how common covariate pattern $x$ is in population $\mathcal P$ |
+| $f_{AB}$, $f_{AC}$ | "the index / comparator trial population" | covariate distributions of the two trials |
+| $\mu_t(x)$ | "the conditional mean" | average outcome under treatment $t$ among patients with covariates $x$ |
+| $m_t(\mathcal P)$ | "the marginal mean" | population-average outcome under $t$ in $\mathcal P$ |
+| $d_{ab(\mathcal P)}$ | "the marginal effect" (subscript is a population) | $b$ versus $a$ effect built from *averaged* means in $\mathcal P$ |
+| $d_{ab}(x)$ | "the conditional effect" (argument is a covariate) | $b$ versus $a$ effect at one fixed covariate value $x$ |
+| $g$, $h$ | "model link, reporting transform" | scale the model is linear on; scale the effect is reported on |
+| $w(x)$ | "the transport weight" | $f_{\mathcal P^{*}}(x)/f_{\mathcal P}(x)$, how much more common $x$ is in the target |
+| $e_t(x)$ | "the (generalized) propensity" | $P(T=t\mid X=x)$ in the source, the chance of getting treatment $t$ at covariates $x$ |
+| $\mathrm{logit}$, $\mathrm{expit}$ | "logit, expit" | $\mathrm{logit}(p)=\log\{p/(1-p)\}$ and its inverse $\mathrm{expit}(z)=1/(1+e^{-z})$ |
+
+The two symbols easiest to confuse are $d_{ab(\mathcal P)}$ and $d_{ab}(x)$: a *population* in the subscript
+means the marginal effect (average first, then transform), while a *covariate value* in the argument means
+the conditional effect (transform at that value). That distinction drives the whole chapter.
+
+A **population** $\mathcal P$ is a probability distribution over the covariate space $\mathcal X$, with
+density (or mass function) $f_{\mathcal P}$ with respect to a fixed dominating measure. Two populations
+differ exactly when their covariate distributions differ. We attach to each individual the potential
+outcomes $Y(t)$ of @def-potential-outcome under treatments $t$ drawn from a finite set, the observed
+treatment $T$, the observed outcome $Y$, and the covariate vector $X\in\mathcal X$. We write
+$\mathcal P^{*}$ for a target population and reserve unindexed probability statements for the population
+under discussion, as set in [Notation](/notation.qmd).
+
+The quantity that travels between populations is the **conditional mean potential outcome**
+$$
+\mu_t(x)\;=\;\mathbb E\!\left[\,Y(t)\mid X=x\,\right],
+$$ {#eq-transport-cmean}
+the average outcome under treatment $t$ among individuals with covariates $x$. Its building blocks, the
+conditional effect $\tau(x)=\mu_1(x)-\mu_0(x)$ and the average effect $\tau=\mathbb E[\tau(X)]$, are the
+estimands of @def-ate. The single structural hypothesis on which all of transportability rests is that
+$\mu_t(\cdot)$ is a property of the biology, not of the population, and so is shared across populations.
+
+::: {#def-transport-invariance}
+## Structural invariance of the conditional model
+Let $S$ be a population-membership indicator, with $S=s$ naming the population $\mathcal P_s$. The
+conditional mean potential outcome model is **structurally invariant** across the populations under study
+if
+$$
+\mathbb E\!\left[\,Y(t)\mid X=x,\,S=s\,\right]\;=\;\mu_t(x)
+\qquad\text{for every population } s \text{ and every } x\in\mathcal X,
+$$ {#eq-transport-invariance}
+that is, the function $\mu_t(\cdot)$ does not depend on $s$. Equivalently, the potential outcome is mean
+independent of population membership given the covariates: $\mathbb E[Y(t)\mid X,S]=\mathbb E[Y(t)\mid X]$.
+$\blacktriangleleft$
+:::
+
+**Reader translation.** Once you know a patient's covariates $x$, learning which trial or population they
+came from tells you nothing more about their expected outcome under treatment $t$. Biology responds to the
+covariates, not to the study logo. The assumption fails exactly when some covariate that changes the
+outcome is left out of $x$ and is distributed differently across populations.
+
+Invariance @eq-transport-invariance is the population-level analog of the conditional exchangeability of
+@def-ignorability. Conditional exchangeability says that, within a population, the potential outcome is
+mean independent of *treatment* given covariates, so that confounding is removed by conditioning on $X$.
+Invariance says that, across populations, the potential outcome is mean independent of *population
+membership* given covariates, so that between-population differences in outcome are entirely explained by
+between-population differences in the covariate distribution. The whole of conditional transportability is
+the working out of this single sentence. It can fail, and we flag the failure mode now: if a variable that
+modifies the treatment effect is omitted from $X$ and is distributed differently across populations, then
+$\mu_t(\cdot)$ silently depends on $s$ through that omitted variable, and @eq-transport-invariance is
+false. The covariate set $X$ must be rich enough to capture every such variable. We assume invariance
+holds for the stated $X$ unless we say otherwise.
+
+**Which covariates must be in $X$?** Because invariance is a claim about one specific covariate set, it
+helps to sort candidate variables by the role they play.
+
+- **Effect modifiers** change the *size* of the treatment effect. These *must* be in $X$: an omitted effect
+  modifier that is distributed differently across populations is precisely what breaks invariance and
+  transport.
+- **Prognostic variables** change the outcome but not the treatment effect. Including them is needed for the
+  conditional mean $\mu_t(\cdot)$ to be correct, but a prognostic variable that is not also an effect
+  modifier does not by itself break transport of a relative effect on a collapsible scale.
+- **Trial-inclusion variables** affect who enrolled. They matter for generalizability and for the overlap
+  condition below, and matter for transport only insofar as they are also effect modifiers.
+- **Merely imbalanced, irrelevant variables** differ across populations but neither modify the effect nor
+  predict the outcome. Imbalance alone is not a reason to adjust for them.
+
+**Invariance versus SEMA (a preview).** Readers who have run matching methods may be waiting for the
+*shared effect modifier assumption* (SEMA). It is a different assumption, and it arrives later, in
+@sec-collapsibility-transport; the distinction is worth fixing now. Structural invariance says the *whole*
+conditional mean function $\mu_t(\cdot)$ is shared across populations. SEMA, once we have a model, will say
+something narrower: that the *effect-modification part* of that function is identical for the two active
+treatments $B$ and $C$. Invariance is assumed everywhere in this chapter; SEMA is an extra structural
+restriction layered on top, not a replacement for it. You do not need SEMA yet.
+
+Under invariance, a population contributes only its covariate distribution $f_{\mathcal P}$, and the
+**marginal mean potential outcome** in $\mathcal P$ is the average of $\mu_t$ over that distribution:
+$$
+m_t(\mathcal P)\;:=\;\mathbb E_{X\sim\mathcal P}\!\left[\mu_t(X)\right]\;=\;\int_{\mathcal X}\mu_t(x)\,f_{\mathcal P}(x)\,dx.
+$$ {#eq-transport-mmean}
+For a binary outcome $m_t(\mathcal P)$ is the population's risk under treatment $t$; for a survival summary
+it is the corresponding mean. Effects are contrasts of these marginal means on a chosen scale. Fix a
+strictly monotone, twice differentiable **link** $g$ (the scale of the effect measure, @def-link-function).
+The **marginal relative effect** of treatment $b$ versus $a$ in $\mathcal P$ on scale $g$ is, in the
+notation $d_{ab(\mathcal P)}$ of [Notation](/notation.qmd),
+$$
+d_{ab(\mathcal P)}\;=\;g\!\left(m_b(\mathcal P)\right)-g\!\left(m_a(\mathcal P)\right),
+$$ {#eq-transport-marg-effect}
+and the **conditional relative effect** at covariate value $x$ is
+$$
+d_{ab}(x)\;=\;g\!\left(\mu_b(x)\right)-g\!\left(\mu_a(x)\right).
+$$ {#eq-transport-cond-effect}
+The marginal mean difference uses $g=\mathrm{id}$, the marginal log odds ratio uses $g=\mathrm{logit}$,^[Recall the two inverse maps of logistic regression: $\mathrm{logit}(p)=\log\{p/(1-p)\}$ sends a probability in $(0,1)$ to a real number, and its inverse $\mathrm{expit}(z)=1/(1+e^{-z})$ sends a real number back to a probability. Both are used throughout this chapter.] the
+marginal log risk ratio uses $g=\log$. The marginal effect @eq-transport-marg-effect transforms the
+*averaged* means, while the population-average conditional effect $\mathbb E_{X\sim\mathcal P}[d_{ab}(X)]$
+averages the *transformed* means; these coincide for the identity scale and diverge for the logit, which
+is exactly the non-collapsibility of @def-non-collapsibility and @thm-noncollapsibility-or-hr. The marginal
+effect @eq-transport-marg-effect is the estimand of a pairwise population adjustment and the object whose
+transport we study.
+
+**Reader translation (marginal versus conditional).** Two operations are in play, and they are not
+interchangeable. The *marginal* effect @eq-transport-marg-effect first *averages* the means over the
+population and then *transforms* with $g$; the *population-average conditional* effect
+$\mathbb E_{X\sim\mathcal P}[d_{ab}(X)]$ first *transforms* each stratum and then *averages*. For the
+identity scale the order does not matter, so the two agree. For a curved scale like the logit it does. A
+two-stratum toy makes the gap visible: let a population place equal weight on two covariate values whose
+control risks are $0.2$ and $0.5$.
+
+| Operation | Value |
+|---|---|
+| average the risks, then take $\mathrm{logit}$ | $\mathrm{logit}(0.35)=-0.619$ |
+| take $\mathrm{logit}$ of each risk, then average | $\tfrac12(\mathrm{logit}\,0.2+\mathrm{logit}\,0.5)=\tfrac12(-1.386+0)=-0.693$ |
+
+The two numbers differ by $0.074$, and that gap is precisely the non-collapsibility of
+@def-non-collapsibility. Here it is small; it can be large, and the whole second half of the chapter is
+about when it forces a marginal effect to change from one population to the next.
+
+**Which effects are conditional, which are marginal, and why HTA wants marginal.** A regression returns a
+*conditional* effect by default: a coefficient, or an odds ratio from a logistic fit, is the effect *at a
+fixed covariate value*, holding covariates equal across the comparison. A reimbursement decision needs a
+*marginal* effect: the average effect over the whole treated population, because a payer funds a population,
+not a single covariate stratum. For a collapsible measure the two coincide and the distinction is harmless.
+For the odds ratio and the hazard ratio they diverge, and a conditional odds ratio answers a different
+question ("for a patient like this one") from the marginal odds ratio a population-level decision needs
+("averaged over everyone we would treat").
+
+::: {.remark}
+## Generalizability versus transportability
+With the membership indicator $S$ in hand we can state the two faces of external validity precisely, which
+is the content of catalogue result N.1.^[Labels such as N.1, N.3, and N.4 point to numbered results in the companion proof catalogue for this Part; they let the formal development be cross-checked against the chapter. A first-time reader can safely ignore the codes.]
+:::
+
+::: {#def-generalizability}
+## Generalizability
+A study conducted on a sample is **generalizable** to its own source population $\mathcal P_s$ if the
+estimand identified from the sample equals the estimand in $\mathcal P_s$. Generalizability is a
+*within-population* property: it concerns sampling, that is, whether the enrolled sample is representative
+of the population it was drawn from. Formally, writing $R=1$ for sample inclusion, the trial estimand
+generalizes to $\mathcal P_s$ when $\mathbb E[Y(t)\mid R=1,S=s]=\mathbb E[Y(t)\mid S=s]=m_t(\mathcal P_s)$,
+which holds when inclusion is mean independent of the potential outcome, $R\perp Y(t)\mid S=s$, possibly
+after conditioning on measured covariates. $\blacktriangleleft$
+:::
+
+**Reader translation.** Generalizability is a question about *sampling within one population*: did the
+enrolled patients represent the population they were drawn from? It is internal to a single study and says
+nothing about moving to a different population.
+
+::: {#def-transportability}
+## Transportability
+An estimand $\psi(\mathcal P^{*})$ defined in a **target** population $\mathcal P^{*}$ is **transportable**
+from a **source** population $\mathcal P$ if $\psi(\mathcal P^{*})$ is identified from the source outcome
+distribution together with the covariate distribution of the target. Transportability is a
+*between-population* property. Two modes are distinguished.
+
+1. The estimand is **directly transportable** from $\mathcal P$ to $\mathcal P^{*}$ if it takes the same
+value in both, $\psi(\mathcal P)=\psi(\mathcal P^{*})$, so the source value may be carried across with no
+adjustment.
+
+2. The estimand is **conditionally transportable** from $\mathcal P$ to $\mathcal P^{*}$ via the covariate
+set $X$ if it is recovered by re-standardizing the source conditional model to the target covariate
+distribution (made operational by the transport g-formula, @thm-conditional-transportability), that is, if
+the structural invariance of @def-transport-invariance holds for $X$ together
+with the support condition below.
+
+$\blacktriangleleft$
+:::
+
+**Reader translation.** Transportability is about *moving between* populations, not sampling within one.
+Mode 1 (direct) is the lucky case: the number is literally identical in source and target, so carry it over
+untouched. Mode 2 (conditional) is the workhorse: keep the covariate-by-covariate response $\mu_t(\cdot)$
+learned in the source, but recompute the population average using the *target's* covariate mix. In
+@exm-transport-running, mode 2 takes the response learned in the index trial $f_{AB}$ and re-averages it
+over the decision population $\mathcal P^{*}$.
+
+Generalizability and transportability are independent properties. A trial may be perfectly generalizable to
+its own enrolled population (a representative sample) and yet its effect may fail to transport to a
+different population; conversely an effect may transport across populations that the trial never sampled.
+HTA lives in the gap between the two: trials are run to be internally valid and, ideally, generalizable to
+their protocol population, but decisions are made for a different population, so the operative question is
+transportability. The rest of the chapter is about the second of @def-transportability's two modes and the
+conditions under which it collapses into the first.
+
+## Direct transportability {#sec-direct-transport}
+
+Direct transportability is the free lunch of evidence synthesis: the source number applies to the target
+unchanged. It is the silent assumption of every unadjusted indirect comparison, of the Bucher subtraction
+(@thm-bucher-unbiased) and of standard network meta-analysis, all of which combine relative effects from
+different trials as though each were a population-free constant. The constancy of relative effects across
+trials that these methods require (@def-constancy-relative-effects) is precisely direct transportability of
+the relative effect across the trial populations. When does it hold?
+
+::: {#thm-direct-transportability}
+## Sufficient conditions for direct transportability
+Assume the structural invariance of @def-transport-invariance, and let $\mathcal P_1,\mathcal P_2$ be two
+populations whose covariate supports both contain the support of the conditional effect's dependence. The
+marginal relative effect $d_{ab}$ of @eq-transport-marg-effect is directly transportable from
+$\mathcal P_1$ to $\mathcal P_2$, that is $d_{ab(\mathcal P_1)}=d_{ab(\mathcal P_2)}$, under either of the
+following sufficient conditions.
+
+(a) **Equal covariate distributions.** $f_{\mathcal P_1}=f_{\mathcal P_2}$ on $\mathcal X$.
+
+(b) **Constant conditional effect on a collapsible scale.** The conditional relative effect is constant in
+the covariates, $d_{ab}(x)=c$ for all $x$, and the effect measure is collapsible on scale $g$ in the sense
+of @def-collapsibility, namely the marginal effect is a weighted average, with weights integrating to one,
+of the stratum-specific conditional effects.
+:::
+
+::: {.proof}
+For (a): if $f_{\mathcal P_1}=f_{\mathcal P_2}$ then for each $t$ the marginal means coincide,
+$m_t(\mathcal P_1)=\int\mu_t(x)f_{\mathcal P_1}(x)\,dx=\int\mu_t(x)f_{\mathcal P_2}(x)\,dx=m_t(\mathcal P_2)$,
+because $\mu_t$ is the same function in both populations by invariance @eq-transport-invariance.
+Applying the link $g$ and differencing, $d_{ab(\mathcal P_1)}=g(m_b(\mathcal P_1))-g(m_a(\mathcal P_1))
+=g(m_b(\mathcal P_2))-g(m_a(\mathcal P_2))=d_{ab(\mathcal P_2)}$.
+
+For (b): collapsibility on scale $g$ (@def-collapsibility) provides, for each population $\mathcal P$,
+nonnegative weights $w_{\mathcal P}(x)$ with $\int w_{\mathcal P}(x)\,dx=1$ such that the marginal effect is
+the weighted average of the conditional effects,
+$$
+d_{ab(\mathcal P)}\;=\;\int_{\mathcal X} d_{ab}(x)\,w_{\mathcal P}(x)\,dx .
+$$
+This is established for the relevant scales in @lem-collapsible-scales below. Substituting the hypothesis
+$d_{ab}(x)=c$,
+$$
+d_{ab(\mathcal P)}\;=\;\int_{\mathcal X} c\,w_{\mathcal P}(x)\,dx\;=\;c\int_{\mathcal X} w_{\mathcal P}(x)\,dx\;=\;c,
+$$
+for every population $\mathcal P$. In particular $d_{ab(\mathcal P_1)}=c=d_{ab(\mathcal P_2)}$. $\square$
+:::
+
+**Why this matters.** Condition (a) is the silent premise of every *unadjusted* indirect comparison and of
+the Bucher subtraction (Chapter 14): they treat a relative effect as a population-free constant, which is
+exactly (a). Condition (b) is the property that population adjustment (MAIC, STC, ML-NMR) works to engineer
+when (a) is unavailable. Naming the two tells you precisely what each family of methods is assuming.
+
+Condition (a) is exact but rarely available: it is what holds when two trials happen to enroll identically
+distributed patients, the idealized situation in which unadjusted indirect comparison is unconditionally
+valid. Condition (b) is the substantive route and the one population adjustment aims for. It has two
+ingredients that the rest of the chapter pulls apart: a *constant conditional effect*, which a shared
+effect modifier structure will deliver for an anchored contrast,^[An *anchored* indirect comparison of $B$ versus $C$ runs through a comparator $A$ present in both trials, so study-level factors that shift both arms cancel; an *unanchored* comparison pits single arms against each other with no shared comparator and must assume far more. Anchoring is developed in Chapter 14.] and *collapsibility of the scale*, which
+some effect measures have and others lack. The contrapositive is the engine of every failure we will meet:
+if the conditional effect is *not* constant in some covariate whose distribution differs across the
+populations, or if the measure is *not* collapsible, direct transportability can break.
+
+::: {#exm-transport-toy-identity}
+## Touching numbers early: an identity-scale effect transports
+Take the two trial populations of @exm-transport-running, $f_{AB}$ with $P(X=1)=0.1$ and $f_{AC}$ with
+$P(X=1)=0.9$, a continuous outcome, and a treatment $B$ that adds a constant $3$ units to the mean at every
+covariate value, so the conditional effect is $d_{BC}(x)=3$ at both $x$ (a constant conditional effect on
+the identity scale). Condition (b) of @thm-direct-transportability applies, because the identity scale is
+collapsible. Check it in one line: whatever the covariate frequencies, the marginal mean difference is
+$\mathbb E_{\mathcal P}[\mu_B(X)-\mu_C(X)]=\mathbb E_{\mathcal P}[3]=3$, the same in $f_{AB}$, in $f_{AC}$,
+and in $\mathcal P^{*}$. The full arithmetic with specific means is @sec-worked-continuous. Contrast it with
+the odds-ratio calculation of @sec-worked-binary, where the identical setup on a logit scale produces
+*different* marginal effects in the two populations. $\blacktriangleleft$
+:::
+
+We isolate the collapsibility ingredient, since it is the property that distinguishes the well-behaved
+measures.
+
+::: {#lem-collapsible-scales}
+## Which scales are collapsible
+Under structural invariance, write $m_t=m_t(\mathcal P)$ for the marginal means in a population
+$\mathcal P$.
+
+1. The **identity scale** ($g=\mathrm{id}$, the mean difference and risk difference) is collapsible with
+population weights: $d_{ab(\mathcal P)}=m_b-m_a=\mathbb E_{X\sim\mathcal P}[\mu_b(X)-\mu_a(X)]
+=\int d_{ab}(x)f_{\mathcal P}(x)\,dx$.
+
+2. The **log scale** ($g=\log$, the log risk ratio and log rate ratio) is collapsible: with the
+reference-mean weights $w_a(x)=\mu_a(x)f_{\mathcal P}(x)/m_a$, which are nonnegative and integrate to one,
+the marginal risk ratio is the weighted average of the conditional risk ratios,
+$m_b/m_a=\int \big(\mu_b(x)/\mu_a(x)\big)\,w_a(x)\,dx$. Consequently a constant conditional risk ratio
+equals the marginal risk ratio in every population.
+
+3. The **logit scale** ($g=\mathrm{logit}$, the log odds ratio) and the **log-hazard scale**
+($g=\log$ applied to the hazard, the log hazard ratio) are **not** collapsible: there exist conditional
+models with a constant conditional effect whose marginal effect differs from that constant, as established
+in @thm-noncollapsibility-or-hr and quantified in @thm-sema-insufficient.
+:::
+
+::: {.proof}
+Part 1 is linearity of expectation: $m_b-m_a=\int\mu_b f_{\mathcal P}-\int\mu_a f_{\mathcal P}
+=\int(\mu_b-\mu_a)f_{\mathcal P}=\int d_{ab}(x)f_{\mathcal P}(x)\,dx$, and $d_{ab}(x)=\mu_b(x)-\mu_a(x)$ on
+the identity scale.
+
+For part 2, the choice of weights is not arbitrary: $w_a(x)$ puts mass on covariate stratum $x$ in
+proportion to that stratum's contribution $\mu_a(x)f_{\mathcal P}(x)$ to the reference-arm risk $m_a$, so
+strata where the reference arm has more events count for more, which is exactly the weighting that turns a
+ratio of averages into an average of ratios. The weights $w_a(x)=\mu_a(x)f_{\mathcal P}(x)/m_a$ are
+nonnegative because $\mu_a\ge 0$ and integrate to one because $\int\mu_a(x)f_{\mathcal P}(x)\,dx=m_a$. Then
+$$
+\int\frac{\mu_b(x)}{\mu_a(x)}\,w_a(x)\,dx
+=\frac1{m_a}\int\frac{\mu_b(x)}{\mu_a(x)}\,\mu_a(x)f_{\mathcal P}(x)\,dx
+=\frac1{m_a}\int\mu_b(x)f_{\mathcal P}(x)\,dx=\frac{m_b}{m_a},
+$$
+so the marginal risk ratio $m_b/m_a$ is the $w_a$-weighted average of the conditional risk ratios
+$\mu_b(x)/\mu_a(x)$. If the conditional risk ratio is the constant $R$, the weighted average of $R$ is $R$,
+hence $m_b/m_a=R$ and $\log(m_b/m_a)=\log R$ in every population; this is the collapsibility used in
+@thm-direct-transportability(b). Part 3 is the non-collapsibility of the odds ratio and hazard ratio, the
+subject of @thm-noncollapsibility-or-hr; the quantitative version, that the marginal log odds ratio is
+strictly attenuated and population dependent even when the conditional log odds ratio is constant, is
+proved in @thm-sema-insufficient. $\square$
+:::
+
+**Why this matters.** This lemma is the dividing line of the chapter. Mean differences, risk ratios, and
+rate ratios (identity and log scales) are collapsible, so a constant conditional effect passes to the
+margin unchanged and transports. Odds ratios and hazard ratios (logit and log-hazard scales) are not, and
+that single algebraic fact is why the measures HTA reports most are the ones that resist transport.
+
+::: {.remark}
+## Direct collapsibility on the identity scale
+Part 1 is the strongest form, sometimes called *direct collapsibility*: the marginal effect equals the
+population-average conditional effect with the population's own weights, $d_{ab(\mathcal P)}
+=\mathbb E_{X\sim\mathcal P}[d_{ab}(X)]$. Part 2 is weaker, the weights are tilted toward the reference
+risk, but it still delivers the one consequence direct transportability needs, that a *constant*
+conditional effect passes unchanged to the margin. It is exactly this weaker consequence, not the stronger
+identity, that the anchored contrast of @sec-collapsibility-transport will exploit. The reason the weaker
+property suffices is simple: direct transportability only ever has to move a *constant* conditional effect
+to the margin, and a weighted average whose weights sum to one leaves a constant untouched whatever the
+weights are, so the reference-mean tilt cannot change the average of a constant. $\blacktriangleleft$
+:::
+
+## Conditional transportability and the transport g-formula {#sec-conditional-transport}
+
+When direct transportability fails, the effect can still be recovered if we are willing to re-standardize
+the source model to the target covariate distribution. This is conditional transportability, and the
+identity that implements it is the transport g-formula, the population-level statement that re-weighting
+the source conditional model to the target distribution recovers the target marginal mean. It is the
+direct generalization of the g-computation identity of @thm-g-computation-unbiased from one population to
+two.
+
+::: {#thm-conditional-transportability}
+## The transport g-formula
+Let $\mathcal P$ be a source population, available with outcome data, and $\mathcal P^{*}$ a target
+population, available only as a covariate distribution. Assume
+
+(i) **Consistency** (@def-sutva, @thm-consistency-identity): $Y=Y(T)$;
+
+(ii) **Source exchangeability** (@def-ignorability): within the source, $T\perp Y(t)\mid X$, so that
+$\mathbb E[Y\mid T=t,X=x,S=\text{src}]=\mu_t(x)$ identifies the conditional mean from source data;
+
+(iii) **Structural invariance** (@def-transport-invariance): $\mathbb E[Y(t)\mid X,S]=\mu_t(X)$;
+
+(iv) **Positivity and overlap** (@def-positivity): the target covariate support is contained in the source
+support, $f_{\mathcal P^{*}}(x)>0\Rightarrow f_{\mathcal P}(x)>0$, and treatment $t$ has positive
+probability throughout the source support.
+
+Then the target marginal mean is identified by the **transport g-formula**
+$$
+m_t(\mathcal P^{*})\;=\;\mathbb E_{X\sim\mathcal P^{*}}\!\left[\,\mathbb E\!\left[\,Y\mid T=t,\,X,\,S=\text{src}\,\right]\right]
+\;=\;\int_{\mathcal X}\mu_t(x)\,f_{\mathcal P^{*}}(x)\,dx,
+$$ {#eq-transport-gformula}
+and equivalently by the **re-weighting identity**, with transportability weights
+$w(x)=f_{\mathcal P^{*}}(x)/f_{\mathcal P}(x)$,
+$$
+m_t(\mathcal P^{*})\;=\;\mathbb E_{X\sim\mathcal P}\!\left[\,w(X)\,\mu_t(X)\,\right]
+\;=\;\mathbb E_{X\sim\mathcal P}\!\left[\,w(X)\,\frac{\mathbf 1\{T=t\}\,Y}{e_t(X)}\,\right],
+\qquad e_t(x)=P(T=t\mid X=x,S=\text{src}).
+$$ {#eq-transport-ipw}
+:::
+
+**Reader translation.** The g-formula @eq-transport-gformula says: to get the target's average outcome,
+take the response curve $\mu_t(\cdot)$ fitted in the source and average it over the *target's* covariates.
+The re-weighting form @eq-transport-ipw says the same thing a second way: rewrite that target average as a
+*weighted* average over the source, where each source patient is up- or down-weighted by
+$w(x)=f_{\mathcal P^{*}}(x)/f_{\mathcal P}(x)$, the factor telling you how much more (or less) common their
+covariate pattern is in the target than in the source. That one sentence is the entire idea behind MAIC.
+
+**Reader translation of the overlap condition (iv).** "The target support is contained in the source
+support" means every covariate pattern that occurs in the target must also occur in the source. In
+@exm-transport-running, if the decision population $\mathcal P^{*}$ includes older patients with renal
+impairment whom the index trial $f_{AB}$ excluded by protocol, the source model has never seen such
+patients and cannot predict their outcomes without extrapolation. Transport is identification only where the
+source has support; beyond it you are guessing.
+
+::: {.proof}
+We first identify the target marginal mean from target covariates and the shared conditional model.
+By the law of total expectation applied within the target population,
+$$
+m_t(\mathcal P^{*})=\mathbb E[Y(t)\mid S=\text{tgt}]
+=\mathbb E_{X\sim\mathcal P^{*}}\!\left[\,\mathbb E[Y(t)\mid X,S=\text{tgt}]\,\right]
+=\mathbb E_{X\sim\mathcal P^{*}}\!\left[\mu_t(X)\right],
+$$
+the last step by structural invariance (iii). Within the source, consistency (i) and source
+exchangeability (ii) give $\mathbb E[Y\mid T=t,X=x,S=\text{src}]=\mathbb E[Y(t)\mid T=t,X=x,S=\text{src}]
+=\mathbb E[Y(t)\mid X=x,S=\text{src}]=\mu_t(x)$, the second equality by (ii) and the third by invariance
+(iii). Substituting $\mu_t(x)=\mathbb E[Y\mid T=t,X=x,S=\text{src}]$ into the previous display yields
+@eq-transport-gformula. The integral form is the definition @eq-transport-mmean of $m_t$ applied with the
+target density; positivity (iv) guarantees the inner conditional expectation is defined on the entire
+target support, so the integral is well defined.
+
+For the re-weighting identity, change measure from the target density to the source density. In words, we
+are rewriting an average over the target population as a weighted average over the source, where the weight
+$w(x)$ says how much more (or less) likely the covariate value $x$ is in the target than in the source; this
+is the entire intuition behind matching-adjusted indirect comparison. Since
+$f_{\mathcal P^{*}}(x)=w(x)f_{\mathcal P}(x)$ wherever $f_{\mathcal P}(x)>0$, and this covers the target
+support by overlap (iv),
+$$
+\int\mu_t(x)f_{\mathcal P^{*}}(x)\,dx=\int\mu_t(x)\,w(x)\,f_{\mathcal P}(x)\,dx
+=\mathbb E_{X\sim\mathcal P}\!\left[w(X)\mu_t(X)\right].
+$$
+Finally replace $\mu_t(X)$ by its inverse-probability representation inside the source. By
+@thm-ipw-unbiased, under (i), (ii), (iv),
+$\mathbb E[\mathbf 1\{T=t\}Y/e_t(X)\mid X=x,S=\text{src}]=\mu_t(x)$, because
+$\mathbb E[\mathbf 1\{T=t\}Y\mid X=x]=e_t(x)\,\mathbb E[Y\mid T=t,X=x]=e_t(x)\mu_t(x)$. Taking the source
+conditional expectation of the product $w(X)\mathbf 1\{T=t\}Y/e_t(X)$ given $X$ and then averaging over the
+source covariate distribution,
+$$
+\mathbb E_{X\sim\mathcal P}\!\left[w(X)\frac{\mathbf 1\{T=t\}Y}{e_t(X)}\right]
+=\mathbb E_{X\sim\mathcal P}\!\left[w(X)\,\mu_t(X)\right]=m_t(\mathcal P^{*}),
+$$
+which is the right-hand identity of @eq-transport-ipw. $\square$
+:::
+
+**Why this matters.** This is the single identity that every population-adjustment method in the book
+computes; the methods differ only in whether they estimate the response curve, the weights, or both.
+Understand this one formula and MAIC, STC, and ML-NMR become three implementations of it.
+
+The transport g-formula is implemented in three ways, each a method studied later in the book. The
+**outcome-regression** route fits the source conditional model $\mu_t(\cdot)$ and averages its predictions
+over the target covariates, the population-level content of simulated treatment comparison (STC, Chapter
+19) and of multilevel network meta-regression (ML-NMR, Chapters 20 to 23). The **weighting** route
+estimates the transportability weights $w(\cdot)$ and forms the weighted source average, the population-level
+content of matching-adjusted indirect comparison (MAIC, Chapter 18). The **doubly robust** route combines
+the two through an augmented estimator that remains consistent if either the outcome model or the weight
+model is correct, the population-level content of the augmented inverse-probability estimator of
+@thm-aipw-double-robust. The choice among them is a question of efficiency and robustness to
+misspecification; all three target the same estimand @eq-transport-gformula.
+
+A number makes the weight concrete. Suppose $X$ is binary with source frequency $P(X=1)=0.3$ in
+$\mathcal P$ and target frequency $P(X=1)=0.6$ in $\mathcal P^{*}$. Then the transport weights are
+$$
+w(1)=\frac{f_{\mathcal P^{*}}(1)}{f_{\mathcal P}(1)}=\frac{0.6}{0.3}=2,\qquad
+w(0)=\frac{f_{\mathcal P^{*}}(0)}{f_{\mathcal P}(0)}=\frac{0.4}{0.7}=0.571,
+$$
+so a source patient with $X=1$, twice as common in the target, counts double, while an $X=0$ patient counts
+a little over half. As a check the weights average to one in the source: $0.7(0.571)+0.3(2)=0.4+0.6=1$.
+Exercise @exr-transport-gformula-weights runs the full re-weighting identity on this setup.
+
+::: {.remark}
+## Normalized weights
+The unnormalized re-weighting identity @eq-transport-ipw uses the density ratio $w$, whose source mean is
+$\mathbb E_{X\sim\mathcal P}[w(X)]=\int (f_{\mathcal P^{*}}/f_{\mathcal P})f_{\mathcal P}=1$. In a finite
+sample the weights are known only up to a constant, so practice uses the self-normalized, or Hájek,^[Named after the statistician Jaroslav Hájek; "self-normalized" means dividing by the sum of the weights, so only the *relative* weights matter and any unknown overall scale cancels.] form
+$\hat m_t=\big(\sum_i w_i\mathbf 1\{T_i=t\}Y_i/e_t(X_i)\big)/\big(\sum_i w_i\mathbf 1\{T_i=t\}/e_t(X_i)\big)$,
+which divides by the realized weight total and so requires only proportional weights. This is the estimator
+form recorded as catalogue result N.3 and the one MAIC uses. $\blacktriangleleft$
+:::
+
+## The two-step transport of a pairwise indirect comparison {#sec-two-step}
+
+We can now expose the structure that the introduction promised. A pairwise PAIC does not perform one
+transport; it performs two, and they require different justifications. The first is conditional transport
+and is what the method explicitly does. The second is direct transport and is usually left implicit. This
+is catalogue result N.4 and the organizing insight of @chandler2026transport.
+
+The setting is an anchored indirect comparison of an active treatment $B$ against an active treatment $C$
+through a common comparator $A$. An **index** trial supplies individual patient data (IPD) on $A$ and $B$,
+drawn from a population with covariate density $f_{AB}$. A **comparator** trial supplies aggregate data
+(AgD) on $A$ and $C$, drawn from a population with covariate density $f_{AC}$. We want the relative effect
+of $B$ versus $C$ in a **decision** population $\mathcal P^{*}$ that is, in general, neither of these.
+Write $d_{1k}$ for the relative effect of treatment $k$ versus the reference $A$ on scale $g$, so that the
+target estimand is $d_{BC(\mathcal P^{*})}=d_{1C(\mathcal P^{*})}-d_{1B(\mathcal P^{*})}$ by the anchoring
+subtraction of @thm-bucher-unbiased.
+
+Before the formal statement, here is the whole maneuver as a picture. A pairwise PAIC carries the comparison
+across two populations in sequence:
+
+| Step | What happens | Moves from | Moves to | Justified by | Estimand after the step |
+|---|---|---|---|---|---|
+| 1 (explicit) | model or re-weight the index IPD to the comparator covariate mix | $f_{AB}$ (index) | $f_{AC}$ (comparator) | transport g-formula (@thm-conditional-transportability) | $d_{BC(AC)}$ |
+| 2 (implicit) | assume the comparator-population effect also holds in the decision population | $f_{AC}$ (comparator) | $\mathcal P^{*}$ (decision) | direct transportability (@thm-direct-transportability) | $d_{BC(\mathcal P^{*})}$ |
+
+A MAIC or STC analysis performs and documents Step 1; Step 2 it performs silently, by reporting the Step 1
+answer as though it were the decision-population answer. The theorem makes this precise.
+
+::: {#thm-two-step-transport}
+## The two-step decomposition of a pairwise PAIC
+Under structural invariance (@def-transport-invariance), the assumptions of the transport g-formula
+(@thm-conditional-transportability) applied to the index trial, and internal validity of the comparator
+trial, the pairwise PAIC produces the estimand
+$$
+d_{BC(AC)}\;=\;d_{1C(AC)}-d_{1B(AC)},
+\qquad
+d_{1B(AC)}=g\!\Big(\!\int\mu_B(x)f_{AC}(x)\,dx\Big)-g\!\Big(\!\int\mu_A(x)f_{AC}(x)\,dx\Big),
+$$ {#eq-two-step-estimand}
+the relative effect of $B$ versus $C$ **in the comparator population** $f_{AC}$. Consequently, for a
+decision population $\mathcal P^{*}$, the discrepancy between the target estimand and the PAIC estimand
+decomposes as
+$$
+\underbrace{d_{BC(\mathcal P^{*})}-\hat d_{BC(AC)}}_{\text{total error}}
+\;=\;
+\underbrace{\big(d_{BC(\mathcal P^{*})}-d_{BC(AC)}\big)}_{\text{Step 2: direct-transport gap}}
+\;+\;
+\underbrace{\big(d_{BC(AC)}-\hat d_{BC(AC)}\big)}_{\text{Step 1: estimation/misspecification error}} .
+$$ {#eq-two-step-bias}
+The Step 1 term vanishes in expectation under correct specification and overlap. The Step 2 term vanishes
+**if and only if** $d_{BC}$ is directly transportable from $f_{AC}$ to $\mathcal P^{*}$ in the sense of
+@thm-direct-transportability.
+:::
+
+**Why this matters.** A standard MAIC or STC report hands the decision maker $d_{BC(AC)}$, the effect in the
+*comparator trial's* population, whereas the reimbursement question is about $d_{BC(\mathcal P^{*})}$, the
+effect in the decision population. Unless the two populations coincide there is a gap, and it is almost
+never stated in submissions. This is the chapter's organizing insight.
+
+::: {.proof}
+*Step 1 (conditional transport, index to comparator).* The index IPD identify the conditional means
+$\mu_A(\cdot)$ and $\mu_B(\cdot)$ on the support of $f_{AB}$, by source exchangeability and consistency
+(@thm-conditional-transportability, hypotheses (i), (ii)). Treating $f_{AC}$ as the target distribution and
+invoking the transport g-formula @eq-transport-gformula with the overlap hypothesis (iv) that the support
+of $f_{AC}$ lies in the support of $f_{AB}$, the marginal means of $A$ and $B$ standardized to the
+comparator population are identified as $m_A(AC)=\int\mu_A(x)f_{AC}(x)\,dx$ and
+$m_B(AC)=\int\mu_B(x)f_{AC}(x)\,dx$. Applying the link and differencing gives $d_{1B(AC)}$ as displayed.
+The comparator trial is an internally valid randomized comparison of $A$ and $C$ in its own population
+$f_{AC}$, so it identifies $d_{1C(AC)}=g(m_C(AC))-g(m_A(AC))$ directly. Both relative effects are now
+defined in the *same* population $f_{AC}$ and share the reference arm $A$, so the anchoring subtraction of
+@thm-bucher-unbiased applies within $f_{AC}$ and yields @eq-two-step-estimand. The shared population is what
+licenses the subtraction: $d_{BC}=d_{1C}-d_{1B}$ is a meaningful $B$ versus $C$ effect only when both
+contrasts are defined in the *same* population and share the reference arm $A$; here both live in $f_{AC}$,
+so their difference is a genuine effect in $f_{AC}$ rather than a number attached to no population. Thus the
+population in which the pairwise PAIC estimand is defined is the comparator population, not the decision
+population.
+
+*Step 2 (implicit direct transport, comparator to decision population).* The decision-relevant estimand is
+$d_{BC(\mathcal P^{*})}$. The PAIC delivers $d_{BC(AC)}$. Their difference is the Step 2 gap of
+@eq-two-step-bias, and it is zero exactly when $d_{BC(AC)}=d_{BC(\mathcal P^{*})}$, which is the definition
+of direct transportability of $d_{BC}$ from $f_{AC}$ to $\mathcal P^{*}$ (@thm-direct-transportability).
+The total error decomposes by inserting and removing $d_{BC(AC)}$:
+$d_{BC(\mathcal P^{*})}-\hat d_{BC(AC)}=(d_{BC(\mathcal P^{*})}-d_{BC(AC)})+(d_{BC(AC)}-\hat d_{BC(AC)})$,
+which is @eq-two-step-bias. The second bracket is the deviation of the estimator from its estimand, the
+ordinary Step 1 error from finite samples and from any misspecification of $\mu_t(\cdot)$ or of the
+weights; under correct specification, overlap, and the consistency of the weighting or regression
+estimator it has mean zero. $\square$
+:::
+
+The decomposition @eq-two-step-bias is the moral of the chapter in one line. The literature on MAIC and STC
+overwhelmingly studies the Step 1 term: model misspecification, poor overlap, effective sample size,
+variance inflation. The Step 2 term is usually invisible, because the estimand it concerns,
+$d_{BC(\mathcal P^{*})}$ for a decision population $\mathcal P^{*}\ne f_{AC}$, is not what the PAIC
+computes. Standard guidance closes the Step 2 gap by appeal to the shared effect modifier assumption
+(SEMA, [Notation](/notation.qmd)), the assumption that the same covariates modify the effects of $B$ and
+$C$ to the same degree, and asserts that under SEMA the active versus active contrast is "the same in any
+population." The next three sections prove that this assertion is correct for collapsible measures and
+false for the odds ratio and the hazard ratio, so that the Step 2 gap is real precisely for the measures
+HTA uses most.
+
+**Why Step 1 vanishes but Step 2 need not.** The Step 1 term $d_{BC(AC)}-\hat d_{BC(AC)}$ is ordinary
+estimation error: if the outcome model or the weights are correctly specified, the comparator support
+overlaps the index support (condition (iv)), and the estimator is consistent (Chapters 18 to 20), then
+$\hat d_{BC(AC)}$ converges to $d_{BC(AC)}$ and the term has mean zero. It is the term the MAIC and STC
+literature studies in detail. The Step 2 term is not estimation error at all; it is a mismatch of
+*estimands*, the gap between the comparator population and the decision population, and no quantity of data
+from trials $AB$ and $AC$ can shrink it. Only knowledge of the decision population's covariate distribution,
+together with a transport argument, can.
+
+**What this means for a reimbursement submission.** Spell the scenario out with three distinct populations.
+Sponsor 1 holds IPD on its index trial $AB$ and standardizes to the covariate distribution $f_{AC}$ of the
+comparator trial it anchored on, so its reported $d_{BC(AC)}$ is an effect in *that* comparator population.
+Sponsor 2, submitting the same drug elsewhere, anchored on a different comparator trial with a different
+covariate distribution and so reports an effect in a *different* population. A national HTA body, meanwhile,
+wants the effect in its own decision population $\mathcal P^{*}$, defined by the label and reimbursement
+criteria, which matches neither comparator trial. For a collapsible measure the three may agree; for the
+odds ratio or hazard ratio they generally do not, and the disagreement is not anyone's arithmetic mistake
+but a consequence of the estimand being tied to a population. A submission that wants to speak to
+$\mathcal P^{*}$ must say what $\mathcal P^{*}$ is in covariate terms and argue the Step 2 transport, not
+merely report the Step 1 number.
+
+::: {.remark}
+## Why two sponsors can disagree
+The two-step view explains a phenomenon often seen and often misattributed to error. Two sponsors comparing
+the same pair $B$ versus $C$ can produce different point estimates because each anchors on a different
+comparator trial, hence standardizes to a different comparator population $f_{AC}$, hence reports
+$d_{BC(AC)}$ for a different population. For a non-collapsible measure these are genuinely different
+estimands, not discordant estimates of one estimand. The disagreement is a feature of population
+dependence, not a symptom of analytic mistake. $\blacktriangleleft$
+:::
+
+## Collapsibility, scale alignment, and the anchored contrast {#sec-collapsibility-transport}
+
+We now assemble the conditions under which the Step 2 gap closes. Two ingredients enter beyond SEMA. The
+first, collapsibility, we have already met. The second, scale alignment, is new and concerns the
+relationship between the scale on which the model is built and the scale on which the effect is reported.
+We treat alignment first, then prove the positive result, that a collapsible aligned measure transports
+under SEMA, and in @sec-sema-insufficient the negative result, that a non-collapsible measure does not.
+
+Here is the destination before the derivations. Marginal transport of a relative effect under a shared
+effect modifier structure turns on three conditions, and each buys one link in a chain:
+
+| Condition | What it controls | What it buys |
+|---|---|---|
+| SEMA (shared effect modifiers) | the *conditional* active-versus-active contrast on the model scale | that contrast is the same constant at every covariate value |
+| Scale alignment ($h=g$) | model scale versus reporting scale | the constancy survives onto the *reported* scale |
+| Collapsibility of the measure | how the marginal relates to the conditional | the constant conditional effect survives *marginalization*, so the marginal effect transports |
+
+A collapsible, aligned measure with SEMA (mean difference, risk ratio, rate ratio) gets all three links and
+transports both conditionally and marginally. The odds ratio and hazard ratio get the first two but fail the
+third, so they transport conditionally but not marginally. A misaligned pair breaks the second link, so
+nothing transports. The rest of the section proves each of these; @prp-transport-table collects the verdicts
+in one table.
+
+Throughout we use the standard outcome model for an anchored network, the individual-level network
+meta-regression with reference treatment $A$. On the linear-predictor scale, the model writes the conditional
+mean through a link $g$ as $g(\mu_k(x))=\eta_k(x)$ with
+$$
+\eta_A(x)=\alpha+x^\top\boldsymbol\beta_1,\qquad
+\eta_k(x)=\alpha+x^\top\boldsymbol\beta_1+\gamma_k+x^\top\boldsymbol\beta_{2,k}\quad(k=B,C),
+$$ {#eq-transport-nmr}
+where $\alpha$ is the baseline, $\boldsymbol\beta_1$ the prognostic (main) covariate effects, $\gamma_k$
+the treatment main effect of $k$ versus $A$, and $\boldsymbol\beta_{2,k}$ the treatment-by-covariate
+interactions, the **effect modification** of $k$ versus $A$ (@def-effect-modifier, @def-prognostic-variable,
+[Notation](/notation.qmd)).
+
+**Reader translation.** The *linear predictor* $\eta_k(x)$ is the covariate combination that the link maps
+the mean to; the *$g$-scale* (or model scale) is the scale on which $g(\mu)$ is linear in the covariates,
+here the scale on which model @eq-transport-nmr is additive. Reading the model left to right for treatment
+$k$: start at the baseline $\alpha$; add the prognostic pull of the covariates $x^\top\boldsymbol\beta_1$,
+which shifts everyone, treated or not; add the treatment's own effect $\gamma_k$; and finally add the
+interaction $x^\top\boldsymbol\beta_{2,k}$, the part of the treatment effect that depends on who the patient
+is.
+
+The **shared effect modifier assumption** (SEMA) is the equality of the
+interaction vectors for the two active treatments,
+$$
+\text{SEMA:}\qquad \boldsymbol\beta_{2,B}=\boldsymbol\beta_{2,C}.
+$$ {#eq-transport-sema}
+
+### Scale alignment {#sec-scale-alignment}
+
+The model @eq-transport-nmr is built on the $g$-scale: the linear predictor, and with it SEMA, lives on the
+scale where $g(\mu)$ is linear in covariates. The effect we want to report, however, need not live on the
+same scale. We might fit a proportional-hazards model on the log-hazard scale but report a difference in
+restricted mean survival time^[Restricted mean survival time up to a horizon $\tau$ is the expected event-free time in $[0,\tau]$, equivalently the area under the survival curve out to $\tau$. An RMST difference is measured in units of time and is often easier for patients and payers to interpret than a hazard ratio.] on the time scale; we might fit a logistic model on the logit scale but
+report a risk difference on the probability scale. Write $h$ for the **effect-measure transform**, so the
+reported conditional effect of $b$ versus $a$ is $h(\mu_b(x))-h(\mu_a(x))$. Alignment is the agreement of
+the two scales.
+
+**Model scale versus reporting scale (in plain terms).** Ask one question: is the effect you plan to
+*report* read off the same scale the model was *built* on? Two aligned pairs, where the answer is yes: a
+logistic model reported as a log odds ratio, and a proportional-hazards model reported as a log hazard
+ratio. Two misaligned pairs, where the answer is no: a logistic model reported as a *risk difference*, and a
+proportional-hazards model reported as an *RMST difference*. The definition below names the composition
+$h\circ g^{-1}$ that measures the mismatch.
+
+::: {#def-scale-alignment}
+## Scale alignment
+A model with link $g$ and an effect measure with transform $h$ are **scale aligned** if the composition
+$h\circ g^{-1}$ is the identity on the range of the linear predictor, equivalently if $h=g$ as functions on
+the mean space. When $h\circ g^{-1}$ is not the identity the model and the measure are **scale misaligned**.
+$\blacktriangleleft$
+:::
+
+**Reader translation.** Alignment asks one practical question: did you build the model on the same scale you
+plan to report the effect on? A logit model reported as an odds ratio is aligned ($h=g$). A logit model
+reported as a risk difference is misaligned ($h\circ g^{-1}=\mathrm{expit}$, not the identity). When the two
+scales disagree, the covariate distribution sneaks back into the reported contrast even if the model had a
+perfectly shared effect modifier structure.
+
+The aligned pairs are the ones where the effect is read directly off the linear predictor: identity link
+with mean difference, logit link with log odds ratio, log link with log risk ratio, log-hazard link with
+log hazard ratio. The misaligned pairs are the ones where a transform intervenes: logit link with risk
+difference, where $h\circ g^{-1}=\mathrm{expit}$, and log-hazard link with restricted mean survival time,
+where $h\circ g^{-1}$ exponentiates the linear predictor and then integrates a survival curve. The
+following theorem shows that alignment is exactly what makes the conditional effect on the reported scale
+inherit the constancy that SEMA confers on the linear predictor.
+
+::: {#thm-scale-alignment}
+## Scale alignment controls covariate dependence of the reported contrast
+Consider the anchored model @eq-transport-nmr under SEMA @eq-transport-sema, and an effect measure with
+transform $h$. Let $\psi=h\circ g^{-1}$.
+
+(i) **Aligned case.** If $h=g$ (so $\psi=\mathrm{id}$), the conditional active versus active contrast on
+the reported scale is constant in the covariates,
+$$
+h(\mu_B(x))-h(\mu_C(x))=\eta_B(x)-\eta_C(x)=\gamma_B-\gamma_C\qquad\text{for all }x.
+$$ {#eq-aligned-constant}
+
+(ii) **Misaligned case.** If $\psi=h\circ g^{-1}$ is not affine, then there exist conditional models of the
+form @eq-transport-nmr satisfying SEMA for which the conditional reported contrast
+$h(\mu_B(x))-h(\mu_C(x))$ is a non-constant function of $x$. Hence under misalignment a shared effect
+modifier structure on the model scale does not make the reported effect constant in the covariates, and
+the marginal reported effect depends on the population.
+:::
+
+**Why this matters.** If you fit on one scale and report on another, a shared effect modifier structure
+stops protecting you. Alignment (part i) keeps the reported contrast constant across covariates; a mismatch
+(part ii) manufactures covariate dependence out of nothing, so the reported effect starts to depend on the
+population even with no interaction in the model at all.
+
+::: {.proof}
+*(i).* Under SEMA, subtracting the two linear predictors in @eq-transport-nmr cancels the baseline, the
+prognostic term, and, because $\boldsymbol\beta_{2,B}=\boldsymbol\beta_{2,C}$, the interaction term:
+$$
+\eta_B(x)-\eta_C(x)=(\gamma_B-\gamma_C)+x^\top(\boldsymbol\beta_{2,B}-\boldsymbol\beta_{2,C})=\gamma_B-\gamma_C,
+$$
+a constant in $x$. With $h=g$, $h(\mu_k(x))=g(\mu_k(x))=\eta_k(x)$, so the reported contrast equals the
+linear-predictor contrast, giving @eq-aligned-constant.
+
+*(ii).* Write the reported conditional means through $\psi$: since $\mu_k(x)=g^{-1}(\eta_k(x))$,
+$h(\mu_k(x))=h(g^{-1}(\eta_k(x)))=\psi(\eta_k(x))$. By part (i)'s cancellation under SEMA,
+$\eta_B(x)=\eta_C(x)+c$ with $c=\gamma_B-\gamma_C$. Hence the reported conditional contrast is
+$$
+h(\mu_B(x))-h(\mu_C(x))=\psi(\eta_C(x)+c)-\psi(\eta_C(x))=:\Delta\big(\eta_C(x)\big),
+\qquad \Delta(\eta):=\psi(\eta+c)-\psi(\eta).
+$$
+Before the general argument, see it on a concrete $\psi$. Take $\psi=\mathrm{expit}$, the logit-model,
+risk-difference case. Then $\psi'(\eta)=\mathrm{expit}(\eta)\{1-\mathrm{expit}(\eta)\}$ is largest at
+$\eta=0$ and shrinks toward $0$ as $|\eta|$ grows, so
+$\Delta(\eta)=\mathrm{expit}(\eta+c)-\mathrm{expit}(\eta)$ is large for patients whose linear predictor sits
+near $0$ and small for those far out in the tails: the reported risk-difference contrast is bigger for some
+covariate patterns than others, which is covariate dependence. The general argument formalizes this. Recall
+that a function is affine exactly when its second derivative is identically zero, so "$\psi$ is not affine"
+means $\psi''\ne 0$ somewhere.
+Because $\psi$ is not affine, there is a point $\eta^{*}$ with $\psi''(\eta^{*})\ne 0$; by continuity
+$\psi''\ne 0$ on a neighborhood, so $\psi'$ is strictly monotone there, and for a suitable nonzero $c$ the
+difference $\Delta'(\eta)=\psi'(\eta+c)-\psi'(\eta)\ne 0$ for $\eta$ near $\eta^{*}$, making $\Delta$
+strictly monotone, hence non-constant, on that neighborhood. Choose the prognostic effects
+$\boldsymbol\beta_1\ne\mathbf 0$ and a covariate $x$ that ranges so that $\eta_C(x)=\alpha+x^\top\boldsymbol\beta_1+\gamma_C$
+takes at least two values inside that neighborhood. Then $\Delta(\eta_C(x))$ takes at least two distinct
+values, so the reported conditional contrast is non-constant in $x$. A non-constant conditional contrast is
+genuine effect modification on the reported scale, and by the contrapositive of
+@thm-direct-transportability(b) the marginal reported effect is not invariant across populations: two
+populations that place different weight on the covariate values where $\Delta$ differs yield different
+population-average reported contrasts, hence different marginal effects. $\square$
+:::
+
+Part (ii) deserves emphasis because it is counterintuitive: scale misalignment *manufactures* effect
+modification. Even a model with a perfectly shared effect modifier structure on its own scale, even one
+with no interactions at all, will exhibit a covariate-dependent contrast once that contrast is read on a
+misaligned scale. The covariate enters the reported contrast not through an interaction term but through
+the prognostic gradient $x^\top\boldsymbol\beta_1$, which the nonlinear $\psi$ refuses to cancel. The
+restricted mean survival time example of @sec-transport-worked makes this concrete.
+
+### The collapsible aligned case transports {#sec-collapsible-aligned}
+
+We can now state and prove the positive result: under SEMA and scale alignment, a collapsible measure's
+marginal active versus active effect is directly transportable. This is the rigorous version of the
+folklore, and it is correct, with the two qualifications the folklore omits.
+
+::: {#thm-collapsible-transport}
+## Direct transportability of a collapsible aligned marginal effect
+Consider the anchored model @eq-transport-nmr under structural invariance. Suppose
+
+(i) **SEMA** holds, $\boldsymbol\beta_{2,B}=\boldsymbol\beta_{2,C}$;
+
+(ii) **scale alignment** holds, $h=g$ (@def-scale-alignment);
+
+(iii) the effect measure is **collapsible** on scale $g$ (@def-collapsibility, @lem-collapsible-scales),
+for instance the mean difference on the identity scale or the log risk ratio on the log scale.
+
+Then the conditional active versus active contrast is constant, $d_{BC}(x)=\gamma_B-\gamma_C$ for all $x$,
+and the marginal active versus active effect is directly transportable across all populations:
+$$
+d_{BC(\mathcal P)}=\gamma_B-\gamma_C\qquad\text{for every population }\mathcal P .
+$$ {#eq-collapsible-transport}
+In particular the Step 2 gap of @thm-two-step-transport closes, and the pairwise PAIC estimand
+$d_{BC(AC)}$ equals the decision-relevant estimand $d_{BC(\mathcal P^{*})}$.
+:::
+
+::: {.proof}
+By scale alignment (ii) the reported and model scales coincide, so the conditional contrast on the reported
+scale is the linear-predictor contrast, which by SEMA (i) and the cancellation of
+@thm-scale-alignment(i) equals the constant $\gamma_B-\gamma_C$:
+$$
+d_{BC}(x)=g(\mu_B(x))-g(\mu_C(x))=\eta_B(x)-\eta_C(x)=\gamma_B-\gamma_C\quad\text{for all }x.
+$$
+Now apply @thm-direct-transportability(b): the conditional effect is the constant $c=\gamma_B-\gamma_C$ and
+the measure is collapsible (iii), so the marginal effect equals $c$ in every population,
+$d_{BC(\mathcal P)}=\gamma_B-\gamma_C$, which is @eq-collapsible-transport. Since this holds for every
+population, in particular $d_{BC(AC)}=\gamma_B-\gamma_C=d_{BC(\mathcal P^{*})}$, so the Step 2 gap
+$d_{BC(\mathcal P^{*})}-d_{BC(AC)}$ of @eq-two-step-bias is zero. $\square$
+:::
+
+**Why this matters.** This is the rigorous form of the folklore "a shared effect modifier makes relative
+effects transportable." The folklore is true, but only with the two pieces of fine print it omits: the
+measure must be collapsible and reported on its own scale. For the mean difference, risk ratio, and rate
+ratio this holds and the Step 2 gap closes; for the odds ratio and hazard ratio it does not.
+
+This is the deepest structural fact of anchored indirect comparison, and it is worth naming the mechanism.
+Individually, the contrast of $B$ versus the common comparator $A$ need not have a constant conditional
+value: the interaction $\boldsymbol\beta_{2,B}$ makes $d_{1B}(x)$ vary with $x$, and on the log scale even
+a constant conditional $B$ versus $A$ risk ratio is not directly collapsible with population weights. But
+the *difference* of the two active versus comparator contrasts cancels the shared interaction, and on a
+collapsible aligned scale the cancellation survives marginalization. The anchored contrast inherits a
+transportability that neither of its halves possesses. We record the conditional analog, which needs one
+fewer hypothesis.
+
+::: {#cor-conditional-transport}
+## Direct transportability of the conditional contrast
+Under hypotheses (i) SEMA and (ii) scale alignment of @thm-collapsible-transport, but *without* requiring
+collapsibility, the population-average conditional active versus active effect is directly transportable:
+$\mathbb E_{X\sim\mathcal P}[d_{BC}(X)]=\gamma_B-\gamma_C$ for every population $\mathcal P$.
+:::
+
+::: {.proof}
+By @thm-scale-alignment(i) the conditional contrast $d_{BC}(x)=\gamma_B-\gamma_C$ is constant in $x$ under
+SEMA and alignment. Its population average is the average of a constant,
+$\mathbb E_{X\sim\mathcal P}[\gamma_B-\gamma_C]=\gamma_B-\gamma_C$, the same in every population. No
+collapsibility property of the scale is used, because the population-average conditional effect averages
+the contrast directly rather than transforming averaged means. $\square$
+:::
+
+**Why this matters.** Conditional estimands, which ML-NMR and STC can target, transport under just SEMA and
+alignment; marginal estimands, which MAIC must target, need collapsibility on top. That extra requirement is
+the transportability advantage of a conditional target. A concrete preview: in the binary example of
+@sec-worked-binary the *conditional* log odds ratio is the constant $c=2$ at both covariate values, so by
+this corollary it transports; yet the *marginal* log odds ratio there comes out $1.175$ in one population
+and $0.622$ in the other, so it does not. The corollary explains the first fact; @thm-sema-insufficient
+explains the second.
+
+The corollary is the reason that estimands targeting the *conditional* effect, as ML-NMR and STC can,
+enjoy a transportability advantage over those targeting the *marginal* effect, as MAIC must. The
+conditional effect needs two conditions, SEMA and alignment; the marginal effect, for a non-collapsible
+measure, needs a third that it cannot have. We turn to that obstruction now.
+
+## Why a shared effect modifier assumption is not enough {#sec-sema-insufficient}
+
+For a non-collapsible measure the cancellation of @thm-collapsible-transport happens on the linear-predictor
+scale but does not survive the passage to the margin, because marginalization and the link do not commute.
+The result is that the marginal odds ratio, even with SEMA and alignment in force and the conditional odds
+ratio held perfectly constant, drifts with the covariate distribution. This is catalogue result N.11, the
+insufficiency of SEMA, and it rests on the strict convexity that defines non-collapsibility.
+
+::: {#thm-sema-insufficient}
+## SEMA and alignment are sufficient if and only if the measure is collapsible
+Consider the anchored model @eq-transport-nmr under SEMA @eq-transport-sema and scale alignment
+$h=g$, so that the conditional active versus active contrast is the constant $c=\gamma_B-\gamma_C$
+(@thm-scale-alignment(i)). The marginal active versus active effect $d_{BC(\mathcal P)}$ is directly
+transportable across all populations **if and only if** the effect measure is collapsible on scale $g$.
+
+In particular, for the odds ratio (logit link) and the hazard ratio (log-hazard link), which are
+non-collapsible (@thm-noncollapsibility-or-hr), the marginal effect is **not** directly transportable under
+SEMA and alignment: there exist populations $\mathcal P_1\ne\mathcal P_2$ with
+$d_{BC(\mathcal P_1)}\ne d_{BC(\mathcal P_2)}$. Concretely, when the conditional log odds ratio is the
+nonzero constant $c$ and the reference risk $\mu_C(X)$ is non-degenerate, the marginal log odds ratio is
+strictly attenuated,
+$$
+0<\big|\,\mathrm{logit}\,m_B(\mathcal P)-\mathrm{logit}\,m_C(\mathcal P)\,\big|<|c|,
+$$ {#eq-or-attenuation}
+and its value depends on the distribution of $\mu_C(X)$.
+:::
+
+**Reader translation.** The odds ratio is a curved (nonlinear) summary of risks. Averaging risks across a
+population and then forming the odds ratio is not the same as forming the odds ratio in each stratum and
+then averaging; the curvature opens a gap, and the size of the gap depends on how spread out the risks are,
+which is a property of the population. So even with the conditional odds ratio pinned to a constant, the
+*marginal* odds ratio drifts as the covariate distribution changes. The proof turns this into an exact
+strict inequality using Jensen's inequality.
+
+::: {.proof}
+*Sufficiency (collapsible $\Rightarrow$ transportable).* This is @thm-collapsible-transport: with the
+conditional contrast constant at $c$ and the measure collapsible, $d_{BC(\mathcal P)}=c$ for every
+$\mathcal P$.
+
+*Necessity (non-collapsible $\Rightarrow$ not transportable), shown for the odds ratio.* Work on the logit
+scale, $g=h=\mathrm{logit}$. SEMA and alignment give a constant conditional log odds ratio
+$\mathrm{logit}\,\mu_B(x)-\mathrm{logit}\,\mu_C(x)=c$ for all $x$, equivalently
+$$
+\mu_B(x)=\varphi\big(\mu_C(x)\big),\qquad \varphi(p):=\mathrm{expit}\big(\mathrm{logit}\,p+c\big)=\frac{e^{c}p}{1+(e^{c}-1)p},
+$$
+the map that adds $c$ on the logit scale. We show $\varphi$ is strictly concave on $(0,1)$ when $c>0$.
+Writing $k=e^{c}>1$, $\varphi(p)=kp/(1+(k-1)p)$, so
+$$
+\varphi'(p)=\frac{k}{\big(1+(k-1)p\big)^{2}}>0,\qquad
+\varphi''(p)=\frac{-2k(k-1)}{\big(1+(k-1)p\big)^{3}}<0,
+$$
+since $k>1$ makes the numerator of $\varphi''$ negative and the denominator positive on $(0,1)$. Thus
+$\varphi$ is strictly increasing and strictly concave. Now compute the marginal means. With
+$m_C=\mathbb E_{X\sim\mathcal P}[\mu_C(X)]$ and $m_B=\mathbb E_{X\sim\mathcal P}[\mu_B(X)]
+=\mathbb E_{X\sim\mathcal P}[\varphi(\mu_C(X))]$, strict Jensen's inequality (@thm-jensen) applied to the
+strictly concave $\varphi$ and the non-degenerate random variable $\mu_C(X)$ gives a strict inequality
+$$
+m_B=\mathbb E\big[\varphi(\mu_C(X))\big]<\varphi\big(\mathbb E[\mu_C(X)]\big)=\varphi(m_C)=\mathrm{expit}\big(\mathrm{logit}\,m_C+c\big).
+$$
+Applying the strictly increasing logit to both sides, $\mathrm{logit}\,m_B<\mathrm{logit}\,m_C+c$, that is,
+the marginal log odds ratio satisfies $\mathrm{logit}\,m_B-\mathrm{logit}\,m_C<c$. For the lower bound,
+$c>0$ and $\varphi(p)>p$ on $(0,1)$ give $m_B=\mathbb E[\varphi(\mu_C(X))]>\mathbb E[\mu_C(X)]=m_C$, hence
+$\mathrm{logit}\,m_B>\mathrm{logit}\,m_C$ and the marginal log odds ratio is positive. Together these are
+the strict attenuation @eq-or-attenuation (the case $c<0$ is symmetric, with $\varphi$ strictly convex).
+
+Finally, the marginal log odds ratio depends on the covariate distribution. Take $\mathcal P_1$ degenerate
+at a single covariate value $x_0$: then $\mu_C(X)=\mu_C(x_0)$ is constant, Jensen holds with equality, and
+$\mathrm{logit}\,m_B-\mathrm{logit}\,m_C=c$. Take $\mathcal P_2$ any non-degenerate distribution of
+$\mu_C(X)$: then the strict inequality gives $\mathrm{logit}\,m_B-\mathrm{logit}\,m_C<c$. Hence
+$d_{BC(\mathcal P_1)}=c\ne d_{BC(\mathcal P_2)}$, so $d_{BC}$ is not directly transportable, proving
+necessity for the odds ratio. The hazard ratio is non-collapsible by the same mechanism, with the
+mixture-of-survival argument of @thm-noncollapsibility-or-hr playing the role of strict Jensen; we do not
+repeat it. $\square$
+:::
+
+**Why this matters.** This is why two HTA submissions built on the very same trials can report different
+odds ratios and both be correct: SEMA makes the *conditional* odds ratio portable, but HTA usually reports
+the *marginal* odds ratio, and that one is not portable. The attenuation formula @eq-or-attenuation is not a
+rounding artifact; it is structural, and it says the reported number belongs to the population it was
+averaged in.
+
+**Why prove necessity, not just show an example?** A single counterexample would establish only that the
+marginal odds ratio *can* fail to transport. Necessity says something stronger: under SEMA and alignment,
+for a non-collapsible measure there is *no* configuration, no clever choice of constants, that rescues
+marginal transport, because the obstruction is the curvature of $\varphi$ itself, which SEMA cannot touch.
+That is the difference between "sometimes fails" and "must fail," and it is why the result is stated as an
+if and only if.
+
+The proof locates the obstruction precisely. The strict concavity of the logit-shift map $\varphi$ is the
+analytic essence of odds-ratio non-collapsibility, and it is what forces a strict Jensen gap between the
+marginal mean $m_B$ and the value $\varphi(m_C)$ that a collapsible measure would have produced. The size of
+that gap is governed by the spread of $\mu_C(X)$, which is a property of the covariate distribution, so the
+marginal log odds ratio is a function of the population. There is no choice of $c$, no shared effect
+modifier structure, that removes the curvature of $\varphi$. SEMA controls the conditional effect; it has
+no purchase on the marginalization.
+
+Collecting @thm-collapsible-transport, @cor-conditional-transport, and @thm-sema-insufficient gives the
+clean characterization, catalogue results N.8 to N.10.
+
+::: {#prp-transport-table}
+## Transportability of common effect measures under SEMA
+Assume SEMA and structural invariance. For each effect measure below, with its natural model link, the
+conditional active versus active effect is directly transportable when SEMA and scale alignment hold, and
+the marginal active versus active effect is directly transportable when in addition the measure is
+collapsible. The resulting status is:
+
+| Effect measure | Model link $g$ | Reported scale $h$ | Aligned? | Collapsible? | Conditional transports? | Marginal transports? |
+|---|---|---|---|---|---|---|
+| Mean difference | identity | identity | yes | yes | yes | yes |
+| Risk difference | identity | identity | yes | yes | yes | yes |
+| Log risk ratio | log | log | yes | yes | yes | yes |
+| Log rate ratio | log | log | yes | yes | yes | yes |
+| RMST difference (RMST-scale SEMA) | identity (RMST) | identity | yes | yes | yes | yes |
+| Log odds ratio | logit | logit | yes | **no** | yes | **no** |
+| Log hazard ratio | log-hazard | log-hazard | yes | **no** | yes | **no** |
+| Risk difference (from logit model) | logit | identity | **no** | yes | **no** | **no** |
+| RMST difference (log-hazard SEMA) | log-hazard | identity | **no** | yes | **no** | **no** |
+:::
+
+::: {.proof}
+Each row is an instance of the three theorems. A "yes" in the conditional column is @cor-conditional-transport,
+valid whenever the measure is scale aligned (so that SEMA makes the conditional contrast constant). A "yes"
+in the marginal column additionally requires collapsibility, by @thm-collapsible-transport; a "no" in the
+marginal column with alignment present is the non-collapsibility obstruction of @thm-sema-insufficient
+(odds ratio, hazard ratio rows). The two misaligned rows have a "no" already in the conditional column by
+@thm-scale-alignment(ii): the reported contrast is covariate dependent even under SEMA, so neither the
+conditional nor the marginal effect transports, regardless of collapsibility. $\square$
+:::
+
+**Why this matters.** This one table is the chapter's practical output: for any effect measure it tells you
+whether you may carry the number to a new population unchanged. The two rows HTA cares about most, the log
+odds ratio and the log hazard ratio, sit in the "no" column for marginal transport. Read the table before
+trusting any indirect-comparison number that has crossed populations.
+
+The table exhibits the paradox in its starkest form. The mean difference, risk ratio, and rate ratio, all
+collapsible and naturally aligned, transport both conditionally and marginally under SEMA. The log odds
+ratio and log hazard ratio, the two effect measures that dominate HTA, transport *conditionally* under SEMA
+but *not marginally*, because non-collapsibility breaks the third condition. And a risk difference computed
+from a logistic model, or a restricted mean survival time computed from a proportional-hazards model, fails
+to transport at all, because scale misalignment breaks the first. The measures we report most are the
+measures that travel least.
+
+## Worked examples {#sec-transport-worked}
+
+We exhibit all three phenomena with a single covariate structure, a binary effect modifier $X\in\{0,1\}$
+distributed differently in two populations, $\mathcal P_1$ with $P(X=1)=0.1$ and $\mathcal P_2$ with
+$P(X=1)=0.9$. In every example SEMA holds and the scales are arranged so that the *conditional* active
+versus active effect, $B$ versus $C$, is constant across $x$. The question is whether the *marginal* effect
+is the same in $\mathcal P_1$ and $\mathcal P_2$. The continuous case says yes; the binary and survival
+cases say no, for the two distinct reasons of @thm-sema-insufficient and @thm-scale-alignment(ii).
+
+### Continuous outcome: the mean difference transports {#sec-worked-continuous}
+
+Let the outcome be continuous with an identity-link model and a binary effect modifier. Take conditional
+means under the comparator $C$ equal to $\mu_C(0)=2$, $\mu_C(1)=7$, and a constant active versus active
+benefit of $\gamma_B-\gamma_C=3$ on the identity scale, so $\mu_B(x)=\mu_C(x)+3$, giving $\mu_B(0)=5$,
+$\mu_B(1)=10$. SEMA holds because the active versus active contrast carries no interaction; the conditional
+mean difference is $d_{BC}(x)=\mu_B(x)-\mu_C(x)=3$ for both $x$. The identity scale is aligned and
+collapsible, so @thm-collapsible-transport predicts the marginal mean difference equals $3$ in every
+population. Verify by hand. In $\mathcal P_1$,
+$$
+m_C(\mathcal P_1)=0.9(2)+0.1(7)=2.5,\quad m_B(\mathcal P_1)=0.9(5)+0.1(10)=5.5,\quad d_{BC(\mathcal P_1)}=5.5-2.5=3.
+$$
+In $\mathcal P_2$,
+$$
+m_C(\mathcal P_2)=0.1(2)+0.9(7)=6.5,\quad m_B(\mathcal P_2)=0.1(5)+0.9(10)=9.5,\quad d_{BC(\mathcal P_2)}=9.5-6.5=3.
+$$
+The marginal mean difference is $3$ in both populations, as it must be, since
+$d_{BC(\mathcal P)}=\mathbb E_{\mathcal P}[\mu_B(X)-\mu_C(X)]=\mathbb E_{\mathcal P}[3]=3$ for any covariate
+distribution. The collapsible aligned measure transports.
+
+**What a researcher would report.** The mean difference is $3$ units, and it is the *same* $3$ in the index
+population $f_{AB}$, the comparator population $f_{AC}$, and the decision population $\mathcal P^{*}$. For
+this collapsible, aligned measure the analyst can report a single number and attach it to any of the three
+populations without qualification; nothing goes wrong when it is carried to the decision population. This is
+the best case, and it is why mean differences and risk ratios are the easy measures for indirect comparison.
+
+### Binary outcome: the marginal odds ratio does not transport {#sec-worked-binary}
+
+Keep the same binary $X$ and the same two populations, but now a binary outcome with a logit-link model.
+On the logit scale set the comparator linear predictors $\eta_C(0)=-3$, $\eta_C(1)=3$ (a strong prognostic
+gradient: the covariate raises the log-odds by $6$), and a constant active versus active log odds ratio
+$c=\gamma_B-\gamma_C=2$, so $\eta_B(x)=\eta_C(x)+2$, giving $\eta_B(0)=-1$, $\eta_B(1)=5$. SEMA holds and
+the logit scale is aligned, so the conditional log odds ratio is the constant $c=2$, an odds ratio of
+$e^{2}=7.389$, at both covariate values. The risks $\mu_k(x)=\mathrm{expit}(\eta_k(x))$ are
+$$
+\mu_C(0)=0.047426,\quad \mu_C(1)=0.952574,\quad \mu_B(0)=0.268941,\quad \mu_B(1)=0.993307,
+$$
+each $\mathrm{expit}(z)=1/(1+e^{-z})$ computed to six places. Now marginalize. In $\mathcal P_1$,
+$P(X=1)=0.1$:
+$$
+m_C(\mathcal P_1)=0.9(0.047426)+0.1(0.952574)=0.137941,\qquad
+m_B(\mathcal P_1)=0.9(0.268941)+0.1(0.993307)=0.341378.
+$$
+The marginal log odds ratio is
+$$
+d_{BC(\mathcal P_1)}=\mathrm{logit}(0.341378)-\mathrm{logit}(0.137941)=(-0.65716)-(-1.83250)=1.17534,
+$$
+a marginal odds ratio of $e^{1.17534}=3.239$. In $\mathcal P_2$, $P(X=1)=0.9$:
+$$
+m_C(\mathcal P_2)=0.1(0.047426)+0.9(0.952574)=0.862060,\qquad
+m_B(\mathcal P_2)=0.1(0.268941)+0.9(0.993307)=0.920871,
+$$
+$$
+d_{BC(\mathcal P_2)}=\mathrm{logit}(0.920871)-\mathrm{logit}(0.862060)=2.45423-1.83250=0.62173,
+$$
+a marginal odds ratio of $e^{0.62173}=1.862$. The conditional odds ratio is $7.389$ in both populations,
+yet the marginal odds ratio is $3.24$ in $\mathcal P_1$ and $1.86$ in $\mathcal P_2$. SEMA holds, the scale
+is aligned, the conditional effect is pinned to a constant, and still the marginal effect nearly halves
+when the covariate distribution shifts. Both marginal values lie strictly between $1$ (log odds ratio $0$)
+and $7.389$ (log odds ratio $2$), the strict attenuation @eq-or-attenuation of @thm-sema-insufficient, and
+they differ from each other because the spread of $\mu_C(X)$ differs between the populations. This single
+calculation is the chapter's central message in numbers: a marginal odds ratio is not a property the
+treatments carry from population to population.
+
+**What a researcher would report, and what would go wrong.** A MAIC or STC standardizing the index trial to
+the comparator population $f_{AC}$ (here $P(X=1)=0.9$) would report a marginal odds ratio of about $1.86$.
+That number is correct for $f_{AC}$. Carried unchanged to a younger decision population like $f_{AB}$ (here
+$P(X=1)=0.1$) it is simply wrong: the right marginal odds ratio there is $3.24$. Nothing was mis-estimated;
+the number was moved to a population it does not describe. A report should therefore state which population
+its odds ratio belongs to, and either argue that the decision population matches it or redo the
+standardization for the decision population.
+
+::: {.remark}
+## What a degenerate population shows
+The proof of @thm-sema-insufficient predicts that a population concentrated at one covariate value recovers
+the conditional value. Check it: at the point mass $X\equiv 0$, the marginal log odds ratio is
+$\mathrm{logit}(\mu_B(0))-\mathrm{logit}(\mu_C(0))=\eta_B(0)-\eta_C(0)=(-1)-(-3)=2=c$, and at $X\equiv 1$ it
+is $\eta_B(1)-\eta_C(1)=5-3=2=c$. Only when the covariate genuinely varies, as in $\mathcal P_1$ and
+$\mathcal P_2$, does the Jensen gap open and the marginal effect attenuate below $c$ and become population
+dependent. $\blacktriangleleft$
+:::
+
+### Time-to-event outcome: scale misalignment breaks transport {#sec-worked-tte}
+
+Finally a survival outcome modeled by proportional hazards, where the effect is reported as a difference in
+restricted mean survival time (RMST). This is the misaligned case of @thm-scale-alignment(ii): SEMA is
+imposed on the log-hazard scale, but RMST lives on the time scale, and $h\circ g^{-1}$ is not the identity.
+Take an exponential baseline so the integrals are elementary. Let the comparator hazards at the two
+covariate values be $\lambda_C(0)=0.5$ and $\lambda_C(1)=2.0$, and let $B$ halve the hazard, a constant
+hazard ratio of $0.5$, so $\lambda_B(x)=0.5\,\lambda_C(x)$, giving $\lambda_B(0)=0.25$, $\lambda_B(1)=1.0$.
+On the log-hazard scale the active versus active contrast is $\log 0.5=-0.69315$ at both covariate values:
+SEMA holds and the conditional hazard ratio is the constant $0.5$. Restrict at time $\tau=2$. For an
+exponential hazard $\lambda$ the survival is $S(t)=e^{-\lambda t}$ and the RMST is
+$$
+\mathrm{RMST}(\lambda)=\int_0^{\tau}e^{-\lambda t}\,dt=\frac{1-e^{-\lambda\tau}}{\lambda}.
+$$
+Watch for the following, because it is the whole point and it happens *before* any marginalization: the
+conditional hazard ratio is a constant $0.5$ at both covariate values, yet we are about to find that the
+conditional RMST *difference* is already unequal at $x=0$ and $x=1$. The misaligned scale has made the
+reported conditional contrast covariate dependent on its own, with no help from the covariate distribution.
+In the binary example the conditional contrast stayed constant and only marginalization broke transport;
+here the breakage is visible one step earlier.
+Compute the four conditional RMSTs:
+$$
+\begin{aligned}
+\mathrm{RMST}_C(0)&=\tfrac{1-e^{-1.0}}{0.5}=1.264241, & \mathrm{RMST}_B(0)&=\tfrac{1-e^{-0.5}}{0.25}=1.573877,\\
+\mathrm{RMST}_C(1)&=\tfrac{1-e^{-4.0}}{2.0}=0.490842, & \mathrm{RMST}_B(1)&=\tfrac{1-e^{-2.0}}{1.0}=0.864665.
+\end{aligned}
+$$
+The conditional RMST difference is therefore
+$$
+d_{BC}(0)=1.573877-1.264241=0.309636,\qquad d_{BC}(1)=0.864665-0.490842=0.373823,
+$$
+*not constant in $x$*, even though the conditional hazard ratio is the constant $0.5$. This is exactly
+@thm-scale-alignment(ii): the nonlinear map from log-hazard to RMST refuses to cancel the covariate, which
+enters through the prognostic gradient $\lambda_C(0)\ne\lambda_C(1)$. Because the conditional RMST
+difference varies in $x$, the marginal RMST difference depends on the population. The RMST difference is
+collapsible, so the marginal is the population-average of the conditional (each marginal RMST is the average
+of the conditional survival curves integrated, by Fubini), and we average:
+$$
+d_{BC(\mathcal P_1)}=0.9(0.309636)+0.1(0.373823)=0.316055,\qquad
+d_{BC(\mathcal P_2)}=0.1(0.309636)+0.9(0.373823)=0.367404.
+$$
+The marginal RMST difference is $0.316$ in $\mathcal P_1$ and $0.367$ in $\mathcal P_2$: a collapsible
+measure that still fails to transport, because the misaligned scale has manufactured effect modification on
+the reported scale. The contrast with the binary example is instructive. There, the conditional effect was
+constant and the failure came from non-collapsibility of the marginalization (@thm-sema-insufficient);
+here, the measure is collapsible and the marginalization is innocent, but the conditional effect is itself
+covariate dependent because of scale misalignment (@thm-scale-alignment). Two different theorems, two
+different mechanisms, the same operational conclusion: the effect is comparator-population specific and the
+Step 2 transport of @thm-two-step-transport is not free.
+
+**What a researcher would report.** An RMST difference standardized to $f_{AC}$ is about $0.367$ units of
+extra event-free time; standardized to $f_{AB}$ it is about $0.316$. Even though RMST is collapsible, the
+number is population-specific, because the proportional-hazards model was fitted on the log-hazard scale
+while the effect is reported on the time scale. Reporting an RMST difference from a hazard model therefore
+carries the same "which population?" caveat as an odds ratio, for a different underlying reason.
+
+## Notes and references {#sec-transport-notes}
+
+The estimand-based theory of transportability for population-adjusted indirect comparisons developed here
+is that of @chandler2026transport, which reframes MAIC, STC, and their kin as solving a transportability
+problem and isolates the three conditions, SEMA, scale alignment, and collapsibility, that govern direct
+transportability of a marginal relative effect. The chapter expands every result of that paper's
+estimand-based core into a full proof: @thm-conditional-transportability (the transport g-formula),
+@thm-two-step-transport (the two-step decomposition and bias split), @thm-collapsible-transport and
+@cor-conditional-transport (the positive transport results), @thm-scale-alignment (the role of scale
+alignment), and @thm-sema-insufficient (the insufficiency of SEMA for non-collapsible marginal effects).
+These correspond, in order, to catalogue results N.3, N.4, N.6 with N.8, N.9, N.7, and N.8 with N.11 in
+`proofs/N_transportability.md`; @def-generalizability and @def-transportability formalize N.1 and N.2,
+@lem-collapsible-scales and @prp-transport-table cover N.5 and N.10, and the HTA discussion threaded through
+@sec-two-step and @sec-sema-insufficient is N.12.
+
+The identification scaffolding is from @hernan2020whatif, whose chapters on transportability use a
+population indicator $S$ and a transport g-formula identical in structure to @eq-transport-gformula; the
+within-population identification it rests on, @thm-consistency-identity, @def-ignorability, @def-positivity,
+@thm-g-computation-unbiased, and @thm-ipw-unbiased, is proved in Chapters 9 and 10, and the doubly robust
+augmentation alluded to after @thm-conditional-transportability is @thm-aipw-double-robust. The
+collapsibility facts, @def-collapsibility, @def-non-collapsibility, @exm-noncollapsible-or, and the
+non-collapsibility of the odds ratio and hazard ratio @thm-noncollapsibility-or-hr, are from Chapters 7 and
+11; the strict-concavity argument used in @thm-sema-insufficient is the quantitative form of that
+non-collapsibility and rests on Jensen's inequality @thm-jensen. The constancy of relative effects that
+unanchored and standard indirect comparisons assume, @def-constancy-relative-effects, is direct
+transportability of the relative effect in the sense of @thm-direct-transportability, and its failure under
+effect modification is the subject of @thm-failure-of-bucher and the ecological bias of @def-ecological-bias
+in Chapter 16. The shared effect modifier assumption itself is developed as part of the population
+adjustment theory of Chapter 17; here it is used as a stated structural condition, @eq-transport-sema, and
+the methods that operationalize the transport g-formula, MAIC, STC, and ML-NMR, are the subjects of
+Chapters 18 to 23. The current NICE Decision Support Unit and EU joint guidance that treat SEMA as
+sufficient for transport are documented in @phillippo2016tsd18; @thm-sema-insufficient is the precise sense
+in which that treatment is incomplete for non-collapsible marginal effects, and @phillippo2020mlnmr is the
+modeling framework that makes the target population, and hence the Step 2 transport, explicit.
+
+**Machine-checked status.** In one sentence for readers outside formal methods: none of this chapter's own
+results have yet been checked by the companion computer-proof system, and this paragraph only records which
+neighboring facts have been. None of this chapter's owned results has a counterpart in the `ITC_Coq`
+development. The Coq tree formalizes the algebraic core of indirect comparison, Bucher's identity and
+unbiasedness in `theories/Bucher.v`, propensity-score balancing, inverse-probability and doubly robust
+estimation, and the anchored cancellation of prognostic variables in `theories/EffectModifiers.v`, but the
+transportability propositions here, which combine SEMA, collapsibility, and scale alignment across
+populations, are pen-and-paper by design, as the companion manuscript notes. The closest machine-checked
+relative is the collapsibility of the linear-model effect, `Lemma STC_collapse_linear` in
+`theories/STC.v`, which proves the identity-scale case of @lem-collapsible-scales(1) from linearity of
+expectation; it is owned and tagged by Chapter 19. No tag is added to any result in this chapter.
+
+## Exercises {#sec-transport-exercises}
+
+A starred exercise, marked $\star$, has a full worked solution in Appendix F. The unstarred exercises are
+arranged from applied identification and interpretation, through computation, to proof, so a reader can stop
+at the level that suits them.
+
+::: {#exr-transport-hta-populations}
+**(Warm-up, interpretation) Name the three populations.** A sponsor submits an indirect comparison of drug
+$B$ against drug $C$, both anchored on a common comparator $A$. The sponsor owns individual patient data
+from a trial of $A$ versus $B$ that enrolled mostly younger, biologic-naive patients, and uses published
+aggregate results from a trial of $A$ versus $C$ that enrolled mostly older, biologic-experienced patients.
+The national HTA body must decide about all label-eligible patients, a mix of both. (a) Identify, in the
+language of this chapter, the source population, the comparator population, and the decision population, and
+say which supplies IPD and which supplies AgD. (b) Using @thm-two-step-transport, state which population the
+standard pairwise PAIC estimand $d_{BC(AC)}$ is attached to. (c) In one sentence, say what extra information
+the sponsor would need before claiming the result applies to the decision population.
+:::
+
+::: {#exr-transport-read-report}
+**(Interpretation) Reading a MAIC report.** A submitted MAIC reports a marginal odds ratio for $B$ versus
+$C$ "standardized to the comparator trial population," and a reviewer asks whether it applies to the
+national decision population. (a) Using the two-step decomposition @eq-two-step-bias, explain which of the
+two terms the MAIC has controlled and which it has left untouched. (b) Explain, citing
+@thm-sema-insufficient, why "the shared effect modifier assumption holds, so the odds ratio is the same in
+any population" is not a valid answer for a *marginal* odds ratio. (c) State one condition on the two
+populations under which the reported number would in fact apply unchanged to the decision population.
+:::
+
+::: {#exr-transport-direct-cond}
+**(Computation) Direct transportability of a constant conditional effect.** Suppose the conditional mean difference is the
+constant $\tau(x)=4$ for all $x$, and a covariate $X$ has mean $\bar x_1=0$ in population $\mathcal P_1$ and
+$\bar x_2=10$ in population $\mathcal P_2$. Using @thm-direct-transportability, show that the marginal mean
+difference is $4$ in both populations, and explain why the difference in covariate means is irrelevant. Then
+show by counterexample that the same conclusion fails for the marginal odds ratio when the model is logistic
+with the same constant conditional log odds ratio.
+:::
+
+::: {#exr-transport-gformula-weights}
+**(Computation) Transport g-formula and weights.** Let $X\in\{0,1\}$ with source probabilities $P_{\mathcal P}(X=1)=0.3$
+and target probabilities $P_{\mathcal P^{*}}(X=1)=0.6$, and let the source conditional means under treatment
+$t$ be $\mu_t(0)$ and $\mu_t(1)$. (a) Write the transportability weights $w(0),w(1)$ as density ratios and
+verify $\mathbb E_{X\sim\mathcal P}[w(X)]=1$. (b) Show by direct computation that the re-weighting identity
+@eq-transport-ipw and the g-formula @eq-transport-gformula give the same target marginal mean
+$m_t(\mathcal P^{*})$. (c) Explain what the overlap condition (iv) of @thm-conditional-transportability
+requires here and what goes wrong if $P_{\mathcal P}(X=1)=0$.
+:::
+
+::: {#exr-transport-two-step}
+**(Interpretation) The two sponsors.** Two sponsors each compare $B$ versus $C$ anchored on $A$, using comparator trials with
+covariate distributions $f_{AC}^{(1)}$ and $f_{AC}^{(2)}$ that differ. The conditional log odds ratio of $B$
+versus $C$ is the constant $c=0.7$ (SEMA and alignment hold). Using @thm-two-step-transport and
+@thm-sema-insufficient, explain why the two sponsors' marginal log odds ratios $d_{BC(AC^{(1)})}$ and
+$d_{BC(AC^{(2)})}$ can differ, identify which of the two bias terms in @eq-two-step-bias is responsible, and
+state what additional information would be needed to transport either estimate to a third, decision-relevant
+population.
+:::
+
+::: {#exr-transport-rr-transports}
+**(Computation) Risk ratio transports where the odds ratio does not.** Consider a log-link binomial model with a binary
+$X$, constant conditional log risk ratio $\log R$ for $B$ versus $C$, and reference risks $\mu_C(0)=0.05$,
+$\mu_C(1)=0.20$. (a) Show that the marginal risk ratio equals $R$ in every population, using
+@lem-collapsible-scales(2). (b) Take $R=1.5$ and the two populations $P(X=1)=0.1$ and $P(X=1)=0.9$; compute
+the marginal risks under $B$ and $C$ and confirm the marginal risk ratio is $1.5$ in both. (c) Contrast this
+with @sec-worked-binary and explain in one sentence why the odds ratio behaves differently.
+:::
+
+::: {#exr-transport-attenuation}
+**($\star$, proof) Strict attenuation of the marginal odds ratio.** Let the conditional log odds ratio be the constant
+$c>0$, so $\mu_B(x)=\varphi(\mu_C(x))$ with $\varphi(p)=\mathrm{expit}(\mathrm{logit}\,p+c)$. (a) Prove that
+$\varphi$ is strictly increasing and strictly concave on $(0,1)$ by computing $\varphi'$ and $\varphi''$.
+(b) Using Jensen's inequality @thm-jensen, prove the strict attenuation
+$0<\mathrm{logit}\,m_B-\mathrm{logit}\,m_C<c$ whenever $\mu_C(X)$ is non-degenerate. (c) Show that the
+attenuation gap $c-(\mathrm{logit}\,m_B-\mathrm{logit}\,m_C)$ increases as the spread of $\mu_C(X)$
+increases, in the sense that it is zero for a point mass and positive otherwise, and use this to conclude
+that the marginal log odds ratio is population dependent. (d) Verify (b) numerically on the
+$\mathcal P_1,\mathcal P_2$ of @sec-worked-binary.
+:::
+
+::: {#exr-transport-scale-misalignment}
+**($\star$, computation and proof) Scale misalignment manufactures effect modification.** Consider a logistic model
+($g=\mathrm{logit}$) with no interactions at all, $\eta_k(x)=\alpha+x^\top\boldsymbol\beta_1+\gamma_k$, so
+that SEMA holds trivially, and report the effect as a risk difference ($h=\mathrm{id}$). (a) Show
+$h\circ g^{-1}=\mathrm{expit}$ and that the conditional risk difference
+$\mathrm{expit}(\eta_B(x))-\mathrm{expit}(\eta_C(x))$ is non-constant in $x$ whenever
+$\boldsymbol\beta_1\ne\mathbf 0$, instantiating @thm-scale-alignment(ii). (b) With scalar $x\in\{0,1\}$,
+$\alpha=-2$, $\beta_1=3$, $\gamma_C=0$, $\gamma_B=1.5$, compute the conditional risk differences at $x=0$
+and $x=1$ and the marginal risk differences in $P(X=1)=0.2$ and $P(X=1)=0.8$. (c) Explain why this failure
+occurs even though the risk difference is a collapsible measure.
+:::
+
+::: {#exr-transport-rmst-baseline}
+**(Proof) RMST transport under an RMST-scale assumption.** The last row of @prp-transport-table claims that an RMST
+difference transports if SEMA is imposed on the RMST (time) scale rather than the log-hazard scale.
+(a) State precisely what "RMST-scale SEMA" means for the conditional RMST difference $d_{BC}(x)$.
+(b) Prove that under it the marginal RMST difference is directly transportable, citing
+@thm-collapsible-transport and the collapsibility of the RMST difference. (c) Explain why this structural
+assumption is restrictive in practice: what would have to be true of the baseline hazard and the covariate
+effects for a proportional-hazards model to also satisfy RMST-scale SEMA?
+:::
+
+::: {#exr-transport-conditional-advantage}
+**(Interpretation) The conditional advantage.** Using @cor-conditional-transport and @thm-sema-insufficient, explain why an
+analysis targeting the population-average conditional log odds ratio needs only SEMA and scale alignment to
+transport, while one targeting the marginal log odds ratio additionally needs collapsibility, which the odds
+ratio lacks. Then state the scientific cost of preferring the conditional estimand: what question does it
+answer, and why is it not interchangeable with the marginal estimand a decision maker may actually want?
+:::

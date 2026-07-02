@@ -1,0 +1,1895 @@
+---
+title: "Hierarchical Models, Shrinkage, and Bayesian Inference"
+---
+
+An indirect treatment comparison never rests on a single study. It assembles effect estimates from a
+collection of trials that are similar but not identical: different sites, different eligibility
+criteria, different calendar years, possibly different versions of an outcome scale. Two extreme ways
+to handle such a collection are both wrong. We could analyze each trial in isolation, treating its
+effect as an unrelated unknown constant; this throws away the obvious fact that the trials inform one
+another and leaves each estimate as noisy as its own small sample allows. Or we could pool everything,
+pretending the trials estimate one common effect; this ignores genuine heterogeneity and reports a
+false precision. The hierarchical model threads between these extremes. It treats the study-specific
+true effects as a sample from a common population, so that each study's estimate is pulled toward the
+others by an amount that the data themselves calibrate. The resulting estimator, the posterior mean,
+is a partial pooling that borrows strength across studies; the amount it borrows is the shrinkage
+factor.
+
+This chapter builds that machinery from the ground up and then develops the Bayesian inference and
+computation that make it operational. We begin with exchangeability, the symmetry assumption that
+licenses pooling, and de Finetti's theorem, which shows that for an exchangeable sequence the
+hierarchical "conditionally independent given a latent parameter" structure is not a modeling choice
+but a representation theorem. We then specify the normal-normal hierarchical model, distinguish random
+effects from fixed effects, and derive the shrinkage estimator as a posterior mean, with the
+James-Stein phenomenon as its frequentist shadow. Restricted maximum likelihood and empirical Bayes
+supply the variance components. The second half of the chapter is the Bayesian toolkit on which
+Bayesian network meta-analysis (Part III) and multilevel network meta-regression (Part V) rest: Bayes'
+theorem for parameters, conjugate analysis, the posterior predictive distribution, credible intervals,
+Markov chain Monte Carlo with a full proof that detailed balance forces the target to be stationary,
+Hamiltonian Monte Carlo and the No-U-Turn Sampler, and the marginal likelihood and Bayes factors.
+Every load-bearing result is proved in full.
+
+Throughout we follow the notation of [Notation](/notation.qmd): $\boldsymbol\xi$ is the full parameter vector,
+$\pi(\boldsymbol\xi)$ a prior density, $p(\mathbf y \mid \boldsymbol\xi)$ a likelihood, and
+$\pi(\boldsymbol\xi \mid \mathbf y)$ a posterior density. In the hierarchical sections we write
+$\theta_j$ for the true effect in study $j$, $\mu$ and $\tau^2$ for the population mean and variance of
+those effects, and $s_j^2$ for the (known) within-study sampling variance of the estimate $y_j$.
+
+**How to read this chapter.** Two kinds of material are interleaved, and it helps to know which is
+which. The *essential* thread, which every applied reader should master, is short: what a hierarchical
+model is, why related trials borrow strength, how shrinkage and the heterogeneity $\tau^2$ work, what a
+posterior and a credible interval mean, and what the draws returned by Bayesian software represent. The
+*justification* thread proves that this machinery is forced and correct: de Finetti's representation
+theorem, the measure-theoretic form of Bayes' theorem, the James-Stein phenomenon, and the
+detailed-balance and volume-preservation arguments behind the samplers. The table sorts the sections;
+on a first reading you may skim the right column and come back to it once the essentials are secure.
+
+| Essential for using ITC methods | Advanced justification (skim on a first reading) |
+|---|---|
+| exchangeability as "no trial is special" (@sec-exchangeability) | de Finetti's theorem and its martingale converse (@thm-de-finetti) |
+| posterior $\propto$ likelihood $\times$ prior (@sec-bayes) | the measure-theoretic proof of Bayes' theorem (@thm-bayes) |
+| the shrinkage formula and the meaning of $\tau^2$ (@sec-shrinkage) | the James-Stein dominance proof (@thm-james-stein) |
+| estimating $\tau^2$ and reading credible intervals (@sec-reml-eb, @sec-predictive) | REML invariance to the contrast basis (@thm-reml-invariance) |
+| what MCMC draws mean and what to check (@sec-mcmc, @sec-hmc) | detailed balance and leapfrog volume preservation (@thm-mh-stationarity, @lem-leapfrog-volume) |
+
+We will not stay abstract for long. Before any theory, here is the concrete object the whole chapter
+serves; we return to it at every transition.
+
+::: {#exm-three-trials-early}
+## Three trials we follow all chapter
+Three randomized trials each compare the same new treatment against the same control and report a log
+odds ratio (log OR) for response together with a standard error:
+
+| Trial $j$ | log OR $y_j$ | standard error $s_j$ | odds ratio $e^{y_j}$ |
+|---|---|---|---|
+| 1 | $0.0$ | $0.5$ | $1.00$ |
+| 2 | $0.6$ | $0.5$ | $1.82$ |
+| 3 | $1.2$ | $0.5$ | $3.32$ |
+
+The log OR is the effect on the scale the models use; the last column translates it to the odds ratio a
+clinician reads, so $y_2 = 0.6$ means roughly $1.8$ times the odds of response under treatment. The
+squared standard error is the within-study sampling variance $s_j^2 = 0.5^2 = 0.25$, treated as known.
+
+Three instincts compete. *No pooling* reports each $y_j$ as is, so trial 3 looks impressively large.
+*Complete pooling* averages the three into a single number and denies that the trials differ at all.
+*Partial pooling*, the subject of this chapter, pulls each estimate part of the way toward the others by
+an amount the data choose; we will find (in @sec-shrinkage, then in the consolidated @exm-three-study-shrinkage)
+that if the true effects scatter with standard deviation $0.5$, each estimate moves halfway, so trial
+3's $1.2$ becomes $0.9$. That pull is the *shrinkage*, and the number that decides how far the trials are
+allowed to differ is the *between-study variance* $\tau^2$, the single most consequential quantity in a
+random-effects meta-analysis.
+
+Why is pooling even legitimate? Because before we look at the data we have no reason to call trial 1
+special and trial 3 typical; relabeling the trials should not change our joint model for their true
+effects. That symmetry is *exchangeability*, which we formalize next. $\blacktriangleleft$
+:::
+
+The notation is dense, so here is the cast in one place; each row is pinned down precisely where
+indicated, and you can return here whenever a symbol feels unfamiliar.
+
+| Symbol | Plain meaning | Defined in |
+|---|---|---|
+| $y_j$ | the effect estimate study $j$ reports (here a log OR) | @sec-normal-hierarchical |
+| $s_j^2$ | the known within-study variance of $y_j$ (its squared standard error) | @sec-normal-hierarchical |
+| $\theta_j$ | the *true* effect in study $j$ (what $y_j$ is trying to estimate) | @eq-normal-normal-model |
+| $\mu$ | the population mean effect, the center the trials scatter around | @eq-normal-normal-model |
+| $\tau^2$ | the between-study variance: how widely the true effects $\theta_j$ scatter | @eq-normal-normal-model |
+| $B_j$ | the shrinkage factor: the weight placed on $\mu$ (not on $y_j$) | @eq-shrinkage |
+| $\boldsymbol\phi$ | the hyperparameters $(\mu,\tau^2)$ that all studies share | @def-hierarchical-model |
+| $\boldsymbol\xi$ | the full Bayesian parameter vector (every $\theta_j$ and $\boldsymbol\phi$ together) | @sec-bayes |
+| $\pi(\cdot)$ | a prior density; $\pi(\cdot\mid\mathbf y)$ the matching posterior density | @sec-bayes |
+
+One clarification the chapter relies on. The hyperparameter $\boldsymbol\phi = (\mu, \tau^2)$ is the part
+of the model the studies have in common, and it is *one piece of* the full Bayesian parameter vector
+$\boldsymbol\xi$, which also contains the study effects $\theta_1, \dots, \theta_J$. So $\boldsymbol\phi$
+is contained in $\boldsymbol\xi$; when a later section writes $\pi(\boldsymbol\xi \mid \mathbf y)$ it
+includes the posterior for $\mu$ and $\tau^2$ as well as for each $\theta_j$.
+
+## Exchangeability and the rationale for hierarchical models {#sec-exchangeability}
+
+The premise that several studies "estimate related quantities" must be made precise before it can do
+any work. The right formalization is a symmetry: before seeing the data, we have no reason to label one
+study as systematically different from another, so our joint model for their true effects should be
+invariant to relabeling. That symmetry is exchangeability.
+
+::: {#def-exchangeability}
+## Exchangeability
+A finite collection of random variables $X_1, \dots, X_n$ (each taking values in a measurable space
+$\mathcal{S}$) is *exchangeable* if for every permutation $\sigma$ of $\{1, \dots, n\}$,
+$$
+(X_{\sigma(1)}, \dots, X_{\sigma(n)}) \stackrel{d}{=} (X_1, \dots, X_n),
+$$
+that is, the two random vectors have the same joint distribution. An infinite sequence
+$(X_i)_{i \ge 1}$ is *(infinitely) exchangeable* if $X_1, \dots, X_n$ is exchangeable for every
+$n \ge 1$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** The symbol $\stackrel{d}{=}$ means "has the same distribution as": the two random
+vectors it joins are not equal value by value, but they follow the identical joint law. So
+exchangeability says that shuffling the labels of the variables leaves their joint distribution
+untouched. For an indirect comparison this is the precise version of a familiar judgment: the trials of
+treatment A versus B that we are about to combine are *exchangeable* if, before seeing any data, we have
+no reason to single out one trial's true effect as larger or smaller than another's. We are not claiming
+the trials are identical; we are claiming our ignorance about them is symmetric. That is exactly the
+state of mind in which pooling is defensible. $\blacktriangleleft$
+:::
+
+Exchangeability is strictly weaker than independence and identical distribution. Independent and
+identically distributed (iid) variables are exchangeable, because the joint density factors into a
+product that any permutation leaves unchanged. But exchangeable variables need not be independent: the
+defining symmetry permits the kind of positive dependence we expect among related studies, where
+learning the effect in one study revises our belief about the others. The following lemma is the source
+of every example of exchangeable-but-dependent variables we shall use.
+
+::: {.remark}
+**A primer on the measure-theoretic words (skim once, then refer back).** The next few proofs use a
+handful of terms from measure-theoretic probability. They make the statements airtight, but the modeling
+lessons survive without them, so on a first pass read the plain gloss and move on; nothing later in the
+chapter requires you to manipulate these objects by hand.
+
+- A *density with respect to a measure* generalizes "probability density." A *dominating measure* $\nu$
+  is the yardstick the density is measured against: Lebesgue measure (ordinary length or area) for
+  continuous data, counting measure for discrete data. "$f$ is a density with respect to $\nu$" just
+  means probabilities are recovered by integrating $f$ against $\nu$, which is an ordinary integral for
+  continuous data and a sum for discrete data.
+- *$\sigma$-finite* is a mild technical condition on $\nu$ (the space is a countable union of pieces of
+  finite measure) that every measure in this book satisfies; you may ignore it.
+- The *product measure* $\nu^{\otimes n}$ is the yardstick for $n$ independent coordinates at once; a
+  joint density "with respect to $\nu^{\otimes n}$" is the ordinary joint density of $(x_1,\dots,x_n)$.
+- *Integrating against a distribution* $\Pi$, written $\int \cdots \, d\Pi(\theta)$, is averaging over a
+  random parameter $\theta \sim \Pi$. It is more general than $\int \cdots f(\theta)\,d\theta$ because
+  $\Pi$ need not have a density (it could place point masses), but when $\Pi$ does have a density it is
+  the familiar weighted average.
+- The *Radon-Nikodym theorem* is the guarantee that the densities we write down exist; *Tonelli's* and
+  *Fubini's* theorems are the guarantees that we may swap the order of a double integral (Tonelli for
+  nonnegative integrands, Fubini once absolute integrability is checked). *Disintegration* is the formal
+  name for "conditional density": it is what makes $p(x,y) = p(x \mid y)\,p(y)$ rigorous in general.
+- A *martingale* (used once, in the de Finetti converse) is a running average or running total that, on
+  average, neither grows nor shrinks given the past; such sequences converge under mild conditions, which
+  is why an empirical frequency settles down to a limit.
+- The *kernel* of a density is its shape as a function of the unknown, dropping any constant that does
+  not depend on the unknown. Two densities with the same kernel are the same distribution, because the
+  constant is forced by the requirement that the density integrate to $1$. We use this constantly:
+  recognizing a kernel lets us read off a posterior without computing any normalizing integral.
+
+$\blacktriangleleft$
+:::
+
+::: {#lem-iid-mixture-exchangeable}
+## Mixtures of iid sequences are exchangeable
+Let $\Theta$ be a random parameter with distribution $\Pi$ on a space $\mathcal{T}$, and suppose that
+conditional on $\Theta = \theta$ the variables $X_1, \dots, X_n$ are iid with density $f(\cdot \mid
+\theta)$ with respect to a dominating measure $\nu$ on $\mathcal{S}$. Then $X_1, \dots, X_n$ is
+exchangeable.
+:::
+
+::: {.proof}
+The joint density of $(X_1, \dots, X_n)$ with respect to $\nu^{\otimes n}$ is obtained by integrating
+the conditional joint density against $\Pi$:
+$$
+p(x_1, \dots, x_n) = \int_{\mathcal{T}} \prod_{i=1}^{n} f(x_i \mid \theta) \, d\Pi(\theta).
+$$
+For any permutation $\sigma$, the product $\prod_{i=1}^{n} f(x_i \mid \theta)$ is unchanged when the
+arguments $x_1, \dots, x_n$ are permuted, since multiplication is commutative; this holds for every
+fixed $\theta$, hence after integration $p(x_{\sigma(1)}, \dots, x_{\sigma(n)}) = p(x_1, \dots, x_n)$.
+Equal joint densities give equal joint distributions, so the collection is exchangeable. $\square$
+:::
+
+The hierarchical model is exactly the structure of @lem-iid-mixture-exchangeable read as a generative
+recipe: draw a latent $\theta$, then draw conditionally iid data. The remarkable content of de
+Finetti's theorem is that, for infinite sequences, this is the *only* structure an exchangeable law can
+have. We state the binary case, which is cleanest, prove the direction we shall use, and cite the
+converse.
+
+Before the formal statement, the idea in one sentence: *if you genuinely cannot tell the units apart
+before seeing data, then they must share something, and that "something" can always be written as a
+single hidden parameter which, once fixed, makes the units independent and identically distributed.* The
+hierarchical "draw $\theta$, then draw data" recipe is therefore not one modeling option among many; for
+an exchangeable sequence it is forced. This is precisely the license a health researcher needs for
+random-effects meta-analysis: treating the study effects as a sample drawn from a population of effects
+is not a convenience, it is the only coherent way to encode "the trials are exchangeable." Everything
+after the hidden parameter is bookkeeping.
+
+::: {#thm-de-finetti}
+## de Finetti representation (binary case)
+Let $(X_i)_{i \ge 1}$ be an infinitely exchangeable sequence of $\{0,1\}$-valued random variables. Then
+there is a unique probability measure $\Pi$ on $[0,1]$ such that for every $n$ and every
+$(x_1, \dots, x_n) \in \{0,1\}^n$ with $s = \sum_{i=1}^n x_i$,
+$$
+P(X_1 = x_1, \dots, X_n = x_n) = \int_0^1 \theta^{s}(1-\theta)^{n-s} \, d\Pi(\theta).
+$$ {#eq-definetti}
+Equivalently, there is a random variable $\Theta \sim \Pi$ such that, conditional on $\Theta = \theta$,
+the $X_i$ are iid $\mathrm{Ber}(\theta)$; moreover $\Theta = \lim_{n\to\infty} \frac{1}{n}\sum_{i=1}^n
+X_i$ almost surely.
+:::
+
+::: {.proof}
+The direction we use in modeling, that any law of the form @eq-definetti is exchangeable, is immediate
+from @lem-iid-mixture-exchangeable with $f(x \mid \theta) = \theta^x (1-\theta)^{1-x}$: the right side
+of @eq-definetti depends on $(x_1, \dots, x_n)$ only through $s$, which is permutation-invariant. The
+converse, that every infinitely exchangeable binary law admits the representation @eq-definetti with a
+unique mixing measure $\Pi$, is the substantive half of the theorem; it is proved by showing that the
+empirical frequencies $\frac{1}{n}\sum_{i\le n} X_i$ form a bounded martingale (a running average that,
+given the past, neither drifts up nor down) and therefore converge almost surely to a limit $\Theta$
+whose distribution is the required $\Pi$; the hidden parameter is thus literally the long-run frequency
+of successes, and the finite-dimensional probabilities match @eq-definetti in the limit. We cite this converse to the standard literature
+(Hewitt and Savage 1955; see the work log) rather than reproduce its measure-theoretic apparatus here.
+$\square$
+:::
+
+::: {.remark}
+The general (real-valued) de Finetti theorem of Hewitt and Savage replaces $\mathrm{Ber}(\theta)$ by an
+arbitrary sampling distribution and $[0,1]$ by an abstract parameter space: an infinitely exchangeable
+sequence of random variables is a mixture of iid sequences. This is the precise sense in which
+"exchangeable units" and "conditionally iid given a latent parameter" coincide for infinite
+populations. Finite exchangeable sequences are only approximately of this form, which matters little
+for our applications because the latent parameter is the quantity of scientific interest and the number
+of studies, though finite, is treated as a sample from a conceptual super-population of studies.
+$\blacktriangleleft$
+:::
+
+A two-point mixing distribution makes the representation concrete and the dependence visible by hand.
+
+::: {#exm-de-finetti-binary}
+## de Finetti with a hand calculation
+Imagine binary responses from a population that is half "low responders" and half "high responders":
+with probability $\tfrac12$ the latent rate is $\theta = 0.3$ and with probability $\tfrac12$ it is
+$\theta = 0.7$, so $\Pi$ puts mass $\tfrac12$ at each. Given $\theta$, responses are iid
+$\mathrm{Ber}(\theta)$. For three patients, the probability of any pattern with $s = 2$ successes is, by
+@eq-definetti,
+$$
+\int_0^1 \theta^{2}(1-\theta)^{1}\, d\Pi(\theta)
+= \tfrac12\,(0.3)^2(0.7) + \tfrac12\,(0.7)^2(0.3) = \tfrac12(0.063) + \tfrac12(0.147) = 0.105.
+$$
+The answer depends on the data only through $s = 2$, not on which two patients responded: that is
+exchangeability, confirmed numerically. The variables are *not* independent, though. A single response
+has $P(X_1 = 1) = \mathbb{E}[\theta] = \tfrac12(0.3) + \tfrac12(0.7) = 0.5$, yet two responses have
+$P(X_1 = 1, X_2 = 1) = \mathbb{E}[\theta^2] = \tfrac12(0.09) + \tfrac12(0.49) = 0.29$, which exceeds
+$0.5 \times 0.5 = 0.25$. Seeing one success raises the chance of a second, because it nudges our belief
+about $\theta$ toward $0.7$. The hidden $\theta$ is exactly the engine of borrowing strength: data on
+some units inform the others only through what they reveal about $\theta$. $\blacktriangleleft$
+:::
+
+For a finite meta-analysis the practical reading is this. de Finetti's theorem is the idealized
+justification, stated for an infinite exchangeable population; real evidence synthesis has a finite
+number of studies, which we treat as exchangeable *conditional on shared hyperparameters* and as a
+sample from a conceptual population of possible studies. The infinite theorem tells us the right shape
+for the model (a latent population parameter with conditionally independent studies); the finite model
+of @def-hierarchical-model, with its hyperprior, is that shape made operational and honest about
+uncertainty in the hyperparameters.
+
+We can now define the object the theorem motivates.
+
+::: {#def-hierarchical-model}
+## Bayesian hierarchical model
+A *two-level Bayesian hierarchical model* for units $j = 1, \dots, J$ consists of:
+
+1. a *sampling distribution* for the data, $y_j \mid \theta_j \sim p(y_j \mid \theta_j)$, independent
+   across $j$ given the unit parameters;
+2. a *population distribution* (second-level prior) for the unit parameters, $\theta_j \mid
+   \boldsymbol\phi \sim p(\theta_j \mid \boldsymbol\phi)$, iid across $j$ given a hyperparameter
+   $\boldsymbol\phi$; and
+3. a *hyperprior* $\boldsymbol\phi \sim p(\boldsymbol\phi)$.
+
+The joint density factors as
+$$
+p(\mathbf y, \boldsymbol\theta, \boldsymbol\phi)
+= p(\boldsymbol\phi) \prod_{j=1}^{J} p(\theta_j \mid \boldsymbol\phi)\, p(y_j \mid \theta_j),
+$$ {#eq-hier-factor}
+where $\boldsymbol\theta = (\theta_1, \dots, \theta_J)$ and $\mathbf y = (y_1, \dots, y_J)$. Models with
+further levels (units nested in groups nested in populations) are defined by iterating the
+construction. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** The three stages name three different things, and keeping them apart is most of
+the battle. The *sampling distribution* (stage 1) is what each trial *observed*: its estimate $y_j$ given
+its own true effect $\theta_j$. The *population distribution* (stage 2) is what the trials *share*: the
+$\theta_j$ are drawn from one population governed by the hyperparameter $\boldsymbol\phi$ (for us
+$\boldsymbol\phi = (\mu, \tau^2)$). The *hyperprior* (stage 3) is our *uncertainty about that shared
+population* before any data. In one line: stage 1 is observed, the $\theta_j$ are latent, and
+$\boldsymbol\phi$ is shared. This is the skeleton of every Bayesian network meta-analysis in Part III,
+where the unit parameters are study-level treatment contrasts and the shared $\boldsymbol\phi$ is the
+pooled effect plus the heterogeneity. $\blacktriangleleft$
+:::
+
+Stage 2 of @def-hierarchical-model encodes exactly the exchangeability of the unit parameters: given
+$\boldsymbol\phi$ they are iid, so unconditionally they are exchangeable by @lem-iid-mixture-exchangeable.
+The hyperparameter $\boldsymbol\phi$ is what the units have in common, and the hyperprior expresses our
+uncertainty about it. Inference for any single $\theta_j$ now flows through the others, because the data
+from all units inform $\boldsymbol\phi$, which in turn informs each $\theta_j$. This is the mechanism of
+borrowing strength, and the rest of the chapter makes it quantitative.
+
+## The normal-normal model: random effects versus fixed effects {#sec-normal-hierarchical}
+
+The canonical instance of @def-hierarchical-model, and the workhorse of meta-analysis, is Gaussian at
+both levels. Suppose study $j$ reports an effect estimate $y_j$ (for concreteness, a log odds ratio)
+together with its standard error, so that the within-study sampling variance $s_j^2$ is known to good
+approximation. The two-level model is
+$$
+y_j \mid \theta_j \sim \mathcal{N}(\theta_j, s_j^2), \qquad
+\theta_j \mid \mu, \tau^2 \sim \mathcal{N}(\mu, \tau^2), \qquad j = 1, \dots, J,
+$$ {#eq-normal-normal-model}
+with hyperparameters $\boldsymbol\phi = (\mu, \tau^2)$. Here $\theta_j$ is the true effect in study $j$,
+$\mu$ is the population mean effect, and $\tau^2$ is the between-study variance that measures
+heterogeneity. The distinction between the two ways of reading $\theta_j$ is the distinction between
+fixed and random effects.
+
+The same five objects, read in the language of the running example of @exm-three-trials-early, are the
+following.
+
+| Object | Symbol | Trial 1 value | Reading |
+|---|---|---|---|
+| observed estimate | $y_j$ | $0.0$ | what trial $j$ reported (a log OR) |
+| standard error | $s_j$ | $0.5$ | how precise that report is |
+| within-study variance | $s_j^2$ | $0.25$ | squared standard error, treated as known |
+| true study effect | $\theta_j$ | unknown | what trial $j$ would report with infinite data |
+| population mean | $\mu$ | unknown | the average true effect across trials |
+| heterogeneity | $\tau^2$ | unknown | how widely the $\theta_j$ scatter around $\mu$ |
+
+A feel for $\tau^2$ is worth having now, because it governs everything downstream. On the log-OR scale a
+between-study standard deviation $\tau = 0.5$ (so $\tau^2 = 0.25$) means a typical trial's true effect
+lies within roughly $\pm 1$ of $\mu$ on the log-OR scale, that is, within a factor of about
+$e^{\pm 1} \approx (0.37,\, 2.7)$ on the odds-ratio scale: real, substantial heterogeneity. A value such
+as $\tau^2 = 0.01$ ($\tau = 0.1$) would mean the trials nearly agree, and $\tau^2 \to 0$ would force them
+to share one true effect. The whole job of @sec-reml-eb is to let the data estimate this number rather
+than guess it.
+
+::: {#def-random-effects}
+## Fixed effects and random effects
+In a model with unit parameters $\theta_1, \dots, \theta_J$ for the data $y_j \mid \theta_j \sim p(y_j
+\mid \theta_j)$:
+
+- the parameters are *fixed effects* if they are treated as unrelated unknown constants, each estimated
+  only from its own unit (formally, the joint model places no second-level distribution linking them,
+  so inference for $\theta_j$ uses $y_j$ alone); and
+- the parameters are *random effects* if they are modeled as an exchangeable sample from a common
+  population distribution $\theta_j \mid \boldsymbol\phi \sim p(\cdot \mid \boldsymbol\phi)$, so that
+  information is shared across units through the common hyperparameter $\boldsymbol\phi$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**A terminology warning you will be glad to have.** The words "fixed" and "random effects" mean different
+things in different fields, and meta-analysis is the worst trap. In regression and mixed-model language,
+which @def-random-effects follows, *fixed effects* are unrelated unknown constants estimated each from
+its own unit (no link, the $\tau^2 \to \infty$ extreme). But in meta-analysis software (RevMan, the R
+package `metafor`) a *fixed-effect model*, increasingly called a *common-effect model*, means the
+opposite extreme: there is one single true effect shared by every study, $\theta_1 = \dots = \theta_J =
+\mu$, which is complete pooling, the $\tau^2 \to 0$ case. So the meta-analysis "fixed-effect model" is
+this chapter's *complete pooling*, not its *fixed effects*. The table reconciles the three usages.
+
+| Term (and field) | Meaning here | Limit |
+|---|---|---|
+| fixed effects (regression, mixed models) | unrelated unknown constants, each from its own unit | $\tau^2 \to \infty$ (no link) |
+| fixed-effect or common-effect model (meta-analysis) | one shared true effect $\theta_1 = \dots = \theta_J = \mu$ | $\tau^2 = 0$ (complete pooling) |
+| random-effects model (both fields) | true effects are an exchangeable sample from a population | $0 < \tau^2 < \infty$ (partial pooling) |
+
+The practical choice is simple to state. If you believe every trial estimates the *same* underlying drug
+effect, the common-effect (meta-analysis "fixed-effect") model is appropriate. If you believe each trial
+has *its own* true effect drawn from a population of trial effects, use random effects. The
+random-effects model of @eq-normal-normal-model contains both beliefs as the extremes $\tau^2 = 0$ and
+$\tau^2 \to \infty$, and lets the data choose where between them to sit. $\blacktriangleleft$
+:::
+
+The two readings are genuinely different probability models, and the difference is visible in the
+marginal law of the data. Under fixed effects the $y_j$ are independent with means $\theta_j$ that bear
+no stated relation. Under random effects, integrating out $\theta_j$ in @eq-normal-normal-model gives a
+marginal model in which every observation carries information about the shared $(\mu, \tau^2)$, hence
+about every other unit; we compute that marginal in @prp-normal-marginal. The fixed-effects analysis is
+the $\tau^2 \to \infty$ limit of the random-effects analysis (an improper flat population that links
+nothing), and the complete-pooling analysis $\theta_1 = \dots = \theta_J = \mu$ is the $\tau^2 \to 0$
+limit (a degenerate population that forces equality). The random-effects model contains both as extreme
+cases and lets the data choose where between them to sit, by estimating $\tau^2$. Three estimators of
+the study effects correspond to the three regimes:
+$$
+\underbrace{\hat\theta_j = y_j}_{\text{no pooling}\;(\tau^2 = \infty)}, \qquad
+\underbrace{\hat\theta_j = \bar y_w}_{\text{complete pooling}\;(\tau^2 = 0)}, \qquad
+\underbrace{\hat\theta_j = \text{posterior mean}}_{\text{partial pooling}\;(0 < \tau^2 < \infty)},
+$$
+where $\bar y_w$ is a precision-weighted average. To compute the partial-pooling estimator we need
+Bayes' theorem and the normal-normal conjugate update, which we now develop in general before returning
+to specialize them in @sec-shrinkage.
+
+## Bayes' theorem for parameters {#sec-bayes}
+
+Bayesian inference treats the parameter as a random variable, assigns it a prior distribution, and
+updates that distribution by conditioning on the data. The update is Bayes' theorem. Five distributions
+recur from here on; they are worth fixing in a table before any algebra.
+
+| Distribution | Symbol | The question it answers |
+|---|---|---|
+| prior | $\pi(\boldsymbol\xi)$ | what we believe about the parameter *before* data |
+| likelihood | $p(\mathbf y \mid \boldsymbol\xi)$ | how probable the observed data are for each parameter value |
+| posterior | $\pi(\boldsymbol\xi \mid \mathbf y)$ | what we believe about the parameter *after* data |
+| marginal likelihood | $p(\mathbf y)$ | how probable the data are overall, averaging the likelihood over the prior |
+| posterior predictive | $p(\tilde{\mathbf y} \mid \mathbf y)$ | what *future* data should look like, given the data so far |
+
+The working content of Bayes' theorem is a single proportionality, posterior $\propto$ likelihood
+$\times$ prior, and it needs nothing measure-theoretic. The simplest possible instance uses pure
+arithmetic.
+
+::: {#exm-bayes-discrete}
+## A one-line Bayes update with no calculus
+Before a trial we entertain just two possibilities for a treatment's true response probability: a
+"modest" rate $p = 0.3$ and a "strong" rate $p = 0.6$, judged equally likely, so the prior is
+$\pi(0.3) = \pi(0.6) = 0.5$. One patient is treated and responds ($y = 1$). The likelihood of this datum
+is $p(y = 1 \mid p) = p$, so by posterior $\propto$ likelihood $\times$ prior,
+$$
+\pi(0.3 \mid y) \propto 0.3 \times 0.5 = 0.15, \qquad \pi(0.6 \mid y) \propto 0.6 \times 0.5 = 0.30.
+$$
+Normalizing so the two add to $1$ (dividing by $0.15 + 0.30 = 0.45$) gives
+$\pi(0.3 \mid y) = \tfrac13$ and $\pi(0.6 \mid y) = \tfrac23$. The single success has shifted belief from
+$50{:}50$ toward the stronger rate, exactly as intuition demands, and the only operation was "multiply,
+then rescale to sum to one." Bayes' theorem below is this same recipe with a sum replaced by an integral.
+$\blacktriangleleft$
+:::
+
+The theorem states the recipe in full generality, for parameters living in continuous spaces where the
+"rescale to one" step is an integral and densities must be handled with care. Its content is
+*interpretive and computational, not analytical*: in practice you use the proportional form above. The
+proof that follows is the measure-theoretic guarantee that the proportional form is legitimate even when
+the parameter has no density in the elementary sense; a reader meeting measure theory for the first time
+may take the boxed primer on faith and skim the proof, losing nothing needed for the rest of the
+chapter.
+
+::: {#thm-bayes}
+## Bayes' theorem (densities)
+Let $\boldsymbol\xi$ take values in a measurable space $(\Xi, \mathcal{G})$ with prior density
+$\pi(\boldsymbol\xi)$ with respect to a $\sigma$-finite dominating measure $\mu$, and let the data
+$\mathbf y$ take values in $(\mathcal{Y}, \mathcal{B})$ with conditional density $p(\mathbf y \mid
+\boldsymbol\xi)$ with respect to a $\sigma$-finite measure $\nu$. Define the *marginal likelihood*
+$$
+p(\mathbf y) = \int_{\Xi} p(\mathbf y \mid \boldsymbol\xi)\, \pi(\boldsymbol\xi) \, d\mu(\boldsymbol\xi).
+$$
+Then for every $\mathbf y$ with $p(\mathbf y) > 0$, a version of the posterior density of
+$\boldsymbol\xi$ given $\mathbf y$ (with respect to $\mu$) is
+$$
+\pi(\boldsymbol\xi \mid \mathbf y) = \frac{p(\mathbf y \mid \boldsymbol\xi)\, \pi(\boldsymbol\xi)}{p(\mathbf y)}.
+$$ {#eq-bayes}
+:::
+
+::: {.proof}
+By construction the pair $(\boldsymbol\xi, \mathbf y)$ has joint density $p(\boldsymbol\xi, \mathbf y) =
+p(\mathbf y \mid \boldsymbol\xi)\,\pi(\boldsymbol\xi)$ with respect to the product measure $\mu \otimes
+\nu$; the existence of these densities is the Radon-Nikodym theorem applied to the assumed dominated
+families. The marginal density of $\mathbf y$ is $p(\mathbf y) = \int_\Xi p(\boldsymbol\xi, \mathbf y)\,
+d\mu(\boldsymbol\xi)$, by Tonelli's theorem applied to the nonnegative integrand. Fix $\mathbf y$ with
+$p(\mathbf y) > 0$ and let $g$ denote the right side of @eq-bayes, a nonnegative function of
+$\boldsymbol\xi$ with $\int_\Xi g\, d\mu = p(\mathbf y)/p(\mathbf y) = 1$, hence a probability density
+with respect to $\mu$. To see that $g(\cdot \mid \mathbf y)$ is a version of the conditional density, we
+verify the defining disintegration property: for every bounded measurable $h: \Xi \to \mathbb{R}$ and
+every $B \in \mathcal{B}$,
+$$
+\mathbb{E}\!\left[h(\boldsymbol\xi)\,\mathbf 1_B(\mathbf y)\right]
+= \int_B \left( \int_\Xi h(\boldsymbol\xi)\, g(\boldsymbol\xi \mid \mathbf y)\, d\mu(\boldsymbol\xi) \right) p(\mathbf y)\, d\nu(\mathbf y).
+$$
+Indeed, writing the left side through the joint density and substituting $p(\boldsymbol\xi, \mathbf y) =
+g(\boldsymbol\xi \mid \mathbf y)\, p(\mathbf y)$,
+$$
+\mathbb{E}\!\left[h(\boldsymbol\xi)\,\mathbf 1_B(\mathbf y)\right]
+= \int_B \int_\Xi h(\boldsymbol\xi)\, p(\boldsymbol\xi, \mathbf y)\, d\mu(\boldsymbol\xi)\, d\nu(\mathbf y)
+= \int_B \int_\Xi h(\boldsymbol\xi)\, g(\boldsymbol\xi \mid \mathbf y)\, p(\mathbf y)\, d\mu(\boldsymbol\xi)\, d\nu(\mathbf y),
+$$
+which is the asserted identity by Fubini's theorem (the integrand is $\nu \otimes \mu$-integrable since
+$h$ is bounded and $p(\boldsymbol\xi,\mathbf y)$ integrates to $1$). The disintegration identity
+characterizes the conditional density up to $\mu$-null sets, so $g(\cdot \mid \mathbf y) =
+\pi(\cdot \mid \mathbf y)$ is the posterior density. $\square$
+:::
+
+::: {.remark}
+Three points organize everything that follows. First, the denominator $p(\mathbf y)$ does not depend on
+$\boldsymbol\xi$, so up to a normalizing constant @eq-bayes reads "posterior $\propto$ likelihood
+$\times$ prior," and every method that needs only the *shape* of the posterior (conjugate updating,
+Markov chain Monte Carlo) can ignore $p(\mathbf y)$. Second, the same $p(\mathbf y)$ is the central
+object of model comparison (@sec-marginal-likelihood), where its dependence on the model, not on
+$\boldsymbol\xi$, is exactly the point. Third, Bayes' theorem is a statement about densities; its use is
+a modeling decision, namely to regard $\boldsymbol\xi$ as random and to report $\pi(\boldsymbol\xi \mid
+\mathbf y)$ as the inference. (Corresponds to L.1 in the proof catalogue.) $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why this matters.** Every Bayesian network meta-analysis in this book is this one update applied to
+study-level treatment contrasts: a prior on the pooled effects and heterogeneity, a binomial or normal
+likelihood from the trials, and a posterior that the software reports. The proportional form posterior
+$\propto$ likelihood $\times$ prior is all that the Markov chain Monte Carlo of @sec-mcmc ever needs,
+because the unknown constant $p(\mathbf y)$ cancels in every ratio it computes. $\blacktriangleleft$
+:::
+
+## Conjugate analysis {#sec-conjugacy}
+
+A prior family is *conjugate* to a likelihood when the posterior stays in the family, with updated
+hyperparameters. Conjugacy turns @eq-bayes into algebra, gives closed-form posteriors that we can read
+and check, and supplies the building blocks of both the shrinkage estimator and the Gibbs updates inside
+samplers. We prove the two pairs we use in full and state the third.
+
+### Normal-normal conjugacy
+
+::: {#thm-conjugate-normal}
+## Normal-normal conjugacy
+Let $y \mid \theta \sim \mathcal{N}(\theta, \sigma^2)$ with $\sigma^2 > 0$ known, and let the prior be
+$\theta \sim \mathcal{N}(\mu_0, \tau_0^2)$. Then the posterior is
+$$
+\theta \mid y \sim \mathcal{N}(\mu_1, \tau_1^2), \qquad
+\frac{1}{\tau_1^2} = \frac{1}{\tau_0^2} + \frac{1}{\sigma^2}, \qquad
+\mu_1 = \tau_1^2 \left( \frac{\mu_0}{\tau_0^2} + \frac{y}{\sigma^2} \right).
+$$ {#eq-conjugate-normal}
+If instead we observe an iid sample $y_1, \dots, y_n \mid \theta \sim \mathcal{N}(\theta, \sigma^2)$,
+the same conclusion holds with $y$ replaced by $\bar y = \frac1n \sum_i y_i$ and $\sigma^2$ replaced by
+$\sigma^2/n$, so that $\tau_1^{-2} = \tau_0^{-2} + n\sigma^{-2}$.
+:::
+
+::: {.proof}
+By Bayes' theorem in proportional form (@thm-bayes), the posterior density is proportional in $\theta$
+to the product of the likelihood and the prior:
+$$
+\pi(\theta \mid y) \propto \exp\!\left(-\frac{(y - \theta)^2}{2\sigma^2}\right)
+\exp\!\left(-\frac{(\theta - \mu_0)^2}{2\tau_0^2}\right)
+= \exp\!\left(-\frac12 Q(\theta)\right),
+$$
+where, collecting the two quadratics,
+$$
+Q(\theta) = \frac{(\theta - y)^2}{\sigma^2} + \frac{(\theta - \mu_0)^2}{\tau_0^2}
+= \left(\frac{1}{\sigma^2} + \frac{1}{\tau_0^2}\right)\theta^2
+- 2\theta\left(\frac{y}{\sigma^2} + \frac{\mu_0}{\tau_0^2}\right) + \text{const}.
+$$
+Write $\tau_1^{-2} = \sigma^{-2} + \tau_0^{-2}$ for the coefficient of $\theta^2$ and $\mu_1 = \tau_1^2(
+y\sigma^{-2} + \mu_0\tau_0^{-2})$. Completing the square,
+$$
+Q(\theta) = \frac{1}{\tau_1^2}\bigl(\theta^2 - 2\theta\mu_1\bigr) + \text{const}
+= \frac{(\theta - \mu_1)^2}{\tau_1^2} + \text{const},
+$$
+where the constant absorbs all terms free of $\theta$. Hence $\pi(\theta \mid y) \propto \exp(-(\theta -
+\mu_1)^2/(2\tau_1^2))$, which is the kernel of the $\mathcal{N}(\mu_1, \tau_1^2)$ density; since a
+density is determined by its kernel (@prp-mvn-density), the posterior is $\mathcal{N}(\mu_1, \tau_1^2)$.
+For the iid sample, the likelihood factor is $\prod_i \exp(-(y_i - \theta)^2/(2\sigma^2)) =
+\exp(-\sum_i (y_i - \theta)^2/(2\sigma^2))$, and $\sum_i (y_i - \theta)^2 = n(\bar y - \theta)^2 +
+\sum_i (y_i - \bar y)^2$; the second term is free of $\theta$, so the sample enters exactly as a single
+observation $\bar y$ with variance $\sigma^2/n$. $\square$
+:::
+
+::: {.remark}
+Equation @eq-conjugate-normal is the rule "precisions add, and the posterior mean is the
+precision-weighted average of prior mean and data." Writing the precision $\tau_1^{-2}$ as the sum of
+the prior precision $\tau_0^{-2}$ and the data precision $\sigma^{-2}$ makes the update additive in
+information, and exhibits the posterior mean $\mu_1 = (\tau_0^{-2}\mu_0 + \sigma^{-2} y)/(\tau_0^{-2} +
+\sigma^{-2})$ as a weighted average with weights proportional to those precisions. This is the analytic
+heart of shrinkage. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why this matters.** This single update is what a Bayesian network meta-analysis performs for each
+study-level treatment contrast: the prior mean $\mu_0$ is the pooled effect, the datum $y$ is one trial's
+log odds ratio, and the posterior mean $\mu_1$ is that trial's shrunken contrast. Read the update with
+$\mu_0$ as the network's pooled effect and you are looking at the engine of Part III. $\blacktriangleleft$
+:::
+
+The same computation runs in any dimension and is the bridge to the multivariate normal of Chapter 4. We
+need the multivariate version because a network meta-analysis estimates a whole *vector* of pooled
+contrasts at once (treatment $B$ versus $A$, $C$ versus $A$, and so on), correlated through the studies
+they share; the update below is the joint version of the scalar shrinkage above, applied to that vector
+of effects.
+
+::: {#cor-conjugate-normal-mv}
+## Multivariate normal-normal conjugacy
+Let $\mathbf y \mid \boldsymbol\theta \sim \mathcal{N}_p(\boldsymbol\theta, \boldsymbol\Sigma)$ with
+$\boldsymbol\Sigma \succ 0$ known, and let $\boldsymbol\theta \sim \mathcal{N}_p(\mathbf m_0,
+\boldsymbol\Omega_0)$ with $\boldsymbol\Omega_0 \succ 0$. Then
+$$
+\boldsymbol\theta \mid \mathbf y \sim \mathcal{N}_p(\mathbf m_1, \boldsymbol\Omega_1), \qquad
+\boldsymbol\Omega_1^{-1} = \boldsymbol\Omega_0^{-1} + \boldsymbol\Sigma^{-1}, \qquad
+\mathbf m_1 = \boldsymbol\Omega_1\bigl(\boldsymbol\Omega_0^{-1}\mathbf m_0 + \boldsymbol\Sigma^{-1}\mathbf y\bigr).
+$$
+:::
+
+::: {.proof}
+The posterior is proportional in $\boldsymbol\theta$ to $\exp(-\tfrac12 Q(\boldsymbol\theta))$ with
+$$
+Q(\boldsymbol\theta) = (\mathbf y - \boldsymbol\theta)^\top \boldsymbol\Sigma^{-1}(\mathbf y - \boldsymbol\theta)
++ (\boldsymbol\theta - \mathbf m_0)^\top \boldsymbol\Omega_0^{-1}(\boldsymbol\theta - \mathbf m_0)
+= \boldsymbol\theta^\top \boldsymbol\Omega_1^{-1}\boldsymbol\theta - 2\boldsymbol\theta^\top
+\bigl(\boldsymbol\Sigma^{-1}\mathbf y + \boldsymbol\Omega_0^{-1}\mathbf m_0\bigr) + \text{const},
+$$
+using symmetry of $\boldsymbol\Sigma^{-1}$ and $\boldsymbol\Omega_0^{-1}$ to combine the cross terms. The
+matrix $\boldsymbol\Omega_1^{-1} = \boldsymbol\Omega_0^{-1} + \boldsymbol\Sigma^{-1}$ is the sum of two
+positive definite matrices, hence positive definite and invertible (@thm-pd-characterization), so
+$\boldsymbol\Omega_1$ is well defined and $\succ 0$. With $\mathbf m_1 = \boldsymbol\Omega_1(
+\boldsymbol\Sigma^{-1}\mathbf y + \boldsymbol\Omega_0^{-1}\mathbf m_0)$, completing the square in the
+$\boldsymbol\Omega_1^{-1}$ quadratic form (@def-quadratic-form) gives $Q(\boldsymbol\theta) =
+(\boldsymbol\theta - \mathbf m_1)^\top \boldsymbol\Omega_1^{-1}(\boldsymbol\theta - \mathbf m_1) +
+\text{const}$, the kernel of $\mathcal{N}_p(\mathbf m_1, \boldsymbol\Omega_1)$. $\square$
+:::
+
+::: {.remark}
+The same posterior can be read off without algebra by stacking $(\boldsymbol\theta, \mathbf y)$ into a
+joint Gaussian and applying the conditioning formula @thm-mvn-conditional: with $\boldsymbol\theta \sim
+\mathcal{N}_p(\mathbf m_0, \boldsymbol\Omega_0)$ and $\mathbf y \mid \boldsymbol\theta \sim
+\mathcal{N}_p(\boldsymbol\theta, \boldsymbol\Sigma)$, the pair is jointly normal, and the conditional of
+$\boldsymbol\theta$ given $\mathbf y$ is normal with the stated mean and covariance. The two routes
+agree, which is a useful check on @thm-mvn-conditional. $\blacktriangleleft$
+:::
+
+### Beta-binomial conjugacy
+
+::: {#thm-conjugate-beta-binomial}
+## Beta-binomial conjugacy
+Let $y \mid p \sim \mathrm{Bin}(n, p)$ and let the prior be $p \sim \mathrm{Beta}(a, b)$ with $a, b > 0$.
+Then
+$$
+p \mid y \sim \mathrm{Beta}(a + y, \, b + n - y),
+$$ {#eq-conjugate-beta}
+and the posterior mean is the convex combination
+$$
+\mathbb{E}[p \mid y] = \frac{a + y}{a + b + n}
+= \frac{a + b}{a + b + n}\cdot \frac{a}{a + b} + \frac{n}{a + b + n}\cdot \frac{y}{n}.
+$$
+:::
+
+::: {.proof}
+The likelihood is $p(y \mid p) = \binom{n}{y} p^y (1 - p)^{n - y} \propto p^y (1 - p)^{n - y}$ as a
+function of $p$, and the prior density is $\pi(p) = \frac{1}{B(a,b)} p^{a-1}(1 - p)^{b-1} \propto
+p^{a-1}(1 - p)^{b-1}$ on $(0,1)$, where $B(a,b) = \Gamma(a)\Gamma(b)/\Gamma(a+b)$ is the beta function.
+By @thm-bayes,
+$$
+\pi(p \mid y) \propto p^{y}(1 - p)^{n - y} \cdot p^{a-1}(1 - p)^{b-1}
+= p^{(a + y) - 1}(1 - p)^{(b + n - y) - 1},
+$$
+which is the kernel of the $\mathrm{Beta}(a + y, b + n - y)$ density. A density is determined by its
+kernel and its total mass $1$; the unique normalizing constant making the displayed kernel integrate to
+$1$ is $1/B(a + y, b + n - y)$, so the posterior is $\mathrm{Beta}(a + y, b + n - y)$. The mean of a
+$\mathrm{Beta}(\alpha, \beta)$ variable is $\alpha/(\alpha + \beta)$; substituting $\alpha = a + y$ and
+$\beta = b + n - y$ gives $(a + y)/(a + b + n)$, and splitting the numerator as $a + y$ and writing the
+denominator as $(a + b) + n$ produces the stated convex combination of the prior mean $a/(a+b)$ and the
+maximum likelihood estimate $y/n$. $\square$
+:::
+
+::: {.remark}
+The posterior mean again shrinks the data estimate $y/n$ toward the prior mean $a/(a + b)$, with weight
+$n/(a + b + n)$ on the data growing to $1$ as $n \to \infty$. The hyperparameters $a$ and $b$ act as
+prior "pseudo-counts" of successes and failures; this is the discrete-data analogue of the
+precision-weighting in @eq-conjugate-normal. $\blacktriangleleft$
+:::
+
+A number makes the update tangible, and event counts are the data a health researcher actually holds.
+
+::: {#exm-beta-binomial-early}
+## A treatment-response update by hand
+One trial arm treats $n = 8$ patients and $y = 7$ respond, a raw response rate of $7/8 = 0.875$. Before
+the trial we hold a weakly informative prior $p \sim \mathrm{Beta}(2, 2)$, centered at $0.5$ and worth two
+pseudo-successes and two pseudo-failures. By @thm-conjugate-beta-binomial the posterior is
+$$
+p \mid y \sim \mathrm{Beta}(2 + 7, \; 2 + 1) = \mathrm{Beta}(9, 3),
+$$
+with posterior mean $9/12 = 0.75$. The observed $0.875$ has been pulled toward the prior mean $0.5$; the
+pull is exactly the "four prior pseudo-patients out of twelve total" weight, $4/12 = \tfrac13$ toward
+$0.5$ and $8/12 = \tfrac23$ toward the data. Only two integers changed, $a \mapsto a + y$ and $b \mapsto
+b + (n - y)$: Bayesian updating with event counts is bookkeeping on responders and non-responders.
+$\blacktriangleleft$
+:::
+
+### Gamma-Poisson conjugacy
+
+We state the third standard pair, with its one-line proof, for completeness; it is the conjugate
+analysis behind count-data meta-analysis.
+
+::: {#prp-conjugate-gamma-poisson}
+## Gamma-Poisson conjugacy
+Let $y_1, \dots, y_n \mid \lambda \sim \mathrm{Poi}(\lambda)$ iid, and let $\lambda \sim
+\mathrm{Gamma}(a, b)$ with shape $a > 0$ and rate $b > 0$ (so $\mathbb{E}[\lambda] = a/b$). Then
+$$
+\lambda \mid \mathbf y \sim \mathrm{Gamma}\!\left(a + \textstyle\sum_{i=1}^n y_i, \; b + n\right).
+$$
+:::
+
+::: {.proof}
+The likelihood is $\prod_i e^{-\lambda}\lambda^{y_i}/y_i! \propto \lambda^{\sum_i y_i} e^{-n\lambda}$,
+and the prior density is $\propto \lambda^{a-1} e^{-b\lambda}$ on $\lambda > 0$. Their product is
+$\propto \lambda^{(a + \sum_i y_i) - 1} e^{-(b + n)\lambda}$, the kernel of $\mathrm{Gamma}(a + \sum_i
+y_i, \, b + n)$. $\square$
+:::
+
+## Partial pooling and the shrinkage estimator {#sec-shrinkage}
+
+We now apply conjugate analysis to the normal-normal model @eq-normal-normal-model. Fix the
+hyperparameters $(\mu, \tau^2)$ for the moment (we estimate them in @sec-reml-eb) and compute the
+posterior of each study effect $\theta_j$ given its estimate $y_j$. The result is the partial-pooling,
+or shrinkage, estimator, and it is the central object of this chapter.
+
+::: {#thm-shrinkage-posterior-mean}
+## Shrinkage as a posterior mean
+In the normal-normal model $y_j \mid \theta_j \sim \mathcal{N}(\theta_j, s_j^2)$ and $\theta_j \mid \mu,
+\tau^2 \sim \mathcal{N}(\mu, \tau^2)$ with $\mu, \tau^2$ and $s_j^2 > 0$ known, the posterior of
+$\theta_j$ given $y_j$ is normal,
+$$
+\theta_j \mid y_j \sim \mathcal{N}\!\left(\hat\theta_j, \; V_j\right),
+$$
+with posterior mean and variance
+$$
+\hat\theta_j = B_j\, \mu + (1 - B_j)\, y_j, \qquad
+V_j = (1 - B_j)\, s_j^2, \qquad
+B_j = \frac{s_j^2}{s_j^2 + \tau^2} = \frac{1/\tau^2}{\,1/\tau^2 + 1/s_j^2\,}.
+$$ {#eq-shrinkage}
+The *shrinkage factor* $B_j$ lies in $(0, 1)$, so the posterior mean is a strict convex combination of
+the population mean $\mu$ and the study estimate $y_j$, and the posterior variance $V_j = (1/\tau^2 +
+1/s_j^2)^{-1}$ is smaller than both $s_j^2$ and $\tau^2$.
+:::
+
+::: {.proof}
+The model is the single-observation normal-normal pair of @thm-conjugate-normal with prior mean
+$\mu_0 = \mu$, prior variance $\tau_0^2 = \tau^2$, and sampling variance $\sigma^2 = s_j^2$. By
+@eq-conjugate-normal the posterior is $\mathcal{N}(\hat\theta_j, V_j)$ with
+$$
+\frac{1}{V_j} = \frac{1}{\tau^2} + \frac{1}{s_j^2}, \qquad
+\hat\theta_j = V_j\left(\frac{\mu}{\tau^2} + \frac{y_j}{s_j^2}\right).
+$$
+Define $B_j = V_j/\tau^2$ and note $1 - B_j = V_j/s_j^2$, because $V_j/\tau^2 + V_j/s_j^2 = V_j(1/\tau^2
++ 1/s_j^2) = V_j \cdot V_j^{-1} = 1$. Substituting,
+$$
+\hat\theta_j = V_j\cdot\frac{\mu}{\tau^2} + V_j\cdot\frac{y_j}{s_j^2} = B_j\,\mu + (1 - B_j)\,y_j,
+$$
+which is the stated convex combination. From $1/V_j = 1/\tau^2 + 1/s_j^2$ we get $V_j = (1/\tau^2 +
+1/s_j^2)^{-1}$ and, multiplying $B_j = V_j/\tau^2$ through,
+$$
+B_j = \frac{V_j}{\tau^2} = \frac{1}{\tau^2}\cdot\frac{1}{1/\tau^2 + 1/s_j^2}
+= \frac{1/\tau^2}{1/\tau^2 + 1/s_j^2} = \frac{s_j^2}{s_j^2 + \tau^2},
+$$
+the last equality by multiplying numerator and denominator by $\tau^2 s_j^2$. Finally $V_j = (1 - B_j)
+s_j^2$ since $1 - B_j = V_j/s_j^2$. Because $s_j^2 > 0$ and $\tau^2 > 0$, the factor $B_j = s_j^2/(s_j^2
++ \tau^2)$ is strictly between $0$ and $1$, and $V_j = (1/\tau^2 + 1/s_j^2)^{-1} < (1/\tau^2)^{-1} =
+\tau^2$ and likewise $V_j < s_j^2$. $\square$
+:::
+
+::: {.remark}
+The estimator @eq-shrinkage interpolates exactly the three regimes of @sec-normal-hierarchical. As
+$\tau^2 \to \infty$ (a diffuse population, units unrelated) we have $B_j \to 0$ and $\hat\theta_j \to
+y_j$: no pooling. As $\tau^2 \to 0$ (a degenerate population, units identical) we have $B_j \to 1$ and
+$\hat\theta_j \to \mu$: complete pooling. For intermediate $\tau^2$, the study is shrunk toward the
+population mean by the fraction $B_j$, and a noisier study (larger $s_j^2$) is shrunk more, because its
+own estimate is less trustworthy: $B_j$ increases in $s_j^2$. This is borrowing strength made precise.
+The posterior variance $V_j$ is smaller than the naive $s_j^2$, which quantifies the information each
+study gains from the others through the shared $\mu$. $\blacktriangleleft$
+:::
+
+Put numbers to it with the three trials of @exm-three-trials-early. Suppose for the moment the population
+mean is $\mu = 0.6$ and the between-study standard deviation is $\tau = 0.5$ (so $\tau^2 = 0.25$), equal
+to the common $s_j^2 = 0.25$. Then @eq-shrinkage gives the same shrinkage factor $B_j = 0.25/(0.25 +
+0.25) = \tfrac12$ for every trial, so each estimate moves exactly halfway toward $0.6$:
+
+| Trial $j$ | raw $y_j$ | raw OR $e^{y_j}$ | shrunk $\hat\theta_j$ | shrunk OR $e^{\hat\theta_j}$ |
+|---|---|---|---|---|
+| 1 | $0.0$ | $1.00$ | $0.30$ | $1.35$ |
+| 2 | $0.6$ | $1.82$ | $0.60$ | $1.82$ |
+| 3 | $1.2$ | $3.32$ | $0.90$ | $2.46$ |
+
+This table is a forest plot in words: the two extreme, equally imprecise trials are drawn inward toward
+the center while the already-central trial 2 does not move, and the odds ratios follow. Trial 3's
+eye-catching raw odds ratio of $3.32$ becomes a soberer $2.46$ once we admit it is one noisy trial among
+three. The full calculation, with credible intervals and a $\tau^2$ estimated from the data, is carried
+out in @exm-three-study-shrinkage.
+
+::: {.remark}
+**Why this matters.** The shrinkage estimator @eq-shrinkage *is* the point estimate a random-effects
+meta-analysis reports for each study, and its network generalization (@sec-hb-bridge) is what a Bayesian
+NMA reports for each study-level contrast. When a paper says a network model "borrows strength across
+trials," this convex combination, with $\tau^2$ setting how far each estimate travels, is the precise
+mechanism. $\blacktriangleleft$
+:::
+
+The shrinkage estimator has a celebrated frequentist counterpart. Stein discovered that shrinkage
+improves estimation of a vector of normal means even with *no* prior and under squared-error loss, a
+result that overturned the presumption that the obvious estimator "use each $y_j$ for $\theta_j$" is
+optimal. We prove it, because it is the rigorous justification for pooling when one is reluctant to
+commit to a prior, and because it explains why empirical Bayes works. The engine is an integration-by-
+parts identity for the normal distribution.
+
+::: {#lem-stein}
+## Stein's lemma
+Let $Z \sim \mathcal{N}(\theta, \sigma^2)$ and let $h: \mathbb{R} \to \mathbb{R}$ be absolutely
+continuous with $\mathbb{E}\,|h'(Z)| < \infty$. Then
+$$
+\mathbb{E}\bigl[(Z - \theta)\, h(Z)\bigr] = \sigma^2\, \mathbb{E}\bigl[h'(Z)\bigr].
+$$
+:::
+
+::: {.proof}
+Write $\varphi(z) = (2\pi\sigma^2)^{-1/2}\exp(-(z - \theta)^2/(2\sigma^2))$ for the density of $Z$. It
+satisfies the identity $\varphi'(z) = -\frac{z - \theta}{\sigma^2}\varphi(z)$, equivalently $(z -
+\theta)\varphi(z) = -\sigma^2 \varphi'(z)$. Hence
+$$
+\mathbb{E}\bigl[(Z - \theta) h(Z)\bigr] = \int_{-\infty}^{\infty} h(z)(z - \theta)\varphi(z)\, dz
+= -\sigma^2 \int_{-\infty}^{\infty} h(z)\varphi'(z)\, dz.
+$$
+Integrating by parts, and using that $h(z)\varphi(z) \to 0$ as $z \to \pm\infty$ (which holds because
+$\mathbb{E}|h'(Z)| < \infty$ forces $h$ to grow slower than the Gaussian tail decays),
+$$
+-\sigma^2 \int_{-\infty}^{\infty} h(z)\varphi'(z)\, dz
+= -\sigma^2\Bigl[ h(z)\varphi(z)\Bigr]_{-\infty}^{\infty} + \sigma^2 \int_{-\infty}^{\infty} h'(z)\varphi(z)\, dz
+= \sigma^2\, \mathbb{E}\bigl[h'(Z)\bigr]. \qquad \square
+$$
+:::
+
+::: {#thm-james-stein}
+## James-Stein dominance
+Let $\mathbf Y \sim \mathcal{N}_J(\boldsymbol\theta, \sigma^2 I_J)$ with $\sigma^2$ known and $J \ge 3$,
+and define the James-Stein estimator
+$$
+\hat{\boldsymbol\theta}^{\mathrm{JS}} = \left(1 - \frac{(J - 2)\sigma^2}{\|\mathbf Y\|^2}\right)\mathbf Y.
+$$
+Then for every $\boldsymbol\theta \in \mathbb{R}^J$,
+$$
+\mathbb{E}\,\bigl\|\hat{\boldsymbol\theta}^{\mathrm{JS}} - \boldsymbol\theta\bigr\|^2
+= J\sigma^2 - (J - 2)^2 \sigma^4\, \mathbb{E}\!\left[\frac{1}{\|\mathbf Y\|^2}\right]
+< J\sigma^2 = \mathbb{E}\,\bigl\|\mathbf Y - \boldsymbol\theta\bigr\|^2.
+$$
+That is, $\hat{\boldsymbol\theta}^{\mathrm{JS}}$ has strictly smaller mean squared error than the
+maximum likelihood estimator $\mathbf Y$, uniformly in $\boldsymbol\theta$.
+:::
+
+::: {.proof}
+Write $\hat{\boldsymbol\theta}^{\mathrm{JS}} = \mathbf Y + \mathbf g(\mathbf Y)$ with $g_i(\mathbf y) =
+-(J - 2)\sigma^2\, y_i/\|\mathbf y\|^2$. Then
+$$
+\|\hat{\boldsymbol\theta}^{\mathrm{JS}} - \boldsymbol\theta\|^2
+= \|\mathbf Y - \boldsymbol\theta\|^2 + 2\sum_{i=1}^J (Y_i - \theta_i) g_i(\mathbf Y) + \|\mathbf g(\mathbf Y)\|^2.
+$$
+Taking expectations, the first term is $J\sigma^2$. For the cross term, apply Stein's lemma
+(@lem-stein) one coordinate at a time. Fix every coordinate except the $i$-th; then $g_i(\mathbf Y)$
+depends on the single scalar $Y_i \sim \mathcal{N}(\theta_i, \sigma^2)$ through the one-variable function
+$h(y_i) := g_i(Y_1, \dots, y_i, \dots, Y_J)$, with the other $Y_k$ riding along as constants, so Stein's
+lemma in that one variable gives $\mathbb{E}[(Y_i - \theta_i) g_i(\mathbf Y) \mid Y_k, k \ne i] =
+\sigma^2\, \mathbb{E}[\partial g_i/\partial y_i \mid Y_k, k \ne i]$. Averaging over the remaining
+coordinates (the tower property) removes the conditioning: $\mathbb{E}[(Y_i - \theta_i) g_i(\mathbf Y)] =
+\sigma^2\, \mathbb{E}[\partial g_i/\partial y_i]$. Summing,
+$$
+\mathbb{E}\Bigl[\textstyle\sum_i (Y_i - \theta_i) g_i(\mathbf Y)\Bigr]
+= \sigma^2\, \mathbb{E}\bigl[\nabla \cdot \mathbf g(\mathbf Y)\bigr].
+$$
+Differentiate: with $\|\mathbf y\|^2 = \sum_k y_k^2$,
+$$
+\frac{\partial g_i}{\partial y_i} = -(J - 2)\sigma^2\left(\frac{1}{\|\mathbf y\|^2} - \frac{2 y_i^2}{\|\mathbf y\|^4}\right),
+\qquad
+\nabla\cdot \mathbf g = -(J - 2)\sigma^2\left(\frac{J}{\|\mathbf y\|^2} - \frac{2}{\|\mathbf y\|^2}\right)
+= -\frac{(J - 2)^2 \sigma^2}{\|\mathbf y\|^2},
+$$
+using $\sum_i y_i^2 = \|\mathbf y\|^2$. Also $\|\mathbf g(\mathbf y)\|^2 = (J - 2)^2\sigma^4\,\|\mathbf
+y\|^2/\|\mathbf y\|^4 = (J - 2)^2\sigma^4/\|\mathbf y\|^2$. Combining,
+$$
+\mathbb{E}\,\|\hat{\boldsymbol\theta}^{\mathrm{JS}} - \boldsymbol\theta\|^2
+= J\sigma^2 + 2\sigma^2\!\left(-(J-2)^2\sigma^2\,\mathbb{E}\tfrac{1}{\|\mathbf Y\|^2}\right) + (J - 2)^2\sigma^4\,\mathbb{E}\tfrac{1}{\|\mathbf Y\|^2}
+= J\sigma^2 - (J - 2)^2\sigma^4\,\mathbb{E}\tfrac{1}{\|\mathbf Y\|^2}.
+$$
+The inverse moment $\mathbb{E}[1/\|\mathbf Y\|^2]$ is finite and strictly positive precisely when $J \ge
+3$: $\|\mathbf Y\|^2/\sigma^2$ is a *noncentral chi-square* with $J$ degrees of freedom (the distribution
+of a sum of $J$ squared independent unit-variance normals with possibly nonzero means; it reduces to the
+ordinary chi-square when $\boldsymbol\theta = \mathbf 0$), whose density behaves like $r^{J/2 - 1}$ near
+$0$, so $\int_0^1 r^{-1} r^{J/2 - 1}\, dr$ converges iff $J/2 - 1 > 0$,
+that is $J \ge 3$. Therefore the subtracted term is strictly positive and the risk is strictly below
+$J\sigma^2$ for every $\boldsymbol\theta$. $\square$
+:::
+
+::: {.remark}
+The James-Stein estimator is exactly the shrinkage estimator @eq-shrinkage with the population mean
+$\mu = 0$ and the shrinkage factor $B = (J - 2)\sigma^2/\|\mathbf Y\|^2$ estimated from the data rather
+than supplied by a prior. Writing $\hat B = (J - 2)\sigma^2/\|\mathbf Y\|^2$ as an estimate of $B =
+\sigma^2/(\sigma^2 + \tau^2)$ is precisely the empirical-Bayes recipe of @sec-reml-eb: the marginal
+variance of each $Y_i$ is $\sigma^2 + \tau^2$, so $\|\mathbf Y\|^2/(J - 2)$ is (almost) an unbiased
+estimate of $\sigma^2 + \tau^2$ and $\hat B$ estimates $B$. Stein's paradox is thus the statement that
+hierarchical shrinkage helps even when no genuine prior is believed, provided one estimates three or
+more means at once; this is the deepest justification for the partial pooling of meta-analysis.
+
+**Why this matters.** If you are reluctant to place a prior on the between-study variance $\tau^2$,
+James-Stein still licenses pooling. With three or more study effects, shrinking every raw estimate toward
+a common center has strictly smaller total mean squared error than reporting the raw estimates,
+*whatever* the true effects are, and with no prior at all. That is the frequentist permission slip for
+borrowing strength: partial pooling is not merely a Bayesian taste but a provable improvement, which is
+why it is the default even for analysts who never write down a hyperprior. The
+result is due to Stein and to James and Stein (1961), with the empirical-Bayes reading due to Efron and
+Morris (1975); see the work log for the bibliography. $\blacktriangleleft$
+:::
+
+## Variance components: REML and empirical Bayes {#sec-reml-eb}
+
+The shrinkage estimator of @sec-shrinkage assumed the hyperparameters $(\mu, \tau^2)$ known. In practice
+the between-study variance $\tau^2$ must be estimated, and this is delicate: ordinary maximum likelihood
+underestimates variance components because it does not pay for the degrees of freedom spent estimating
+the mean. Restricted maximum likelihood (REML) corrects this; empirical Bayes plugs the estimated
+hyperparameters back into the shrinkage formula.
+
+### The bias of maximum likelihood and the idea of REML
+
+The pathology is visible in the simplest model. For $y_1, \dots, y_n \sim \mathcal{N}(\mu, \sigma^2)$
+iid, the maximum likelihood estimator of $\sigma^2$ is $\hat\sigma^2_{\mathrm{ML}} = \frac1n \sum_i (y_i
+- \bar y)^2$, with $\mathbb{E}[\hat\sigma^2_{\mathrm{ML}}] = \frac{n - 1}{n}\sigma^2$, biased downward
+by the factor $(n - 1)/n$. The reason is that $\bar y$ is estimated from the same data, consuming one
+degree of freedom that the maximum likelihood denominator $n$ ignores. REML removes the dependence on
+the mean by basing inference for the variance on linear combinations of the data that are orthogonal to
+the mean, the *error contrasts*, whose distribution does not involve the fixed effects at all.
+
+::: {#def-reml}
+## Restricted maximum likelihood
+Consider the Gaussian linear model $\mathbf y \sim \mathcal{N}_n(\mathbf X\boldsymbol\beta, \mathbf
+V(\boldsymbol\vartheta))$, where $\mathbf X \in \mathbb{R}^{n \times p}$ has full column rank $p$,
+$\boldsymbol\beta \in \mathbb{R}^p$ are fixed effects, and $\mathbf V(\boldsymbol\vartheta) \succ 0$
+depends on variance parameters $\boldsymbol\vartheta$. An *error contrast* is a linear combination
+$\mathbf a^\top \mathbf y$ with $\mathbf X^\top \mathbf a = \mathbf 0$, that is $\mathbf a \in
+\mathcal{C}(\mathbf X)^\perp$. Let $\mathbf K \in \mathbb{R}^{n \times (n - p)}$ have full column rank
+with $\mathbf K^\top \mathbf X = \mathbf 0$, so its columns form a basis of $\mathcal{C}(\mathbf
+X)^\perp$. The *restricted maximum likelihood estimator* of $\boldsymbol\vartheta$ maximizes the
+likelihood of the transformed data $\mathbf K^\top \mathbf y$, which is
+$$
+\mathbf K^\top \mathbf y \sim \mathcal{N}_{n - p}\bigl(\mathbf 0, \; \mathbf K^\top \mathbf V(\boldsymbol\vartheta)\mathbf K\bigr),
+$$
+a distribution free of $\boldsymbol\beta$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** An *error contrast* $\mathbf a^\top\mathbf y$ with $\mathbf X^\top\mathbf a =
+\mathbf 0$ is a combination of the data that the fixed effects cannot touch: it lives in the residual
+space $\mathcal{C}(\mathbf X)^\perp$, the directions left over after the model's fitted part is removed.
+Looking only at these contrasts is looking only at the residuals, and residuals carry no information
+about where the mean sits. That is the whole trick of REML: estimate the variance from the part of the
+data that says nothing about the mean, so you are not charged twice for the mean you had to estimate. The
+matrix $\mathbf K$ merely collects a basis of that residual space, and the theorem below says the
+particular basis does not matter. $\blacktriangleleft$
+:::
+
+Two questions arise immediately: does the estimator depend on the arbitrary choice of contrast matrix
+$\mathbf K$, and what does maximizing the contrast likelihood give in a concrete model. We answer both.
+
+::: {#thm-reml-invariance}
+## REML is invariant to the choice of error contrasts
+The REML estimator of @def-reml does not depend on the choice of full-rank contrast matrix $\mathbf K$
+with $\mathbf K^\top \mathbf X = \mathbf 0$.
+:::
+
+::: {.proof}
+Let $\mathbf K_1$ and $\mathbf K_2$ be two such matrices. Each has $n - p$ independent columns lying in
+$\mathcal{C}(\mathbf X)^\perp$, and $\dim \mathcal{C}(\mathbf X)^\perp = n - \mathrm{rank}(\mathbf X) = n
+- p$ by the four-subspaces theorem (@thm-four-subspaces) and rank-nullity (@thm-rank-nullity). Hence the
+columns of each $\mathbf K_i$ are a basis of the *same* space $\mathcal{C}(\mathbf X)^\perp$, so there
+is an invertible $(n - p) \times (n - p)$ matrix $\mathbf T$ with $\mathbf K_2 = \mathbf K_1 \mathbf T$.
+Then $\mathbf K_2^\top \mathbf y = \mathbf T^\top (\mathbf K_1^\top \mathbf y)$ is an invertible linear
+transformation of $\mathbf K_1^\top \mathbf y$. By the change-of-variables formula, the density of
+$\mathbf K_2^\top \mathbf y$ at any point equals the density of $\mathbf K_1^\top \mathbf y$ at the
+corresponding point times the constant Jacobian factor $|\det \mathbf T|^{-1}$, which does not depend on
+$\boldsymbol\vartheta$. Therefore the two contrast log-likelihoods differ by an additive constant
+$-\log|\det \mathbf T|$, and they are maximized at the same $\boldsymbol\vartheta$. $\square$
+:::
+
+In the balanced normal case we can carry the maximization out explicitly and see REML restore the
+correct denominator.
+
+::: {#thm-reml-one-sample}
+## REML in the one-sample normal model
+Let $y_i = \mu + \varepsilon_i$ with $\varepsilon_i \sim \mathcal{N}(0, \sigma^2)$ iid, $i = 1, \dots, n
+\ge 2$, so $\mathbf X = \mathbf 1_n$, $p = 1$, and $\mathbf V = \sigma^2 I_n$. The REML estimator of the
+variance is
+$$
+\hat\sigma^2_{\mathrm{REML}} = \frac{1}{n - 1}\sum_{i=1}^n (y_i - \bar y)^2 = s^2,
+$$
+the usual unbiased sample variance, in contrast to $\hat\sigma^2_{\mathrm{ML}} = \frac1n \sum_i (y_i -
+\bar y)^2$.
+:::
+
+::: {.proof}
+Choose $\mathbf K \in \mathbb{R}^{n \times (n - 1)}$ with orthonormal columns spanning $\mathbf
+1_n^\perp$, so $\mathbf K^\top \mathbf 1_n = \mathbf 0$ and $\mathbf K^\top \mathbf K = I_{n-1}$. Such a
+$\mathbf K$ exists by Gram-Schmidt (@thm-gram-schmidt) applied to any basis of $\mathbf 1_n^\perp$. Then
+$\mathbf K^\top \mathbf y \sim \mathcal{N}_{n-1}(\mathbf 0, \sigma^2 \mathbf K^\top \mathbf K) =
+\mathcal{N}_{n-1}(\mathbf 0, \sigma^2 I_{n-1})$, and its log-likelihood in $\sigma^2$ is
+$$
+\ell_R(\sigma^2) = -\frac{n - 1}{2}\log(2\pi\sigma^2) - \frac{1}{2\sigma^2}\,\|\mathbf K^\top \mathbf y\|^2.
+$$
+Now $\|\mathbf K^\top \mathbf y\|^2 = \mathbf y^\top \mathbf K \mathbf K^\top \mathbf y$, and because the
+columns of $\mathbf K$ are an orthonormal basis of $\mathbf 1_n^\perp$, the matrix $\mathbf K \mathbf
+K^\top$ is the orthogonal projection onto $\mathbf 1_n^\perp$ (@def-projection-matrix), namely $\mathbf
+K \mathbf K^\top = I_n - \frac{1}{n}\mathbf 1_n \mathbf 1_n^\top = I_n - \frac1n J_n$. Hence
+$$
+\|\mathbf K^\top \mathbf y\|^2 = \mathbf y^\top\!\left(I_n - \tfrac1n J_n\right)\mathbf y
+= \sum_{i=1}^n y_i^2 - n\bar y^2 = \sum_{i=1}^n (y_i - \bar y)^2 =: S.
+$$
+Maximizing $\ell_R$ over $\sigma^2 > 0$: setting $d\ell_R/d\sigma^2 = -\frac{n - 1}{2\sigma^2} +
+\frac{S}{2\sigma^4} = 0$ gives $\hat\sigma^2_{\mathrm{REML}} = S/(n - 1)$, and the second derivative is
+negative there, confirming a maximum. Since $\mathbb{E}[S] = (n - 1)\sigma^2$, the REML estimator is
+unbiased, whereas the maximum likelihood estimator $S/n$ has expectation $\frac{n-1}{n}\sigma^2$.
+$\square$
+:::
+
+::: {.remark}
+The same construction, applied to the balanced one-way layout $y_{ij} = \mu + \theta_i +
+\varepsilon_{ij}$ with $\theta_i \sim \mathcal{N}(0, \tau^2)$ and $\varepsilon_{ij} \sim \mathcal{N}(0,
+\sigma^2)$, yields the analysis-of-variance estimators of the variance components $(\tau^2, \sigma^2)$,
+with the between-groups denominator reduced by one for the estimated grand mean; the general restricted
+log-likelihood is, up to an additive constant,
+$$
+\ell_R(\boldsymbol\vartheta) = -\tfrac12 \log\det \mathbf V - \tfrac12 \log\det(\mathbf X^\top \mathbf V^{-1}\mathbf X)
+- \tfrac12 (\mathbf y - \mathbf X\hat{\boldsymbol\beta})^\top \mathbf V^{-1}(\mathbf y - \mathbf X\hat{\boldsymbol\beta}),
+$$
+with $\hat{\boldsymbol\beta} = (\mathbf X^\top \mathbf V^{-1}\mathbf X)^{-1}\mathbf X^\top \mathbf
+V^{-1}\mathbf y$ the generalized least squares estimator; the extra log-determinant term, absent from
+ordinary maximum likelihood, is the penalty for estimating $\boldsymbol\beta$. REML is the default for
+variance-component estimation in mixed models and in meta-analysis software (Patterson and Thompson
+1971; Harville 1977; @dias2018nma). $\blacktriangleleft$
+:::
+
+It is worth instantiating this general formula on the meta-analysis model itself, since that is the case
+a health researcher actually faces. The normal-normal model @eq-normal-normal-model is the Gaussian
+linear model of @def-reml with a single fixed effect, $\mathbf X = \mathbf 1_J$ (so $\boldsymbol\beta =
+\mu$), and diagonal covariance $\mathbf V(\tau^2) = \mathrm{diag}(\tau^2 + s_1^2, \dots, \tau^2 + s_J^2)$.
+Writing $w_j(\tau^2) = 1/(\tau^2 + s_j^2)$ and $\hat\mu(\tau^2) = \sum_j w_j(\tau^2)\, y_j / \sum_j
+w_j(\tau^2)$, the restricted log-likelihood specializes to a function of the one unknown $\tau^2$,
+$$
+\ell_R(\tau^2) = -\tfrac12 \sum_{j=1}^J \log(\tau^2 + s_j^2)
+- \tfrac12 \log\!\Bigl(\textstyle\sum_j w_j(\tau^2)\Bigr)
+- \tfrac12 \sum_{j=1}^J w_j(\tau^2)\,\bigl(y_j - \hat\mu(\tau^2)\bigr)^2 .
+$$
+The middle log term, absent from ordinary maximum likelihood, is the penalty for having estimated $\mu$;
+it is what stops $\hat\tau^2$ from being biased toward $0$. Unlike the one-sample case of
+@thm-reml-one-sample there is no closed form, so software maximizes $\ell_R(\tau^2)$ numerically over
+$\tau^2 \ge 0$. The DerSimonian-Laird estimator @eq-dersimonian-laird is the quick method-of-moments
+approximation to the same target; REML is the likelihood-based default.
+
+::: {.remark}
+**Why this matters.** When `metafor`, the `multinma` package, or a hand-written Stan model reports a
+heterogeneity estimate $\hat\tau^2$ for your meta-analysis or network, it is this restricted likelihood
+(or its moment shortcut) that produced the number. REML is preferred precisely because, as
+@thm-reml-one-sample shows in miniature, plain maximum likelihood underestimates $\tau^2$ by ignoring the
+degree of freedom spent on the pooled effect; with the handful of studies typical of an indirect
+comparison, that downward bias is not negligible and would make the pooled effect look falsely precise.
+$\blacktriangleleft$
+:::
+
+### Empirical Bayes
+
+Empirical Bayes estimates the hyperparameters from the marginal distribution of the data and then
+proceeds as if they were known. The marginal is itself a normal model, obtained by integrating out the
+study effects.
+
+::: {#prp-normal-marginal}
+## The marginal model
+In the normal-normal model @eq-normal-normal-model, integrating out $\theta_j$ gives, independently
+across $j$,
+$$
+y_j \sim \mathcal{N}\bigl(\mu, \; \tau^2 + s_j^2\bigr).
+$$
+:::
+
+::: {.proof}
+Write $y_j = \theta_j + e_j$ with $\theta_j \sim \mathcal{N}(\mu, \tau^2)$ and $e_j \mid \theta_j \sim
+\mathcal{N}(0, s_j^2)$, where $e_j$ is independent of $\theta_j$. The pair $(\theta_j, e_j)$ is jointly
+normal with independent components, so the linear combination $y_j = \theta_j + e_j$ is normal by the
+affine-image property of the multivariate normal (@thm-mvn-linear), with mean $\mathbb{E}[\theta_j] +
+\mathbb{E}[e_j] = \mu$ and variance $\mathrm{Var}(\theta_j) + \mathrm{Var}(e_j) = \tau^2 + s_j^2$ by
+independence. Independence across $j$ follows from the independence of the pairs $(\theta_j, e_j)$ across
+$j$. $\square$
+:::
+
+Given @prp-normal-marginal, empirical Bayes estimates $(\mu, \tau^2)$ by maximizing the marginal
+likelihood $\prod_j \mathcal{N}(y_j; \mu, \tau^2 + s_j^2)$ over $(\mu, \tau^2)$, or by the method of
+moments, and then substitutes $(\hat\mu, \hat\tau^2)$ into the shrinkage formula @eq-shrinkage.
+
+The most widely used moment estimator is due to DerSimonian and Laird (@dersimonian1986), and it is the
+single most common heterogeneity estimate a health researcher meets, so it is worth deriving rather than
+displaying. Its ingredients are the precision weights $w_j = 1/s_j^2$ (a precise study earns a large
+weight), the precision-weighted mean $\bar y_w = \sum_j w_j y_j / \sum_j w_j$, and *Cochran's
+heterogeneity statistic*
+$$
+Q = \sum_{j=1}^J w_j (y_j - \bar y_w)^2 ,
+$$
+which measures how far the study estimates fall from their weighted mean, each squared discrepancy scaled
+by that study's own precision. The key fact is that if there were no heterogeneity ($\tau^2 = 0$) then
+$Q$ would average to exactly $J - 1$; any systematic excess of $Q$ over $J - 1$ is therefore evidence of
+between-study variance, and the estimator below turns that excess into a number.
+
+::: {#prp-dl-moment}
+## The DerSimonian-Laird estimator is a method-of-moments estimator
+In the marginal model $y_j \sim \mathcal{N}(\mu, \tau^2 + s_j^2)$ of @prp-normal-marginal, with weights
+$w_j = 1/s_j^2$ and Cochran's $Q$ as above,
+$$
+\mathbb{E}[Q] = (J - 1) + \tau^2\Bigl(\textstyle\sum_j w_j - \sum_j w_j^2 / \sum_j w_j\Bigr).
+$$
+Equating the observed $Q$ to this expectation, solving for $\tau^2$, and truncating at $0$ to keep the
+estimate nonnegative gives
+$$
+\hat\tau^2_{\mathrm{DL}} = \max\!\left\{0, \; \frac{Q - (J - 1)}{\sum_j w_j - \sum_j w_j^2 / \sum_j w_j}\right\},
+\qquad \hat\mu = \bar y_w .
+$$ {#eq-dersimonian-laird}
+:::
+
+::: {.proof}
+Write $W = \sum_j w_j$ and $v_j = \tau^2 + s_j^2 = \mathrm{Var}(y_j)$, and note the identity $w_j v_j = 1
++ w_j\tau^2$ (since $w_j s_j^2 = 1$). Expand $Q = \sum_j w_j y_j^2 - W\bar y_w^2$. For the first sum,
+using $\mathbb{E}[y_j^2] = \mu^2 + v_j$,
+$$
+\mathbb{E}\Bigl[\textstyle\sum_j w_j y_j^2\Bigr] = \sum_j w_j(\mu^2 + v_j) = \mu^2 W + \sum_j (1 + w_j\tau^2)
+= \mu^2 W + J + \tau^2 W .
+$$
+For the second, $\bar y_w = W^{-1}\sum_j w_j y_j$ has mean $\mu$ and, by independence of the $y_j$,
+$$
+\mathrm{Var}(\bar y_w) = W^{-2}\sum_j w_j^2 v_j = W^{-2}\sum_j\bigl(w_j + \tau^2 w_j^2\bigr) = W^{-1} + \tau^2 W^{-2}\textstyle\sum_j w_j^2 ,
+$$
+using $w_j^2 s_j^2 = w_j$. Hence $\mathbb{E}[W\bar y_w^2] = W\bigl(\mathrm{Var}(\bar y_w) + \mu^2\bigr) = 1
++ \tau^2 W^{-1}\sum_j w_j^2 + \mu^2 W$. Subtracting the two expectations, the $\mu^2 W$ terms cancel and
+$$
+\mathbb{E}[Q] = \bigl(J + \tau^2 W\bigr) - \bigl(1 + \tau^2 W^{-1}\textstyle\sum_j w_j^2\bigr)
+= (J - 1) + \tau^2\Bigl(W - \textstyle\sum_j w_j^2 / W\Bigr),
+$$
+which is the claimed identity since $W = \sum_j w_j$. Replacing $\mathbb{E}[Q]$ by the observed $Q$ and
+solving the resulting linear equation for $\tau^2$ produces the displayed estimator; the truncation
+enforces $\tau^2 \ge 0$. $\square$
+:::
+
+The truncation at $0$ is exactly why a random-effects analysis sometimes collapses to complete pooling:
+when the studies agree more closely than their standard errors alone would predict, $Q < J - 1$, the
+numerator is negative, and $\hat\tau^2_{\mathrm{DL}} = 0$, so every $B_j \to 1$ and the estimates fuse at
+the common mean $\bar y_w$.
+
+::: {.remark}
+Empirical Bayes is a computational shortcut to full Bayes: it replaces the hyperprior and the
+integration over $(\mu, \tau^2)$ by a point estimate $(\hat\mu, \hat\tau^2)$. The cost is that it
+ignores the uncertainty in $(\hat\mu, \hat\tau^2)$, so the empirical-Bayes posterior variance $V_j =
+(1/\hat\tau^2 + 1/s_j^2)^{-1}$ understates the true posterior variance, the more so when $J$ is small
+and $\tau^2$ is poorly identified. Full Bayes places a hyperprior $p(\mu, \tau^2)$ and integrates over
+it, propagating that uncertainty into the credible intervals for $\theta_j$; this integral is rarely
+closed-form and is computed by the Markov chain Monte Carlo of @sec-mcmc. The James-Stein estimator of
+@thm-james-stein is the empirical-Bayes estimator for $\mu = 0$ with $\hat B = (J - 2)\sigma^2/\|\mathbf
+y\|^2$, which is why it dominates the maximum likelihood estimator: estimating the shrinkage factor from
+the ensemble is exactly what borrowing strength means. As a rule of thumb, empirical Bayes is safe when
+$J$ is large (a dozen studies or more) and misleads most when $J$ is small: with three or four trials the
+credible intervals it reports for each $\theta_j$ can be substantially too narrow, because a point
+estimate $\hat\tau^2$ hides how uncertain the heterogeneity really is. Full Bayes, or a small-sample
+correction of the Hartung-Knapp type, is then worth the extra computation. $\blacktriangleleft$
+:::
+
+## The posterior predictive distribution and credible intervals {#sec-predictive}
+
+Two further objects complete the inferential toolkit: the distribution of future data, and the Bayesian
+analogue of a confidence interval.
+
+::: {#def-posterior-predictive}
+## Posterior predictive distribution
+Let $\mathbf y$ be observed data and $\tilde{\mathbf y}$ future data that is conditionally independent
+of $\mathbf y$ given the parameter, $\tilde{\mathbf y} \perp \mathbf y \mid \boldsymbol\xi$. The
+*posterior predictive distribution* of $\tilde{\mathbf y}$ given $\mathbf y$ has density
+$$
+p(\tilde{\mathbf y} \mid \mathbf y) = \int_\Xi p(\tilde{\mathbf y} \mid \boldsymbol\xi)\, \pi(\boldsymbol\xi \mid \mathbf y)\, d\boldsymbol\xi.
+$$ {#eq-posterior-predictive}
+$\blacktriangleleft$
+:::
+
+::: {.proof}
+We verify @eq-posterior-predictive. By the conditional independence assumption (@def-conditional-independence),
+the joint density of $(\tilde{\mathbf y}, \boldsymbol\xi)$ given $\mathbf y$ factors as
+$$
+p(\tilde{\mathbf y}, \boldsymbol\xi \mid \mathbf y)
+= p(\tilde{\mathbf y} \mid \boldsymbol\xi, \mathbf y)\, \pi(\boldsymbol\xi \mid \mathbf y)
+= p(\tilde{\mathbf y} \mid \boldsymbol\xi)\, \pi(\boldsymbol\xi \mid \mathbf y),
+$$
+the last step using $\tilde{\mathbf y} \perp \mathbf y \mid \boldsymbol\xi$. Marginalizing over
+$\boldsymbol\xi$ gives @eq-posterior-predictive. $\square$
+:::
+
+::: {.remark}
+The integral @eq-posterior-predictive is computed by sampling: draw $\boldsymbol\xi^{(s)} \sim
+\pi(\boldsymbol\xi \mid \mathbf y)$ from the posterior and then $\tilde{\mathbf y}^{(s)} \sim
+p(\cdot \mid \boldsymbol\xi^{(s)})$ from the sampling model, so that the $\tilde{\mathbf y}^{(s)}$ are a
+sample from the posterior predictive. This drives posterior predictive checks (compare statistics of the
+$\tilde{\mathbf y}^{(s)}$ to the observed data; systematic discrepancy signals misfit) and out-of-sample
+prediction.
+
+**Reader translation, and why it matters for ITC.** The posterior predictive answers "what would a *new*
+observation look like, given everything we have learned?" by averaging the sampling model over the
+posterior, so it carries both the natural variability of data and our remaining uncertainty about the
+parameters. This is exactly the shape of an indirect-comparison target estimand. A population-adjusted
+effect asks what a treatment contrast would be in a *new* target population, one we did not run a trial
+in; predicting that effect means drawing parameters from the posterior and pushing them through the
+target population's covariate distribution, which is a posterior predictive computation. So the marginal
+effect reported in Part V is not a single plug-in number but a posterior predictive quantity, and its
+credible interval inherits parameter uncertainty through this very integral. (Corresponds to L.4 in the
+proof catalogue.) $\blacktriangleleft$
+:::
+
+A Bayesian reports uncertainty as a region of high posterior probability.
+
+::: {#def-credible-interval}
+## Credible set, equal-tailed and highest posterior density
+A *$(1 - \alpha)$ credible set* for $\boldsymbol\xi$ is a measurable set $C \subseteq \Xi$ with
+$\Pi(\boldsymbol\xi \in C \mid \mathbf y) = 1 - \alpha$. In one dimension, the *equal-tailed* interval
+is $(q_{\alpha/2}, q_{1 - \alpha/2})$, the interval between the $\alpha/2$ and $1 - \alpha/2$ posterior
+quantiles. The *highest posterior density (HPD)* set at level $1 - \alpha$ is $C_\lambda =
+\{\boldsymbol\xi : \pi(\boldsymbol\xi \mid \mathbf y) \ge \lambda\}$, with $\lambda$ chosen so that
+$\Pi(C_\lambda \mid \mathbf y) = 1 - \alpha$. $\blacktriangleleft$
+:::
+
+The HPD set is the most economical credible region, in the precise sense of minimal volume.
+
+::: {#prp-hpd-shortest}
+## The HPD set has minimal volume
+Let the posterior density $\pi(\cdot \mid \mathbf y)$ be defined with respect to Lebesgue measure, and
+let $C = C_\lambda = \{\boldsymbol\xi : \pi(\boldsymbol\xi \mid \mathbf y) \ge \lambda\}$ be an HPD set of
+posterior probability $1 - \alpha$. Then for any measurable set $D$ with $\Pi(D \mid \mathbf y) \ge 1 -
+\alpha$, we have $\mathrm{vol}(C) \le \mathrm{vol}(D)$.
+:::
+
+::: {.proof}
+Write $\pi$ for $\pi(\cdot \mid \mathbf y)$ and $\mathrm{vol}$ for Lebesgue measure. From $\Pi(D) \ge
+\Pi(C)$,
+$$
+0 \le \Pi(D) - \Pi(C) = \int_{D \setminus C}\pi - \int_{C \setminus D}\pi.
+$$
+On $D \setminus C$ the point is outside $C$, so $\pi < \lambda$ there, giving $\int_{D \setminus C}\pi
+\le \lambda\,\mathrm{vol}(D \setminus C)$. On $C \setminus D$ the point is inside $C$, so $\pi \ge
+\lambda$ there, giving $\int_{C \setminus D}\pi \ge \lambda\,\mathrm{vol}(C \setminus D)$. Combining,
+$$
+0 \le \lambda\,\mathrm{vol}(D \setminus C) - \lambda\,\mathrm{vol}(C \setminus D),
+$$
+and since $\lambda > 0$, $\mathrm{vol}(C \setminus D) \le \mathrm{vol}(D \setminus C)$. Adding
+$\mathrm{vol}(C \cap D)$ to both sides,
+$$
+\mathrm{vol}(C) = \mathrm{vol}(C \cap D) + \mathrm{vol}(C \setminus D)
+\le \mathrm{vol}(C \cap D) + \mathrm{vol}(D \setminus C) = \mathrm{vol}(D). \qquad \square
+$$
+:::
+
+::: {.remark}
+A credible interval is a direct probability statement about the parameter given the data, $\Pi(\theta
+\in C \mid \mathbf y) = 1 - \alpha$, which is the interpretation practitioners often wrongly attach to a
+frequentist confidence interval. For a symmetric unimodal posterior the equal-tailed and HPD intervals
+coincide; for skewed posteriors the HPD interval is shorter but can be harder to compute from samples,
+so equal-tailed intervals (posterior sample quantiles) are the common default. $\blacktriangleleft$
+:::
+
+## Markov chain Monte Carlo {#sec-mcmc}
+
+Outside the conjugate families the posterior @eq-bayes is known only up to the intractable normalizing
+constant $p(\mathbf y)$, and posterior expectations $\mathbb{E}[g(\boldsymbol\xi) \mid \mathbf y]$ are
+high-dimensional integrals with no closed form. Markov chain Monte Carlo (MCMC) sidesteps both problems
+by constructing a Markov chain whose stationary distribution is the posterior; running the chain
+produces dependent draws whose ergodic averages estimate posterior expectations. The construction needs
+only the *ratio* of posterior densities, in which $p(\mathbf y)$ cancels. We develop the general theory
+on an abstract state space and then specialize to the posterior.
+
+::: {#def-markov-kernel}
+## Transition kernel and stationary distribution
+A *transition kernel* on a measurable state space $(\mathcal{X}, \mathcal{B})$ is a map $P: \mathcal{X}
+\times \mathcal{B} \to [0,1]$ such that $P(x, \cdot)$ is a probability measure for each $x$ and
+$P(\cdot, B)$ is measurable for each $B$. A probability measure $\pi$ on $\mathcal{X}$ is *stationary*
+(or invariant) for $P$ if
+$$
+\int_{\mathcal{X}} P(x, B)\, \pi(dx) = \pi(B) \qquad \text{for every } B \in \mathcal{B}.
+$$
+$\blacktriangleleft$
+:::
+
+Stationarity is the property that, if the chain's current state is distributed as $\pi$, then so is its
+next state; a chain started anywhere and run long enough (under further ergodicity conditions) forgets
+its start and produces draws from $\pi$. The practical way to guarantee a prescribed stationary
+distribution is the stronger and easier-to-check condition of detailed balance.
+
+::: {#def-detailed-balance}
+## Detailed balance (reversibility)
+A transition kernel $P$ is *reversible* with respect to a probability measure $\pi$, or satisfies
+*detailed balance*, if the two measures on $\mathcal{X} \times \mathcal{X}$ defined by $\pi(dx)P(x, dy)$
+and $\pi(dy)P(y, dx)$ are equal:
+$$
+\pi(dx)\, P(x, dy) = \pi(dy)\, P(y, dx).
+$$ {#eq-detailed-balance}
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** Detailed balance says the long-run flow of probability from $x$ to $y$ exactly
+matches the flow from $y$ back to $x$, for every pair of states. Nothing circulates on net, so once the
+chain is distributed as $\pi$ it stays that way: $\pi$ is held in place. It is a stronger condition than
+stationarity but far easier to check (a pointwise equation instead of an integral one), which is why
+every sampler in this chapter is engineered to satisfy it. $\blacktriangleleft$
+:::
+
+::: {#lem-detailed-balance-stationary}
+## Detailed balance implies stationarity
+If $P$ satisfies detailed balance with respect to $\pi$ (@def-detailed-balance), then $\pi$ is
+stationary for $P$.
+:::
+
+::: {.proof}
+Fix $B \in \mathcal{B}$. Integrate the detailed-balance identity @eq-detailed-balance over $x \in
+\mathcal{X}$ and $y \in B$. The left side is
+$$
+\int_{\mathcal{X}} \int_{B} \pi(dx)\, P(x, dy) = \int_{\mathcal{X}} P(x, B)\, \pi(dx),
+$$
+which is the quantity in @def-markov-kernel. The right side is
+$$
+\int_{\mathcal{X}} \int_{B} \pi(dy)\, P(y, dx) = \int_{B}\left(\int_{\mathcal{X}} P(y, dx)\right)\pi(dy)
+= \int_{B} P(y, \mathcal{X})\, \pi(dy) = \int_{B} 1 \cdot \pi(dy) = \pi(B),
+$$
+using $P(y, \mathcal{X}) = 1$ because $P(y, \cdot)$ is a probability measure, and Tonelli's theorem to
+exchange the order of integration of the nonnegative kernel. Equating the two sides gives
+$\int_{\mathcal{X}} P(x, B)\, \pi(dx) = \pi(B)$ for every $B$, which is stationarity. $\square$
+:::
+
+The Metropolis-Hastings algorithm builds a reversible kernel for any target $\pi$ from an arbitrary
+proposal mechanism, correcting the proposal by an accept-reject step.
+
+::: {#thm-mh-stationarity}
+## Metropolis-Hastings has the target as stationary distribution
+Let $\pi$ be a target density on $\mathcal{X}$ with respect to a reference measure, and let $q(x, y)$ be
+a proposal density (so $q(x, \cdot)$ is a density for each $x$). Define the acceptance probability
+$$
+\alpha(x, y) = \min\!\left\{1, \; \frac{\pi(y)\, q(y, x)}{\pi(x)\, q(x, y)}\right\}
+$$ {#eq-mh-acceptance}
+for $x, y$ with $\pi(x)q(x, y) > 0$, and the Metropolis-Hastings kernel
+$$
+P(x, dy) = \alpha(x, y)\, q(x, y)\, dy + r(x)\, \delta_x(dy), \qquad
+r(x) = 1 - \int \alpha(x, y)\, q(x, y)\, dy,
+$$
+where $\delta_x$ is the point mass at $x$ (the probability of rejecting and staying). Then $P$ satisfies
+detailed balance with respect to $\pi$, and hence (by @lem-detailed-balance-stationary) $\pi$ is
+stationary for $P$.
+:::
+
+::: {.proof}
+The kernel has two parts: a "move" part with density $p(x, y) = \alpha(x, y)\, q(x, y)$ for $y \ne x$,
+and a "stay" part, the atom $r(x)\delta_x$. We check the detailed-balance identity @eq-detailed-balance
+for each.
+
+*Move part.* We must show $\pi(x)\, p(x, y) = \pi(y)\, p(y, x)$ for all $x \ne y$, that is
+$$
+\pi(x)\, q(x, y)\, \alpha(x, y) = \pi(y)\, q(y, x)\, \alpha(y, x).
+$$
+Fix $x \ne y$. If either $\pi(x)q(x,y) = 0$ or $\pi(y)q(y,x) = 0$ the identity holds trivially (both
+sides are $0$, since $\alpha$ multiplies the vanishing factor). Otherwise both products are positive,
+and the ratio $\rho = \pi(y)q(y, x)/(\pi(x)q(x, y))$ is a positive real with $\alpha(x, y) = \min\{1,
+\rho\}$ and $\alpha(y, x) = \min\{1, 1/\rho\}$. Suppose $\rho \le 1$ (the case $\rho > 1$ is symmetric by
+swapping $x$ and $y$). Then $\alpha(x, y) = \rho$ and $\alpha(y, x) = 1$, so
+$$
+\pi(x)\, q(x, y)\, \alpha(x, y) = \pi(x)\, q(x, y)\, \rho = \pi(x)\, q(x, y)\cdot \frac{\pi(y)\, q(y, x)}{\pi(x)\, q(x, y)}
+= \pi(y)\, q(y, x) = \pi(y)\, q(y, x)\, \alpha(y, x),
+$$
+as required. Thus $\pi(x)p(x, y)\, dx\, dy$ is symmetric in $(x, y)$.
+
+*Stay part.* The atomic contribution to $\pi(dx)P(x, dy)$ is $\pi(x)\, r(x)\, \delta_x(dy)\, dx$, a
+measure concentrated on the diagonal $\{x = y\}$. The diagonal is invariant under the coordinate swap
+$(x, y) \mapsto (y, x)$, and on it $\pi(x)r(x)\delta_x(dy)\,dx = \pi(y)r(y)\delta_y(dx)\,dy$ because both
+describe the same mass $\pi(x)r(x)$ placed at $x = y$. Hence the stay part also satisfies detailed
+balance.
+
+Adding the move and stay parts, $\pi(dx)P(x, dy) = \pi(dy)P(y, dx)$, so $P$ is reversible with respect
+to $\pi$. By @lem-detailed-balance-stationary, $\pi$ is stationary. $\square$
+:::
+
+::: {.remark}
+Two practical points. First, the acceptance ratio @eq-mh-acceptance involves $\pi$ only through the
+ratio $\pi(y)/\pi(x)$, in which the normalizing constant $p(\mathbf y)$ cancels; this is what makes MCMC
+applicable to the unnormalized posterior. Second, stationarity alone does not guarantee that the time
+average $\frac1N \sum_{t=1}^N g(\boldsymbol\xi^{(t)})$ converges to $\mathbb{E}_\pi[g]$; that requires
+the chain to be $\pi$-irreducible (it can reach any set of positive $\pi$-measure) and aperiodic, under
+which a law of large numbers for Markov chains gives almost-sure convergence of ergodic averages and a
+central limit theorem governs the Monte Carlo error. We state this ergodic theorem as a cited result
+(Tierney 1994; see the work log) and use it to justify Monte Carlo estimation; its proof belongs to the
+general theory of Harris-recurrent chains. The original symmetric-proposal algorithm is due to
+Metropolis et al. (1953) and the general asymmetric form to Hastings (1970). (Corresponds to the
+Metropolis-Hastings content of L.3 in the proof catalogue.) $\blacktriangleleft$
+:::
+
+::: {.remark}
+**What this means in practice, and what to check.** The theory above guarantees only that the chain
+*eventually* produces draws from the posterior; it says nothing about any particular finite run. It helps
+to picture what the software hands back. When you fit a Bayesian meta-analysis or NMA, the sampler returns
+a long list of draws $\boldsymbol\xi^{(1)}, \boldsymbol\xi^{(2)}, \dots$, and each draw is one complete,
+jointly plausible setting of every parameter at once: each pooled effect $d_{1k}$, the heterogeneity
+$\tau^2$, and every study-level contrast. A posterior mean is then just the average of one column of that
+list, a $95\%$ credible interval is a pair of sample quantiles, and a treatment ranking is computed draw
+by draw and tallied. Plotted against iteration, a single parameter's *trace* should look like a fuzzy
+horizontal band (a "grassy" caterpillar), not a slow drift or a path that sticks in one place for long
+stretches. Before trusting any of these numbers, check four things: (i) *convergence*, that several
+chains started from different points overlap, summarized by the potential scale reduction factor $\hat R$
+lying near $1$; (ii) the *effective sample size*, the number of effectively independent draws after
+discounting autocorrelation, which must be large enough that the *Monte Carlo error* (the sampler's own
+noise, distinct from genuine posterior uncertainty) is negligible; (iii) *divergent transitions*,
+warnings that the sampler could not follow the posterior geometry and that estimates may be biased; and
+(iv) *prior sensitivity*, that the conclusions do not swing with an arbitrary choice of prior. Theoretical
+correctness (detailed balance) and a trustworthy run (clean diagnostics) are separate matters, and an ITC
+result needs both. These diagnostics are developed in full in the Bayesian-computation chapter of Part V.
+$\blacktriangleleft$
+:::
+
+## Hamiltonian Monte Carlo and the No-U-Turn Sampler {#sec-hmc}
+
+Random-walk Metropolis explores by undirected local steps and mixes slowly in high dimensions, because
+the proposal must be small to be accepted yet small steps decorrelate slowly. Hamiltonian Monte Carlo
+(HMC) replaces the random walk by deterministic trajectories that follow the gradient of the log
+posterior, allowing distant, high-acceptance proposals. It is the sampler inside Stan and the engine of
+the ML-NMR software of Part V.
+
+The physical picture is worth carrying through the algebra that follows. Imagine the negative log
+posterior $-\log\pi(\boldsymbol\xi \mid \mathbf y)$ as a landscape, with deep valleys where the posterior
+is high. HMC gives the current parameter value a random shove (a *momentum*) and lets it roll across this
+landscape under Newtonian mechanics for a short while, then proposes wherever the roll ends. Because the
+motion follows the gradient, it travels *along* a valley rather than diffusing across it, so one proposal
+can land far from the start yet still in a plausible region, which is exactly what random-walk Metropolis
+cannot do in high dimensions. The *kinetic energy* $K(\mathbf r)$ is the cost of moving, the *potential
+energy* $U(\boldsymbol\xi)$ is the negative log posterior, and the ideal dynamics conserve their sum; the
+small error from simulating the roll on a computer is what the final accept-reject step corrects. In one
+line: this is what runs when you call Stan on a network meta-analysis, and everything below proves that
+the roll-and-correct recipe targets the right distribution.
+
+::: {#def-hmc}
+## Hamiltonian Monte Carlo
+To sample $\pi(\boldsymbol\xi \mid \mathbf y)$ on $\boldsymbol\xi \in \mathbb{R}^d$, augment the state
+with an auxiliary momentum $\mathbf r \in \mathbb{R}^d$ and define the *Hamiltonian*
+$$
+H(\boldsymbol\xi, \mathbf r) = U(\boldsymbol\xi) + K(\mathbf r), \qquad
+U(\boldsymbol\xi) = -\log \pi(\boldsymbol\xi \mid \mathbf y), \qquad
+K(\mathbf r) = \tfrac12 \mathbf r^\top M^{-1}\mathbf r,
+$$ {#eq-hamiltonian}
+with a symmetric positive definite *mass matrix* $M$. The joint density $p(\boldsymbol\xi, \mathbf r)
+\propto e^{-H(\boldsymbol\xi, \mathbf r)} = \pi(\boldsymbol\xi \mid \mathbf y)\,\mathcal{N}(\mathbf r;
+\mathbf 0, M)$ has the target as its $\boldsymbol\xi$-marginal. One HMC transition from
+$(\boldsymbol\xi, \mathbf r)$ is:
+
+1. *Momentum refresh:* draw $\mathbf r \sim \mathcal{N}(\mathbf 0, M)$.
+2. *Simulate dynamics:* approximate the Hamiltonian flow of
+   $$
+   \dot{\boldsymbol\xi} = \nabla_{\mathbf r} H = M^{-1}\mathbf r, \qquad
+   \dot{\mathbf r} = -\nabla_{\boldsymbol\xi} H = \nabla_{\boldsymbol\xi} \log \pi(\boldsymbol\xi \mid \mathbf y),
+   $$
+   for $L$ steps of size $\epsilon$ using the *leapfrog* integrator
+   $$
+   \mathbf r^{+} = \mathbf r + \tfrac{\epsilon}{2}\nabla\log\pi(\boldsymbol\xi), \quad
+   \boldsymbol\xi' = \boldsymbol\xi + \epsilon M^{-1}\mathbf r^{+}, \quad
+   \mathbf r' = \mathbf r^{+} + \tfrac{\epsilon}{2}\nabla\log\pi(\boldsymbol\xi'),
+   $$
+   producing a proposal $(\boldsymbol\xi^{*}, \mathbf r^{*})$ (after negating the final momentum).
+3. *Metropolis correction:* accept $(\boldsymbol\xi^{*}, \mathbf r^{*})$ with probability $\min\{1,
+   \exp(H(\boldsymbol\xi, \mathbf r) - H(\boldsymbol\xi^{*}, \mathbf r^{*}))\}$. $\blacktriangleleft$
+:::
+
+The correctness of HMC rests on three facts about the Hamiltonian flow and its leapfrog discretization,
+which we prove, after which the Metropolis correction delivers the target by the detailed-balance
+argument of @sec-mcmc.
+
+::: {#lem-hamiltonian-conservation}
+## The Hamiltonian flow conserves energy
+Along any solution of Hamilton's equations $\dot{\boldsymbol\xi} = \nabla_{\mathbf r}H$, $\dot{\mathbf
+r} = -\nabla_{\boldsymbol\xi}H$, the Hamiltonian $H$ is constant in time.
+:::
+
+::: {.proof}
+By the chain rule and Hamilton's equations,
+$$
+\frac{dH}{dt} = \nabla_{\boldsymbol\xi}H \cdot \dot{\boldsymbol\xi} + \nabla_{\mathbf r}H \cdot \dot{\mathbf r}
+= \nabla_{\boldsymbol\xi}H \cdot \nabla_{\mathbf r}H + \nabla_{\mathbf r}H \cdot (-\nabla_{\boldsymbol\xi}H) = 0. \qquad \square
+$$
+:::
+
+::: {#lem-leapfrog-volume}
+## The leapfrog map preserves volume and is reversible
+The leapfrog map $(\boldsymbol\xi, \mathbf r) \mapsto (\boldsymbol\xi', \mathbf r')$ of @def-hmc has
+Jacobian determinant equal to $1$, and is reversible: negating the momentum, applying the map, and
+negating the momentum again recovers the inverse map.
+:::
+
+::: {.proof}
+The map is the composition of three shears. The first, $(\boldsymbol\xi, \mathbf r) \mapsto
+(\boldsymbol\xi, \mathbf r^{+})$ with $\mathbf r^{+} = \mathbf r + \frac{\epsilon}{2}\nabla\log\pi(
+\boldsymbol\xi)$, leaves $\boldsymbol\xi$ fixed and updates $\mathbf r$ by a function of
+$\boldsymbol\xi$ alone; its Jacobian in block form is $\left(\begin{smallmatrix} I & 0 \\ * & I
+\end{smallmatrix}\right)$, lower triangular with unit diagonal, so its determinant is $1$. The second,
+$(\boldsymbol\xi, \mathbf r^{+}) \mapsto (\boldsymbol\xi', \mathbf r^{+})$ with $\boldsymbol\xi' =
+\boldsymbol\xi + \epsilon M^{-1}\mathbf r^{+}$, updates $\boldsymbol\xi$ by a function of $\mathbf r^{+}$
+alone; its Jacobian is $\left(\begin{smallmatrix} I & * \\ 0 & I \end{smallmatrix}\right)$, again unit
+determinant. The third is another momentum shear, determinant $1$. The determinant of the composition is
+the product, $1 \cdot 1 \cdot 1 = 1$, so the leapfrog map preserves Lebesgue volume. Reversibility is
+direct: each substep is inverted by running it with $\epsilon \mapsto -\epsilon$, and negating $\mathbf
+r$ turns the forward half-steps into the corresponding backward half-steps, so the momentum-flip
+conjugate of the leapfrog map is its own inverse. $\square$
+:::
+
+::: {#prp-hmc-invariance}
+## HMC leaves the joint distribution invariant
+The HMC transition of @def-hmc is reversible with respect to the joint density $p(\boldsymbol\xi,
+\mathbf r) \propto e^{-H(\boldsymbol\xi, \mathbf r)}$, and therefore leaves the target posterior
+$\pi(\boldsymbol\xi \mid \mathbf y)$ invariant as the $\boldsymbol\xi$-marginal.
+:::
+
+::: {.proof}
+The momentum refresh draws $\mathbf r \sim \mathcal{N}(\mathbf 0, M)$, which is exactly the conditional
+$p(\mathbf r \mid \boldsymbol\xi)$ under the joint $e^{-H}$, so it leaves the joint invariant. The
+leapfrog proposal is a deterministic, volume-preserving (@lem-leapfrog-volume) involution after the
+momentum flip. For such a proposal the two ingredients of the general acceptance ratio @eq-mh-acceptance
+each simplify: the involution makes the forward map and its reverse identical after the momentum flip, so
+the proposal is symmetric and the factor $q(y,x)/q(x,y)$ equals $1$; and volume preservation means the
+change-of-variables Jacobian relating the forward and reverse densities is also $1$, so no Jacobian factor
+survives. The acceptance ratio therefore collapses to the pure density ratio
+$$
+\frac{p(\boldsymbol\xi^{*}, \mathbf r^{*})}{p(\boldsymbol\xi, \mathbf r)} = \frac{e^{-H(\boldsymbol\xi^{*}, \mathbf r^{*})}}{e^{-H(\boldsymbol\xi, \mathbf r)}}
+= \exp\!\bigl(H(\boldsymbol\xi, \mathbf r) - H(\boldsymbol\xi^{*}, \mathbf r^{*})\bigr),
+$$
+because the proposal Jacobian is $1$ and the involution makes the forward and reverse proposal densities
+equal; this is the acceptance probability in step 3. By the detailed-balance computation of
+@thm-mh-stationarity applied to the joint target $e^{-H}$, the accept-reject step is reversible with
+respect to $e^{-H}$, so the joint distribution is invariant. (If the leapfrog flow were exact, energy
+conservation @lem-hamiltonian-conservation would make $H(\boldsymbol\xi^{*}, \mathbf r^{*}) =
+H(\boldsymbol\xi, \mathbf r)$ and every proposal would be accepted; finite $\epsilon$ introduces an
+energy error that the Metropolis step corrects exactly.) Marginalizing the invariant joint over the
+Gaussian momentum returns $\pi(\boldsymbol\xi \mid \mathbf y)$. $\square$
+:::
+
+::: {.remark}
+HMC still requires the user to choose the trajectory length $L$ and step size $\epsilon$. The
+*No-U-Turn Sampler* (NUTS) of Hoffman and Gelman (2014) eliminates the choice of $L$ by building the
+leapfrog trajectory forward and backward in time, doubling its length until it begins to double back on
+itself (formally, until the running trajectory would make a "U-turn," detected when the momentum becomes
+anti-aligned with the position displacement), then selecting the next state from the trajectory by a
+slice or multinomial rule that preserves detailed balance. The step size $\epsilon$ is tuned during a
+warmup phase by dual averaging to hit a target acceptance rate near $0.8$, and the mass matrix $M$ is
+adapted to the posterior covariance. NUTS is the default in Stan (@carpenter2017stan) and underlies the
+multilevel models of Part V; the geometric foundations are surveyed by Betancourt (2017) and Neal
+(2011). A hierarchical-model caution connects back to this chapter, and it is the single most common practical
+failure in Bayesian meta-analysis. In the centered parameterization $\theta_j \sim \mathcal{N}(\mu,
+\tau^2)$, the joint posterior of $(\theta_j, \log\tau)$ has a *funnel* geometry: when $\tau$ is large the
+study effects $\theta_j$ are free to spread out, but when $\tau$ is small they are squeezed into a narrow
+neck around $\mu$. Picture a funnel or a trumpet bell, wide at the top and pinched at the bottom. A single
+leapfrog step size cannot fit both regions at once; a step tuned for the wide mouth overshoots the narrow
+neck, the simulated energy blows up, and the proposal is rejected as a *divergent transition*. The sampler
+then silently fails to explore small $\tau$, biasing $\hat\tau^2$ upward and understating heterogeneity.
+The remedy is the *non-centered parameterization* $\theta_j = \mu + \tau\,\tilde\theta_j$ with
+$\tilde\theta_j \sim \mathcal{N}(0, 1)$, which factors the dependence out so that the geometry the sampler
+actually traverses is a fixed unit Gaussian regardless of $\tau$; this is the standard fix and the reason
+production NMA code is written in the non-centered form. $\blacktriangleleft$
+:::
+
+## Marginal likelihood and Bayes factors {#sec-marginal-likelihood}
+
+Model comparison uses the same marginal likelihood that normalizes the posterior, now read as a function
+of the model.
+
+::: {#def-marginal-likelihood}
+## Marginal likelihood and Bayes factor
+For a model $\mathcal{M}$ with parameter $\boldsymbol\xi$, prior $\pi(\boldsymbol\xi \mid \mathcal{M})$,
+and likelihood $p(\mathbf y \mid \boldsymbol\xi, \mathcal{M})$, the *marginal likelihood* (or evidence)
+is
+$$
+p(\mathbf y \mid \mathcal{M}) = \int p(\mathbf y \mid \boldsymbol\xi, \mathcal{M})\, \pi(\boldsymbol\xi \mid \mathcal{M})\, d\boldsymbol\xi.
+$$
+The *Bayes factor* comparing models $\mathcal{M}_1$ and $\mathcal{M}_0$ is the ratio of their marginal
+likelihoods,
+$$
+\mathrm{BF}_{10} = \frac{p(\mathbf y \mid \mathcal{M}_1)}{p(\mathbf y \mid \mathcal{M}_0)}.
+$$
+$\blacktriangleleft$
+:::
+
+::: {#prp-posterior-odds}
+## Posterior odds equal the Bayes factor times prior odds
+Given prior model probabilities $\pi(\mathcal{M}_0), \pi(\mathcal{M}_1) > 0$,
+$$
+\frac{P(\mathcal{M}_1 \mid \mathbf y)}{P(\mathcal{M}_0 \mid \mathbf y)}
+= \mathrm{BF}_{10} \cdot \frac{\pi(\mathcal{M}_1)}{\pi(\mathcal{M}_0)}.
+$$
+:::
+
+::: {.proof}
+Treat the model index $\mathcal{M}$ as a discrete parameter and apply Bayes' theorem (@thm-bayes) at the
+model level: $P(\mathcal{M}_k \mid \mathbf y) = p(\mathbf y \mid \mathcal{M}_k)\,\pi(\mathcal{M}_k)/
+p(\mathbf y)$, where $p(\mathbf y) = \sum_k p(\mathbf y \mid \mathcal{M}_k)\pi(\mathcal{M}_k)$ is common
+to both. Taking the ratio for $k = 1$ and $k = 0$ cancels $p(\mathbf y)$:
+$$
+\frac{P(\mathcal{M}_1 \mid \mathbf y)}{P(\mathcal{M}_0 \mid \mathbf y)}
+= \frac{p(\mathbf y \mid \mathcal{M}_1)\,\pi(\mathcal{M}_1)}{p(\mathbf y \mid \mathcal{M}_0)\,\pi(\mathcal{M}_0)}
+= \mathrm{BF}_{10}\cdot \frac{\pi(\mathcal{M}_1)}{\pi(\mathcal{M}_0)}. \qquad \square
+$$
+:::
+
+::: {.remark}
+The Bayes factor is the factor by which the data update the prior odds, and it is the principled
+Bayesian model-comparison criterion. It is, however, sensitive to the prior on $\boldsymbol\xi$ within
+each model, because $p(\mathbf y \mid \mathcal{M}) = \mathbb{E}_{\pi}[p(\mathbf y \mid \boldsymbol\xi)]$
+averages the likelihood over the prior and so depends on prior mass placed in regions of low likelihood;
+a diffuse prior can drive the marginal likelihood toward zero and favor the simpler model regardless of
+the data, the phenomenon known as Lindley's paradox. The mechanism is spreading too thin: a prior
+stretched over a very wide range places only a sliver of its mass near the parameter values the data
+support, so the average of the likelihood over the prior, which is precisely what $p(\mathbf y \mid
+\mathcal{M})$ computes, comes out small even when the best-fitting parameter value fits the data well. For this reason applied Bayesian model comparison
+often prefers predictive criteria such as the widely applicable information criterion or
+leave-one-out cross-validation, which are developed in the Bayesian-computation chapter of Part V. (
+Corresponds to L.5 in the proof catalogue.) $\blacktriangleleft$
+:::
+
+## A fully worked example {#sec-hb-worked}
+
+We compute a three-study normal-normal meta-analysis entirely by hand: the shrinkage estimates, their
+credible intervals, the empirical-Bayes heterogeneity, a direct conjugacy check, and one
+Metropolis-Hastings acceptance probability.
+
+::: {#exm-three-study-shrinkage}
+## Partial pooling of three studies
+Three trials report log-odds-ratio estimates
+$$
+y_1 = 0.0, \qquad y_2 = 0.6, \qquad y_3 = 1.2,
+$$
+each with the same known sampling variance $s_j^2 = 0.25$ (standard error $0.5$).
+
+**Shrinkage with given hyperparameters.** Take the population mean $\mu = 0.6$ and between-study
+variance $\tau^2 = 0.25$. The shrinkage factor of @eq-shrinkage is the same for all three studies,
+$$
+B_j = \frac{s_j^2}{s_j^2 + \tau^2} = \frac{0.25}{0.25 + 0.25} = \frac12,
+$$
+so $\hat\theta_j = \tfrac12\mu + \tfrac12 y_j$. The partial-pooling estimates are
+$$
+\hat\theta_1 = \tfrac12(0.6) + \tfrac12(0.0) = 0.30, \quad
+\hat\theta_2 = \tfrac12(0.6) + \tfrac12(0.6) = 0.60, \quad
+\hat\theta_3 = \tfrac12(0.6) + \tfrac12(1.2) = 0.90,
+$$
+each pulled halfway from its raw value toward the population mean $0.6$. The common posterior variance is
+$V_j = (1 - B_j)s_j^2 = \tfrac12 \times 0.25 = 0.125$, with posterior standard deviation $\sqrt{0.125} =
+0.35355$. The $95\%$ credible interval for $\theta_1$ is therefore
+$$
+0.30 \pm 1.96 \times 0.35355 = 0.30 \pm 0.6930 = (-0.393,\; 0.993).
+$$
+
+**Reading the result on the odds-ratio scale.** Translating back to the scale a clinician reads makes the
+effect of shrinkage concrete. Trial 3's raw log odds ratio of $1.2$ (an odds ratio of $e^{1.2} = 3.32$)
+shrinks to $0.90$ (an odds ratio of $e^{0.90} = 2.46$): partial pooling has walked the most eye-catching
+trial back from roughly a tripling of the odds to about a $2.5$-fold effect, because that trial is one
+imprecise result among three. For trial 1 the shrunken estimate $0.30$ corresponds to an odds ratio of
+$e^{0.30} = 1.35$, and its credible interval $(-0.393,\; 0.993)$ becomes $(e^{-0.393},\; e^{0.993}) =
+(0.67,\; 2.70)$ on the odds-ratio scale. That interval straddles $1$, so even after borrowing strength the
+evidence for trial 1's population remains consistent with no effect: shrinkage has changed the point
+estimate without manufacturing certainty.
+
+**Direct conjugacy check.** Verify $\hat\theta_1$ from first principles by @thm-conjugate-normal. The
+prior is $\theta_1 \sim \mathcal{N}(0.6, 0.25)$ and the likelihood is $y_1 = 0 \sim \mathcal{N}(\theta_1,
+0.25)$. Posterior precision $= 1/0.25 + 1/0.25 = 4 + 4 = 8$, so $V_1 = 1/8 = 0.125$, matching above.
+Posterior mean $= V_1(\mu/\tau^2 + y_1/s_1^2) = 0.125\,(0.6/0.25 + 0/0.25) = 0.125 \times 2.4 = 0.30$,
+matching $\hat\theta_1$.
+
+**Empirical Bayes by the DerSimonian-Laird estimator.** Now estimate $(\mu, \tau^2)$ from the data via
+@eq-dersimonian-laird. The weights are $w_j = 1/s_j^2 = 4$, so $\sum_j w_j = 12$, the weighted mean is
+$\bar y_w = (4 \cdot 0 + 4 \cdot 0.6 + 4 \cdot 1.2)/12 = 7.2/12 = 0.60$, and
+$$
+Q = \sum_j w_j (y_j - \bar y_w)^2 = 4\bigl[(0 - 0.6)^2 + 0 + (1.2 - 0.6)^2\bigr] = 4(0.36 + 0.36) = 2.88.
+$$
+With $J - 1 = 2$, $\sum_j w_j^2 = 3 \times 16 = 48$, and $\sum_j w_j^2/\sum_j w_j = 48/12 = 4$, the
+denominator is $12 - 4 = 8$, so
+$$
+\hat\tau^2_{\mathrm{DL}} = \frac{2.88 - 2}{8} = \frac{0.88}{8} = 0.11.
+$$
+The estimated heterogeneity is smaller than the $\tau^2 = 0.25$ assumed above, so empirical Bayes shrinks
+more aggressively: $\hat B_j = 0.25/(0.25 + 0.11) = 0.25/0.36 = 0.6944$, giving
+$$
+\hat\theta_1 = 0.6944(0.6) + 0.3056(0.0) = 0.4167, \quad
+\hat\theta_2 = 0.60, \quad
+\hat\theta_3 = 0.6944(0.6) + 0.3056(1.2) = 0.7833.
+$$
+
+**One Metropolis-Hastings step.** Suppose we sample the posterior $\theta_1 \mid y_1 \sim
+\mathcal{N}(0.30, 0.125)$ of the first display by random-walk Metropolis with a symmetric Gaussian
+proposal, so $q(x, y) = q(y, x)$ and the acceptance probability @eq-mh-acceptance reduces to $\min\{1,
+\pi(y)/\pi(x)\}$. From the current state $\theta = 0.30$ (the posterior mode) propose $\theta' = 0.70$.
+Then
+$$
+\frac{\pi(\theta')}{\pi(\theta)} = \exp\!\left(-\frac{(0.70 - 0.30)^2 - (0.30 - 0.30)^2}{2 \times 0.125}\right)
+= \exp\!\left(-\frac{0.16}{0.25}\right) = e^{-0.64} = 0.5273,
+$$
+so the move is accepted with probability $0.5273$. A draw below this threshold accepts $\theta' = 0.70$;
+otherwise the chain stays at $0.30$. Iterating such steps produces a sample from $\mathcal{N}(0.30,
+0.125)$ by @thm-mh-stationarity. $\blacktriangleleft$
+:::
+
+::: {#exm-beta-binomial-shrinkage}
+## Beta-binomial shrinkage
+A binary endpoint yields $y = 8$ successes in $n = 10$ patients, with a weakly informative prior $p \sim
+\mathrm{Beta}(2, 2)$ (prior mean $0.5$, two pseudo-successes and two pseudo-failures). By
+@thm-conjugate-beta-binomial the posterior is $\mathrm{Beta}(2 + 8, 2 + 2) = \mathrm{Beta}(10, 4)$, with
+posterior mean
+$$
+\frac{10}{14} = 0.7143 = \frac{4}{14}\cdot \frac{2}{4} + \frac{10}{14}\cdot \frac{8}{10},
+$$
+a convex combination shrinking the maximum likelihood estimate $0.80$ toward the prior mean $0.50$, with
+weight $10/14$ on the data. The posterior standard deviation is $\sqrt{10 \cdot 4/(14^2 \cdot 15)} =
+\sqrt{40/2940} = 0.1167$. $\blacktriangleleft$
+:::
+
+## The bridge to Bayesian network meta-analysis {#sec-hb-bridge}
+
+The random-effects meta-analysis model @eq-normal-normal-model is the one-comparison special case of the
+hierarchical models that drive the rest of this book. In a network of trials comparing several
+treatments, each study $j$ contributes one or more relative-effect estimates, and the study-specific
+true contrasts $\delta_{j,1k}$ (treatment $k$ versus the reference) are modeled as exchangeable draws
+from a common distribution,
+$$
+\delta_{j,1k} \mid d_{1k}, \tau^2 \sim \mathcal{N}(d_{1k}, \tau^2),
+$$
+where $d_{1k}$ is the population (pooled) relative effect to be estimated and $\tau^2$ is the
+between-study heterogeneity (@dias2018nma). This is precisely @def-hierarchical-model with the study
+contrasts as unit parameters; the pooled effects $d_{1k}$ play the role of $\mu$, and the consistency
+equations of the network tie the contrasts together algebraically. Because the link is typically the
+logit and the likelihood binomial, the posterior is non-conjugate, and estimation proceeds by the
+Hamiltonian Monte Carlo of @sec-hmc, as implemented in the Bayesian NMA software of Part III and the
+multilevel network meta-regression of Part V. The shrinkage, REML, empirical-Bayes, and MCMC machinery
+built here is the computational substrate of every Bayesian estimate reported in those chapters; the
+non-collapsibility of the logit link (@def-non-collapsibility) is the reason the population and
+study-level effects must be handled with the care this chapter develops.
+
+## Notes and references {#sec-hb-notes}
+
+The hierarchical and Bayesian material of this chapter is standard, and our presentation aligns with the
+companion proof catalogue, where it is items L.1 through L.5: Bayes' theorem (L.1, @thm-bayes),
+conjugate families (L.2, @thm-conjugate-normal, @thm-conjugate-beta-binomial,
+@prp-conjugate-gamma-poisson), the Hamiltonian Monte Carlo invariance and the Metropolis-Hastings
+detailed-balance argument (L.3, @thm-mh-stationarity, @prp-hmc-invariance, @def-hmc), the posterior
+predictive distribution (L.4, @def-posterior-predictive), and the marginal likelihood and Bayes factors
+(L.5, @def-marginal-likelihood, @prp-posterior-odds). The catalogue's one-line sketches have been
+expanded into full proofs; in particular the Metropolis-Hastings stationarity is proved here from the
+general detailed-balance lemma (@lem-detailed-balance-stationary) on a general state space, and the HMC
+volume-preservation and energy-conservation facts (@lem-leapfrog-volume, @lem-hamiltonian-conservation)
+are given complete proofs rather than cited. We additionally own the random-effects and REML content of
+the chapter assignment: exchangeability and de Finetti (@def-exchangeability, @thm-de-finetti), the
+hierarchical model and the random-versus-fixed distinction (@def-hierarchical-model,
+@def-random-effects), the shrinkage estimator (@thm-shrinkage-posterior-mean), the James-Stein
+phenomenon (@lem-stein, @thm-james-stein), and restricted maximum likelihood (@def-reml,
+@thm-reml-invariance, @thm-reml-one-sample), together with the method-of-moments derivation of the
+DerSimonian-Laird heterogeneity estimator (@prp-dl-moment).
+
+The random-effects meta-analysis model and its Bayesian estimation follow @dias2018nma, which is the
+primary source for the bridge in @sec-hb-bridge and for the practice of fitting these models by Markov
+chain Monte Carlo. The method-of-moments heterogeneity estimator @eq-dersimonian-laird is from
+@dersimonian1986, and we give its method-of-moments derivation in full (@prp-dl-moment) rather than
+merely displaying the formula. The Hamiltonian Monte Carlo and No-U-Turn material, including the dual-averaging step
+adaptation and the centered-versus-non-centered parameterization, follows @carpenter2017stan. The
+linear-algebra prerequisites are the four fundamental subspaces and rank-nullity (@thm-four-subspaces,
+@thm-rank-nullity), orthogonal projection and Gram-Schmidt (@def-projection-matrix, @thm-gram-schmidt),
+and positive definiteness and quadratic forms (@thm-pd-characterization, @def-quadratic-form), all from
+@strang2016; the multivariate normal facts (@thm-mvn-linear, @thm-mvn-conditional, @prp-mvn-density,
+@def-conditional-independence) are from Chapter 4, and the variance-component and generalized
+least squares background from @bingham2010regression. Several attributions rely on sources not yet in the
+bibliography (de Finetti and Hewitt-Savage for @thm-de-finetti; James-Stein and Efron-Morris for
+@thm-james-stein; Patterson-Thompson and Harville for REML; Metropolis et al., Hastings, and Tierney for
+@sec-mcmc; Hoffman-Gelman, Neal, and Betancourt for @sec-hmc); these are listed with full bibliographic
+data in the work log for the orchestrator to merge.
+
+No result in this chapter carries a machine-checked tag. The companion Coq development formalizes the
+identification and algebraic content of the indirect-comparison methods, not Bayesian inference: there
+is no Coq counterpart to the posterior, the conjugate updates, or the samplers, a scope decision
+recorded in the companion manuscript. The cleanest candidates for future formalization are the purely
+algebraic results here, namely the detailed-balance lemma (@lem-detailed-balance-stationary), the
+shrinkage identity (@thm-shrinkage-posterior-mean), and the leapfrog volume-preservation
+(@lem-leapfrog-volume).
+
+## Exercises {#sec-hb-exercises}
+
+A starred exercise ($\star$) has a full worked solution in Appendix F. The first two exercises are
+plain-language warm-ups; the rest build up to the computations and proofs.
+
+::: {#exr-interpret-shrinkage}
+## Warm-up: reading shrinkage in words (interpretation)
+No calculation is required. (a) Two trials estimate the same treatment contrast; trial A has a small
+standard error and trial B a large one. In a random-effects meta-analysis, which of the two raw estimates
+is pulled harder toward the pooled mean, and why? (b) Explain in one sentence each what it means for the
+between-study variance to be $\tau^2 = 0$ and for $\tau^2$ to be very large, in terms of how much the
+trials borrow strength. (c) A colleague reports a shrinkage factor $B_j = 0.8$ for a study and says
+"good, that means we trust the study a lot." Correct the misunderstanding: what does $B_j = 0.8$ actually
+say about that study, and which direction does it pull the estimate?
+:::
+
+::: {#exr-or-interpretation}
+## Warm-up: from log odds ratios to a clinical statement (interpretation)
+A Bayesian meta-analysis reports, for a treatment contrast on the log-odds-ratio scale, a posterior mean
+of $0.55$ with a $95\%$ credible interval $(0.10,\; 1.00)$. (a) Convert the point estimate and both
+interval endpoints to the odds-ratio scale. (b) State in one plain sentence what the credible interval
+says, and contrast that with the (incorrect) confidence-interval interpretation a reader might reach for.
+(c) Does the interval provide evidence of a treatment effect on the odds scale? Answer by reference to the
+value $\mathrm{OR} = 1$.
+:::
+
+::: {#exr-shrinkage-unequal}
+## Shrinkage with unequal variances
+Two studies report $y_1 = 1.0$ with $s_1^2 = 0.04$ and $y_2 = 0.0$ with $s_2^2 = 0.36$, and the
+hyperparameters are $\mu = 0.4$, $\tau^2 = 0.16$. (a) Compute the shrinkage factors $B_1, B_2$, the
+partial-pooling estimates $\hat\theta_1, \hat\theta_2$, and the posterior variances $V_1, V_2$ from
+@eq-shrinkage. (b) Explain, by comparing $B_1$ and $B_2$, why the less precise study is shrunk more.
+(c) Give the $95\%$ credible interval for each $\theta_j$.
+:::
+
+::: {#exr-conjugate-n-sample}
+## The $n$-sample normal update and complete pooling
+For $y_1, \dots, y_n \mid \theta \sim \mathcal{N}(\theta, \sigma^2)$ iid with prior $\theta \sim
+\mathcal{N}(\mu_0, \tau_0^2)$, prove from @thm-conjugate-normal that the posterior precision is
+$\tau_0^{-2} + n\sigma^{-2}$ and the posterior mean is the precision-weighted average of $\mu_0$ and
+$\bar y$. Deduce that as $n \to \infty$ the posterior concentrates at $\bar y$ regardless of the prior,
+and interpret this as the data overwhelming the prior.
+:::
+
+::: {#exr-gamma-poisson-mean}
+## Gamma-Poisson posterior mean as shrinkage
+Using @prp-conjugate-gamma-poisson, show that the posterior mean of $\lambda$ given $y_1, \dots, y_n$ is
+$$
+\mathbb{E}[\lambda \mid \mathbf y] = \frac{a + \sum_i y_i}{b + n} = \frac{b}{b + n}\cdot \frac{a}{b} + \frac{n}{b + n}\cdot \bar y,
+$$
+a convex combination of the prior mean $a/b$ and the sample mean $\bar y$. Identify the data weight and
+its limit as $n \to \infty$.
+:::
+
+::: {#exr-mh-detailed-balance-discrete}
+## Detailed balance on a finite chain
+Let $\mathcal{X} = \{1, 2, 3\}$ and let $\pi = (0.2, 0.3, 0.5)$ be a target. Take the symmetric proposal
+that picks one of the other two states with probability $1/2$ each, and apply Metropolis-Hastings.
+(a) Write down the full $3 \times 3$ transition matrix $P$ with entries $P_{xy} = q_{xy}\alpha(x, y)$ off
+the diagonal and the rejection mass on the diagonal. (b) Verify directly that $\pi_x P_{xy} = \pi_y
+P_{yx}$ for all $x \ne y$. (c) Confirm $\pi P = \pi$, illustrating @lem-detailed-balance-stationary.
+:::
+
+::: {#exr-hpd-vs-equal-tailed}
+## Equal-tailed and HPD intervals
+For a posterior $\theta \mid \mathbf y \sim \mathcal{N}(m, v)$, show that the $95\%$ equal-tailed and
+$95\%$ HPD intervals coincide and both equal $m \pm 1.96\sqrt{v}$, and explain using @prp-hpd-shortest
+why the coincidence is special to symmetric unimodal posteriors. Then for a $\mathrm{Gamma}(2, 1)$
+posterior, argue qualitatively that the HPD interval is shifted toward smaller values relative to the
+equal-tailed interval.
+:::
+
+::: {#exr-leapfrog-jacobian}
+## Leapfrog volume preservation in one dimension
+For $d = 1$ and $M = 1$, write the leapfrog map $(\xi, r) \mapsto (\xi', r')$ of @def-hmc explicitly as
+a function of $(\xi, r)$ for a smooth log target $\log\pi(\xi)$, compute the $2 \times 2$ Jacobian
+matrix, and verify its determinant equals $1$, confirming @lem-leapfrog-volume in this case.
+:::
+
+::: {#exr-empirical-bayes-recompute}
+## Recomputing the worked example
+Redo @exm-three-study-shrinkage with $y = (0.2, 0.5, 1.1)$ and common $s_j^2 = 0.20$. (a) Using $\mu =
+0.6$, $\tau^2 = 0.20$, compute the shrinkage factor, the three partial-pooling estimates, and the
+posterior standard deviation. (b) Compute the DerSimonian-Laird estimate $\hat\tau^2_{\mathrm{DL}}$ from
+@eq-dersimonian-laird and the corresponding empirical-Bayes estimates. (c) Carry out one
+Metropolis-Hastings acceptance-probability calculation for the posterior of $\theta_3$ with a proposed
+move of your choice.
+:::
+
+::: {#exr-james-stein-sure}
+## James-Stein dominance via the unbiased risk estimate ($\star$)
+Let $\mathbf Y \sim \mathcal{N}_J(\boldsymbol\theta, \sigma^2 I_J)$ with $J \ge 3$ and $\sigma^2$ known.
+(a) Prove Stein's unbiased risk estimate: for $\hat{\boldsymbol\theta} = \mathbf Y + \mathbf g(\mathbf
+Y)$ with $\mathbf g$ weakly differentiable and suitably integrable, $\mathbb{E}\|\hat{\boldsymbol\theta}
+- \boldsymbol\theta\|^2 = \mathbb{E}[J\sigma^2 + 2\sigma^2\nabla\cdot\mathbf g(\mathbf Y) + \|\mathbf
+g(\mathbf Y)\|^2]$, using @lem-stein coordinatewise. (b) Apply it to the James-Stein choice $\mathbf
+g(\mathbf y) = -(J - 2)\sigma^2\mathbf y/\|\mathbf y\|^2$ to recover the risk identity of
+@thm-james-stein, and identify the positive-part estimator $\hat{\boldsymbol\theta}^{\mathrm{JS+}} =
+(1 - (J-2)\sigma^2/\|\mathbf Y\|^2)_{+}\mathbf Y$ as a further improvement. (c) Explain in one paragraph
+how this justifies the partial pooling of meta-analysis without invoking a subjective prior. *(Solution
+in Appendix F.)*
+:::
+
+::: {#exr-reml-one-way}
+## REML for the balanced one-way model ($\star$)
+Consider the balanced one-way random-effects model $y_{ij} = \mu + \theta_i + \varepsilon_{ij}$, $i = 1,
+\dots, I$, $j = 1, \dots, n$, with $\theta_i \sim \mathcal{N}(0, \tau^2)$ and $\varepsilon_{ij} \sim
+\mathcal{N}(0, \sigma^2)$, all independent. (a) Using a maximal set of error contrasts orthogonal to
+$\mathbf 1_{In}$, or otherwise, derive the REML estimators of $(\sigma^2, \tau^2)$ in terms of the
+within-group and between-group mean squares $\mathrm{MS}_{\mathrm{W}}$ and $\mathrm{MS}_{\mathrm{B}}$.
+(b) Show that the REML between-groups computation uses the denominator $I - 1$ (correcting for the
+estimated grand mean), whereas the corresponding maximum likelihood computation uses $I$, and confirm
+that REML reproduces the analysis-of-variance estimators. (c) State the condition under which the REML
+estimate of $\tau^2$ is truncated at zero, and relate it to @eq-dersimonian-laird. *(Solution in
+Appendix F.)*
+:::

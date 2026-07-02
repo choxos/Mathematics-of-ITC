@@ -1,0 +1,526 @@
+---
+title: "Notation Glossary"
+---
+
+This appendix is the reference index for the book's notation. It has two parts. The first repeats every
+symbol introduced in [Notation](/notation.qmd), grouped by the same topics, and adds for each symbol a
+one-line gloss together with the chapter that introduces it, naming the defining environment by its slug
+where one exists. The second is an alphabetical glossary of every formally defined term in the book; each
+entry gives a one-sentence statement of the term and a pointer to the chapter and the definition slug
+that fixes it. The conventions themselves, that bold lowercase letters denote vectors and bold uppercase
+letters denote matrices, that random variables are capitalized when the distinction from a realized value
+matters, that an unsubscripted probability refers to the population under discussion, and that $\square$
+closes a proof while $\blacktriangleleft$ closes a definition, example, or remark, are stated in
+[Notation](/notation.qmd) and are not repeated here. Nothing in this appendix is proved; it is a single
+place to look up a symbol or a definition and to follow the slug to the statement that establishes it.
+
+Throughout, "Ch." abbreviates chapter, and a slug such as `@def-effect-modifier` names the
+cross-referenceable definition environment in the chapter where the term is established; that slug is the
+exact cross-reference an author would use to cite the result.
+
+## How to use this appendix {#sec-gloss-howto}
+
+There are two ways in. If you have *seen a symbol* and want to know what it is, use the symbol tables of
+@sec-gloss-symbols, grouped by role from linear algebra through population adjustment. If you have *heard
+a term* and want its meaning, use the alphabetical glossary of @sec-gloss-terms; the clusters in
+@sec-gloss-clusters gather related terms so a whole family can be read at once. In either place the final
+column names the chapter and, where a formal definition fixes the item, the slug of that definition. That
+slug is the cross-reference key that takes you to the formal definition in the chapter that establishes
+it. The chapter legend in @tbl-gloss-chapters turns each "Ch." number into its subject and part, so that
+"Ch. 14" reads as "Bucher indirect comparison," not a bare number.
+
+Four short aids come before the tables: a compact key to the conventions (@sec-gloss-conventions), a
+worked notation key that maps the symbols onto a single anchored comparison (@sec-gloss-worked-key), a
+table of symbols that carry more than one meaning (@sec-gloss-overloaded), and a plain-language note on
+effect scales (@sec-gloss-scales).
+
+| Ch. | Subject | Part |
+|---|---|---|
+| 1 to 3 | Linear algebra: spaces, orthogonality, spectral theory | I, Foundations |
+| 4 to 5 | Probability; statistical inference | I, Foundations |
+| 6 to 8 | Linear regression; generalized linear models; hierarchical and Bayesian models | I, Foundations |
+| 9 to 12 | Potential outcomes; adjustment methods; effect modification and collapsibility; transportability | II, Causal foundations |
+| 13 to 16 | Pairwise meta-analysis; Bucher; network meta-analysis; limits of standard NMA | III, Evidence synthesis |
+| 17 to 19 | Population adjustment theory; MAIC; STC | IV, Population adjustment |
+| 20 to 23 | ML-NMR: aggregation, discrete approximation, integration, estimands | V, Multilevel network meta-regression |
+| 24 to 26 | Bayesian computation and diagnostics; general likelihoods; ML-UMR | V, Multilevel network meta-regression |
+| 27 to 30 | Distance matching; quantitative bias analysis; simulation; the Coq formalization | VI, Frontier and formalization |
+
+: What each chapter covers, to decode the "Introduced" and "Defined in" columns. {#tbl-gloss-chapters}
+
+## A compact key to the conventions {#sec-gloss-conventions}
+
+The full conventions live in [Notation](/notation.qmd); the few a reader most often needs are repeated
+here, since a reader who reaches for a glossary is usually already unsure. Bold lowercase letters
+($\mathbf{x}$, $\boldsymbol{\beta}$) are vectors; bold uppercase letters ($\mathbf{X}$,
+$\boldsymbol{\Sigma}$) are matrices; plain letters are scalars. A capital letter is a random variable and
+the matching lowercase letter is a value it takes: $X$ is the random covariate, $x$ a realized covariate
+value, $\mathbf{x}$ the covariate vector for one patient, and $\mathcal{X}$ the set of all possible
+covariate values. A probability $P(\cdot)$ with no subscript refers to the population under discussion.
+The index letters are fixed: $i$ is a patient, $j$ a study, $k$ an arm, and $a,b,c$ name treatments, so
+$\eta_{ijk}$ reads "patient $i$, study $j$, arm $k$." The symbol $\square$ closes a proof and
+$\blacktriangleleft$ closes a definition, example, or remark.
+
+## A worked notation key: one anchored comparison {#sec-gloss-worked-key}
+
+To pin the symbols to a familiar picture, read them off a single indirect comparison. Treatments $A$ and
+$B$ were never studied head to head. An $AC$ trial compares $A$ against a common comparator $C$; a
+separate $BC$ trial compares $B$ against the same $C$. A health technology assessment wants the $A$
+versus $B$ effect in a target population $\mathcal{P}^{*}$. The symbols then read as follows.
+
+| Symbol | In this anchored comparison |
+|---|---|
+| $j$ | the study: here $j=AC$ or $j=BC$ |
+| $i$ | a patient inside one of the two trials |
+| $\mathbf{x}_i$ | patient $i$'s baseline covariate vector (age, disease severity, and so on) |
+| $\mathcal{P}^{*}$ | the target population in which the answer is wanted |
+| $\hat d_{AC},\ \hat d_{BC}$ | the within-trial estimates, each a $\hat d_{ab(j)}$, of $A$ versus $C$ and of $B$ versus $C$ |
+| $d_{AB(\mathcal{P}^{*})}$ | the wanted marginal $A$ versus $B$ contrast in $\mathcal{P}^{*}$, on a stated scale |
+| the Bucher step | $\hat d_{AB}=\hat d_{AC}-\hat d_{BC}$, valid when relative effects are constant across the populations (`@def-anchored-comparison`) |
+
+: One anchored comparison, symbol by symbol. {#tbl-gloss-worked-key}
+
+Had the two trials shared no comparator, the comparison would be *unanchored* and would rest on the
+stronger prognostic assumptions of Chapters 17 and 26; the same $i$, $j$, $\mathbf{x}_i$, and
+$\mathcal{P}^{*}$ still apply.
+
+## Overloaded symbols at a glance {#sec-gloss-overloaded}
+
+A few glyphs carry more than one meaning. Context always fixes the intended one, but a reader arriving in
+the middle of a chapter may want the map. Each row lists a reused symbol and its separate roles.
+
+| Symbol | One meaning | Another meaning |
+|---|---|---|
+| $\perp$ | "is independent of," as in $X\perp Y\mid Z$ (Ch. 4) | "is orthogonal to," inner product zero (Ch. 2) |
+| $\Pi$ | prior probability measure (Ch. 8) | the coupling set $\Pi(\mathcal{P},\mathcal{Q})$ of a Wasserstein distance (Ch. 27) |
+| $S$ | study or population membership indicator (Ch. 12) | a generic set, as in $\mathrm{span}(S)$ (Ch. 1) |
+| $\mathrm{ESS}$ | effective sample size of a weighted sample (Ch. 18) | of an MCMC chain, written $N_{\mathrm{eff}}$ to keep them apart (Ch. 24); and $\mathrm{ESS}_{\mathrm{reg}}$, the explained regression sum of squares (Ch. 6) |
+| $\tau$ | average treatment effect (Ch. 9) | restricted mean survival time horizon (Ch. 25); and $\tau^2$, the heterogeneity variance (Chs. 8, 13) |
+| $\mu$ | a mean, and $\mu_t(x)$ a mean outcome (Chs. 4, 9) | $\mu_j$, a study baseline intercept (Ch. 15) |
+| $\sigma$ | $\sigma^2$, an error or sampling variance (Ch. 6) | $\sigma_i(A)$, the $i$-th singular value (Ch. 3) |
+| $\boldsymbol{\beta}$ | regression coefficients (Ch. 6) | matching-weight parameters (Ch. 18); prognostic effects $\boldsymbol{\beta}_1$ and interactions $\boldsymbol{\beta}_{2,k}$ (Ch. 17) |
+| $\alpha$ | matching-weight normalizing constant in $w_i=\exp(\alpha+\boldsymbol{\beta}^\top\mathbf{x}_i)$ (Ch. 18) | a significance level in hypothesis testing (Ch. 29) |
+| $d$ versus $\delta$ | $d_{ab(\mathcal{P})}$, a population-level relative effect (Ch. 14) | $\delta_{j,\,t_1 t_k}$, the within-study contrast that estimates it (Ch. 15) |
+| $D$ | deviance, and $\bar D$ the posterior mean deviance (Chs. 7, 15) | $D_N^{*}(P)$, the star discrepancy (Ch. 22) |
+
+: Symbols that carry more than one meaning. {#tbl-gloss-overloaded}
+
+## A note on effect scales {#sec-gloss-scales}
+
+Many entries below turn on two distinctions that run through the whole book, so they are worth stating
+plainly once. The first is *marginal* versus *conditional*. A conditional effect $\tau^g_{ab}(x)$
+compares treatments within a fixed covariate value $x$; a marginal effect compares treatments after
+averaging outcomes over a whole population. On a *non-collapsible* scale, such as the odds ratio, these
+two differ even when nothing is confounded, which is exactly why the book keeps them apart. The second is
+*outcome scale* versus *link scale*. The outcome scale is the natural scale of the response, a
+probability, a rate, or a survival time; the link scale, also called the linear-predictor scale, is the
+scale on which the model is linear, reached by applying the link $g$ (for a probability, the log-odds).
+Relative effects such as $d_{ab(\mathcal{P})}$ live on a stated scale, and odds ratios, risk ratios, risk
+differences, and hazard ratios are not interchangeable: an assumption true on one scale can fail on
+another. The book names the scale whenever it matters; the defined terms `@def-scale-alignment`,
+`@def-collapsibility`, and `@def-marginal-effect` make the point precisely.
+
+## Symbols by topic {#sec-gloss-symbols}
+
+Each table below corresponds to one group of [Notation](/notation.qmd). The "Introduced" column records
+the chapter of first use and, where a formal definition fixes the symbol, the slug of that definition.
+Many symbols recur across the book; the chapter named is the one that introduces and is responsible for
+the symbol, not the only one that uses it. One table has no counterpart in [Notation](/notation.qmd): the
+Bayesian computation table @tbl-gloss-bayes collects symbols from Chapters 8, 15, and 24 that the
+Notation chapter does not yet list. The groups run from general mathematics toward the notation specific
+to indirect comparison; the turning point is @tbl-gloss-studies, where the symbols begin to describe
+trials, populations, and contrasts rather than generic mathematical objects.
+
+### Linear algebra and matrices {#sec-gloss-linalg}
+
+| Symbol | Meaning | Introduced |
+|---|---|---|
+| $\mathbb{R},\ \mathbb{R}^n,\ \mathbb{R}^{m\times n}$ | reals, real $n$-vectors, real $m\times n$ matrices | Ch. 1 |
+| $V,\ W$ | vector spaces over $\mathbb{R}$ (sets where adding and scaling stay inside the set, like the space of covariate vectors) | Ch. 1, `@def-vector-space` |
+| $\dim V,\ \mathrm{span}(S)$ | dimension of a space; linear span of a set (everything you can build from $S$ by adding and scaling) | Ch. 1, `@def-dimension`, `@def-span` |
+| $\mathbf{e}_i$ | $i$-th standard basis vector (all zeros but a $1$ in slot $i$; for example $\mathbf{e}_1=(1,0,\dots,0)^\top$) | Ch. 1, `@def-basis` |
+| $\mathbf{1}_n,\ \mathbf{0}_n$ | all-ones and all-zeros $n$-vectors | Ch. 1 |
+| $I_n,\ J_n=\mathbf{1}_n\mathbf{1}_n^\top$ | identity matrix; all-ones matrix | Ch. 1 |
+| $A^\top,\ A^{-1},\ A^{+}$ | transpose; inverse; Moore-Penrose pseudoinverse (a stand-in inverse that works even when $A$ is not square or not invertible) | Ch. 1; pseudoinverse Ch. 3, `@def-pseudoinverse` |
+| $\mathrm{rank}(A),\ \det(A),\ \mathrm{tr}(A)$ | rank (number of independent columns); determinant; trace (sum of the diagonal) | rank Ch. 1 (`@def-rank`); $\det,\ \mathrm{tr}$ Ch. 3 |
+| $\mathcal{C}(A),\ \mathcal{N}(A)$ | column space (all vectors $A$ can output); null space (all vectors $A$ sends to $\mathbf{0}$) | Ch. 1, `@def-column-space`, `@def-kernel-image` |
+| $\langle\mathbf{x},\mathbf{y}\rangle=\mathbf{x}^\top\mathbf{y}$ | Euclidean inner product (zero means the two vectors sit at right angles) | Ch. 2, `@def-inner-product` |
+| $\lVert\mathbf{x}\rVert_2=\sqrt{\mathbf{x}^\top\mathbf{x}},\ \lVert\mathbf{x}\rVert_A=\sqrt{\mathbf{x}^\top A\,\mathbf{x}}$ | Euclidean norm (ordinary length); quadratic-form norm | Ch. 2, `@def-norm` |
+| $P_{\mathcal{M}},\ P^{\perp}_{\mathcal{M}}=I-P_{\mathcal{M}}$ | orthogonal projection onto $\mathcal{M}$ (the nearest point in the subspace) and onto its complement (everything left over) | Ch. 2, `@def-projection-matrix` |
+| $A\succeq 0,\ A\succ 0$ | positive semidefinite; positive definite (the quadratic form $\mathbf{x}^\top A\,\mathbf{x}$ is always $\ge 0$, or strictly $>0$ for $\mathbf{x}\ne\mathbf{0}$) | Ch. 3, `@def-definiteness` |
+| $\lambda_i(A),\ \sigma_i(A)$ | $i$-th eigenvalue (stretch factor along a special direction of $A$); $i$-th singular value (stretch factor of the map $\mathbf{x}\mapsto A\,\mathbf{x}$) | Ch. 3, `@def-eigenvalue` |
+| $A=Q\Lambda Q^\top,\ A=U\Sigma V^\top$ | spectral decomposition; singular value decomposition (factorizations that expose those stretch factors) | Ch. 3 |
+
+: Linear algebra and matrix symbols. {#tbl-gloss-linalg}
+
+### Regression and least squares {#sec-gloss-regression}
+
+| Symbol | Meaning | Introduced |
+|---|---|---|
+| $\mathbf{X}\in\mathbb{R}^{n\times p}$ | design (model) matrix; rows are observations, columns are regressors | Ch. 6, `@def-linear-model` |
+| $\mathbf{y},\ \hat{\mathbf{y}}$ | response vector; fitted values ($\hat{\mathbf{y}}=H\mathbf{y}$) | Ch. 6 |
+| $\boldsymbol{\beta},\ \hat{\boldsymbol{\beta}}$ | regression coefficients and their estimator (the slopes the fit chooses) | Ch. 6 |
+| $\boldsymbol{\varepsilon},\ \mathbf{r}=\mathbf{y}-\hat{\mathbf{y}}$ | error vector (unobserved noise); residual vector (its observed proxy) | Ch. 6 |
+| $H=\mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$ | hat matrix; it puts the "hat" on $\mathbf{y}$, projecting it onto $\mathcal{C}(\mathbf{X})$ | Ch. 6, `@def-hat-matrix` |
+| $M=I-H$ | residual maker ($M\mathbf{y}=\mathbf{r}$, the part $\mathbf{X}$ cannot explain) | Ch. 6, `@def-hat-matrix` |
+| $\mathrm{RSS},\ \mathrm{TSS},\ \mathrm{ESS}_{\mathrm{reg}}$ | residual, total, explained sums of squares (the subscript keeps $\mathrm{ESS}_{\mathrm{reg}}$ apart from the weighting $\mathrm{ESS}$) | Ch. 6, `@def-sums-of-squares` |
+| $\sigma^2,\ s^2$ | error variance and its unbiased estimator | Ch. 6 |
+| $R^2$ | coefficient of determination (fraction of response variation the fit explains) | Ch. 6, `@def-r-squared` |
+
+: Regression and least-squares symbols. {#tbl-gloss-regression}
+
+### Probability and random variables {#sec-gloss-probability}
+
+| Symbol | Meaning | Introduced |
+|---|---|---|
+| $(\Omega,\mathcal{F},P)$ | probability space: sample space, event $\sigma$-algebra (the events probabilities attach to), probability measure | Ch. 4, `@def-probability-space` |
+| $\mathbb{E}[X],\ \mathbb{E}[X\mid Z]$ | expectation; conditional expectation (best mean-square prediction of $X$ from $Z$) | Ch. 4, `@def-conditional-expectation` |
+| $\mathrm{Var}(X),\ \mathrm{Cov}(X,Y),\ \boldsymbol{\Sigma}$ | variance; covariance; covariance matrix | Ch. 4, `@def-variance-covariance` |
+| $X\perp Y\mid Z$ | conditional independence: given $Z$, knowing $X$ tells you nothing about $Y$ (here $\perp$ reads "is independent of," not the "perpendicular" of Ch. 2) | Ch. 4, `@def-conditional-independence` |
+| $\mathcal{N}(\mu,\sigma^2),\ \mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})$ | univariate and $p$-variate normal | Ch. 4, `@def-normal`, `@def-mvn` |
+| $\mathrm{Bin}(n,p),\ \mathrm{Poi}(\lambda),\ \mathrm{Ber}(p)$ | binomial, Poisson, Bernoulli | Ch. 4 |
+| $\mathrm{PoBin}(\mathbf{p})$ | Poisson binomial (sum of independent coin flips with different success probabilities) | Ch. 4, `@def-poisson-binomial` |
+| $F_X,\ F_X^{-1}$ | distribution function and its generalized inverse (the quantile function; "generalized" so it still works for discrete laws) | Ch. 4 |
+| $\Phi,\ \phi$ | standard normal distribution function and density | Ch. 4, `@def-normal` |
+| $M_X(\mathbf{t})=\mathbb{E}[e^{\mathbf{t}^\top X}]$ | moment generating function (when finite near $\mathbf{0}$ it determines the whole distribution) | Ch. 4, `@def-mgf` |
+| $\lVert\mu-\nu\rVert_{\mathrm{TV}}$ | total variation distance (largest probability gap two laws assign any event) | Ch. 21, `@def-total-variation` |
+| $\xrightarrow{p},\ \xrightarrow{d},\ \xrightarrow{\text{a.s.}}$ | convergence in probability (settles near a fixed value as $n$ grows), in distribution (its histogram settles to a fixed shape), almost surely (settles for all but a negligible set of outcomes) | Ch. 4 |
+| $O_p,\ o_p,\ O(\cdot),\ o(\cdot)$ | stochastic and deterministic order symbols ($O(1/n)$ means "shrinks about like $1/n$"; little-$o$ means "shrinks strictly faster than its argument") | Ch. 5 |
+
+: Probability and random-variable symbols. {#tbl-gloss-probability}
+
+### Statistical inference {#sec-gloss-inference}
+
+| Symbol | Meaning | Introduced |
+|---|---|---|
+| $L(\boldsymbol{\theta}),\ \ell(\boldsymbol{\theta})=\log L(\boldsymbol{\theta})$ | likelihood and log-likelihood (the data's probability read as a function of the parameter) | Ch. 5, `@def-likelihood` |
+| $\mathbf{s}(\boldsymbol{\theta})=\nabla\ell(\boldsymbol{\theta})$ | score function (gradient of the log-likelihood; it vanishes at the MLE) | Ch. 5, `@def-score` |
+| $\mathcal{I}(\boldsymbol{\theta})$ | Fisher information matrix (curvature of the log-likelihood; larger means sharper estimates) | Ch. 5, `@def-fisher-information` |
+| $\hat{\boldsymbol{\theta}}_{\mathrm{MLE}}$ | maximum likelihood estimator | Ch. 5, `@def-mle` |
+| $\mathbb{V}$ | sandwich (robust) variance estimator, $\mathbb{V}=A^{-1}BA^{-\top}$; stays valid under model misspecification | Ch. 5, `@def-sandwich-variance` |
+
+: Statistical-inference symbols. {#tbl-gloss-inference}
+
+### Bayesian computation and model comparison {#sec-gloss-bayes}
+
+These symbols run through the Bayesian chapters (8, 15, 24) but have no home in [Notation](/notation.qmd),
+so they are collected here: a reader who meets $\hat R$ or $\pi(\boldsymbol{\xi}\mid\mathbf{y})$ in a
+chapter will look for them in this appendix. The concepts behind them are glossed in the alphabetical
+table of @sec-gloss-terms.
+
+| Symbol | Meaning | Introduced |
+|---|---|---|
+| $\pi(\boldsymbol{\xi}),\ \pi(\boldsymbol{\xi}\mid\mathbf{y})$ | prior and posterior density of the parameter vector (belief before, then after, seeing the data $\mathbf{y}$) | Ch. 8 |
+| $p(\mathbf{y}\mid\boldsymbol{\xi})$ | likelihood (probability of the data given the parameters) | Ch. 8 |
+| $\Pi$ | prior probability measure, used when the prior has no density (a different $\Pi$ than the coupling set of Ch. 27) | Ch. 8 |
+| $\tau^2$ | between-study heterogeneity variance (spread of true study effects around their mean) | Chs. 8, 13, `@def-random-effects-ma` |
+| $\hat R$ | Gelman-Rubin potential scale reduction statistic; a value near $1$ signals the chains have converged | Ch. 24, `@def-comp-rhat-pieces` |
+| $N_{\mathrm{eff}}$ | effective sample size of an autocorrelated MCMC chain (how many independent draws it is worth); reported in bulk and tail forms, and distinct from the weighting $\mathrm{ESS}$ | Ch. 24, `@def-mcmc-ess` |
+| $\bar D,\ D(\bar{\boldsymbol{\theta}}),\ p_D$ | posterior mean deviance, deviance at the posterior mean, and effective number of parameters $p_D=\bar D-D(\bar{\boldsymbol{\theta}})$ | Ch. 15, `@def-dic` |
+| $\mathrm{lppd},\ \widehat{\mathrm{elpd}}$ | log pointwise predictive density and the estimated expected log pointwise predictive density (out-of-sample fit) | Ch. 24, `@def-comp-criteria` |
+| $\mathrm{WAIC},\ \mathrm{LOO}$ | widely applicable information criterion and leave-one-out cross-validation scores | Ch. 24, `@def-comp-criteria` |
+| PSIS, $\widehat k$ | Pareto-smoothed importance sampling and its per-observation tail-index diagnostic (a large $\widehat k$, above about $0.7$, flags an unreliable, influential point) | Ch. 24, `@def-psis-loo` |
+
+: Bayesian computation and model-comparison symbols. {#tbl-gloss-bayes}
+
+### Causal inference {#sec-gloss-causal}
+
+| Symbol | Meaning | Introduced |
+|---|---|---|
+| $Y(0),\ Y(1)$ | potential outcomes under control and active treatment (what a patient's outcome would be under each option) | Ch. 9, `@def-potential-outcome` |
+| $T\in\{0,1\}$ | treatment indicator | Ch. 9 |
+| $Y=TY(1)+(1-T)Y(0)$ | observed outcome (you see only the potential outcome for the treatment actually given; consistency under SUTVA) | Ch. 9, `@def-sutva` |
+| $X\in\mathcal{X}$ | baseline covariates ($X$ the random covariate, $x$ a value, $\mathbf{x}$ a patient's vector, $\mathcal{X}$ the space of values) | Ch. 9 |
+| $e(x)=P(T=1\mid X=x)$ | propensity score, the coarsest balancing score; for example $e(x)=0.3$ means 30 percent of patients with covariates $x$ were treated | Ch. 10, `@def-propensity-score` |
+| $\mu_t(x)=\mathbb{E}[Y(t)\mid X=x]$ | conditional mean outcome under treatment $t$ (the outcome model at covariate value $x$) | Ch. 9 |
+| $\tau(x)=\mu_1(x)-\mu_0(x)$ | conditional average treatment effect (the effect for patients with covariates $x$; average it over $X$ to get $\tau$) | Ch. 9, `@def-cate` |
+| $\tau=\mathbb{E}[\tau(X)]$ | average treatment effect (the conditional effect averaged over the covariate distribution) | Ch. 9, `@def-ate` |
+| $S$ | study or population membership indicator (a different $S$ than the generic set of Ch. 1) | Ch. 12, `@def-transport-invariance` |
+
+: Causal-inference symbols. {#tbl-gloss-causal}
+
+### Studies, treatments, and populations {#sec-gloss-studies}
+
+This is where the appendix turns from general mathematics to the notation specific to indirect
+comparison: the symbols now describe trials, the patients in them, and treatment contrasts. Read them
+against the worked key of @sec-gloss-worked-key, where $j$, $i$, $\mathbf{x}_i$, $\mathcal{P}^{*}$, and
+$d_{ab(\mathcal{P})}$ are placed in a concrete $AC$-versus-$BC$ comparison.
+
+| Symbol | Meaning | Introduced |
+|---|---|---|
+| $j$ | study index, for example $j=AB,\ BC$ (which trial) | Ch. 13 |
+| $k$ | treatment index, or arm (which arm within a trial) | Ch. 15 |
+| $i$ | individual index within a study or arm (which patient) | Ch. 6 |
+| $\mathcal{P},\ \mathcal{P}^{*}$ | populations as distributions over $\mathcal{X}$, density $f_{\mathcal{P}}$; $\mathcal{P}^{*}$ is the target population the comparison is transported to | Ch. 11; target Ch. 12 |
+| $f_j(x),\ F_j(x)$ | covariate density and distribution in study $j$ (who is in trial $j$) | Ch. 14 |
+| $\bar{\mathbf{x}}_j,\ \boldsymbol{\Sigma}_j$ | covariate mean and covariance in study $j$ (the published baseline table, as means and spread) | Ch. 17 |
+| $d_{ab(\mathcal{P})}$ | marginal relative effect of $b$ versus $a$ in population $\mathcal{P}$ on a stated scale (the target treatment contrast in a named population) | Ch. 14, `@def-constancy-relative-effects` |
+| $\hat d_{ab(j)}$ | estimator of $d_{ab}$ computed from study $j$'s data | Ch. 13 |
+| $\delta_{j,\,t_1 t_k}$ | study-$j$ contrast of treatment $t_k$ versus $t_1$; $\delta$ is the within-one-study contrast, whereas $d_{ab(\mathcal{P})}$ is the population-level estimand it targets | Ch. 15 |
+
+: Study, treatment, and population symbols. {#tbl-gloss-studies}
+
+### Outcome models and likelihoods {#sec-gloss-outcome}
+
+| Symbol | Meaning | Introduced |
+|---|---|---|
+| $g,\ g^{-1}$ | link function and its inverse (maps between the outcome scale and the linear-predictor scale) | Ch. 7, `@def-link-function` |
+| $\eta_{ijk}$ | linear predictor for individual $i$, study $j$, arm $k$ (the additive score $\mu_j+\mathbf{x}^\top\boldsymbol{\beta}_1+\mathbf{x}^\top\boldsymbol{\beta}_{2,k}+\gamma_k$ before the link is inverted) | Ch. 20, `@def-individual-model` |
+| $\theta_{ijk}=g^{-1}(\eta_{ijk})$ | conditional mean on the outcome scale (the linear predictor pushed back to a probability, rate, or mean) | Ch. 20, `@def-individual-model` |
+| $\mu_j$ | study-$j$ baseline (intercept), the reference-arm outcome level in trial $j$ | Ch. 15, `@def-nma-arm-model` |
+| $\boldsymbol{\beta}_1$ | main (prognostic) covariate effects (how covariates shift outcome regardless of treatment) | Ch. 17 |
+| $\boldsymbol{\beta}_{2,k}$ | treatment-by-covariate interactions for arm $k$ (effect modification: how covariates change the treatment effect) | Ch. 17, `@def-sema` |
+| $\gamma_k$ | treatment main effect of arm $k$ relative to the reference | Ch. 17 |
+| $L_i(\boldsymbol{\xi};y_i),\ \bar L_j(\boldsymbol{\xi};\bar y_j)$ | individual and aggregate likelihood contributions (one IPD patient versus one integrated AgD arm) | Ch. 20, `@def-aggregate-model` |
+| $\boldsymbol{\xi}$ | full parameter vector; in ML-NMR it bundles $\mu_j,\ \boldsymbol{\beta}_1,\ \boldsymbol{\beta}_{2,k},\ \gamma_k$ | Ch. 20 |
+
+: Outcome-model and likelihood symbols. {#tbl-gloss-outcome}
+
+### Population adjustment: MAIC, STC, ML-NMR, ML-UMR {#sec-gloss-adjustment}
+
+| Symbol | Meaning | Introduced |
+|---|---|---|
+| $w_i,\ w(x)$ | matching weight for individual $i$, or weight function (tilts the IPD sample to match the comparator's covariate profile) | Ch. 18, `@def-moment-balance` |
+| $\mathrm{ESS}=\left(\sum_i w_i\right)^2/\sum_i w_i^2$ | effective sample size of a weighted sample; a small $\mathrm{ESS}$ warns of unstable weights (not the MCMC $N_{\mathrm{eff}}$ of Ch. 24) | Ch. 18, `@def-maic-ess` |
+| $\alpha,\ \boldsymbol{\beta}$ | matching-weight parameters, $w_i=\exp(\alpha+\boldsymbol{\beta}^\top\mathbf{x}_i)$; the exponential form is forced by the balance constraints (entropy balancing) | Ch. 18, `@def-entropy-balancing` |
+| $\hat\mu_t^{\mathrm{STC}}$ | simulated treatment comparison predicted mean under $t$ (the outcome model evaluated on the target population) | Ch. 19, `@def-stc-marginal` |
+| $C(u_1,\dots,u_d)$ | copula (a function that glues marginal distributions into a joint law) | Ch. 22, `@def-copula` |
+| $C_\Omega(\mathbf{u})=\Phi_\Omega\big(\Phi^{-1}(u_1),\dots,\Phi^{-1}(u_d)\big)$ | Gaussian copula with correlation matrix $\Omega$; the tractable default for correlating covariates in ML-NMR integration | Ch. 22, `@def-gaussian-copula` |
+| $V_{\mathrm{HK}}(f)$ | Hardy-Krause variation of $f$ (how much $f$ wiggles; it bounds quasi-Monte Carlo error) | Ch. 22, `@def-hardy-krause-variation` |
+| $D_N^{*}(P)$ | star discrepancy of a point set $P$ (how far $P$ is from uniform; the other half of the QMC error bound) | Ch. 22, `@def-star-discrepancy` |
+| SEMA, SPFA | shared effect modifier and shared prognostic factor assumptions | Ch. 17 (`@def-sema`); Ch. 26 (`@def-spfa`) |
+
+: Population-adjustment symbols. {#tbl-gloss-adjustment}
+
+### Abbreviations {#sec-gloss-abbrev}
+
+| Short form | Expansion | Developed in |
+|---|---|---|
+| ITC | indirect treatment comparison | Ch. 14 |
+| PAIC | population-adjusted indirect comparison | Ch. 17 |
+| (N)MA | (network) meta-analysis | Ch. 13, 15 |
+| MAIC | matching-adjusted indirect comparison | Ch. 18 |
+| STC | simulated treatment comparison | Ch. 19 |
+| ML-NMR | multilevel network meta-regression | Ch. 20 |
+| ML-UMR | multilevel unanchored meta-regression | Ch. 26 |
+| IPD, AgD | individual patient data, aggregate data | Ch. 17, `@def-pat-data-structures` |
+| EM, PV | effect modifier, prognostic variable | Ch. 11 |
+| ATE, CATE | average and conditional average treatment effect | Ch. 9 |
+| IPW, AIPW | (augmented) inverse probability weighting | Ch. 10 |
+| OR, RR, HR, RD | odds ratio, risk ratio, hazard ratio, risk difference | Ch. 7, 11; HR Ch. 25 |
+| RMST | restricted mean survival time | Ch. 25, `@def-rmst` |
+| QMC | quasi-Monte Carlo | Ch. 22 |
+| HTA | health technology assessment | Ch. 16 |
+
+: Abbreviations and where each is developed. {#tbl-gloss-abbrev}
+
+## Finding related terms: clusters by role {#sec-gloss-clusters}
+
+The alphabetical table that follows is exhaustive but scatters related ideas: everything about STC or
+about collapsibility is spread across the alphabet. This index groups the terms a reader most often wants
+together, so a whole family can be found at once, and it flags which clusters are core to indirect
+comparison and which are specialized later tools. Each term is named as it appears in the alphabetical
+table, so it can be located there directly.
+
+| Cluster (and reading priority) | Terms, as they appear in the alphabetical table |
+|---|---|
+| Mathematical background, Part I | Real vector space; Subspace; Basis; Dimension; Linear map; Rank and nullity; Four fundamental subspaces; Orthogonality; Orthogonal projection matrix; Eigenvalue and eigenvector; Definiteness; Quadratic form; Moore-Penrose pseudoinverse |
+| Probability and inference, Part I | Probability space; Random variable and its law; Conditional expectation; Conditional independence; Normal distribution; Multivariate normal; Likelihood and log-likelihood; Score function; Fisher information; Maximum likelihood estimator; Consistency; Sandwich (robust) variance estimator |
+| Bayesian and computation (Chs. 8, 15, 24) | Bayesian hierarchical model; Exchangeability; Fixed effects and random effects; Hamiltonian Monte Carlo; Detailed balance (reversibility); Transition kernel and stationary distribution; Credible set; Posterior predictive distribution; Deviance information criterion; DIC, WAIC, and LOO-CV; Pareto-smoothed importance sampling LOO; Effective sample size of an MCMC chain; Within-chain, between-chain, and pooled variance estimators |
+| Causal foundations (core ITC) | Potential outcomes; Individual treatment effect; Average treatment effect; Conditional average treatment effect; Ignorability; Positivity (overlap); Propensity score; Balancing score; Stable unit treatment value assumption (SUTVA) |
+| Effect modification and scale (core ITC) | Effect modifier; Prognostic variable; Statistical interaction; Conditional effect; Marginal effect; Collapsibility and direct collapsibility; Collapsibility and non-collapsibility of an effect measure; Shared effect modifier assumption (SEMA); Shared prognostic factor assumption (SPFA) |
+| Evidence synthesis (core ITC) | Fixed-effect meta-analysis model; Random-effects meta-analysis model; Cochran's $Q$ statistic; $I^2$ and $H^2$ heterogeneity statistics; Anchored indirect comparison; Unanchored (naive single-arm) comparison; Transitivity (anchored triangle); Constancy of relative effects; Arm-based network model; Node-splitting |
+| Transportability and population adjustment (core ITC) | Generalizability; Transportability; Structural invariance of the conditional model; Scale alignment; Individual patient data and aggregate data; Anchored and unanchored setups; Conditional constancy of relative effects (anchored); Conditional constancy of absolute effects (unanchored); Balance and the adjustment set |
+| MAIC, STC, ML-NMR, ML-UMR | Method-of-moments covariate balance; Entropy-balancing problem; Effective sample size; STC outcome model; STC estimands; Conditional (plug-in) STC; Marginal STC; Bayesian g-computation for STC; Individual-level model (ML-NMR); Aggregate-level model (ML-NMR); Target-population marginal and conditional contrasts; Unanchored disconnected two-study network |
+| Integration and numerics | Copula; Gaussian copula; Hardy-Krause variation; Star discrepancy; Digital $(t,m,s)$-nets and the Sobol' sequence; Doubling diagnostic for integration error |
+| Survival and general likelihoods | Survival function; Hazard function and cumulative hazard; Restricted mean survival time; Right-censored individual likelihood; Proportional-odds model |
+| Distance matching | Euclidean and standardized Euclidean distance; Mahalanobis distance; Distance variants; Comparator selection (aggregate-level) |
+| Bias analysis, simulation, formalization | Quantitative bias analysis; E-value (indirect-comparison); Probabilistic bias analysis; Tipping point; ADEMP framework; Coverage; Monte Carlo bias estimator, relative bias, and Monte Carlo standard error; Proof-status tiers; Active classical axioms |
+
+: Defined terms grouped by role, with the core-ITC clusters flagged. {#tbl-gloss-clusters}
+
+## Alphabetical glossary of defined terms {#sec-gloss-terms}
+
+Every formally stated definition in the book appears below, sorted alphabetically by its leading term
+(ignoring case, punctuation, and parentheticals). The "Defined in" column gives the chapter and the slug
+of the definition; that slug is the cross-reference that links to the statement in the rendered book.
+Terms whose meaning is scale-dependent, notably effect modification and collapsibility, are stated for a
+fixed link $g$, as in the chapter that defines them.
+
+| Term | One-sentence meaning | Defined in |
+|---|---|---|
+| Active classical axioms | The classical logical axioms, such as functional extensionality and the law of the excluded middle, that the Coq development assumes. | Ch. 30, `@def-active-axioms` |
+| ADEMP framework | A protocol that specifies a simulation study by its Aims, Data-generating mechanisms, Estimands, Methods, and Performance measures. | Ch. 29, `@def-ademp` |
+| Aggregate-level model (ML-NMR) | The individual-level model integrated over a study's covariate distribution so that aggregate study arms can enter the likelihood. | Ch. 20, `@def-aggregate-model` |
+| Anchored and unanchored setups | The two evidence configurations in which the index and comparator studies either share a common treatment arm (anchored) or do not (unanchored). | Ch. 17, `@def-pat-setups` |
+| Anchored indirect comparison | The Bucher estimator $\hat d_{AB}=\hat d_{AC}-\hat d_{BC}$ that differences two within-study contrasts to a shared comparator. | Ch. 14, `@def-anchored-comparison` |
+| Arm-based network model | A network meta-analysis written at the level of arm means, each one a study baseline plus a treatment effect on the link scale. | Ch. 15, `@def-nma-arm-model` |
+| Average treatment effect | The population-mean potential-outcome contrast $\tau=\mathbb{E}[Y(1)-Y(0)]$. | Ch. 9, `@def-ate` |
+| Average treatment effect on the treated | The mean potential-outcome contrast among the units that actually received treatment. | Ch. 9, `@def-att` |
+| Balance and the adjustment set | The set of covariates whose cross-study imbalance biases an unadjusted comparison and must therefore be adjusted for. | Ch. 17, `@def-pat-imbalance` |
+| Balancing score | A covariate summary $b(X)$ such that treatment assignment and covariates are independent given $b(X)$. | Ch. 10, `@def-balancing-score` |
+| Baseline-shift parameterization | A network parameterization that writes each arm mean as a study-specific baseline plus a treatment contrast. | Ch. 15, `@def-baseline-shift-param` |
+| Basis | A linearly independent set that spans a vector space. | Ch. 1, `@def-basis` |
+| Bayesian g-computation for STC | Posterior predictive averaging of modeled outcomes over the target covariate distribution to obtain a marginal estimate. | Ch. 19, `@def-stc-bayes` |
+| Bayesian hierarchical model | A model whose unit-level parameters are themselves drawn from shared population-level priors. | Ch. 8, `@def-hierarchical-model` |
+| Bernoulli distribution | The law of a single binary trial with success probability $p$. | Ch. 4, `@def-bernoulli` |
+| Binomial distribution | The law of the number of successes in $n$ independent identical Bernoulli trials. | Ch. 4, `@def-binomial` |
+| Canonical link | The link that sets the linear predictor equal to the exponential family's natural parameter (the $\theta$ in the exponential-family density; for logistic regression it is the log-odds). | Ch. 7, `@def-canonical-link` |
+| Centered and non-centered parameterization | Two equivalent ways to write a hierarchical model that induce different posterior geometries for sampling. | Ch. 24, `@def-centered-noncentered` |
+| Characteristic polynomial | The polynomial $\det(A-\lambda I)$ whose roots are the eigenvalues of $A$. | Ch. 3, `@def-characteristic-polynomial` |
+| Cochran's $Q$ statistic | The inverse-variance-weighted sum of squared deviations of study estimates from their pooled value, the basis of heterogeneity tests. | Ch. 13, `@def-cochran-q-stat` |
+| Coefficient of determination | $R^2$, the fraction of total response variation explained by the regression. | Ch. 6, `@def-r-squared` |
+| Collapsibility and direct collapsibility | Whether the marginal effect equals the common conditional effect (collapsible) or always equals a covariate-weighted average of conditional effects (directly collapsible). | Ch. 11, `@def-collapsibility` |
+| Collapsibility and non-collapsibility of an effect measure | Whether a measure's marginal value coincides with its conditional value when that conditional value is constant across strata. | Ch. 7, `@def-non-collapsibility` |
+| Comparator selection (aggregate-level) | Choosing, among candidate aggregate studies, the one whose covariate profile is closest to the target population. | Ch. 27, `@def-comparator-selection` |
+| Conditional average treatment effect | The covariate-conditional contrast $\tau(x)=\mu_1(x)-\mu_0(x)$. | Ch. 9, `@def-cate` |
+| Conditional constancy of absolute effects (unanchored) | The condition that each arm's conditional mean outcome is the same function of covariates across the populations being linked. | Ch. 17, `@def-conditional-constancy-absolute` |
+| Conditional constancy of relative effects (anchored) | The condition that the conditional treatment effect $\tau^g_{ab}(x)$ is the same function of covariates across populations. | Ch. 17, `@def-conditional-constancy-relative` |
+| Conditional effect | The stratum-specific link-scale contrast $\tau^g_{ab}(x)=g(\mu_b(x))-g(\mu_a(x))$. | Ch. 11, `@def-conditional-effect` |
+| Conditional expectation | The mean-square-optimal predictor $\mathbb{E}[X\mid Z]$ of $X$ given $Z$. | Ch. 4, `@def-conditional-expectation` |
+| Conditional independence | $X\perp Y\mid Z$: the conditional joint law of $X$ and $Y$ given $Z$ factorizes. | Ch. 4, `@def-conditional-independence` |
+| Conditional (plug-in) STC | The relative effect produced by evaluating the fitted outcome model at the comparator covariate mean. | Ch. 19, `@def-stc-conditional` |
+| Consistency | The property that an estimator converges in probability to its target as the sample size grows. | Ch. 5, `@def-consistent-estimator` |
+| Constancy of relative effects | The assumption that the marginal relative effect $d_{ab}$ takes the same value in every study population. | Ch. 14, `@def-constancy-relative-effects` |
+| Copula | A distribution on the unit cube with uniform margins that couples given marginals into a joint law (Sklar's theorem). | Ch. 22, `@def-copula` |
+| Coverage | With the empirical and model-based standard errors, the probability that a stated confidence interval contains the estimand. | Ch. 29, `@def-coverage` |
+| Credible set | A region carrying a stated posterior probability, in equal-tailed or highest-posterior-density form. | Ch. 8, `@def-credible-interval` |
+| Definiteness | The sign pattern of a symmetric matrix's quadratic form: positive or negative (semi)definite, or indefinite. | Ch. 3, `@def-definiteness` |
+| Detailed balance (reversibility) | The pairwise probability-flux symmetry that guarantees a target stationary distribution for a Markov chain. | Ch. 8, `@def-detailed-balance` |
+| Deviance and residual deviance | Twice the log-likelihood gap between the saturated model and the fitted model. | Ch. 7, `@def-deviance` |
+| Deviance information criterion | A Bayesian model-comparison score combining posterior fit with the effective number of parameters. | Ch. 15, `@def-dic` |
+| DIC, WAIC, and LOO-CV | The three predictive criteria used to compare fitted hierarchical models. | Ch. 24, `@def-comp-criteria` |
+| Diagonalizable and similar matrices | A matrix similar to a diagonal one, and the relation $B=S^{-1}AS$ between matrices. | Ch. 3, `@def-diagonalizable` |
+| Digital $(t,m,s)$-nets and the Sobol' sequence | Low-discrepancy point sets with guaranteed equidistribution across dyadic boxes. | Ch. 22, `@def-sobol-net` |
+| Dimension | The common cardinality shared by every basis of a vector space. | Ch. 1, `@def-dimension` |
+| Distance variants | The Manhattan, Minkowski, mean standardized-mean-difference, and Gower covariate distances. | Ch. 27, `@def-distance-variants` |
+| Doubling diagnostic for integration error | A check that bounds numerical integration error by comparing estimates computed at $N$ and at $2N$ nodes. | Ch. 24, `@def-integration-error-monitoring` |
+| Ecological (aggregation) bias | The gap between the plug-in arm mean $g^{-1}(\eta(\bar x))$ and the covariate-averaged mean $\int g^{-1}(\eta(x))\,f(x)\,dx$. | Ch. 16, `@def-ecological-bias` |
+| Effect modifier | A covariate on which the conditional treatment effect depends, a property defined relative to a chosen scale. | Ch. 11, `@def-effect-modifier` |
+| Effective sample size | $\mathrm{ESS}=\left(\sum_i w_i\right)^2/\sum_i w_i^2$, the equivalent unweighted size of a weighted sample. | Ch. 18, `@def-maic-ess` |
+| Effective sample size of an MCMC chain | The autocorrelation-deflated equivalent number of independent posterior draws. | Ch. 24, `@def-mcmc-ess` |
+| Efficiency and asymptotic efficiency | The property of attaining the Cramér-Rao lower bound exactly or in the large-sample limit. | Ch. 5, `@def-efficient-estimator` |
+| Eigenvalue and eigenvector | A scalar $\lambda$ and nonzero vector $v$ with $Av=\lambda v$. | Ch. 3, `@def-eigenvalue` |
+| Entropy-balancing problem | The convex program minimizing weight divergence from uniformity subject to covariate-balance constraints, whose solution is an exponential tilt. | Ch. 18, `@def-entropy-balancing` |
+| Estimator, bias, variance, mean squared error | A statistic used to target a parameter, together with its bias, variance, and mean squared error. | Ch. 5, `@def-estimator` |
+| Euclidean and standardized Euclidean distance | The ordinary and variance-scaled $\ell_2$ distances between covariate-mean vectors. | Ch. 27, `@def-euclidean-distance` |
+| E-value (indirect-comparison) | The smallest unreported-covariate association that could reduce an unanchored estimate to the null. | Ch. 28, `@def-itc-evalue` |
+| Exchangeability | The property that a sequence's joint law is invariant under permutation of its indices. | Ch. 8, `@def-exchangeability` |
+| Exponential dispersion family | Densities of the form $\exp\{(y\theta-b(\theta))/a(\phi)+c(y,\phi)\}$, the common template for the normal, binomial, and Poisson laws; $\theta$ is the natural parameter and $\phi$ the dispersion that scales the variance. | Ch. 7, `@def-exponential-family` |
+| Fisher information | The variance of the score, equivalently minus the expected Hessian of the log-likelihood. | Ch. 5, `@def-fisher-information` |
+| Fixed-effect meta-analysis model | A pooling model in which all studies estimate one common effect, combined by inverse-variance weighting. | Ch. 13, `@def-fixed-effect-ma` |
+| Fixed effects and random effects | Parameters treated as fixed unknowns versus parameters modeled as draws from a population distribution. | Ch. 8, `@def-random-effects` |
+| Four fundamental subspaces | The column space, null space, row space, and left null space of a matrix. | Ch. 1, `@def-column-space` |
+| Gaussian copula | The copula $C_\Omega(\mathbf{u})=\Phi_\Omega\big(\Phi^{-1}(u_1),\dots,\Phi^{-1}(u_d)\big)$ induced by a correlated normal vector. | Ch. 22, `@def-gaussian-copula` |
+| Generalizability | A within-population property: a sample's estimand equals the estimand of its own source population. | Ch. 12, `@def-generalizability` |
+| Generalized linear model | A regression with an exponential-family response and a link-transformed linear mean. | Ch. 7, `@def-glm` |
+| Hamiltonian Monte Carlo | An MCMC method that proposes distant, high-acceptance moves by simulating gradient-driven Hamiltonian dynamics. | Ch. 8, `@def-hmc` |
+| Hardy-Krause variation | A multidimensional measure of a function's variation that bounds quasi-Monte Carlo error. | Ch. 22, `@def-hardy-krause-variation` |
+| Hat matrix and residual maker | The projection $H$ onto $\mathcal{C}(\mathbf{X})$ and its complement $M=I-H$. | Ch. 6, `@def-hat-matrix` |
+| Hazard function and cumulative hazard | The instantaneous event rate $h(t)$ and its integral $H(t)$. | Ch. 25, `@def-hazard` |
+| $I^2$ and $H^2$ heterogeneity statistics | The share of total variability attributable to between-study heterogeneity, and its ratio form. | Ch. 13, `@def-i-squared` |
+| Ignorability | Conditional independence of treatment and potential outcomes given covariates, in strong, weak, or mean form. | Ch. 9, `@def-ignorability` |
+| Independence | The property that a joint law factorizes into the product of its marginals. | Ch. 4, `@def-independence` |
+| Individual-level model (ML-NMR) | The link-scale model $g(\theta_{ijk})=\mu_j+\mathbf{x}^\top\boldsymbol{\beta}_1+\mathbf{x}^\top\boldsymbol{\beta}_{2,k}+\gamma_k$ for each individual. | Ch. 20, `@def-individual-model` |
+| Individual patient data and aggregate data | Per-patient covariates and outcomes (IPD) versus published summary statistics (AgD). | Ch. 17, `@def-pat-data-structures` |
+| Individual treatment effect | The unit-level, generally unobservable contrast $Y(1)-Y(0)$. | Ch. 9, `@def-individual-effect` |
+| Inner product space | A vector space carrying a symmetric, bilinear, positive-definite form. | Ch. 2, `@def-inner-product` |
+| Invertible matrix | A square matrix possessing a two-sided inverse, equivalently one of full rank. | Ch. 1, `@def-invertible` |
+| Kernel and image | The set of inputs a linear map sends to zero and the set of outputs it attains. | Ch. 1, `@def-kernel-image` |
+| Likelihood and log-likelihood | The data density read as a function of the parameter, and its logarithm. | Ch. 5, `@def-likelihood` |
+| Linear independence | The property that the only vanishing linear combination of a set of vectors is the trivial one. | Ch. 1, `@def-linear-independence` |
+| Linear map | A function between vector spaces that preserves addition and scalar multiplication. | Ch. 1, `@def-linear-map` |
+| Linear model | The model $\mathbf{y}=\mathbf{X}\boldsymbol{\beta}+\boldsymbol{\varepsilon}$ with mean-zero, constant-variance, uncorrelated errors. | Ch. 6, `@def-linear-model` |
+| Link function | A monotone smooth map $g$ with $g(\mu)=\eta$ relating the mean to the linear predictor. | Ch. 7, `@def-link-function` |
+| M-estimator and estimating equation | A parameter value solving an estimating equation $\sum_i\psi(X_i;\theta)=\mathbf{0}$. | Ch. 5, `@def-m-estimator` |
+| Mahalanobis distance | The covariance-whitened distance $\sqrt{(x-y)^\top\Sigma^{-1}(x-y)}$. | Ch. 27, `@def-mahalanobis-distance` |
+| Marginal and average-conditional relative effects | The two population-level contrasts that diverge whenever the effect measure is non-collapsible. | Ch. 16, `@def-conditional-marginal-contrast` |
+| Marginal effect | The contrast of link-transformed population-mean outcomes, $g(\mathbb{E}[\mu_b(X)])-g(\mathbb{E}[\mu_a(X)])$. | Ch. 11, `@def-marginal-effect` |
+| Marginal likelihood and Bayes factor | The prior-averaged data density, and the ratio of two models' marginal likelihoods. | Ch. 8, `@def-marginal-likelihood` |
+| Marginal link-scale position | The link-transformed population-mean outcome of a single arm. | Ch. 14, `@def-marginal-link-position` |
+| Marginal STC | The estimator that averages predicted individual outcomes over the comparator population before contrasting on the link scale. | Ch. 19, `@def-stc-marginal` |
+| Maximum likelihood estimator | The parameter value that maximizes the likelihood. | Ch. 5, `@def-mle` |
+| Method-of-moments covariate balance | Choosing weights so that the weighted individual covariate moments match the comparator's published moments. | Ch. 18, `@def-moment-balance` |
+| Moment generating function | $M_X(\mathbf{t})=\mathbb{E}[e^{\mathbf{t}^\top X}]$, which fixes the law when finite near the origin. | Ch. 4, `@def-mgf` |
+| Monte Carlo bias estimator, relative bias, and Monte Carlo standard error | The empirical bias of an estimator over simulation repetitions, and the Monte Carlo uncertainty in that estimate. | Ch. 29, `@def-bias-mcse` |
+| Moore-Penrose pseudoinverse | The unique matrix $A^{+}$ satisfying the four Penrose conditions, giving the minimum-norm least-squares solution. | Ch. 3, `@def-pseudoinverse` |
+| Multivariate normal | The $p$-variate Gaussian $\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})$ fixed by its mean vector and covariance matrix. | Ch. 4, `@def-mvn` |
+| Node-splitting | An inconsistency check that compares direct and indirect evidence on a single network contrast. | Ch. 15, `@def-node-splitting` |
+| Norm and induced norm | A nonnegative, homogeneous, triangle-inequality length function, here induced by an inner product. | Ch. 2, `@def-norm` |
+| Normal distribution | The Gaussian law $\mathcal{N}(\mu,\sigma^2)$, with distribution function $\Phi$ and density $\phi$. | Ch. 4, `@def-normal` |
+| Orthogonal complement | The subspace of all vectors orthogonal to every vector of a given subspace. | Ch. 2, `@def-orthogonal-complement` |
+| Orthogonal projection matrix | A symmetric matrix with $P=P^\top=P^2$ (idempotent: applying it twice does no more than applying it once) sending each vector to its nearest point in a subspace. | Ch. 2, `@def-projection-matrix` |
+| Orthogonality | The relation between two vectors whose inner product is zero. | Ch. 2, `@def-orthogonality` |
+| Parametric statistical model | A family of distributions indexed by a finite-dimensional parameter $\theta\in\Theta$. | Ch. 5, `@def-statistical-model` |
+| Pareto-smoothed importance sampling LOO | A stabilized leave-one-out cross-validation estimate carrying a tail-index diagnostic $\hat k$. | Ch. 24, `@def-psis-loo` |
+| Performance measures as functionals | Simulation performance written as functionals of the sampling distribution, distinguishing the data and repetition sample sizes. | Ch. 29, `@def-sim-performance-functional` |
+| Poisson binomial distribution | The law of a sum of independent, non-identical Bernoulli trials with probability vector $\mathbf{p}$. | Ch. 4, `@def-poisson-binomial` |
+| Poisson distribution | The count law with mean equal to variance $\lambda$, the rare-event limit of the binomial. | Ch. 4, `@def-poisson` |
+| Positivity (overlap) | The requirement that each treatment has positive probability in every covariate stratum, $0<e(x)<1$. | Ch. 9, `@def-positivity` |
+| Posterior predictive distribution | The law of new data averaged over the parameter posterior. | Ch. 8, `@def-posterior-predictive` |
+| Potential outcomes | The outcomes $Y(0)$ and $Y(1)$ a unit would exhibit under each treatment level. | Ch. 9, `@def-potential-outcome` |
+| Probabilistic bias analysis | Assigning bias parameters prior distributions and propagating them into a bias-adjusted interval. | Ch. 28, `@def-probabilistic-bias-analysis` |
+| Probability generating function | $\mathbb{E}[s^N]$ for a nonnegative-integer variable, which encodes its mass function. | Ch. 21, `@def-pgf` |
+| Probability space | The triple $(\Omega,\mathcal{F},P)$ of sample space, event $\sigma$-algebra (the collection of events that can be assigned a probability), and probability measure. | Ch. 4, `@def-probability-space` |
+| Prognostic variable | A covariate on which the conditional mean outcome depends, whether or not it modifies the treatment effect. | Ch. 11, `@def-prognostic-variable` |
+| Proof-status tiers | The classification of the book's results by their degree of machine verification in the Coq development. | Ch. 30, `@def-coq-proof-status` |
+| Propensity score | The conditional treatment probability $e(x)=P(T=1\mid X=x)$, the coarsest balancing score. | Ch. 10, `@def-propensity-score` |
+| Proportional-odds model | An ordinal regression in which treatment shifts every cumulative logit by a common amount. | Ch. 25, `@def-proportional-odds` |
+| Quadratic form | The map $x\mapsto x^\top A x$ associated with a symmetric matrix $A$. | Ch. 3, `@def-quadratic-form` |
+| Quantitative bias analysis | The practice of quantifying how strong an unmeasured bias would have to be to overturn a study's conclusion. | Ch. 28, `@def-quantitative-bias-analysis` |
+| Random-effects meta-analysis model | A model with exchangeable study effects drawn from a distribution of heterogeneity variance $\tau^2$. | Ch. 13, `@def-random-effects-ma` |
+| Random variable and its law | A function on the sample space, measurable so that probabilities can attach to its values, together with the distribution it induces. | Ch. 4, `@def-random-variable` |
+| Rank and nullity | The dimension of the image and the dimension of the kernel of a map or matrix. | Ch. 1, `@def-rank` |
+| Rayleigh quotient | The ratio $x^\top A x/x^\top x$, whose extrema over $x\neq\mathbf{0}$ are the extreme eigenvalues of symmetric $A$. | Ch. 3, `@def-rayleigh-quotient` |
+| Real vector space | A set closed under addition and scalar multiplication satisfying the eight vector-space axioms over $\mathbb{R}$. | Ch. 1, `@def-vector-space` |
+| Reference-treatment parameterization | Expressing every treatment effect relative to one designated network reference treatment. | Ch. 15, `@def-reference-treatment-param` |
+| Regularity conditions | Smoothness and identifiability assumptions under which the score and information behave classically. | Ch. 5, `@def-regular-model` |
+| Residual deviance | The deviance of a fitted network model relative to the saturated model, used as a goodness-of-fit summary. | Ch. 15, `@def-residual-deviance` |
+| Residual, total, and explained sums of squares | The orthogonal decomposition $\mathrm{TSS}=\mathrm{RSS}+\mathrm{ESS}_{\mathrm{reg}}$ of response variation. | Ch. 6, `@def-sums-of-squares` |
+| Restricted maximum likelihood | Variance-component estimation from the likelihood of error contrasts, removing the downward bias of full maximum likelihood. | Ch. 8, `@def-reml` |
+| Restricted mean survival time | The area under the survival curve to a horizon $\tau$, $\int_0^\tau S(t)\,dt$. | Ch. 25, `@def-rmst` |
+| Right-censored individual likelihood | The contribution $f(t)^\delta S(t)^{1-\delta}$ combining observed events and right-censored observations. | Ch. 25, `@def-censored-likelihood` |
+| Sandwich (robust) variance estimator | The $A^{-1}BA^{-\top}$ variance for M-estimators, valid under model misspecification. | Ch. 5, `@def-sandwich-variance` |
+| Saturated model | The GLM with one parameter per observation, reproducing the data exactly. | Ch. 7, `@def-saturated-model` |
+| Scale alignment | Choosing the effect scale on which a transportability or invariance assumption actually holds. | Ch. 12, `@def-scale-alignment` |
+| Score function | The gradient of the log-likelihood with respect to the parameter. | Ch. 5, `@def-score` |
+| Shared effect modifier assumption (SEMA) | The assumption that the compared active treatments carry identical effect-modifier interactions, $\boldsymbol{\beta}_{2,A}=\boldsymbol{\beta}_{2,B}$. | Ch. 17, `@def-sema` |
+| Shared prognostic factor assumption (SPFA) | The assumption that covariate-outcome slopes coincide across treatments, which forces the absence of effect modification. | Ch. 26, `@def-spfa` |
+| Span | The set of all finite linear combinations of a collection of vectors. | Ch. 1, `@def-span` |
+| Stable unit treatment value assumption (SUTVA) | No interference between units and a single version of each treatment, giving consistency $Y=Y(T)$. | Ch. 9, `@def-sutva` |
+| Star discrepancy | The worst-case gap between the empirical and uniform measures over anchored boxes, the quasi-Monte Carlo accuracy criterion. | Ch. 22, `@def-star-discrepancy` |
+| Statistical interaction | A nonzero product term in the linear predictor, equivalently a covariate-dependent treatment coefficient. | Ch. 11, `@def-statistical-interaction` |
+| STC estimands | The marginal and the conditional-at-the-mean targets a simulated treatment comparison may estimate. | Ch. 19, `@def-stc-estimands` |
+| STC outcome model | The individual patient outcome regression, carrying treatment-covariate interactions, used for cross-study prediction. | Ch. 19, `@def-stc-outcome-model` |
+| Structural invariance of the conditional model | The condition that the conditional mean potential outcome $\mu_t(x)$ does not depend on population membership. | Ch. 12, `@def-transport-invariance` |
+| Subspace | A nonempty subset of a vector space that is closed under addition and scalar multiplication. | Ch. 1, `@def-subspace` |
+| Survival function | $S(t)=P(T>t)$, the probability of surviving beyond time $t$. | Ch. 25, `@def-survival-function` |
+| Target-population marginal and conditional contrasts | The ML-NMR estimands obtained by integrating the fitted model over a chosen target population. | Ch. 23, `@def-mlnmr-target-contrast` |
+| Tipping point | The magnitude of bias at which an adjusted estimate crosses a decision threshold such as the null. | Ch. 28, `@def-tipping-point` |
+| Total-variation distance | The largest probability discrepancy two laws can assign any event, $\sup_A\lvert\mu(A)-\nu(A)\rvert$. | Ch. 21, `@def-total-variation` |
+| Transition kernel and stationary distribution | The one-step transition law of a Markov chain and the measure it leaves invariant. | Ch. 8, `@def-markov-kernel` |
+| Transitivity (anchored triangle) | The assumption that each of the three triangle relative effects takes a common value across the three trial populations. | Ch. 14, `@def-transitivity` |
+| Transportability | A between-population property: a target estimand is identified from source outcomes together with target covariates. | Ch. 12, `@def-transportability` |
+| Unanchored (naive single-arm) comparison | A comparison of active arms across studies that discards the shared comparator. | Ch. 14, `@def-unanchored-comparison` |
+| Unanchored disconnected two-study network | Two studies without a common comparator, linkable only under prognostic-factor assumptions. | Ch. 26, `@def-unanchored-network` |
+| Variance, covariance, and the covariance matrix | The second central moments of a single variable, of a pair, and of a random vector. | Ch. 4, `@def-variance-covariance` |
+| Wald, score, and likelihood-ratio statistics | The three asymptotically equivalent classical statistics for testing a parametric hypothesis. | Ch. 5, `@def-test-statistics` |
+| Wald test, Type I error rate, and power | The Wald rejection rule together with its rejection probabilities under the null and under an alternative. | Ch. 29, `@def-power-type1` |
+| Within-chain, between-chain, and pooled variance estimators | The variance components from which the $\hat R$ convergence diagnostic is built. | Ch. 24, `@def-comp-rhat-pieces` |
+
+: Alphabetical glossary of the book's defined terms. {#tbl-gloss-terms}
+
+## Notes and sources {#sec-gloss-notes}
+
+The source for this appendix is the book itself: the symbol tables reproduce [Notation](/notation.qmd),
+which is the single source of truth for the symbols and conventions, extended by one table (Bayesian
+computation and model comparison, @tbl-gloss-bayes) that gathers symbols from Chapters 8, 15, and 24 not
+yet listed there; the term glossary is assembled from the definition environments of Chapters 1 through
+30. Where a symbol carries a formal definition,
+the slug in the "Introduced" column is that definition; where a term is glossed, the slug in the "Defined
+in" column links to its statement. The companion catalogues that the notation extends are the proof
+catalogue and the `ITC_Coq` development described in Chapter 30 and in
+[Appendix G](/appendices/G-reading-coq.qmd). Related reference appendices collect the objects that recur
+across chapters: the probability families of [Appendix C](/appendices/C-distributions.qmd), the matrix
+calculus identities of [Appendix B](/appendices/B-matrix-calculus.qmd), and the special functions of
+[Appendix D](/appendices/D-special-functions.qmd).

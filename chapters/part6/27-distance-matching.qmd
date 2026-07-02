@@ -1,0 +1,1493 @@
+---
+title: "Aggregate-Level Covariate-Distance Matching"
+---
+
+## Introduction {#sec-distance-intro}
+
+Consider a situation that arises constantly in oncology health technology assessment (HTA). A novel
+therapy, say a CAR-T cell product for relapsed or refractory large B-cell lymphoma, is licensed on the
+strength of a **single-arm** Phase II trial: every enrolled patient received the new agent, so the trial
+carries no internal control against which a treatment effect could be measured. To report how the new
+agent compares with standard chemoimmunotherapy, the analyst must borrow a control arm from *outside* the
+trial, from one of several external Phase III trials or disease registries of the standard regimens. Those
+external studies do not contain the new agent, so there is no shared treatment to anchor the comparison,
+and they rarely release patient-level data; each publishes only a short table of baseline covariate means,
+mean age, proportion male, a mean severity marker, and little else. Which external study should supply the
+borrowed control arm? Choosing wrongly can reverse the sign of the reported effect and drive a
+reimbursement decision the wrong way, so the stakes are the whole submission. This chapter answers the
+prior question that every method of Parts IV and V silently assumed away: *before* adjusting for
+population differences, how do we choose the comparator study to adjust toward, using only the aggregate
+covariate summaries the external studies report? The workable answer, together with a sharp statement of
+what it can and cannot guarantee, is the subject of the chapter, and we will follow one running trial
+example (@exm-distance-two-trials) from the first definition to the final caveat.
+
+Every method in Parts IV and V began once a comparator had already been chosen. Matching-adjusted
+indirect comparison (Chapter 18), simulated treatment comparison (Chapter 19), multilevel network
+meta-regression (Chapter 20), and multilevel unanchored meta-regression (Chapter 26) all take as given a
+pair of studies, an index trial with individual patient data (IPD) and a designated comparator trial with
+aggregate data (AgD), and then do the work of bridging their populations. In a connected anchored network
+the comparator is not a choice at all: the common control treatment forces it, and the only question is
+how to adjust. But two situations strip away that luxury. A **disconnected network** offers several AgD
+studies, none sharing a common comparator with the index trial, any of which could in principle serve as
+the external arm for an unanchored comparison; the analyst must select one. A **single-arm study**, having
+no internal control, must borrow its entire comparator arm from an external population, and the choice of
+which external study to borrow is the whole analysis. This chapter is about that prior choice: how to pick
+a comparator study before the population-adjustment machinery is switched on.
+
+The practical rule, described in the Bristol Compass blog on disconnected ML-NMR and implemented in the
+`uitc` diagnostic package (a full citation for both is forthcoming; see @sec-distance-notes), is
+disarmingly simple. Each candidate comparator study reports a vector of
+covariate summaries, typically baseline means; the index population reports its own; choose the candidate
+whose summaries lie **closest** to the index population on some distance between summary vectors. The
+content of the rule is entirely in the word "closest," because there is no single distance on
+$\mathbb{R}^p$ and the candidates can be ranked differently by different choices. We develop the natural
+candidates: the Euclidean and standardized Euclidean distances (@def-euclidean-distance), the Mahalanobis
+distance and its identification with a whitened Euclidean distance (@thm-mahalanobis-whitening), and the
+Manhattan, Minkowski, Gower, and mean-absolute standardized-mean-difference distances
+(@def-distance-variants). We prove which of these are invariant to a change in the units of a covariate
+and which are not (@thm-distance-scale-invariance, @prp-distance-scale-dependence), because a distance
+whose ranking flips when age is recorded in months rather than years is a poor basis for a decision.
+
+We then ask the only question that matters for validity: does a small covariate-summary distance bound the
+**bias** of the eventual adjusted estimate? The answer is a sharp dichotomy that this chapter proves in
+full. When the conditional contrast is affine in the covariates, the transport bias is *exactly* a linear
+functional of the covariate-mean gap, and the Cauchy-Schwarz inequality turns any of the quadratic-form
+distances into a rigorous bias bound (@thm-distance-linear-bias-bound), connecting comparator selection
+directly to the unanchored consistency theorem of Chapter 17 (@thm-unanchored-paic-consistency). When the
+contrast is merely Lipschitz, a bias bound survives, but only against the **Wasserstein distance between
+full distributions** (@thm-lipschitz-bias-bound), and a distance between *means* is provably not a
+Wasserstein distance: it is a lower bound on it, never an upper bound. The consequence, made precise in
+@prp-distance-diagnostic-not-validity, is the central honest caveat of the chapter. Two populations can
+have identical covariate means, hence zero distance under every metric we define, and yet different target
+effects, because a nonlinear contrast sees the spread and not only the center, and because an unmeasured
+prognostic variable can differ while every observed summary agrees. Aggregate-level distance matching is
+therefore a **diagnostic and design tool**, not a transportability theorem: a small distance makes a
+population bridge more plausible and, under linearity, controls the residual bias, but it certifies
+neither the shared prognostic factor assumption (@def-spfa) nor conditional constancy of absolute effects
+(@def-conditional-constancy-absolute) nor the absence of unmeasured imbalance. A fully worked example
+ranking four candidate comparators under five criteria, in which the three principal distances each select
+a different winner and the actual bias is computed exactly, closes the development. This material is an
+extension beyond the population-adjustment theory of @phillippo2019thesis, prompted by the
+disconnected-network setting of @chandler2025mlumr, and corresponds to results O.1 to O.7 of the proof
+catalogue.
+
+Throughout, $\bar{\mathbf{x}}_0\in\mathbb{R}^p$ denotes the covariate-summary vector of the **index**
+population (the population in which we hold IPD, or whose effect we wish to report), and
+$\bar{\mathbf{x}}_1,\dots,\bar{\mathbf{x}}_J\in\mathbb{R}^p$ the summary vectors of the $J$ candidate
+comparator studies, following the study-mean notation $\bar{\mathbf{x}}_j$ of [Notation](/notation.qmd).
+We write $\boldsymbol{\delta}_j=\bar{\mathbf{x}}_j-\bar{\mathbf{x}}_0$ for the **covariate gap** of
+candidate $j$, $\ell\in\{1,\dots,p\}$ for the covariate index, and $\|\mathbf{v}\|_A=\sqrt{\mathbf{v}^\top
+A\,\mathbf{v}}$ for the quadratic-form norm of a positive-definite $A$. The bold vector
+$\boldsymbol{\delta}_j$, a gap between covariate means, is a different object from the plain scalar
+$\delta_{j,\,t_1 t_k}$ of [Notation](/notation.qmd), which is a within-study treatment contrast; the
+boldface marks the vector throughout, following the vector-versus-scalar convention of the book, and the
+two never appear together. Read $\|\mathbf{v}\|_A$ simply as "the length of $\mathbf{v}$ measured with the
+ruler $A$": when $A=I$ it is the ordinary length, and a general $A\succ0$ (read $A\succ0$ as "$A$ is
+symmetric positive definite," so that $\mathbf{v}^\top A\mathbf{v}>0$ for every $\mathbf{v}\ne\mathbf 0$
+and the square root is real) stretches some directions and shrinks others.
+
+A reader who wants the destination before the journey can consult the map in @tbl-distance-roadmap. The
+single practical recommendation, defended in the sections that follow, is compressed into it: if you
+compute only one distance, compute the **standardized Euclidean distance**, and if the index study
+supplies a covariance matrix, add the **Mahalanobis distance** and treat any disagreement between the two
+as a signal that the ranking depends on covariate correlations rather than on the data.
+
+| Distance | What the number captures | Units-safe? | Defined in |
+|---|---|:--:|---|
+| Raw Euclidean $d_E$ | straight-line gap in the recorded units | no | @def-euclidean-distance |
+| Standardized Euclidean $d_{SE}$ (default) | gap in standard-deviation units, one per covariate | yes | @def-euclidean-distance |
+| Mahalanobis $d_M$ | gap measured against the index covariate correlation cloud | yes | @def-mahalanobis-distance |
+| Manhattan, Minkowski, Chebyshev $d_q$ | sum, blend, or single worst standardized gap | yes | @def-distance-variants |
+| Mean-SMD $d_{\mathrm{SMD}}$ | average standardized gap; ties to balance tables | yes | @def-distance-variants |
+| Gower $d_G$ | mixed continuous and binary covariates on one scale | yes | @def-distance-variants |
+
+: Roadmap of the covariate-summary distances of this chapter. "Units-safe" means the ranking of candidates does not change when a covariate is re-expressed in different units (@thm-distance-scale-invariance, @prp-distance-scale-dependence). Every distance here is a diagnostic of population similarity, never by itself a proof that the eventual comparison is unbiased (@prp-distance-diagnostic-not-validity). {#tbl-distance-roadmap}
+
+## The comparator-selection problem {#sec-distance-problem}
+
+We fix the decision the chapter addresses.
+
+::: {#def-comparator-selection}
+## Aggregate-level comparator selection
+Let the index population have covariate-summary vector $\bar{\mathbf{x}}_0\in\mathbb{R}^p$, and let
+candidate comparator studies $j=1,\dots,J$ report covariate-summary vectors
+$\bar{\mathbf{x}}_j\in\mathbb{R}^p$ on the same $p$ covariates. Given a distance
+$d:\mathbb{R}^p\times\mathbb{R}^p\to[0,\infty)$ on summary vectors, the **aggregate-level matching rule**
+selects
+$$
+j^{*}\;\in\;\arg\min_{1\le j\le J}\; d\big(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j\big).
+$$ {#eq-distance-argmin}
+The selected study $j^{*}$ is the observed comparator whose reported population summaries are closest to
+the index population on the chosen scale. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** Each candidate study is reduced to one number, its distance from the index
+population, and the rule picks the smallest. The only content is what "distance" means, because a candidate
+that looks closest under one sensible distance can look farthest under another. The rest of the chapter is
+a tour of the reasonable choices and a proof of exactly how much a small distance does, and does not, buy
+you. $\blacktriangleleft$
+:::
+
+We anchor every definition to one small scenario, carried from here to the end of the chapter.
+
+::: {#exm-distance-two-trials}
+## A running example: two candidate comparator trials
+Return to the single-arm lymphoma trial of the introduction. The **index** study reports two baseline
+covariate means, mean age in years and a mean severity biomarker in its natural units, and two external
+Phase III trials, $P$ and $Q$, are candidate sources of the borrowed control arm. Their reported means
+are
+
+| Covariate ($\ell$) | reference scale $s_\ell$ | index mean $\bar{x}_{0\ell}$ | Study $P$ mean | Study $Q$ mean |
+|:--|--:|--:|--:|--:|
+| age (years) | $10$ | $60$ | $70$ | $66$ |
+| biomarker (units) | $4$ | $10$ | $14$ | $6$ |
+
+The reference scales $s=(10,4)$ are the index-study standard deviations of the two covariates. The index
+covariance, also from the index study, is
+$$
+\boldsymbol{\Sigma}=\begin{pmatrix}100 & 20\\ 20 & 16\end{pmatrix},
+$$
+so age and biomarker are positively correlated, $\operatorname{corr}=20/(10\cdot4)=0.5$. The covariate
+gaps and their standardized versions $\mathbf{z}_j=(\delta_{j1}/s_1,\ \delta_{j2}/s_2)$ are
+$$
+\boldsymbol{\delta}_P=(10,\ 4),\quad \mathbf{z}_P=(1.0,\ 1.0);
+\qquad
+\boldsymbol{\delta}_Q=(6,\ -4),\quad \mathbf{z}_Q=(0.6,\ -1.0).
+$$
+In words: Study $P$'s patients are older **and** have a higher biomarker, both covariates up together, the
+direction in which age and biomarker naturally co-vary in the index trial. Study $Q$'s patients are
+somewhat older but have a **lower** biomarker, the two covariates moving in opposite directions, against
+the correlation. The central surprise of the chapter, foreshadowed here and computed in
+@sec-distance-euclidean and @sec-distance-mahalanobis, is that raw and standardized Euclidean distance
+will both judge $Q$ the closer match, while the Mahalanobis distance will judge $P$ the closer match,
+purely because $P$ respects the age-biomarker correlation and $Q$ fights it. $\blacktriangleleft$
+:::
+
+The rule @eq-distance-argmin is a *design rule*: it ranks the candidates and names a winner, to be fed
+into an unanchored MAIC, STC, or ML-UMR. It is not yet a claim about validity. To see both what it can do
+and what it cannot, recall the two regimes that make it necessary.
+
+::: {.remark}
+**Why selection is forced in disconnected and single-arm evidence.** In the anchored triangle of
+Chapter 14 the index trial $AC$ and the comparator trial $BC$ share the control $C$, and the Bucher
+contrast $\hat d_{AB}=\hat d_{AC}-\hat d_{BC}$ differences the shared anchor away. A **disconnected**
+network has no such shared treatment between the index trial and the studies reporting the comparator of
+interest, so there is no anchor to difference and the comparison must be **unanchored**: the absolute
+outcome of the index treatment is compared to the absolute outcome of a comparator drawn from a *different*
+population (Chapter 17, @thm-unanchored-paic-consistency; Chapter 26). When several AgD studies report that
+comparator, each defines a different bridging population, and the analyst must choose. A **single-arm**
+index study is the limiting case: lacking any internal control, its entire counterfactual arm is an
+external population, and selecting the most similar external study is the only lever available. In both
+regimes the choice precedes, and conditions the credibility of, the adjustment that follows. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**What a good choice buys, and what it does not.** Unanchored population adjustment is consistent only
+when every imbalanced prognostic variable and effect modifier is measured and balanced and the target
+covariate values lie inside the index covariate support (@thm-unanchored-paic-consistency, hypotheses
+(iii) and (iv)). Choosing a comparator with smaller covariate gaps makes both conditions easier to meet: a
+smaller gap means less reweighting, a higher effective sample size (@thm-maic-ess-bound), and a target
+nearer the interior of the support, so finite stable weights are more likely to exist. The distance is a
+proxy for "how hard the bridge will be." It is not a proxy for "whether the bridge is valid," because the
+unmeasured and the nonlinear escape it entirely; that gap is the subject of @sec-distance-caveat. $\blacktriangleleft$
+:::
+
+This setup corresponds to O.1 in the proof catalogue.
+
+## A practical workflow, and what selection is for {#sec-distance-workflow}
+
+Before any algebra, it helps to see where comparator selection sits in a real submission. Distance
+matching is one step of a longer pipeline, and it is neither the first step nor the last.
+
+1. **Fix the target.** State the population in which the effect must be reported (here, the index
+single-arm trial's population) and the estimand (for instance, a marginal log odds ratio versus standard
+of care). Everything downstream is measured against this target.
+2. **Assemble candidates.** From a systematic review, list every external study that reports the
+comparator treatment *and* the baseline covariates you will need. These are the candidate comparators
+$j=1,\dots,J$.
+3. **Screen for clinical and design comparability first.** Before computing a single distance, discard
+candidates that differ in line of therapy, outcome definition, follow-up length, standard of care,
+eligibility, or measurement practice. Distance matching operates only among studies that already pass
+this clinical screen; a small covariate distance cannot rescue an incomparable trial.
+4. **Choose the covariate set.** Include the effect modifiers and prognostic variables that are both
+clinically justified and reported across the surviving candidates, and record which important covariates
+are missing from which studies.
+5. **Harmonize and scale.** Put every covariate on a common definition, choose reference scales, and
+compute several distances. Inspect which covariates drive each distance and estimate the effective sample
+size (ESS) the eventual reweighting would leave (@sec-distance-bias, @thm-maic-ess-bound).
+6. **Carry uncertainty forward.** Feed the chosen comparator into an unanchored MAIC, STC, or ML-UMR, and
+carry any disagreement between distances, any missing covariate, and any residual imbalance into a
+quantitative bias analysis (Chapter 28).
+
+| Step | Question it answers | Tool |
+|:--|:--|:--|
+| 1 target | For whom must the effect hold? | estimand definition (Chapter 12, Chapter 17) |
+| 2 candidates | Which external studies could supply the arm? | systematic review |
+| 3 clinical screen | Are the trials comparable at all? | clinical and design appraisal |
+| 4 covariates | Which variables enter the gap? | effect-modifier and prognosis judgment |
+| 5 distance and ESS | Which candidate is closest, and how costly? | this chapter, @thm-maic-ess-bound |
+| 6 sensitivity | What could still go wrong? | quantitative bias analysis (Chapter 28) |
+
+: The place of aggregate-level distance matching (steps 4 and 5) in a comparator-selection workflow. {#tbl-distance-workflow}
+
+::: {.remark}
+**Why a cheap pre-analysis screen, rather than adjusting on every candidate.** A natural objection is: if
+there are four candidate comparators, why not simply run four unanchored MAICs and keep the one with the
+best effective sample size? Three reasons. First, an unanchored adjustment against a badly matched
+comparator can produce extreme weights, a tiny ESS, or an optimization that fails to converge at all, so
+the "try them all" strategy often has no clean output to compare. Second, choosing the comparator *after*
+seeing four different treatment estimates is selection on the outcome: it inflates the apparent effect and
+destroys any pre-registration guarantee. Third, distance matching is computed from published covariate
+tables alone, before the outcome is touched, so it is cheap, reproducible, and blind to the answer. It is
+a screen, run once, up front, on data an HTA reviewer can check. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Where entropy balancing and individual-level reweighting live.** The word "matching" in this chapter's
+title is aggregate-level: it matches *summary vectors*, not patients. The individual-level reweighting
+tools, the method-of-moments weights of MAIC (Chapter 18), and entropy balancing (Hainmueller's minimum
+relative-entropy weights, derived in the individual-level setting), operate *after* a comparator has been
+chosen and require the index individual patient data; they solve a different problem, how to reweight
+patients so that a chosen comparator's moments are met. This chapter is strictly the upstream, aggregate
+step that decides *which* comparator to reweight toward, using only the means each study publishes. If you
+were expecting entropy balancing here, it belongs to the individual-level material of Chapter 18; distance
+matching is the design step before it. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Choosing the covariates and the reference scales.** Two applied choices decide what the distance
+measures.
+
+- *Which covariates.* Include a covariate only if it is a plausible effect modifier (@def-effect-modifier)
+or prognostic variable (@def-prognostic-variable) *and* is reported by every surviving candidate. A
+covariate reported by some candidates but not others cannot enter a common distance; dropping a genuine
+effect modifier to keep a candidate in the running is a substantive decision to be recorded, not hidden.
+Do not pad the distance with many weakly prognostic covariates: each one dilutes the gaps that actually
+drive bias.
+- *Which reference scale.* When the index individual patient data are available, the index standard
+deviations are the natural reference scales, because the eventual reweighting is toward the index
+population. When no IPD are available, a pooled or comparator-reported standard deviation is used instead;
+for a binary covariate with prevalence $\pi$, the Bernoulli standard deviation $\sqrt{\pi(1-\pi)}$ is
+standard; a missing standard deviation is usually borrowed from a comparable covariate or a pooled value.
+Note the asymmetry proved later: re-expressing a covariate in different **units** does not change the
+standardized ranking (@thm-distance-scale-invariance), but changing the **reference scale** while holding
+units fixed can change the winner (@exr-distance-rescale-ranking), so the reference-scale choice is a
+modeling decision that belongs in the write-up, not a harmless re-expression. $\blacktriangleleft$
+:::
+
+## Euclidean and standardized Euclidean distances {#sec-distance-euclidean}
+
+The first candidate is the ordinary straight-line distance, and its first defect is that it depends on the
+units in which the covariates happen to be recorded.
+
+::: {#def-euclidean-distance}
+## Euclidean and standardized Euclidean distance
+The **Euclidean distance** between the index summary $\bar{\mathbf{x}}_0$ and a candidate summary
+$\bar{\mathbf{x}}_j$ is the $\ell_2$ norm of their gap,
+$$
+d_E\big(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j\big)\;=\;\big\|\boldsymbol{\delta}_j\big\|_2
+\;=\;\sqrt{\sum_{\ell=1}^{p}\big(\bar{x}_{j\ell}-\bar{x}_{0\ell}\big)^2}.
+$$ {#eq-distance-euclidean}
+Let $s_1,\dots,s_p>0$ be **reference scales**, one per covariate, typically an IPD standard deviation, a
+reported comparator standard deviation, or, for a binary covariate with prevalence $\pi$, the Bernoulli
+standard deviation $\sqrt{\pi(1-\pi)}$. Writing $S=\operatorname{diag}(s_1,\dots,s_p)$ and the
+**standardized gap** $\mathbf{z}_j=S^{-1}\boldsymbol{\delta}_j$, with components
+$z_{j\ell}=(\bar{x}_{j\ell}-\bar{x}_{0\ell})/s_\ell$, the **standardized Euclidean distance** is
+$$
+d_{SE}\big(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j;s\big)\;=\;\big\|\mathbf{z}_j\big\|_2
+\;=\;\big\|S^{-1}\boldsymbol{\delta}_j\big\|_2
+\;=\;\sqrt{\sum_{\ell=1}^{p}\left(\frac{\bar{x}_{j\ell}-\bar{x}_{0\ell}}{s_\ell}\right)^2}.
+$$ {#eq-distance-stdeuclidean}
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why standardize.** The raw distance @eq-distance-euclidean adds squared gaps measured in incompatible
+units, so it is dominated by whichever covariate carries the largest numerical magnitude. A gap of one
+year in mean age and a gap of $0.5$ in a proportion contribute $1$ and $0.25$ to the raw squared distance,
+yet the proportion gap is a far larger fraction of that covariate's natural spread. Dividing each gap by a
+reference scale renders the contributions commensurate: each standardized component $z_{j\ell}$ is the
+familiar **standardized mean difference** of that covariate, a dimensionless number measured in standard
+deviations. The `uitc` package defaults to $d_{SE}$ for exactly this reason, reserving the raw $d_E$ for
+covariates that are already on a common scale. The formal statement that standardization removes the unit
+dependence is @thm-distance-scale-invariance below. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**The running example, raw and standardized.** Take the two candidate trials of @exm-distance-two-trials.
+The raw Euclidean distances are
+$$
+d_E(P)=\sqrt{10^2+4^2}=\sqrt{116}=10.77,
+\qquad
+d_E(Q)=\sqrt{6^2+(-4)^2}=\sqrt{52}=7.21,
+$$
+and the standardized Euclidean distances, using the standardized gaps $\mathbf{z}_P=(1.0,1.0)$ and
+$\mathbf{z}_Q=(0.6,-1.0)$, are
+$$
+d_{SE}(P)=\sqrt{1.0^2+1.0^2}=\sqrt2=1.414,
+\qquad
+d_{SE}(Q)=\sqrt{0.6^2+1.0^2}=\sqrt{1.36}=1.166 .
+$$
+The standardized numbers read directly as "how many standard deviations apart": Study $P$ is exactly one
+standard deviation older and one higher on the biomarker; Study $Q$ is $0.6$ standard deviations older and
+one lower. Both the raw and the standardized distance rank $Q$ ahead of $P$. Hold on to that ranking:
+@sec-distance-mahalanobis overturns it once the age-biomarker correlation is taken into account.
+$\blacktriangleleft$
+:::
+
+This material corresponds to O.2 in the proof catalogue.
+
+## The Mahalanobis distance and whitening {#sec-distance-mahalanobis}
+
+Standardization rescales each covariate but ignores their correlations. When the index IPD supplies a full
+covariance matrix, the Mahalanobis distance uses it, and the use turns out to be exactly a change of
+coordinates that decorrelates and standardizes the covariates simultaneously, an operation called
+**whitening** (the name borrows from signal processing: it turns a correlated covariate cloud into an
+uncorrelated, unit-variance cloud, like the flat spectrum of white noise). Before any formula, here is the
+picture to carry: the Mahalanobis distance asks whether the *whole pattern* of covariate differences looks
+unusual relative to the index trial's covariate cloud. A gap that points along a direction in which the
+index patients naturally vary, or in which two covariates move together as they usually do, is
+unremarkable and counts for little; the same-sized gap in a direction the index patients rarely move, or
+against a correlation they usually respect, is surprising and counts for a lot.
+
+::: {#def-mahalanobis-distance}
+## Mahalanobis distance
+Let $\boldsymbol{\Sigma}\in\mathbb{R}^{p\times p}$ be a positive-definite covariance matrix for the
+covariates, typically the index-IPD sample covariance. The **Mahalanobis distance** is the
+$\boldsymbol{\Sigma}^{-1}$-quadratic-form norm of the gap,
+$$
+d_M\big(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j;\boldsymbol{\Sigma}\big)
+\;=\;\sqrt{\boldsymbol{\delta}_j^\top\boldsymbol{\Sigma}^{-1}\boldsymbol{\delta}_j}
+\;=\;\big\|\boldsymbol{\delta}_j\big\|_{\boldsymbol{\Sigma}^{-1}}.
+$$ {#eq-distance-mahalanobis}
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** The Mahalanobis distance is the quadratic-form norm
+$\|\boldsymbol{\delta}_j\|_{\boldsymbol{\Sigma}^{-1}}$ from the chapter opening: the length of the gap
+measured with the ruler $\boldsymbol{\Sigma}^{-1}$ in place of the identity (recall $\boldsymbol{\Sigma}
+\succ0$ means $\boldsymbol{\Sigma}$ is symmetric positive definite, so $\boldsymbol{\Sigma}^{-1}$ exists and
+the square root is real). The ruler $\boldsymbol{\Sigma}^{-1}$ is large in directions where the index
+patients are tightly clustered and small in directions where they are widely spread, so it charges a heavy
+price for a gap along a low-variance direction and a light price for a gap along a high-variance one. When
+the covariates are uncorrelated and on equal footing, $\boldsymbol{\Sigma}=I$, the ruler is the identity
+and $d_M$ is the ordinary Euclidean distance. $\blacktriangleleft$
+:::
+
+The defining identity is that this distance is an ordinary Euclidean distance after a linear transform
+that "whitens" the covariates, that is, makes their covariance the identity. We prove it for any matrix
+square root, then specialize to the two used in practice.
+
+::: {#thm-mahalanobis-whitening}
+## Whitening equivalence of the Mahalanobis distance
+Let $\boldsymbol{\Sigma}\succ 0$ and let $B\in\mathbb{R}^{p\times p}$ be any invertible matrix with
+$\boldsymbol{\Sigma}=BB^\top$ (such a $B$ exists by @thm-cov-psd). Then the Mahalanobis distance is the
+Euclidean norm of the **whitened gap** $B^{-1}\boldsymbol{\delta}_j$:
+$$
+d_M\big(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j;\boldsymbol{\Sigma}\big)
+\;=\;\big\|B^{-1}\boldsymbol{\delta}_j\big\|_2 .
+$$ {#eq-distance-whitening}
+In particular this holds for the lower-triangular Cholesky factor $B=L$ with
+$\boldsymbol{\Sigma}=LL^\top$, and for the symmetric positive-definite square root
+$B=\boldsymbol{\Sigma}^{1/2}$ of @thm-cov-psd. Moreover:
+
+1. If $\boldsymbol{\Sigma}=\operatorname{diag}(s_1^2,\dots,s_p^2)$ is diagonal, then $d_M$ reduces to the
+standardized Euclidean distance $d_{SE}$ with reference scales $s_\ell$.
+
+2. The whitened covariates $\mathbf{u}_j=B^{-1}\boldsymbol{\delta}_j$ have, under the model in which
+$\boldsymbol{\Sigma}$ is the true covariance, identity covariance: $\operatorname{Cov}(B^{-1}\mathbf{X})=
+B^{-1}\boldsymbol{\Sigma}B^{-\top}=I_p$.
+:::
+
+::: {.proof}
+That a factorization $\boldsymbol{\Sigma}=BB^\top$ with invertible $B$ exists is part of @thm-cov-psd:
+since $\boldsymbol{\Sigma}\succ0$ is symmetric, the spectral theorem writes $\boldsymbol{\Sigma}=Q\Lambda
+Q^\top$ with $Q$ orthogonal ($Q^\top Q=I$) and $\Lambda=\operatorname{diag}(\lambda_1,\dots,\lambda_p)$,
+and positive-definiteness forces every eigenvalue $\lambda_i>0$; the spectral
+construction there produces the symmetric square root $\boldsymbol{\Sigma}^{1/2}=Q\operatorname{diag}
+(\sqrt{\lambda_1},\dots,\sqrt{\lambda_p})Q^\top$, which is invertible because every $\lambda_i>0$ and
+satisfies $\boldsymbol{\Sigma}^{1/2}\boldsymbol{\Sigma}^{1/2}=\boldsymbol{\Sigma}$; taking
+$B=\boldsymbol{\Sigma}^{1/2}$ (symmetric, so $B=B^\top$ and $BB^\top=\boldsymbol{\Sigma}$) gives one such
+$B$, and the Cholesky factor gives another.
+
+For any invertible $B$ with $\boldsymbol{\Sigma}=BB^\top$, taking inverses and using
+$(BB^\top)^{-1}=B^{-\top}B^{-1}$,
+$$
+\boldsymbol{\delta}_j^\top\boldsymbol{\Sigma}^{-1}\boldsymbol{\delta}_j
+=\boldsymbol{\delta}_j^\top B^{-\top}B^{-1}\boldsymbol{\delta}_j
+=\big(B^{-1}\boldsymbol{\delta}_j\big)^\top\big(B^{-1}\boldsymbol{\delta}_j\big)
+=\big\|B^{-1}\boldsymbol{\delta}_j\big\|_2^2 .
+$$
+Taking nonnegative square roots gives @eq-distance-whitening. For part 1, if
+$\boldsymbol{\Sigma}=\operatorname{diag}(s_1^2,\dots,s_p^2)$ then
+$\boldsymbol{\Sigma}^{-1}=\operatorname{diag}(s_1^{-2},\dots,s_p^{-2})$ and
+$$
+\boldsymbol{\delta}_j^\top\boldsymbol{\Sigma}^{-1}\boldsymbol{\delta}_j
+=\sum_{\ell=1}^{p}\frac{\delta_{j\ell}^2}{s_\ell^2}
+=\sum_{\ell=1}^{p}\left(\frac{\bar{x}_{j\ell}-\bar{x}_{0\ell}}{s_\ell}\right)^2
+=d_{SE}\big(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j;s\big)^2 ,
+$$
+which is @eq-distance-stdeuclidean. For part 2, the covariance of a linear map is
+$\operatorname{Cov}(B^{-1}\mathbf{X})=B^{-1}\operatorname{Cov}(\mathbf{X})B^{-\top}
+=B^{-1}\boldsymbol{\Sigma}B^{-\top}=B^{-1}(BB^\top)B^{-\top}=I_p$. $\square$
+:::
+
+::: {.remark}
+**The running example, and the promised reversal.** Return to @exm-distance-two-trials, with
+$\boldsymbol{\Sigma}=\bigl[\begin{smallmatrix}100&20\\20&16\end{smallmatrix}\bigr]$. Its inverse is
+$\boldsymbol{\Sigma}^{-1}=\tfrac{1}{1200}\bigl[\begin{smallmatrix}16&-20\\-20&100\end{smallmatrix}\bigr]$,
+so the Mahalanobis quadratic form is $d_M^2=\tfrac{1}{75}\delta_1^2+\tfrac{1}{12}\delta_2^2
+-\tfrac{1}{30}\delta_1\delta_2$. Evaluating on the two gaps $\boldsymbol{\delta}_P=(10,4)$ and
+$\boldsymbol{\delta}_Q=(6,-4)$,
+$$
+d_M(P)=\sqrt{\tfrac{100}{75}+\tfrac{16}{12}-\tfrac{40}{30}}=\sqrt{1.333}=1.155,
+\qquad
+d_M(Q)=\sqrt{\tfrac{36}{75}+\tfrac{16}{12}+\tfrac{24}{30}}=\sqrt{2.613}=1.617 .
+$$
+Now the Mahalanobis distance ranks $P$ **ahead** of $Q$, the exact reverse of the raw and standardized
+verdict. The reason is visible in the cross term. Study $P$ moved age and biomarker up together, the
+direction the index correlation $\operatorname{corr}=0.5$ expects, so its cross term is negative
+($-\tfrac{40}{30}$) and cancels much of the distance: a concordant move is cheap. Study $Q$ moved them in
+opposite directions, against the correlation, so its cross term is positive ($+\tfrac{24}{30}$) and
+*adds* to the distance: a discordant move is expensive. The standardized distance, blind to the
+correlation, saw only that $Q$'s total standardized magnitude ($\sqrt{1.36}$) is smaller than $P$'s
+($\sqrt2$) and called $Q$ closer; the Mahalanobis distance sees that $Q$'s *direction* is the improbable
+one and calls $P$ closer. Which verdict should drive the decision is exactly the question
+@sec-distance-bias settles, and the answer is "it depends on the unknown contrast." $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Mahalanobis is Euclidean in the right coordinates.** Equation @eq-distance-whitening says the
+Mahalanobis distance measures the gap in coordinates where the covariate cloud has been sphered to an
+isotropic unit ball. A direction in which the covariates are highly variable, or two covariates that move
+together, are "cheap" to differ in, because such differences are expected under
+$\boldsymbol{\Sigma}$; a direction of low variance, or a discordant move against a strong correlation, is
+"expensive." Part 1 shows that standardized Euclidean distance is the special case that keeps the variances
+but discards the correlations, that is, it whitens with the diagonal of $\boldsymbol{\Sigma}$. The worked
+example of @sec-distance-example exhibits a candidate that standardized Euclidean distance and Mahalanobis
+distance rank oppositely for exactly this reason. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**The Mahalanobis distance is a genuine metric.** By @eq-distance-whitening, $d_M(\mathbf{a},\mathbf{b})=
+\|B^{-1}(\mathbf{a}-\mathbf{b})\|_2$ is the Euclidean metric composed with the invertible linear map
+$B^{-1}$; the symmetry, triangle inequality, and positive-definiteness of $d_M$ are inherited from those of
+$\|\cdot\|_2$ because $B^{-1}$ is injective. The same argument makes $d_{SE}$ a metric. This is recorded as
+part of @prp-distance-metric-properties. $\blacktriangleleft$
+:::
+
+This material corresponds to O.3 in the proof catalogue.
+
+## Further distances {#sec-distance-variants}
+
+The `uitc` toolkit offers several alternatives to the $\ell_2$ family, each answering a slightly different
+question about the covariate gap. A reader in a hurry can treat this section as reference material: the
+standardized Euclidean and Mahalanobis distances of the previous two sections are the workhorses, and the
+variants here earn their place only when a specific question makes one of them apt (the single
+worst-matched covariate, or mixed continuous and binary covariate types). Skip to @sec-distance-scale on a
+first reading and return when a variant is needed.
+
+::: {#def-distance-variants}
+## Manhattan, Minkowski, mean-SMD, and Gower distances
+With standardized gap components $z_{j\ell}=(\bar{x}_{j\ell}-\bar{x}_{0\ell})/s_\ell$ as in
+@def-euclidean-distance, define:
+
+The **Manhattan** (or $\ell_1$) distance, the sum of absolute standardized gaps,
+$$
+d_1\big(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j;s\big)=\sum_{\ell=1}^{p}\big|z_{j\ell}\big|.
+$$ {#eq-distance-manhattan}
+
+The **Minkowski** distance of order $q\ge 1$, which interpolates between them,
+$$
+d_q\big(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j;s\big)
+=\left(\sum_{\ell=1}^{p}\big|z_{j\ell}\big|^{q}\right)^{1/q},
+\qquad
+d_\infty=\max_{1\le\ell\le p}\big|z_{j\ell}\big| ,
+$$ {#eq-distance-minkowski}
+with $q=1$ the Manhattan distance, $q=2$ the standardized Euclidean distance, and the limit
+$q\to\infty$ the **Chebyshev** distance, the largest single standardized gap.
+
+The **mean absolute standardized mean difference** (mean-SMD), the Manhattan distance averaged over
+covariates,
+$$
+d_{\mathrm{SMD}}\big(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j;s\big)
+=\frac1p\sum_{\ell=1}^{p}\big|z_{j\ell}\big|
+=\frac1p\,d_1\big(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j;s\big).
+$$ {#eq-distance-meansmd}
+
+The **Gower** distance, for mixed continuous and binary covariates, with a positive range $r_\ell$ for
+each continuous covariate and binary covariates coded in $[0,1]$,
+$$
+d_G\big(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j\big)=\frac1p\sum_{\ell=1}^{p}g_{j\ell},
+\qquad
+g_{j\ell}=\begin{cases}
+\min\!\big\{\,|\bar{x}_{j\ell}-\bar{x}_{0\ell}|/r_\ell,\ 1\,\big\}, & \ell\text{ continuous},\\[2pt]
+|\bar{x}_{j\ell}-\bar{x}_{0\ell}|, & \ell\text{ binary}.
+\end{cases}
+$$ {#eq-distance-gower}
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**What each variant emphasizes, and what is excluded.** Raising the order $q$ concentrates attention on
+the single worst-matched covariate: $d_\infty$ ignores all but the maximal standardized gap, so a
+candidate with one badly mismatched covariate is penalized regardless of how well the rest agree, whereas
+$d_1$ trades off freely across covariates. The mean-SMD rescales $d_1$ to the per-covariate average,
+which makes it directly comparable across analyses with different numbers of covariates and ties the
+diagnostic to the standardized-mean-difference balance tables of the propensity-score literature, where a
+common rule of thumb flags any $|z_{j\ell}|>0.1$ as imbalance. The Gower distance handles continuous and
+binary covariates on one footing by range-scaling and truncating the continuous gaps. The `uitc` toolkit
+deliberately omits cosine, Hamming, Jaccard, Sorensen-Dice, and Haversine distances for this task: those
+measure angular similarity, binary-set overlap, or geographic separation, none of which is the right notion
+for a gap between continuous covariate means. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**A tiny Gower calculation.** Suppose a candidate is summarized by one continuous covariate, mean age, and
+one binary covariate, proportion male. Let the pooled ages run from $40$ to $80$, so the age range is
+$r_{\text{age}}=40$, and let the index means be age $60$ and proportion male $0.5$. A candidate reporting
+mean age $68$ and proportion male $0.7$ has
+$$
+g_{\text{age}}=\min\!\Big\{\tfrac{|68-60|}{40},\,1\Big\}=\min\{0.2,\,1\}=0.2,
+\qquad
+g_{\text{male}}=|0.7-0.5|=0.2,
+$$
+and Gower distance $d_G=\tfrac12(0.2+0.2)=0.2$. The range division puts the $8$-year age gap on the same
+$[0,1]$ footing as the $0.2$ difference in a proportion, and the truncation at $1$ means that even a wildly
+out-of-range age gap (say a candidate with mean age $120$, giving $|120-60|/40=1.5$, capped to $1$) counts
+no more than a complete binary disagreement. This is why Gower is the natural choice when continuous and
+binary covariates must be compared together. $\blacktriangleleft$
+:::
+
+For these to support a coherent "closest" in @def-comparator-selection, they should at least be genuine
+distances. We record which are, and where the metric axioms can fail.
+
+::: {#prp-distance-metric-properties}
+## Metric properties of the covariate-summary distances
+Fix the reference scales $s_\ell>0$, the covariance $\boldsymbol{\Sigma}\succ0$, and the Gower ranges
+$r_\ell>0$. Then:
+
+1. The standardized Euclidean distance $d_{SE}$ and the Mahalanobis distance $d_M$ are metrics on
+$\mathbb{R}^p$.
+
+2. For every $q\in[1,\infty]$ the Minkowski distance $d_q$ is a metric on $\mathbb{R}^p$; the mean-SMD
+$d_{\mathrm{SMD}}=d_1/p$ is a metric. For $0<q<1$ the function in @eq-distance-minkowski is **not** a
+metric: it violates the triangle inequality.
+
+3. The Gower distance $d_G$ is a metric on the product covariate space.
+:::
+
+::: {.proof}
+*Part 1.* By @def-euclidean-distance and @thm-mahalanobis-whitening, $d_{SE}(\mathbf{a},\mathbf{b})=
+\|S^{-1}(\mathbf{a}-\mathbf{b})\|_2$ and $d_M(\mathbf{a},\mathbf{b})=\|B^{-1}(\mathbf{a}-\mathbf{b})\|_2$
+with $S^{-1}$ and $B^{-1}$ invertible. For any invertible linear map $T$, the function
+$N(\mathbf{v})=\|T\mathbf{v}\|_2$ is a norm: it is absolutely homogeneous and satisfies the triangle
+inequality because $\|\cdot\|_2$ does and $T$ is linear, and $N(\mathbf{v})=0$ forces $T\mathbf{v}=0$,
+hence $\mathbf{v}=0$ by injectivity of $T$. A norm of a difference is a metric, giving part 1.
+
+*Part 2.* For $q\in[1,\infty]$ the map $\mathbf{v}\mapsto\|\mathbf{v}\|_q$ is the $\ell_q$ norm, and
+$d_q(\mathbf{a},\mathbf{b})=\|S^{-1}(\mathbf{a}-\mathbf{b})\|_q$ is the corresponding metric; the only
+nontrivial axiom is the triangle inequality, which is Minkowski's inequality
+$\|\mathbf{u}+\mathbf{w}\|_q\le\|\mathbf{u}\|_q+\|\mathbf{w}\|_q$. We verify the three orders this book
+uses directly. For $q=1$ it is the triangle inequality for $|\cdot|$ summed over coordinates; for
+$q=\infty$ it is $\max_\ell|u_\ell+w_\ell|\le\max_\ell(|u_\ell|+|w_\ell|)\le\max_\ell|u_\ell|+
+\max_\ell|w_\ell|$; for $q=2$ it follows from the Cauchy-Schwarz inequality, since
+$\|\mathbf{u}+\mathbf{w}\|_2^2=\|\mathbf{u}\|_2^2+2\mathbf{u}^\top\mathbf{w}+\|\mathbf{w}\|_2^2
+\le\|\mathbf{u}\|_2^2+2\|\mathbf{u}\|_2\|\mathbf{w}\|_2+\|\mathbf{w}\|_2^2
+=(\|\mathbf{u}\|_2+\|\mathbf{w}\|_2)^2$. For general $q\in[1,\infty)$ the inequality is the named Minkowski
+inequality, which we cite here; its derivation from Hölder's inequality is exactly the content of
+@exr-distance-minkowski-metric, so the single case not verified in the display above is signposted to a
+worked exercise rather than left as a gap. Since $d_{\mathrm{SMD}}=d_1/p$ is a positive scalar multiple of
+a metric, it is a metric.
+
+For $0<q<1$ the triangle inequality fails. In $\mathbb{R}^2$ take $\mathbf{a}=(0,0)$, $\mathbf{b}=(1,0)$,
+$\mathbf{c}=(1,1)$ with unit reference scales. Then $d_q(\mathbf{a},\mathbf{c})=(1+1)^{1/q}=2^{1/q}$ while
+$d_q(\mathbf{a},\mathbf{b})+d_q(\mathbf{b},\mathbf{c})=1+1=2$; since $1/q>1$ we have $2^{1/q}>2$, so the
+direct distance exceeds the detour and the triangle inequality is violated.
+
+*Part 3.* For a continuous coordinate, $\rho_\ell(a,b)=|a-b|/r_\ell$ is a metric on $\mathbb{R}$, and we
+claim its truncation $\min\{\rho_\ell,1\}$ is again a metric. Symmetry and positive-definiteness are
+immediate; for the triangle inequality, given points $a,b,c$, if either of $\min\{\rho_\ell(a,b),1\}$ or
+$\min\{\rho_\ell(b,c),1\}$ equals $1$ then the right-hand side is at least $1\ge\min\{\rho_\ell(a,c),1\}$,
+and otherwise both are below $1$, so $\rho_\ell(a,b),\rho_\ell(b,c)<1$ and
+$\min\{\rho_\ell(a,c),1\}\le\rho_\ell(a,c)\le\rho_\ell(a,b)+\rho_\ell(b,c)
+=\min\{\rho_\ell(a,b),1\}+\min\{\rho_\ell(b,c),1\}$. Thus each $g_\ell$ is a per-coordinate metric (the
+binary case $|a-b|$ on $[0,1]$ being a metric outright). A nonnegative weighted sum of metrics composed
+with coordinate projections is a pseudometric on the product, and it separates points here because each
+$g_\ell(a_\ell,b_\ell)=0$ forces $a_\ell=b_\ell$; therefore $d_G=\frac1p\sum_\ell g_\ell$ is a metric.
+$\square$
+:::
+
+This material corresponds to O.4 in the proof catalogue.
+
+## Scale dependence and scale invariance {#sec-distance-scale}
+
+A change in the unit of a covariate, age in months rather than years, weight in pounds rather than
+kilograms, is a coordinate map $\mathbf{x}\mapsto A\mathbf{x}$ with $A=\operatorname{diag}(a_1,\dots,a_p)$
+and $a_\ell>0$. A distance fit to drive a decision should not let such a relabeling change the decision.
+The standardized and Mahalanobis families pass this test; the raw Euclidean distance fails it, and fails
+it badly enough to reverse the ranking of candidates.
+
+Here is the concrete picture behind the formal statement. Record age in months instead of years and you
+multiply every age by $12$; but the standard deviation of age is *also* multiplied by $12$, so the
+standardized age gap, the gap divided by that standard deviation, is unchanged, because the factor of $12$
+cancels in the ratio. Re-expressing the same data in different units therefore cannot move a standardized
+distance. That is all "coherent rescaling" means in the theorem below: the covariate and every auxiliary
+input tied to its units (its reference scale, its Gower range, its row and column of the covariance
+matrix) are re-expressed together, exactly as they would be in any honest re-recording of the data. The
+practical stake is a regulatory one. A reviewer who asks "would your comparator choice have changed if the
+sponsor had reported age in months rather than years?" is asking precisely whether the chosen distance is
+scale-invariant, and the next theorem lets you answer "no, it could not have" for the standardized and
+Mahalanobis families, while @prp-distance-scale-dependence shows you would have to answer "yes, possibly"
+for the raw Euclidean distance.
+
+::: {#thm-distance-scale-invariance}
+## Scale invariance of standardized and Mahalanobis distances
+Let $A=\operatorname{diag}(a_1,\dots,a_p)$ with every $a_\ell>0$, and apply the **coherent rescaling**
+that maps every summary vector $\mathbf{x}\mapsto A\mathbf{x}$ and rescales the auxiliary inputs in step:
+the reference scales $s_\ell\mapsto a_\ell s_\ell$ (so $S\mapsto AS$), the Gower ranges $r_\ell\mapsto
+a_\ell r_\ell$, and the Mahalanobis covariance $\boldsymbol{\Sigma}\mapsto A\boldsymbol{\Sigma}A$. Then the
+standardized Euclidean distance $d_{SE}$, the Manhattan, Minkowski, and Chebyshev distances $d_q$
+($q\in[1,\infty]$), the mean-SMD $d_{\mathrm{SMD}}$, the Gower distance $d_G$, and the Mahalanobis distance
+$d_M$ are all unchanged. Moreover the Mahalanobis distance is invariant under **any** invertible affine
+reparameterization $\mathbf{x}\mapsto A\mathbf{x}+\mathbf{c}$ with $A\in\mathbb{R}^{p\times p}$
+invertible, not only diagonal $A$, provided $\boldsymbol{\Sigma}\mapsto A\boldsymbol{\Sigma}A^\top$.
+:::
+
+::: {.proof}
+Under the coherent rescaling the standardized components are unchanged coordinatewise: the rescaled gap is
+$A\bar{\mathbf{x}}_j-A\bar{\mathbf{x}}_0=A\boldsymbol{\delta}_j$ with $\ell$-th entry
+$a_\ell\delta_{j\ell}$, and dividing by the rescaled reference scale $a_\ell s_\ell$ gives
+$$
+\frac{a_\ell\,\delta_{j\ell}}{a_\ell s_\ell}=\frac{\delta_{j\ell}}{s_\ell}=z_{j\ell}.
+$$
+Every distance built from the standardized vector $\mathbf{z}_j$ alone, namely $d_{SE}=\|\mathbf{z}_j\|_2$,
+$d_q=\|\mathbf{z}_j\|_q$ for $q\in[1,\infty]$, and $d_{\mathrm{SMD}}=\|\mathbf{z}_j\|_1/p$, is therefore a
+function of unchanged quantities and is unchanged. For the Gower distance the continuous terms are
+$\min\{a_\ell|\delta_{j\ell}|/(a_\ell r_\ell),1\}=\min\{|\delta_{j\ell}|/r_\ell,1\}$, unchanged, and the
+binary terms involve no continuous unit, so $d_G$ is unchanged.
+
+For the Mahalanobis distance, take the general invertible affine map $\mathbf{x}\mapsto A\mathbf{x}+
+\mathbf{c}$; the constant $\mathbf{c}$ cancels in the gap, which becomes $A\boldsymbol{\delta}_j$, and the
+covariance becomes $A\boldsymbol{\Sigma}A^\top$. Using $(A\boldsymbol{\Sigma}A^\top)^{-1}=
+A^{-\top}\boldsymbol{\Sigma}^{-1}A^{-1}$,
+$$
+\big(A\boldsymbol{\delta}_j\big)^\top\big(A\boldsymbol{\Sigma}A^\top\big)^{-1}\big(A\boldsymbol{\delta}_j\big)
+=\boldsymbol{\delta}_j^\top A^\top A^{-\top}\boldsymbol{\Sigma}^{-1}A^{-1}A\,\boldsymbol{\delta}_j
+=\boldsymbol{\delta}_j^\top\boldsymbol{\Sigma}^{-1}\boldsymbol{\delta}_j ,
+$$
+so $d_M$ is unchanged. The diagonal coherent rescaling is the special case $A=\operatorname{diag}(a_\ell)$,
+for which $A\boldsymbol{\Sigma}A=A\boldsymbol{\Sigma}A^\top$. $\square$
+:::
+
+The raw Euclidean distance enjoys none of this. It is not merely rescaled by a unit change; the rescaling
+reweights the covariates unequally and can overturn which candidate is judged closest.
+
+::: {#prp-distance-scale-dependence}
+## Raw Euclidean distance is scale-dependent and can reverse rankings
+Let $A=\operatorname{diag}(a_1,\dots,a_p)$ with $a_\ell>0$. In general
+$d_E(A\bar{\mathbf{x}}_0,A\bar{\mathbf{x}}_j)\ne d_E(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j)$, because
+$$
+d_E\big(A\bar{\mathbf{x}}_0,A\bar{\mathbf{x}}_j\big)^2=\sum_{\ell=1}^{p}a_\ell^2\,\delta_{j\ell}^2 ,
+$$ {#eq-distance-rescaled}
+a reweighting of the squared gaps by $a_\ell^2$. There exist two candidates whose raw-Euclidean ranking is
+reversed by a change of units in a single covariate.
+:::
+
+::: {.proof}
+Equation @eq-distance-rescaled is immediate from $A\bar{\mathbf{x}}_j-A\bar{\mathbf{x}}_0=
+A\boldsymbol{\delta}_j$ and the diagonal form of $A$. For the reversal, take $p=2$ and two candidates with
+gaps $\boldsymbol{\delta}_1=(1,2)$ and $\boldsymbol{\delta}_2=(2,1)$. With unit scaling both have squared
+distance $1^2+2^2=2^2+1^2=5$, so they tie. Rescale the first coordinate by $a_1=10$ and keep $a_2=1$.
+Then
+$$
+d_E(A\boldsymbol{\delta}_1)^2=10^2\cdot1+1\cdot4=104,
+\qquad
+d_E(A\boldsymbol{\delta}_2)^2=10^2\cdot4+1\cdot1=401 ,
+$$
+so candidate $1$ is now strictly closer than candidate $2$, whereas before they were equidistant; a unit
+change has manufactured a strict preference. Perturbing $\boldsymbol{\delta}_1$ to $(1,2+\varepsilon)$ for
+small $\varepsilon>0$ makes candidate $2$ strictly closer under unit scaling ($5<5+4\varepsilon+
+\varepsilon^2$) while candidate $1$ remains strictly closer after the rescaling, an outright reversal of
+the strict ranking. $\square$
+:::
+
+::: {.remark}
+**The decision-theoretic moral.** Because the comparator-selection rule @eq-distance-argmin returns an
+$\arg\min$, only the *ranking* of candidates matters, and @prp-distance-scale-dependence shows the raw
+Euclidean ranking is an artifact of the recording units. Standardized Euclidean and Mahalanobis distances
+are immune (@thm-distance-scale-invariance), which is why `uitc` recommends them whenever covariates carry
+mixed units. The worked example of @sec-distance-example exhibits a concrete reversal: raw Euclidean
+distance there selects the candidate with the *largest* eventual bias, precisely because it is dominated by
+a large-unit covariate. $\blacktriangleleft$
+:::
+
+This material corresponds to O.5 in the proof catalogue.
+
+## Bias bounds from covariate-summary distance {#sec-distance-bias}
+
+A distance is worth minimizing only if minimizing it reduces the bias of the eventual estimate. We now
+prove exactly when it does. Throughout this section we work under conditional constancy, so that the
+conditional contrast (or, in the unanchored case, each conditional mean) is the same function of the
+covariates in the index and comparator populations; the only cross-population difference is the covariate
+distribution. The quantity of interest is the **transport bias**
+$$
+B_j\;=\;\mathbb{E}_{\mathcal{P}_j}\big[\tau(\mathbf{X})\big]-\mathbb{E}_{\mathcal{P}_0}\big[\tau(\mathbf{X})\big],
+$$ {#eq-distance-bias-def}
+the difference between the marginal effect over the comparator population $\mathcal{P}_j$ and the marginal
+effect over the index population $\mathcal{P}_0$, where $\tau$ is the shared conditional contrast. Under
+conditional constancy this $B_j$ is the residual bias incurred by treating comparator $j$'s population as a
+stand-in for the index population, or equivalently the bias that remains if the covariate gap
+$\boldsymbol{\delta}_j$ is left unadjusted; it is the population-level quantity that the unanchored
+consistency theorem (@thm-unanchored-paic-consistency) requires to vanish.
+
+::: {.remark}
+**Reader translation of the two working assumptions.** Two phrases carry this whole section. *Conditional
+constancy* (@def-conditional-constancy-absolute) means the conditional contrast $\tau(\mathbf{x})$, the
+treatment effect among patients whose covariates equal $\mathbf{x}$, is the **same function** of
+$\mathbf{x}$ in the index and comparator populations; what differs between the populations is only how many
+patients sit at each value of $\mathbf{x}$. If that holds, the sole thing a comparator's population changes
+is the covariate mix, so any transport bias is due entirely to the covariate gap. *Transport bias* $B_j$
+is then just the difference between the average effect you would report over the comparator's patient mix
+and the average effect over the index patient mix: it is what you get wrong by handing an estimand defined
+for the index population to a population with a different covariate distribution. A small covariate
+distance is our attempt to keep that difference small; the rest of the section is about when it succeeds.
+$\blacktriangleleft$
+:::
+
+### The linear case: an exact Cauchy-Schwarz bound {#sec-distance-bias-linear}
+
+When the contrast is affine, the bias is a linear functional of the covariate-mean gap, and the
+quadratic-form distances bound it sharply.
+
+What does "affine contrast" mean for a real outcome, and when is it plausible? Fit an outcome model on the
+link scale, the logit (log-odds) scale for a binary response, the log scale for a hazard, with a linear
+predictor of the Chapter 20 form $\eta=\mu+\boldsymbol{\beta}_1^\top\mathbf{x}+(\gamma+\boldsymbol{\beta}_2
+^\top\mathbf{x})\,T$, where $T$ is the treatment indicator. The conditional contrast on that scale, the
+treatment effect at covariate value $\mathbf{x}$, is
+$$
+\tau(\mathbf{x})=\eta\big|_{T=1}-\eta\big|_{T=0}=\gamma+\boldsymbol{\beta}_2^\top\mathbf{x},
+$$
+which is affine in $\mathbf{x}$ with intercept $\alpha=\gamma$ and slope vector
+$\boldsymbol{\beta}=\boldsymbol{\beta}_2$. So in the theorem below $\alpha$ is the treatment effect at
+$\mathbf{x}=\mathbf 0$ and $\boldsymbol{\beta}$ is the vector of **effect-modifier slopes**: each
+$\beta_\ell$ says how much the treatment's effect on the link scale changes per unit of covariate $\ell$.
+The affine case is therefore exactly "a linear outcome model on the link scale whose treatment effect is
+modified linearly by the covariates, with no covariate-by-covariate or higher-order terms." It is a
+reasonable working hypothesis when effect modification is mild and roughly linear, and it is the sensitivity
+input under which comparator distance provably bounds bias. Two poles are worth noting: if
+$\boldsymbol{\beta}=\mathbf 0$ there is no effect modification and the transport bias is zero for *any*
+covariate gap; the entire difficulty lives in the direction of $\boldsymbol{\beta}\ne\mathbf 0$, which is
+why the theorem's bound pairs the gap with $\boldsymbol{\beta}$.
+
+::: {#thm-distance-linear-bias-bound}
+## Linear bias bound
+Suppose the shared conditional contrast is affine in the covariates,
+$\tau(\mathbf{x})=\alpha+\boldsymbol{\beta}^\top\mathbf{x}$. Then the transport bias @eq-distance-bias-def
+is the linear functional of the covariate-mean gap
+$$
+B_j=\boldsymbol{\beta}^\top\boldsymbol{\delta}_j
+=\boldsymbol{\beta}^\top\big(\bar{\mathbf{x}}_j-\bar{\mathbf{x}}_0\big),
+$$ {#eq-distance-bias-linear}
+and it is bounded by either quadratic-form distance:
+
+1. with $S=\operatorname{diag}(s_1,\dots,s_p)$,
+$$
+|B_j|\;\le\;\|S\boldsymbol{\beta}\|_2\;\cdot\;d_{SE}\big(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j;s\big),
+$$ {#eq-distance-bias-se}
+with equality if and only if the standardized gap $\mathbf{z}_j=S^{-1}\boldsymbol{\delta}_j$ is parallel
+to $S\boldsymbol{\beta}$;
+
+2. with $\boldsymbol{\Sigma}\succ0$,
+$$
+|B_j|\;\le\;\sqrt{\boldsymbol{\beta}^\top\boldsymbol{\Sigma}\boldsymbol{\beta}}\;\cdot\;
+d_M\big(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j;\boldsymbol{\Sigma}\big)
+=\|\boldsymbol{\beta}\|_{\boldsymbol{\Sigma}}\cdot\|\boldsymbol{\delta}_j\|_{\boldsymbol{\Sigma}^{-1}},
+$$ {#eq-distance-bias-mah}
+with equality if and only if $\boldsymbol{\delta}_j$ is parallel to $\boldsymbol{\Sigma}\boldsymbol{\beta}$.
+:::
+
+::: {.proof}
+The intercept $\alpha$ cancels in the difference @eq-distance-bias-def, leaving
+$B_j=\boldsymbol{\beta}^\top\mathbb{E}_{\mathcal{P}_j}[\mathbf{X}]-\boldsymbol{\beta}^\top
+\mathbb{E}_{\mathcal{P}_0}[\mathbf{X}]=\boldsymbol{\beta}^\top(\bar{\mathbf{x}}_j-\bar{\mathbf{x}}_0)
+=\boldsymbol{\beta}^\top\boldsymbol{\delta}_j$, which is @eq-distance-bias-linear.
+
+*Bound 1.* Insert $S^{-1}S=I$: $B_j=\boldsymbol{\beta}^\top S S^{-1}\boldsymbol{\delta}_j=
+(S\boldsymbol{\beta})^\top\mathbf{z}_j$. By the Cauchy-Schwarz inequality in $\mathbb{R}^p$,
+$$
+|B_j|=\big|(S\boldsymbol{\beta})^\top\mathbf{z}_j\big|
+\le\|S\boldsymbol{\beta}\|_2\,\|\mathbf{z}_j\|_2
+=\|S\boldsymbol{\beta}\|_2\,d_{SE}\big(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j;s\big),
+$$
+which is @eq-distance-bias-se. Cauchy-Schwarz holds with equality if and only if the two vectors are
+linearly dependent, that is, $\mathbf{z}_j\parallel S\boldsymbol{\beta}$.
+
+*Bound 2.* Write $\boldsymbol{\Sigma}=\boldsymbol{\Sigma}^{1/2}\boldsymbol{\Sigma}^{1/2}$ with the
+symmetric square root of @thm-cov-psd and insert $\boldsymbol{\Sigma}^{-1/2}\boldsymbol{\Sigma}^{1/2}=I$:
+$$
+B_j=\boldsymbol{\beta}^\top\boldsymbol{\delta}_j
+=\big(\boldsymbol{\Sigma}^{1/2}\boldsymbol{\beta}\big)^\top
+\big(\boldsymbol{\Sigma}^{-1/2}\boldsymbol{\delta}_j\big).
+$$
+By Cauchy-Schwarz,
+$$
+|B_j|\le\big\|\boldsymbol{\Sigma}^{1/2}\boldsymbol{\beta}\big\|_2
+\big\|\boldsymbol{\Sigma}^{-1/2}\boldsymbol{\delta}_j\big\|_2
+=\sqrt{\boldsymbol{\beta}^\top\boldsymbol{\Sigma}\boldsymbol{\beta}}\,
+\sqrt{\boldsymbol{\delta}_j^\top\boldsymbol{\Sigma}^{-1}\boldsymbol{\delta}_j}
+=\sqrt{\boldsymbol{\beta}^\top\boldsymbol{\Sigma}\boldsymbol{\beta}}\;
+d_M\big(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j;\boldsymbol{\Sigma}\big),
+$$
+which is @eq-distance-bias-mah, using @eq-distance-mahalanobis for the last factor. Equality holds if and
+only if $\boldsymbol{\Sigma}^{-1/2}\boldsymbol{\delta}_j\parallel\boldsymbol{\Sigma}^{1/2}
+\boldsymbol{\beta}$; applying the invertible map $\boldsymbol{\Sigma}^{1/2}$ to both sides, this is
+$\boldsymbol{\delta}_j\parallel\boldsymbol{\Sigma}\boldsymbol{\beta}$. $\square$
+:::
+
+::: {.remark}
+**Reading the bounds.** Both bounds factor the bias into a fixed coefficient magnitude, $\|S
+\boldsymbol{\beta}\|_2$ or $\|\boldsymbol{\beta}\|_{\boldsymbol{\Sigma}}$, which does not depend on the
+candidate, times a distance, which does. Because the coefficient factor is common to all candidates, each
+distance ranks the candidates exactly by its own bound on $|B_j|$: selecting the
+$d_{SE}$-minimizer minimizes the standardized bound, and selecting the $d_M$-minimizer minimizes the
+Mahalanobis bound. The two bounds need not agree on the winner, because $\|S\boldsymbol{\beta}\|_2\,d_{SE}$
+and $\|\boldsymbol{\beta}\|_{\boldsymbol{\Sigma}}\,d_M$ are different upper bounds on the same $|B_j|$; the
+equality conditions say each bound is tight for the candidate whose gap aligns with the coefficient vector
+in the relevant geometry. This is not a defect but the precise sense in which the right distance is the one
+matched to the unknown contrast direction $\boldsymbol{\beta}$, a point the worked example makes concrete
+and the caveat of @sec-distance-caveat makes unavoidable. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Connection to unanchored consistency.** The transport bias @eq-distance-bias-def is the population-level
+obstacle in the unanchored PAIC theorem @thm-unanchored-paic-consistency. That theorem recovers the target
+estimand only when every imbalanced effect modifier and prognostic variable is balanced, so that no
+residual covariate gap survives; its necessity clause exhibits the bias as an integral that is nonzero
+exactly when an imbalanced covariate is omitted. Under the affine specialization
+$\tau(\mathbf{x})=\alpha+\boldsymbol{\beta}^\top\mathbf{x}$, which is hypothesis (v) "sufficiency of the
+matched moments" of @thm-anchored-maic-consistency and the affine-$\mu_t$ hypothesis of
+@thm-unanchored-paic-consistency, that integral collapses to the inner product
+@eq-distance-bias-linear, and @thm-distance-linear-bias-bound bounds it by the covariate-summary distance.
+Comparator selection therefore *bounds the very bias the consistency theorem assumes away*: a smaller
+distance means a smaller worst-case residual bias, under linearity. The qualifier "under linearity" is
+essential, and @sec-distance-bias-nonlinear and @sec-distance-caveat show what happens without it. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**The running example: exact bias and the two bounds.** Suppose, as a sensitivity input, the effect-modifier
+slopes are $\boldsymbol{\beta}=(0.1,\,0.5)$, that is, the treatment's effect on the link scale rises by
+$0.1$ per year of age and by $0.5$ per biomarker unit. Then the exact transport biases of
+@exm-distance-two-trials are
+$$
+B_P=\boldsymbol{\beta}^\top\boldsymbol{\delta}_P=0.1(10)+0.5(4)=3.0,
+\qquad
+B_Q=\boldsymbol{\beta}^\top\boldsymbol{\delta}_Q=0.1(6)+0.5(-4)=-1.4 .
+$$
+The standardized Cauchy-Schwarz bound uses $S\boldsymbol{\beta}=(1,2)$, so
+$\|S\boldsymbol{\beta}\|_2=\sqrt5=2.236$, giving $|B_P|\le 2.236(1.414)=3.16$ and $|B_Q|\le2.236(1.166)=2.61$;
+the Mahalanobis bound uses $\|\boldsymbol{\beta}\|_{\boldsymbol{\Sigma}}=\sqrt{\boldsymbol{\beta}^\top
+\boldsymbol{\Sigma}\boldsymbol{\beta}}=\sqrt7=2.646$, giving $|B_P|\le2.646(1.155)=3.06$ and
+$|B_Q|\le2.646(1.617)=4.28$. Both bounds dominate the exact biases, as they must. Now the honest lesson:
+the **standardized** winner $Q$ has the *smaller* true bias ($1.4$ against $3.0$), while the
+**Mahalanobis** winner $P$ has the *larger* true bias, so for this particular $\boldsymbol{\beta}$ the
+standardized distance was the faithful ranker and Mahalanobis was misled. Had $\boldsymbol{\beta}$ pointed
+along the high-variance, positively-correlated axis of $\boldsymbol{\Sigma}$, the verdict would flip and
+Mahalanobis would be faithful. Since $\boldsymbol{\beta}$ is unknown when the comparator is chosen, no
+distance is guaranteed to rank by bias; this is exactly @prp-distance-diagnostic-not-validity, previewed
+here in arithmetic. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Bias against variance: the effective-sample-size tradeoff.** A closer comparator is not automatically the
+better analysis, because comparator selection trades bias against variance, and the mean distance governs
+both. Under the linear bound, the mean distance caps the bias; and the same distance also controls the
+variance, because the subsequent unanchored MAIC reweights the index sample (size $n$) to match the
+comparator's means, and a larger standardized gap forces more extreme weights and hence a smaller effective
+sample size $\mathrm{ESS}=(\sum_i w_i)^2/\sum_i w_i^2$ (@thm-maic-ess-bound), inflating the variance by the
+factor $n/\mathrm{ESS}$. The schematic pattern, for an index study of $n=200$, is
+
+| candidate | $d_{SE}$ | typical weight extremity | illustrative $\mathrm{ESS}$ | variance inflation $n/\mathrm{ESS}$ |
+|:--|--:|:--|--:|--:|
+| close (Study $Q$) | $1.17$ | mild | $150$ | $1.33$ |
+| moderate (Study $P$) | $1.41$ | moderate | $110$ | $1.82$ |
+| far (hypothetical) | $3.0$ | severe | $35$ | $5.7$ |
+
+: How the mean distance drives the effective sample size after reweighting. The $\mathrm{ESS}$ column is illustrative: the true value depends on the index individual patient data, not on the means alone. {#tbl-distance-ess}
+
+Two consequences. First, in the linear case there is usually no dramatic conflict: the minimum-distance
+candidate tends to minimize both the bias bound and the reweighting variance at once. The genuine tension
+appears among candidates of *comparable* distance, where one breaks the tie by projected $\mathrm{ESS}$, and
+in the fact that a far comparator's variance can explode (bottom row) faster than a nearer comparator's bias
+bound grows, so a mean-squared-error view, $\mathrm{MSE}\approx \text{bias}^2+\text{variance}$, can prefer a
+slightly closer, higher-$\mathrm{ESS}$ candidate even when its bias bound is not the smallest. Second, and
+more important, the distance bounds bias only under linearity; a close, high-$\mathrm{ESS}$ comparator can
+still be badly biased through nonlinearity or unmeasured imbalance (@sec-distance-caveat). The defensible
+practice is to report distance and projected $\mathrm{ESS}$ together and to choose on the mean-squared-error
+picture, not on distance alone. This trade-off is developed as @exr-distance-ess-tradeoff and connects to
+the simulation estimands of Chapter 29. $\blacktriangleleft$
+:::
+
+### The nonlinear case: a Lipschitz-Wasserstein bound {#sec-distance-bias-nonlinear}
+
+The punchline of this subsection first, because it is easy to lose in the machinery: the clean linear bound
+of @thm-distance-linear-bias-bound has **no analogue at the level of covariate means** once the contrast is
+nonlinear. A bias bound still exists, but it needs a distance between whole distributions, not between their
+centers, and no distance between means can supply it. This is the deepest reason aggregate distance matching
+is a diagnostic and not a transportability theorem, and the rest of the section makes it precise.
+
+When the contrast is not affine, the mean gap no longer determines the bias, because a nonlinear $\tau$
+responds to the whole distribution and not only its center. A bias bound survives, but the distance it
+requires is between full distributions.
+
+Before the formal statement, here is the object in plain terms. A **coupling** of the index and comparator
+covariate distributions is a way of pairing each comparator patient with an index patient, that is, a joint
+distribution whose two margins are the two populations. Picture the comparator patients as piles of sand
+sitting at their covariate values and the index patients as holes to be filled at theirs; a coupling is a
+transport plan saying how much sand moves from each pile to each hole. The **Wasserstein-1 distance**
+$W_\rho(\mathcal{P}_j,\mathcal{P}_0)$ is the cost of the cheapest such plan, where moving one unit of mass a
+covariate-distance $\rho$ costs $\rho$: it is the minimum average distance patients must be shifted in
+covariate space to turn one population's covariate distribution into the other's. Unlike a gap between
+means, it sees the whole shape of each distribution, its spread and its tails, not only its center. For
+instance, to turn a population with everyone at $x=0$ into one split evenly between $x=-1$ and $x=+1$, half
+the mass moves one unit left and half moves one unit right, an average move of $1$, so $W_\rho=1$, even
+though the two means agree at $0$; this is the example of @prp-distance-diagnostic-not-validity. The next
+theorem says a **Lipschitz** contrast, one that cannot change faster than a fixed rate $L$ as the covariates
+change, can differ across two populations by at most $L$ times this transport cost.
+
+::: {#thm-lipschitz-bias-bound}
+## Lipschitz bias bound via the Wasserstein distance
+Let $(\mathcal{X},\rho)$ be a metric space and let $\mathcal{P}_0,\mathcal{P}_j$ be probability measures on
+$\mathcal{X}$ with finite first moment. Suppose the conditional contrast $\tau:\mathcal{X}\to\mathbb{R}$ is
+$L$-Lipschitz with respect to $\rho$, that is $|\tau(\mathbf{x})-\tau(\mathbf{x}')|\le L\,\rho(\mathbf{x},
+\mathbf{x}')$ for all $\mathbf{x},\mathbf{x}'$. Then the transport bias is bounded by the Wasserstein-1
+distance,
+$$
+\big|B_j\big|
+=\Big|\mathbb{E}_{\mathcal{P}_j}[\tau]-\mathbb{E}_{\mathcal{P}_0}[\tau]\Big|
+\;\le\;L\;W_\rho\big(\mathcal{P}_j,\mathcal{P}_0\big),
+\qquad
+W_\rho(\mathcal{P},\mathcal{Q})=\inf_{\gamma\in\Pi(\mathcal{P},\mathcal{Q})}\int\rho(\mathbf{x},\mathbf{y})
+\,d\gamma(\mathbf{x},\mathbf{y}),
+$$ {#eq-distance-lipschitz}
+where $\Pi(\mathcal{P},\mathcal{Q})$ is the set of couplings of $\mathcal{P}$ and $\mathcal{Q}$.
+:::
+
+::: {.proof}
+Let $\gamma\in\Pi(\mathcal{P}_j,\mathcal{P}_0)$ be any coupling, that is, a joint law of a pair
+$(\mathbf{X},\mathbf{Y})$ whose first marginal is $\mathcal{P}_j$ and whose second marginal is
+$\mathcal{P}_0$. Because the marginals reproduce the two expectations,
+$$
+B_j=\mathbb{E}_{\mathcal{P}_j}[\tau]-\mathbb{E}_{\mathcal{P}_0}[\tau]
+=\mathbb{E}_\gamma\big[\tau(\mathbf{X})-\tau(\mathbf{Y})\big].
+$$
+Taking absolute values, then using Jensen's inequality for the convex function $|\cdot|$
+(@thm-jensen) and the Lipschitz hypothesis,
+$$
+|B_j|=\big|\mathbb{E}_\gamma[\tau(\mathbf{X})-\tau(\mathbf{Y})]\big|
+\le\mathbb{E}_\gamma\big|\tau(\mathbf{X})-\tau(\mathbf{Y})\big|
+\le L\,\mathbb{E}_\gamma\big[\rho(\mathbf{X},\mathbf{Y})\big].
+$$
+This holds for every coupling $\gamma$, so taking the infimum over $\gamma\in\Pi(\mathcal{P}_j,
+\mathcal{P}_0)$ of the right-hand side gives $|B_j|\le L\,W_\rho(\mathcal{P}_j,\mathcal{P}_0)$, which is
+@eq-distance-lipschitz. $\square$
+:::
+
+::: {.remark}
+**Why the Wasserstein distance is the right yardstick (Kantorovich-Rubinstein duality).** The bound
+@eq-distance-lipschitz used a single coupling; remarkably, the best possible bound of this shape is again a
+Wasserstein distance. The Kantorovich-Rubinstein duality states
+$$
+W_\rho(\mathcal{P},\mathcal{Q})=\sup_{\|f\|_{\mathrm{Lip}_\rho}\le1}
+\big|\mathbb{E}_\mathcal{P}f-\mathbb{E}_\mathcal{Q}f\big|,
+$$
+where the supremum runs over all functions $f$ that are $1$-Lipschitz with respect to $\rho$, meaning $f$
+changes by at most the distance between its inputs ($\|f\|_{\mathrm{Lip}_\rho}$ is the smallest such rate).
+Read from right to left, it says the Wasserstein distance *is* the worst-case transport bias over every
+$1$-Lipschitz contrast: no unit-Lipschitz contrast can separate the two populations by more than $W_\rho$,
+and some contrast comes arbitrarily close. That is exactly why $W_\rho$, and not some cruder distributional
+distance, is the natural yardstick for Lipschitz transport bias, and why the bound in terms of it cannot be
+improved. Applying the identity to $f=\tau/L$ recovers @eq-distance-lipschitz. We gave the elementary
+coupling proof above because it is self-contained and needs only @thm-jensen; the duality is recorded here
+for the reader who wants to know the bound is tight, not merely valid. $\blacktriangleleft$
+:::
+
+The decisive point is that a distance between means is **not** a Wasserstein distance between
+distributions. It is only a lower bound on it, so a small mean distance does not imply a small Wasserstein
+distance, hence does not bound the nonlinear bias.
+
+::: {#prp-distance-wasserstein-lower-bound}
+## Mean distance lower-bounds the Wasserstein distance
+With $\rho$ the Euclidean metric on $\mathbb{R}^p$, the Euclidean distance between covariate means is
+dominated by the Wasserstein-1 distance between the covariate distributions:
+$$
+d_E\big(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j\big)
+=\big\|\bar{\mathbf{x}}_j-\bar{\mathbf{x}}_0\big\|_2
+\;\le\;W_\rho\big(\mathcal{P}_j,\mathcal{P}_0\big).
+$$ {#eq-distance-wlower}
+Consequently a small Wasserstein distance forces a small mean distance, but a small (or zero) mean distance
+places no upper bound on the Wasserstein distance, and hence none on the nonlinear bias of
+@eq-distance-lipschitz.
+:::
+
+::: {.proof}
+For any coupling $\gamma$ of $(\mathbf{X},\mathbf{Y})$ with marginals $\mathcal{P}_j,\mathcal{P}_0$, the
+vector Jensen inequality (@thm-jensen applied to the convex norm $\|\cdot\|_2$) gives
+$$
+\big\|\bar{\mathbf{x}}_j-\bar{\mathbf{x}}_0\big\|_2
+=\big\|\mathbb{E}_\gamma[\mathbf{X}-\mathbf{Y}]\big\|_2
+\le\mathbb{E}_\gamma\big\|\mathbf{X}-\mathbf{Y}\big\|_2
+=\mathbb{E}_\gamma\big[\rho(\mathbf{X},\mathbf{Y})\big].
+$$
+Taking the infimum over couplings gives @eq-distance-wlower. The implication is one-directional: the
+example in @prp-distance-diagnostic-not-validity has $d_E=0$ yet $W_\rho>0$ and nonzero bias, so no reverse
+inequality can hold. $\square$
+:::
+
+This material corresponds to O.6 in the proof catalogue.
+
+## Distance is a diagnostic, not a validity guarantee {#sec-distance-caveat}
+
+We now state and prove the chapter's central caveat. Every distance of this chapter is a function of the
+reported covariate summaries; the means are the universally available summary, and all of the distances
+reduce to zero when the means coincide. The next proposition shows that zero distance carries no guarantee
+about the target effect, in two independent ways: through nonlinearity, which the means cannot see, and
+through unmeasured variables, which no observed summary can see.
+
+::: {#prp-distance-diagnostic-not-validity}
+## Zero covariate-summary distance does not bound transport bias
+Let $d$ be any covariate-summary distance of this chapter that is computed from the covariate means alone:
+Euclidean, standardized Euclidean, Mahalanobis, Manhattan, Minkowski, mean-SMD, or Gower with the means as
+inputs.
+
+1. **(Nonlinearity.)** There exist populations $\mathcal{P}_0,\mathcal{P}_j$ with identical covariate
+means, hence $d(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j)=0$ for every such $d$, and a conditional contrast
+$\tau$ for which the target effects differ, $\mathbb{E}_{\mathcal{P}_j}[\tau]\ne\mathbb{E}_{\mathcal{P}_0}
+[\tau]$. Consequently no inequality of the form $|B_j|\le C\,d(\bar{\mathbf{x}}_0,\bar{\mathbf{x}}_j)$ can
+hold for a finite constant $C$ uniformly over contrasts; the transport bias is not a function of any
+mean-based distance.
+
+2. **(Unmeasured imbalance.)** There exist populations whose observed covariate $\mathbf{X}$ has identical
+distributions, hence zero distance under every summary of $\mathbf{X}$, that nonetheless differ in an
+unobserved prognostic variable $W$ in a way that makes the unanchored target means
+$\mathbb{E}[\mu_t(\mathbf{X},W)]$ differ across populations.
+:::
+
+::: {.proof}
+*Part 1.* Let the covariate be scalar. Let $\mathcal{P}_0$ place all mass at $X=0$, and let
+$\mathcal{P}_j$ place mass $\tfrac12$ at $X=-1$ and mass $\tfrac12$ at $X=+1$. Both have mean
+$\bar{x}_0=\bar{x}_j=0$, so every mean-based distance is zero. Take the nonlinear contrast
+$\tau(x)=x^2$. Then
+$$
+\mathbb{E}_{\mathcal{P}_0}[\tau]=0^2=0,
+\qquad
+\mathbb{E}_{\mathcal{P}_j}[\tau]=\tfrac12(-1)^2+\tfrac12(1)^2=1,
+$$
+so $B_j=1\ne0$ while $d=0$. Since $|B_j|=1>C\cdot0$ for every finite $C$, no bound of the stated form can
+hold. It is worth seeing this against @thm-lipschitz-bias-bound in full. On the support $\{-1,0,1\}$ the
+contrast $\tau(x)=x^2$ is Lipschitz: for any two points $|x^2-y^2|=|x+y|\,|x-y|\le 2|x-y|$, so we may take
+$L=2$. The Wasserstein distance is $W_\rho(\mathcal{P}_j,\mathcal{P}_0)=1$, by the following explicit
+transport plan: move the mass $\tfrac12$ sitting at $x=-1$ to $x=0$ (a shift of distance $1$) and the mass
+$\tfrac12$ sitting at $x=+1$ to $x=0$ (a shift of distance $1$), for an average move of
+$\tfrac12\cdot1+\tfrac12\cdot1=1$; no plan does better, since all the mass of $\mathcal{P}_j$ must arrive at
+the single point $0$ where $\mathcal{P}_0$ lives, each unit travelling at least distance $1$. The Lipschitz
+bound then reads
+$$
+|B_j|=1\;\le\;L\,W_\rho=2\cdot1=2 ,
+$$
+which holds with room to spare, while the mean distance $d_E=0$ vanishes. The bias is real, it is controlled
+by the full-distribution distance, and it is wholly invisible to the means: it hides in the spread, which no
+mean-based distance records.
+
+*Part 2.* Let the observed covariate $\mathbf{X}$ have the same law in $\mathcal{P}_0$ and $\mathcal{P}_j$,
+and let an unobserved prognostic variable $W$, which one should picture concretely as ECOG performance
+status, a strong prognostic factor in oncology that the single-arm Phase II might record but that the
+external Phase III reports only partially or on an incompatible scale, so it never enters the shared
+covariate table, have mean $\mathbb{E}_{\mathcal{P}_0}[W]=0$ in the index population and
+$\mathbb{E}_{\mathcal{P}_j}[W]=1$ in the comparator population, with $W$ independent of $\mathbf{X}$ in each. Let the conditional mean depend on $W$, for instance $\mu_t(\mathbf{x},w)=w$ for the
+relevant arm. Every distance computed from $\mathbf{X}$ is zero because the laws of $\mathbf{X}$ agree, yet
+the unanchored target means differ:
+$$
+\mathbb{E}_{\mathcal{P}_0}[\mu_t(\mathbf{X},W)]=\mathbb{E}_{\mathcal{P}_0}[W]=0,
+\qquad
+\mathbb{E}_{\mathcal{P}_j}[\mu_t(\mathbf{X},W)]=\mathbb{E}_{\mathcal{P}_j}[W]=1.
+$$
+This is exactly the omitted-prognostic-variable bias of @thm-unanchored-paic-consistency: with $W$ absent
+from the adjustment set, the inner difference of its necessity integral @eq-pat-unanchored-bias does not
+vanish, and no comparator term cancels it in the unanchored contrast. $\square$
+:::
+
+::: {.remark}
+**What aggregate-level matching is, and is not, good for.** Parts 1 and 2 of
+@prp-distance-diagnostic-not-validity delimit the method precisely. Aggregate-level distance matching
+*is* a sound basis for: a **comparator-selection rule** when several bridging studies are available
+(@def-comparator-selection); an **overlap diagnostic** to be inspected before any unanchored MAIC, STC, or
+ML-UMR, since a large distance forewarns of heavy reweighting and low effective sample size
+(@thm-maic-ess-bound); and a **sensitivity-analysis input** that names which covariates drive the bridge.
+It is *not* a substitute for adjusting every imbalanced effect modifier (@def-effect-modifier) and
+prognostic variable (@def-prognostic-variable); it is not a proof of the shared prognostic factor
+assumption (@def-spfa); it is not a proof of conditional constancy of absolute effects
+(@def-conditional-constancy-absolute); and it is no guard whatever against unmeasured imbalance. It
+presupposes, and does not establish, the clinical and design comparability of the trials, which must be
+judged separately and before any distance is computed (step 3 of @sec-distance-workflow): two studies can
+match on age, sex, and biomarker means and still differ in line of therapy, outcome definition, follow-up,
+or standard of care, and no small distance repairs that. The quantitative bias analysis of Chapter 28 is
+the tool for the residual and unmeasured part that distance matching leaves untouched. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Second-moment distances narrow, but do not close, the gap.** Part 1 exploits that the means agree while
+the variances differ. One can blunt this particular counterexample by augmenting the summary with second
+moments and using a distance that also compares the covariances, $\boldsymbol{\Sigma}_0$ against
+$\boldsymbol{\Sigma}_j$; this is the diagnostic analogue of MAIC second-moment balancing
+(Chapter 18) and of the joint-distribution modeling that ML-NMR achieves through a copula
+(@def-gaussian-copula, Chapter 22). But no finite collection of moments closes the gap for every
+contrast: @exr-distance-secondmoment constructs two populations matching in mean *and* variance whose
+target effects differ under a quartic contrast, and Part 2 shows that unmeasured variables defeat any
+summary of the observed covariates regardless of how many moments it includes. Distance matching on
+richer summaries is a better diagnostic, never a validity proof. $\blacktriangleleft$
+:::
+
+This material corresponds to O.7 in the proof catalogue.
+
+## A fully worked example: ranking four comparators {#sec-distance-example}
+
+We rank four candidate comparator studies for a single-arm index study, computing every distance and the
+exact bias by hand, and exhibit the chapter's three lessons at once: the raw Euclidean ranking is an
+artifact of units, the standardized and Mahalanobis distances disagree because of covariate correlation,
+and the distance that tracks the actual bias is the one matched to the contrast direction.
+
+::: {#exm-distance-comparator-ranking}
+## Selecting among four comparator studies
+The index single-arm study reports covariate means on three baseline covariates, mean age
+(years), proportion male, and mean biomarker level (units),
+$$
+\bar{\mathbf{x}}_0=(60,\;0.5,\;10),
+$$
+with reference scales $s=(10,\;0.5,\;4)$ (the biomarker and age standard deviations from the index IPD, and
+the Bernoulli standard deviation $\sqrt{0.5\cdot0.5}=0.5$ for sex), and index covariance
+$$
+\boldsymbol{\Sigma}=\begin{pmatrix}100&0&20\\[1pt]0&0.25&0\\[1pt]20&0&16\end{pmatrix},
+$$
+in which age and biomarker are positively correlated, $\operatorname{corr}=20/(10\cdot4)=0.5$, and sex is
+uncorrelated with both. (This $\boldsymbol{\Sigma}\succ0$: its leading minors are $100>0$,
+$100\cdot0.25=25>0$, and $\det\boldsymbol{\Sigma}=0.25\,(100\cdot16-20^2)=300>0$.) Four candidate
+comparator studies report means $\bar{\mathbf{x}}_A,\dots,\bar{\mathbf{x}}_D$, with covariate gaps
+$\boldsymbol{\delta}_j=\bar{\mathbf{x}}_j-\bar{\mathbf{x}}_0$ and standardized gaps
+$\mathbf{z}_j=S^{-1}\boldsymbol{\delta}_j$:
+$$
+\begin{array}{llll}
+\text{Study } A: & \boldsymbol{\delta}_A=(12,\;0.05,\;1), & \mathbf{z}_A=(1.2,\;0.1,\;0.25),\\
+\text{Study } B: & \boldsymbol{\delta}_B=(6,\;0.30,\;4.8), & \mathbf{z}_B=(0.6,\;0.6,\;1.2),\\
+\text{Study } C: & \boldsymbol{\delta}_C=(1,\;0.45,\;6), & \mathbf{z}_C=(0.1,\;0.9,\;1.5),\\
+\text{Study } D: & \boldsymbol{\delta}_D=(8,\;0.20,\;4), & \mathbf{z}_D=(0.8,\;0.4,\;1.0).
+\end{array}
+$$
+
+**Raw Euclidean (@eq-distance-euclidean).** Squaring and summing the raw gaps,
+$$
+d_E(A)=\sqrt{12^2+0.05^2+1^2}=\sqrt{145.00}=12.04,
+\quad
+d_E(B)=\sqrt{6^2+0.3^2+4.8^2}=\sqrt{59.13}=7.69,
+$$
+$$
+d_E(C)=\sqrt{1^2+0.45^2+6^2}=\sqrt{37.20}=6.10,
+\quad
+d_E(D)=\sqrt{8^2+0.2^2+4^2}=\sqrt{80.04}=8.95.
+$$
+The raw ranking is $C\prec B\prec D\prec A$, so raw Euclidean distance selects **Study $C$**.
+
+**Standardized Euclidean (@eq-distance-stdeuclidean).** Using the standardized gaps,
+$$
+d_{SE}(A)=\sqrt{1.2^2+0.1^2+0.25^2}=\sqrt{1.5125}=1.230,
+\quad
+d_{SE}(B)=\sqrt{0.6^2+0.6^2+1.2^2}=\sqrt{2.16}=1.470,
+$$
+$$
+d_{SE}(C)=\sqrt{0.1^2+0.9^2+1.5^2}=\sqrt{3.07}=1.752,
+\quad
+d_{SE}(D)=\sqrt{0.8^2+0.4^2+1.0^2}=\sqrt{1.80}=1.342.
+$$
+The standardized ranking is $A\prec D\prec B\prec C$, so standardized Euclidean distance selects
+**Study $A$**: the opposite winner from the raw distance. The reversal is intuitive. Study $A$'s
+$12$-year age gap dominates the raw distance, but in standard-deviation units it is only $1.2$ SD; Study
+$C$'s gaps are tiny in raw units (a $1$-year age gap, a $6$-unit biomarker gap) yet large when
+standardized ($0.9$ SD in sex, $1.5$ SD in biomarker), and the raw distance, blind to scale, mistakes
+$C$ for the closest.
+
+**Mahalanobis (@eq-distance-mahalanobis).** With
+$\boldsymbol{\Sigma}^{-1}$ having entries $(\boldsymbol{\Sigma}^{-1})_{11}=\tfrac{1}{75}$,
+$(\boldsymbol{\Sigma}^{-1})_{22}=4$, $(\boldsymbol{\Sigma}^{-1})_{33}=\tfrac{1}{12}$, and
+$(\boldsymbol{\Sigma}^{-1})_{13}=-\tfrac{1}{60}$ (from inverting the age-biomarker block
+$\bigl[\begin{smallmatrix}100&20\\20&16\end{smallmatrix}\bigr]$, of determinant $1200$, and the scalar
+sex block), the quadratic form is $d_M^2=\tfrac{1}{75}\delta_1^2+4\delta_2^2+\tfrac{1}{12}\delta_3^2
+-\tfrac{1}{30}\delta_1\delta_3$. Evaluating,
+$$
+d_M(A)=\sqrt{1.613}=1.270,
+\quad
+d_M(B)=\sqrt{1.800}=1.342,
+\quad
+d_M(C)=\sqrt{3.623}=1.904,
+\quad
+d_M(D)=\sqrt{1.280}=1.131.
+$$
+The Mahalanobis ranking is $D\prec A\prec B\prec C$, so Mahalanobis distance selects **Study $D$**: a
+third, distinct winner. The reason is the age-biomarker correlation. Study $D$'s gap $(8,0.2,4)$ moves age
+and biomarker up together, exactly the direction the index covariance expects, so it is "cheap" in
+Mahalanobis geometry; standardized Euclidean distance, ignoring the correlation, charges $D$ for both
+moves separately and ranks it behind $A$.
+
+**Mean-SMD (@eq-distance-meansmd).** Averaging the absolute standardized gaps,
+$d_{\mathrm{SMD}}(A)=1.55/3=0.517$, $d_{\mathrm{SMD}}(B)=2.40/3=0.800$, $d_{\mathrm{SMD}}(C)=2.50/3=0.833$,
+$d_{\mathrm{SMD}}(D)=2.20/3=0.733$, giving the ranking $A\prec D\prec B\prec C$, the same as standardized
+Euclidean, as the $\ell_1$ and $\ell_2$ norms of a common standardized vector must often agree.
+
+The four criteria are collected below; each column's minimum is the selected study.
+
+| Study | raw $d_E$ | std $d_{SE}$ | mean-SMD | Mahalanobis $d_M$ |
+|:--|--:|--:|--:|--:|
+| $A$ | $12.04$ | $\mathbf{1.230}$ | $\mathbf{0.517}$ | $1.270$ |
+| $B$ | $7.69$  | $1.470$ | $0.800$ | $1.342$ |
+| $C$ | $\mathbf{6.10}$  | $1.752$ | $0.833$ | $1.904$ |
+| $D$ | $8.95$  | $1.342$ | $0.733$ | $\mathbf{1.131}$ |
+
+**Which winner is right? The bias bound decides.** Suppose, as a sensitivity input, the unanchored
+conditional contrast is taken to be affine, $\tau(\mathbf{x})=\alpha+\boldsymbol{\beta}^\top\mathbf{x}$,
+with $\boldsymbol{\beta}=(0.1,\;2,\;0.5)$, so that $S\boldsymbol{\beta}=(1,1,2)$ and
+$\|S\boldsymbol{\beta}\|_2=\sqrt6$. By @thm-distance-linear-bias-bound the exact transport bias is
+$B_j=\boldsymbol{\beta}^\top\boldsymbol{\delta}_j=(S\boldsymbol{\beta})^\top\mathbf{z}_j=z_{j1}+z_{j2}+
+2z_{j3}$:
+$$
+B_A=1.8,\qquad B_D=3.2,\qquad B_B=3.6,\qquad B_C=4.0 .
+$$
+The exact-bias ranking $A\prec D\prec B\prec C$ coincides with the standardized Euclidean and mean-SMD
+rankings, and the standardized winner $A$ is indeed the minimum-bias comparator. The raw Euclidean winner
+$C$ has the **largest** bias of the four, $4.0$; selecting by raw distance would have chosen the worst
+comparator, the concrete reversal promised by @prp-distance-scale-dependence. The Mahalanobis winner $D$
+has bias $3.2$, larger than $A$'s, because the contrast direction $\boldsymbol{\beta}$ is not aligned with
+the covariance geometry that Mahalanobis distance rewards.
+
+The Cauchy-Schwarz bounds and their equality cases are worth seeing. The standardized bound
+$\|S\boldsymbol{\beta}\|_2\,d_{SE}=\sqrt6\,d_{SE}$ gives, for Study $B$,
+$$
+\sqrt6\cdot\sqrt{2.16}=\sqrt{12.96}=3.600=|B_B|,
+$$
+an exact equality, because $\mathbf{z}_B=(0.6,0.6,1.2)=0.6\,(1,1,2)=0.6\,S\boldsymbol{\beta}$ is parallel
+to $S\boldsymbol{\beta}$, meeting the equality condition of @eq-distance-bias-se. The Mahalanobis bound
+$\|\boldsymbol{\beta}\|_{\boldsymbol{\Sigma}}\,d_M=\sqrt{8}\,d_M$ gives, for Study $D$,
+$$
+\sqrt8\cdot\sqrt{1.28}=\sqrt{10.24}=3.200=|B_D|,
+$$
+again exact, because $\boldsymbol{\delta}_D=(8,0.2,4)=0.4\,(20,0.5,10)=0.4\,\boldsymbol{\Sigma}
+\boldsymbol{\beta}$ is parallel to $\boldsymbol{\Sigma}\boldsymbol{\beta}$, meeting the equality condition
+of @eq-distance-bias-mah (one verifies $\boldsymbol{\Sigma}\boldsymbol{\beta}=(20,0.5,10)$ and
+$\boldsymbol{\beta}^\top\boldsymbol{\Sigma}\boldsymbol{\beta}=8$). For every study both bounds dominate the
+exact bias, as they must. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reading the four rankings, and where $\boldsymbol{\beta}$ comes from.** The calculation compresses into
+one interpretation table.
+
+| Criterion | Winner | Why it wins | What an HTA analyst should conclude |
+|:--|:--:|:--|:--|
+| Raw Euclidean $d_E$ | $C$ | dominated by the large-unit biomarker gap; blind to scale | discard: the choice is an artifact of units (@prp-distance-scale-dependence) |
+| Standardized Euclidean $d_{SE}$ | $A$ | smallest gap in standard-deviation units, equal weight per covariate | defensible default; here it also happens to be the minimum-bias choice |
+| Mahalanobis $d_M$ | $D$ | $D$'s age-biomarker move follows the index correlation, so it is "cheap" | defensible when the correlation is trusted, but here *not* the minimum-bias choice |
+| Exact bias ($\boldsymbol{\beta}$ known) | $A$ | smallest $|\boldsymbol{\beta}^\top\boldsymbol{\delta}_j|$ | the truth for *this* $\boldsymbol{\beta}$, which is unknown at selection time |
+
+: Why each criterion selects a different comparator, and how to report the disagreement. {#tbl-distance-interpretation}
+
+The vector $\boldsymbol{\beta}=(0.1,2,0.5)$ is a **sensitivity input**, not a quantity available when the
+comparator is chosen. In practice it would be borrowed from a published regression of the outcome on the
+covariates, elicited from clinical experts, or, most honestly, varied across a plausible range with the
+ranking recomputed at each setting; here it is a teaching device that lets us see, after the fact, which
+distance happened to align with the truth. Because it is unknown up front, the practical recommendation is
+the one the table's last two columns dramatize: report the ranking under several distances, flag any
+disagreement as a signal that the choice is geometry-dependent, and carry the ambiguity into the
+sensitivity analysis rather than trusting a single number. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**The lesson of the example.** Three reputable distances selected three different comparators. Standardized
+Euclidean distance happened to rank by the true bias here because its implicit geometry, equal weight per
+standardized covariate, was closer to the contrast direction $S\boldsymbol{\beta}=(1,1,2)$ than the
+Mahalanobis geometry was. Had $\boldsymbol{\beta}$ pointed along the high-variance axis of
+$\boldsymbol{\Sigma}$, the Mahalanobis ranking would have been the faithful one. Since
+$\boldsymbol{\beta}$ is unknown at selection time, no distance is guaranteed to rank by bias; this is
+@prp-distance-diagnostic-not-validity made arithmetic. The defensible practice is to report the ranking
+under several distances, flag disagreement as a signal that the choice is geometry-dependent, and carry the
+ambiguity into the sensitivity analysis rather than trusting a single number. $\blacktriangleleft$
+:::
+
+## Connection to the Coq formalization {#sec-distance-coq}
+
+Aggregate-level distance matching is a **design heuristic**, a rule for choosing which comparator to adjust
+toward, and unlike the estimators of Parts IV and V it makes no claim of unbiasedness that a proof
+assistant could certify. Its absence from the companion Coq development is therefore deliberate, not an
+item left on a backlog: there is no `theories/DistanceMatching.v` because there is no correctness theorem
+about the *selection rule* itself to mechanize. What the chapter does prove is elementary linear algebra
+and analysis, and every piece already lives in the development in another guise. The whitening identity
+@eq-distance-whitening is a one-line consequence of $(BB^\top)^{-1}=B^{-\top}B^{-1}$ and the existence of a
+matrix square root, the latter being the symmetric-square-root construction underlying @thm-cov-psd. The
+linear bias bounds @eq-distance-bias-se and @eq-distance-bias-mah are the Cauchy-Schwarz inequality, the
+same inequality the development formalizes for the effective-sample-size bound: the machine-checked
+`Theorem ESS_upper_bound` of `theories/MAIC.v` (tagged on @thm-maic-ess-bound) is built from the
+elementary $2xy\le x^2+y^2$ assembled by induction into a Cauchy-Schwarz statement, and a future
+`DistanceMatching.v` could reuse that lemma verbatim to certify @thm-distance-linear-bias-bound.
+Schematically, the single statement such a file would prove is one Cauchy-Schwarz application,
+
+```coq
+(* Linear bias bound, schematic form of Theorem distance-linear-bias-bound. *)
+(* |beta . delta| <= ||beta||_Sigma * ||delta||_{inverse Sigma}. *)
+Theorem distance_linear_bias_bound :
+  forall (Sigma : SPDMatrix) (beta delta : Vector),
+    Rabs (dot beta delta)
+      <= sqrt (quad_form Sigma beta) * sqrt (quad_form (inverse Sigma) delta).
+```
+
+which is exactly @eq-distance-bias-mah, the Mahalanobis factor
+$\|\boldsymbol{\delta}_j\|_{\boldsymbol{\Sigma}^{-1}}$ written out. The
+non-identification proposition @prp-distance-diagnostic-not-validity is a pair of finite arithmetic
+counterexamples and would formalize directly. None of these results is currently mechanized, so this
+chapter carries no `[machine-checked]` tags; Chapter 30 documents the boundary of the formal development,
+of which distance matching lies outside.
+
+## Notes and references {#sec-distance-notes}
+
+Aggregate-level covariate-distance matching is an extension beyond the population-adjustment theory of
+@phillippo2019thesis, motivated by the disconnected-network and single-arm settings that the multilevel
+unanchored meta-regression of @chandler2025mlumr addresses and that the transportability reframing of
+@chandler2026transport places in estimand terms. The practical rule of selecting the candidate study
+minimizing a covariate-summary distance is described in the Bristol Compass blog on extending ML-NMR to
+disconnected networks, and the suite of distances studied here, standardized Euclidean (the default),
+Euclidean, Mahalanobis, Manhattan, Minkowski, Gower, and mean-absolute standardized-mean-difference, is the
+diagnostic toolkit implemented in the `uitc` R package; bibliographic entries for both the blog and the
+package are proposed in the chapter work log.
+
+The distances themselves are classical. The Mahalanobis distance and its whitening interpretation
+(@thm-mahalanobis-whitening) originate with Mahalanobis; its reduction to standardized Euclidean distance
+for diagonal covariance and its full affine invariance (@thm-distance-scale-invariance) are standard facts
+of multivariate analysis, here proved from @thm-cov-psd. The Gower distance for mixed continuous and
+binary data is due to Gower. Minkowski's inequality, invoked in @prp-distance-metric-properties for the
+general $\ell_q$ triangle inequality, is the standard named result; the orders $q\in\{1,2,\infty\}$ used in
+this book are proved directly there from the coordinatewise triangle inequality and Cauchy-Schwarz. The
+mean-SMD diagnostic and the $|z|>0.1$ rule of thumb are the covariate-balance conventions of the
+propensity-score literature, transposed from the individual level to study summaries.
+
+The bias theory is the chapter's own contribution to the catalogue. The linear bound
+@thm-distance-linear-bias-bound is the Cauchy-Schwarz inequality applied to the affine specialization of
+the unanchored transport bias of @thm-unanchored-paic-consistency, and it makes precise the sense in which
+comparator selection bounds the residual bias that the consistency theorem assumes away. The Lipschitz
+bound @thm-lipschitz-bias-bound is the elementary coupling side of Kantorovich-Rubinstein duality; a
+reference for the duality and for the Wasserstein distance is the optimal-transport literature (Villani),
+proposed in the work log. The lower bound @prp-distance-wasserstein-lower-bound, that the mean gap never
+exceeds the Wasserstein distance, uses the vector Jensen inequality @thm-jensen and is what makes the
+non-identification of @prp-distance-diagnostic-not-validity unavoidable rather than accidental: mean
+distance is a floor on distributional distance, never a ceiling. The reader who wants the residual and
+unmeasured-confounding part of the problem, which distance matching cannot touch, should continue to the
+quantitative bias analysis of Chapter 28, where the E-value and tipping-point methods quantify exactly the
+bias that a zero distance fails to rule out.
+
+This chapter corresponds to results O.1 (the comparator-selection problem), O.2 (Euclidean and
+standardized Euclidean distance), O.3 (the Mahalanobis whitening equivalence), O.4 (the Manhattan,
+Minkowski, Gower, and mean-SMD distances), O.5 (scale dependence and invariance), O.6 (the linear and
+Lipschitz bias bounds), and O.7 (the non-identification caveat) of the proof catalogue in
+`proofs/O_distance_matching.md`, expanding each catalogue sketch into a complete proof and adding the
+metric-property proposition @prp-distance-metric-properties and the Wasserstein lower bound
+@prp-distance-wasserstein-lower-bound.
+
+## Exercises {#sec-distance-exercises}
+
+An exercise marked $\star$ has a full worked solution in Appendix F. The exercises are tagged by type;
+start with the warm-ups, which need only arithmetic, before the computation, proof, and challenge problems.
+
+::: {#exr-distance-warmup-compute}
+**(Warm-up, computation) Two distances by hand.** The index study reports covariate means
+$\bar{\mathbf{x}}_0=(50,\,20)$ on (age in years, biomarker in units) with reference scales $s=(10,\,5)$.
+Two candidate comparators report $\bar{\mathbf{x}}_1=(58,\,24)$ and $\bar{\mathbf{x}}_2=(46,\,30)$.
+(a) Compute the raw Euclidean and the standardized Euclidean distance of each candidate to the index, and
+state which candidate each distance selects. (b) Using the index covariance
+$\boldsymbol{\Sigma}=\bigl[\begin{smallmatrix}100&30\\30&25\end{smallmatrix}\bigr]$, compute the two
+Mahalanobis distances and say whether they agree with the standardized ranking. You can check your method
+against the fully worked @exm-distance-two-trials.
+:::
+
+::: {#exr-distance-warmup-memo}
+**(Warm-up, interpretation) A comparator-selection memo.** Using @exm-distance-comparator-ranking, write a
+short decision memo, one paragraph, for an HTA submission that (a) names the comparator you would carry
+forward and why, (b) reports the disagreement among the raw, standardized, and Mahalanobis rankings and
+explains it in one sentence a non-mathematician could follow, and (c) states what you would do if the
+Mahalanobis winner (Study $D$) had poor clinical comparability, say a different line of therapy, while the
+standardized winner (Study $A$) had better trial-design similarity. Which would you choose, and what does
+@sec-distance-workflow say about the order in which comparability and distance are assessed?
+:::
+
+::: {#exr-distance-rescale-ranking}
+**(Computation) Reference scale changes the winner.** Recompute the standardized Euclidean ranking in
+@exm-distance-comparator-ranking using comparator-reported standard deviations $s'=(8,\,0.5,\,6)$ in place
+of the index scales $s=(10,\,0.5,\,4)$. Report the new $d_{SE}$ for all four studies and the new winner,
+and explain why @thm-distance-scale-invariance does **not** apply (the change is not a coherent rescaling
+of a single coordinate system but a change of reference scales alone). Comment on which reference scale is
+preferable when index IPD is available.
+:::
+
+::: {#exr-distance-chebyshev}
+**(Computation) Worst-covariate selection.** For the four studies of @exm-distance-comparator-ranking compute the
+Chebyshev distance $d_\infty=\max_\ell|z_{j\ell}|$ and the Minkowski distances $d_3$ and $d_4$. Show that
+the ranking under $d_q$ moves toward the Chebyshev ranking as $q$ grows, and identify the study whose
+selection is most sensitive to the choice of $q$. Interpret the result for a decision-maker who regards a
+single badly mismatched covariate as disqualifying.
+:::
+
+::: {#exr-distance-minkowski-metric}
+**(Proof) The triangle inequality at the boundary.** Prove that $d_q$ in @eq-distance-minkowski is a metric for
+every $q\in[1,\infty]$ by establishing Minkowski's inequality $\|\mathbf{u}+\mathbf{w}\|_q\le
+\|\mathbf{u}\|_q+\|\mathbf{w}\|_q$ from Hölder's inequality, and show by the explicit three-point
+configuration of @prp-distance-metric-properties that the triangle inequality fails for every
+$q\in(0,1)$. Conclude that the `uitc` restriction $q\ge1$ is exactly the range in which the Minkowski
+"distance" deserves the name.
+:::
+
+::: {#exr-distance-affine-invariance}
+**($\star$, proof) Full affine invariance of the Mahalanobis distance.** Prove that if the covariates are
+reparameterized by any invertible affine map $\mathbf{x}\mapsto A\mathbf{x}+\mathbf{c}$ and the covariance
+is transformed accordingly to $A\boldsymbol{\Sigma}A^\top$, then the Mahalanobis distance is unchanged,
+whereas the standardized Euclidean distance is invariant only for diagonal $A$. Exhibit a nondiagonal
+$2\times2$ invertible $A$ and a pair of candidates whose standardized Euclidean ranking is reversed by the
+reparameterization while their Mahalanobis ranking is preserved. Explain what this says about the sense in
+which Mahalanobis distance is the "coordinate-free" member of the family.
+:::
+
+::: {#exr-distance-secondmoment}
+**($\star$, challenge) Matching means and variances is still not enough.** Strengthen
+@prp-distance-diagnostic-not-validity by constructing two scalar covariate distributions with **identical
+mean and identical variance**, hence zero distance under any diagnostic built from the first two moments,
+whose target effects differ under a nonlinear contrast. (Hint: let $\mathcal{P}_0$ put mass $\tfrac12$ at
+each of $\pm1$, and let $\mathcal{P}_1$ put mass $\tfrac34$ at $0$ and mass $\tfrac18$ at each of $\pm2$;
+verify both have mean $0$ and variance $1$, then evaluate the quartic contrast $\tau(x)=x^4$.) Report the
+two target effects, the resulting bias, and the implication for MAIC second-moment balancing: balancing
+through any fixed finite set of moments leaves a residual bias for sufficiently nonlinear contrasts.
+:::
+
+::: {#exr-distance-wasserstein}
+**(Computation) Verifying the Lipschitz bound.** For the two distributions of @prp-distance-diagnostic-not-validity Part
+1, $\mathcal{P}_0=\delta_0$ and $\mathcal{P}_1=\tfrac12\delta_{-1}+\tfrac12\delta_{+1}$, compute the
+Wasserstein-1 distance $W_\rho(\mathcal{P}_1,\mathcal{P}_0)$ under the Euclidean ground metric by
+exhibiting the optimal coupling, confirm the mean-distance lower bound
+$d_E=0\le W_\rho$ of @prp-distance-wasserstein-lower-bound, and verify the Lipschitz bias bound
+@eq-distance-lipschitz for the contrast $\tau(x)=x^2$ on the support $\{-1,0,1\}$ with its Lipschitz
+constant $L=2$. State why the bound is not tight here and which feature of $\tau$ would make it tight.
+:::
+
+::: {#exr-distance-ess-tradeoff}
+**(Interpretation) Distance against effective sample size.** Argue that, all else equal, a comparator with a larger
+standardized Euclidean distance from the index population requires more aggressive reweighting in a
+subsequent unanchored MAIC and hence a lower effective sample size. Using @thm-maic-ess-bound and the
+variance-inflation factor $n/\mathrm{ESS}$, explain why comparator selection trades bias (bounded by the
+distance under @thm-distance-linear-bias-bound) against variance (governed by the ESS), and sketch how this
+trade-off would enter a mean-squared-error criterion for choosing among candidates of comparable distance.
+Relate the trade-off to the simulation-study estimands of Chapter 29.
+:::

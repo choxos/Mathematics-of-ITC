@@ -1,0 +1,1717 @@
+---
+title: "Probability and Distributions"
+---
+
+## Why probability comes first {#sec-prob-intro}
+
+Every claim made in an indirect treatment comparison is, at bottom, a claim about a probability
+distribution. When we say that the effect of a drug measured in one trial population also describes
+what would happen in a different population, we are asserting a relationship between two joint
+distributions of covariates and outcomes. When we say that a weighted average of patient-level
+predictions reproduces a population mean, we are computing an expectation. When we warn that a
+marginal odds ratio from one population does not transport to another, we are invoking a property of
+nonlinear transformations of expectations. None of these statements can be made precise, let alone
+proved, without the language of measure-theoretic probability. This chapter builds that language from
+the ground up.
+
+Three tools recur so often in later chapters that they deserve to be flagged at the outset. The first
+is the *expectation operator* together with its conditional version and the *tower property*; almost
+every identification and adjustment result in the book is, in its skeleton, an application of the
+identity $\mathbb{E}[Y]=\mathbb{E}[\mathbb{E}[Y\mid X]]$. The second is *Jensen's inequality*, which is
+the reason a nonlinear function of an average differs from the average of the nonlinear function; this
+single fact is the source of aggregation bias in meta-regression, of the non-collapsibility of the odds
+ratio and the hazard ratio, and of the scale mismatches that make marginal effects hard to transport.
+The third is the *multivariate normal distribution*, which is both the exact sampling model behind the
+normal-theory likelihoods used throughout network meta-analysis and the approximate model that the
+delta method and the central limit theorem deliver for almost any estimator. We develop all three here,
+with full proofs.
+
+We follow the measure-theoretic framework of Kolmogorov. Readers with graduate probability may skim to
+the boxed statements, but should read @thm-jensen, @thm-cauchy-schwarz-exp, and the multivariate normal
+results @thm-mvn-linear and @thm-mvn-conditional in full, since later chapters cite specific steps of
+those proofs. The causal motivation throughout is drawn from @hernan2020whatif; the measure theory is
+standard and we cite @billingsley1995 and @williams1991 for the results we use without proof. The
+material of this chapter corresponds to results A.1 through A.10 of the proof catalogue.
+
+A reader new to measure theory should not try to absorb every proof on a first pass. Read the motivating
+prose, the definitions, the *reader translation* that follows each definition, and the *why this matters*
+note that follows each major theorem; treat the heaviest proofs, the graphoid axioms
+@thm-graphoid-axioms and the differentiation of the moment generating function @thm-mgf-moments, as
+optional on a first reading and return to them once the running example below feels familiar. The symbols
+used here are collected in the [Notation](/notation.qmd) chapter.
+
+## A running clinical-trial example {#sec-prob-running-example}
+
+Every abstract object in this chapter is a precise way of talking about a concrete quantity in a trial.
+To keep that concreteness in view, we fix one small example now and return to it at each transition.
+
+::: {#exm-toy-trial}
+## A toy two-arm trial
+A randomized trial compares an active drug ($T=1$) against control ($T=0$). Each enrolled patient has a
+**baseline severity** $X\in\{0,1\}$, with $0$ meaning low risk and $1$ meaning high risk, and a binary
+**response** $Y\in\{0,1\}$, with $1$ meaning the patient responded. A second trial of the same drug, run
+in a sicker population, is labeled by a **study indicator** $S\in\{1,2\}$. Suppose the response risks
+within each severity stratum are those in the table.
+
+| severity $X$ | share of patients | risk under control $P(Y=1\mid X,T=0)$ | risk under active $P(Y=1\mid X,T=1)$ |
+|:---|:---:|:---:|:---:|
+| low ($X=0$)  | $0.6$ | $0.20$ | $0.50$ |
+| high ($X=1$) | $0.4$ | $0.50$ | $0.90$ |
+
+These numbers are all we need. We will use them to read off a probability space (@sec-prob-space), random
+variables and their laws (@sec-random-variables), an expectation (@sec-expectation), a conditional
+expectation and the tower property (@sec-conditional), independence and conditional independence
+(@sec-independence), and the Jensen gap behind non-collapsibility (@sec-jensen). The potential-outcome
+symbols $Y(0),Y(1)$ and the formal treatment-effect machinery are built in Chapter 9; here they serve
+only as motivation.
+:::
+
+**Two probability spaces, not one.** It is worth deciding at the outset what "an outcome" is, because the
+indirect-comparison literature quietly uses two different choices. In a *patient-level* probability space,
+one outcome $\omega$ is one patient's full record $(X,T,Y)$, and an event is a set of patients, for
+example "high-risk patients who responded." In a *study-level* probability space, one outcome is an
+entire trial dataset or its aggregate summary, and an event is a set of possible datasets, for example
+"trials in which the observed response rate exceeds $0.5$." Both are legitimate; the table above lives in
+the patient-level space, while a sampling statement about an estimated response rate lives in the
+study-level space. Whenever the distinction matters we name the space explicitly.
+
+The next table is a field guide to the measure-theoretic vocabulary that follows. Skim it now and refer
+back as each term appears; none of it needs to be memorized in advance.
+
+| term | plain meaning | in the trial |
+|:---|:---|:---|
+| outcome $\omega$ | one elementary result the randomness can produce | one patient's record $(X,T,Y)$ |
+| event | a yes-or-no question about $\omega$, formally a set of outcomes | "high risk and responded" |
+| $\sigma$-algebra $\mathcal{F}$ | the collection of events we are allowed to ask about | all questions decidable from $(X,T,Y)$ |
+| measurable | a map whose preimages of events are events, so probabilities transfer | "response status" as a function of $\omega$ |
+| Borel set | a subset of $\mathbb{R}^d$ built from open sets by countable operations | a range of survival times $(0,5]$ |
+| disjoint union $\bigsqcup$ | a union of sets no two of which overlap | "responded" and "did not respond" |
+| almost surely (a.s.) | with probability one, ignoring a set of probability zero | "every enrolled patient has a severity" |
+| $L^1$ | random variables with finite mean, $\mathbb{E}\lvert X\rvert<\infty$ | a finite average response |
+| $L^2$ | random variables with finite variance, $\mathbb{E}[X^2]<\infty$ | a finite response variance |
+| law / distribution $P_X$ | the probabilities $X$ assigns to value-sets, forgetting $\omega$ | $P(X=1)=0.4$ |
+| $\sigma(X)$ | the information in $X$: all events decidable from the value of $X$ | "all we learn once severity is known" |
+| version | one specific random variable among several agreeing almost surely | one chosen formula for $\mathbb{E}[Y\mid X]$ |
+
+## Probability spaces and $\sigma$-algebras {#sec-prob-space}
+
+The starting point is a triple that encodes a source of randomness, the collection of questions we are
+allowed to ask of it, and the answer to each question expressed as a probability.
+
+::: {#def-probability-space}
+## Probability space
+A **probability space** is a triple $(\Omega,\mathcal{F},P)$ in which:
+
+1. $\Omega$ is a nonempty set, the **sample space**, whose elements $\omega$ are **outcomes**;
+2. $\mathcal{F}\subseteq 2^{\Omega}$ is a **$\sigma$-algebra** on $\Omega$, meaning that
+   (i) $\Omega\in\mathcal{F}$; (ii) $A\in\mathcal{F}\Rightarrow A^{c}:=\Omega\setminus A\in\mathcal{F}$;
+   and (iii) for every sequence $\{A_n\}_{n\ge 1}\subseteq\mathcal{F}$, $\bigcup_{n\ge 1}A_n\in\mathcal{F}$.
+   The elements of $\mathcal{F}$ are called **events**;
+3. $P:\mathcal{F}\to[0,1]$ is a **probability measure**: $P(\Omega)=1$, and for every sequence of
+   pairwise disjoint events $\{A_n\}_{n\ge 1}\subseteq\mathcal{F}$,
+   $$
+   P\!\left(\bigsqcup_{n\ge 1}A_n\right)=\sum_{n\ge 1}P(A_n).
+   $$ {#eq-countable-additivity}
+   The property @eq-countable-additivity is called **countable additivity**.
+:::
+
+::: {.remark}
+**Reader translation.** A probability space is the trial bookkeeping made exact: $\Omega$ is the list of
+things that can happen (one entry per patient, in the patient-level reading of @exm-toy-trial),
+$\mathcal{F}$ is the list of questions we are allowed to ask, and $P$ assigns each question a number
+between $0$ and $1$. The disjoint-union symbol $\bigsqcup$ in @eq-countable-additivity is an ordinary
+union with a reminder attached: the events do not overlap, so their probabilities simply add.
+:::
+
+In a clinical-trial reading of the definition, an outcome $\omega$ is the entire record of one patient:
+baseline covariates, assigned treatment, and follow-up response. The event "the patient survives beyond
+five years" is a subset of $\Omega$; if it lies in $\mathcal{F}$ we may speak of its probability. The
+requirement that $\mathcal{F}$ be closed under *countable* unions, not merely finite ones, is exactly
+what separates a $\sigma$-algebra from a mere algebra of sets, and it is what makes limiting operations,
+on which all of analysis depends, available inside the theory. A concrete instance: the event "the
+patient relapses at some point during follow-up" is the union over all times $n=1,2,\dots$ of the events
+"relapses by time $n$," a genuinely countable union; without closure under such unions we could not even
+assign it a probability.
+
+The defining axioms list only a few closure properties. The remaining ones we need follow from them.
+
+::: {#lem-sigma-algebra-closure}
+## Closure properties of a $\sigma$-algebra
+Let $\mathcal{F}$ be a $\sigma$-algebra on $\Omega$ and $\{A_n\}_{n\ge 1}\subseteq\mathcal{F}$. Then
+$\varnothing\in\mathcal{F}$, and $\mathcal{F}$ is closed under countable intersections
+$\bigcap_n A_n$, under finite differences $A\setminus B$, and under the set limits
+$\limsup_n A_n:=\bigcap_{m\ge 1}\bigcup_{n\ge m}A_n$ and
+$\liminf_n A_n:=\bigcup_{m\ge 1}\bigcap_{n\ge m}A_n$.
+:::
+
+::: {.remark}
+**Reader translation.** The two set limits read as tail events. The expression $\bigcap_{m\ge 1}\bigcup_{n\ge m}A_n$
+unpacks as "for every starting time $m$, at least one $A_n$ with $n\ge m$ occurs," which is exactly the
+event that $A_n$ occurs for *infinitely many* $n$; this is $\limsup_n A_n$. Dually, $\liminf_n A_n$ is the
+event that $A_n$ occurs for *all but finitely many* $n$. The lemma simply says a $\sigma$-algebra is
+closed under all the everyday set operations, so every such event has a probability; @exr-borel-cantelli
+puts this to work.
+:::
+
+::: {.proof}
+Since $\Omega\in\mathcal{F}$, axiom (ii) gives $\varnothing=\Omega^{c}\in\mathcal{F}$. For countable
+intersections, axiom (ii) gives $A_n^{c}\in\mathcal{F}$, axiom (iii) gives
+$\bigcup_n A_n^{c}\in\mathcal{F}$, and axiom (ii) once more gives
+$\bigl(\bigcup_n A_n^{c}\bigr)^{c}=\bigcap_n A_n\in\mathcal{F}$ by De Morgan's law (the complement of a
+union is the intersection of the complements). For finite
+differences, $A\setminus B=A\cap B^{c}$ is the intersection of two events. For the set limits,
+$\bigcup_{n\ge m}A_n\in\mathcal{F}$ for each $m$ by axiom (iii), and the countable intersection over $m$
+lies in $\mathcal{F}$ by what we have just shown; the argument for $\liminf$ is the mirror image.
+$\square$
+:::
+
+This is result A.1 of the proof catalogue. We will not construct probability measures by hand. The
+existence of measures with prescribed values on a generating class, in particular Lebesgue measure on
+$\mathbb{R}$ and the measures induced by distribution functions, is guaranteed by the Carathéodory
+extension theorem; see @billingsley1995, §3. We take that machinery as given.
+
+## Random variables and their distributions {#sec-random-variables}
+
+A probability space is rarely interesting on its own. What we observe are numerical summaries of an
+outcome: a covariate, a treatment indicator, a survival time. These are functions on $\Omega$, and to
+assign probabilities to statements about their values we require that the preimage of every reasonable
+set of values be an event.
+
+Throughout, $\mathcal{B}(\mathbb{R}^{d})$ denotes the **Borel $\sigma$-algebra** on $\mathbb{R}^{d}$,
+the smallest $\sigma$-algebra containing all open sets. Its existence follows from the fact that an
+arbitrary intersection of $\sigma$-algebras is again a $\sigma$-algebra, so one may intersect all
+$\sigma$-algebras containing the open sets.
+
+::: {#def-random-variable}
+## Random variable and its law
+Let $(\Omega,\mathcal{F},P)$ be a probability space and $(\mathcal{S},\mathcal{S}')$ a **measurable space**
+(a set $\mathcal{S}$ paired with a $\sigma$-algebra $\mathcal{S}'$ of its subsets; the prime is merely a
+label distinguishing the $\sigma$-algebra from the set, not a derivative).
+A function $X:\Omega\to\mathcal{S}$ is **measurable**, and is called a **random variable** when
+$(\mathcal{S},\mathcal{S}')=(\mathbb{R},\mathcal{B}(\mathbb{R}))$ and a **random vector** when
+$(\mathcal{S},\mathcal{S}')=(\mathbb{R}^{d},\mathcal{B}(\mathbb{R}^{d}))$, if
+$$
+X^{-1}(B):=\{\omega\in\Omega: X(\omega)\in B\}\in\mathcal{F}\qquad\text{for every }B\in\mathcal{S}'.
+$$
+The **law** (or **distribution**) of $X$ is the set function $P_X$ on $(\mathcal{S},\mathcal{S}')$
+defined by the **pushforward**
+$$
+P_X(B):=P\bigl(X^{-1}(B)\bigr),\qquad B\in\mathcal{S}'.
+$$ {#eq-pushforward}
+:::
+
+::: {.remark}
+**Reader translation.** A random variable is a measurement: it reads a number off each outcome.
+Measurability is the modest demand that every question about that number ("is severity high?", "is the
+response time under five years?") be a legitimate event, so it has a probability. The **law** $P_X$ is
+what remains after forgetting the patient and keeping only how often $X$ lands in each value-set; the
+**pushforward** @eq-pushforward is the recipe for it, pushing each value-set $B$ back through $X$ to a
+patient event $X^{-1}(B)$ and taking its probability. From the change-of-variables identity
+@eq-change-of-variables onward we work entirely with the law and never mention $\Omega$ again.
+:::
+
+::: {#prp-law-is-measure}
+## The law is a probability measure
+For a random variable $X$, the pushforward $P_X$ of @eq-pushforward is a probability measure on
+$(\mathcal{S},\mathcal{S}')$.
+:::
+
+::: {.proof}
+Measurability of $X$ guarantees $X^{-1}(B)\in\mathcal{F}$, so $P_X(B)$ is defined. First,
+$P_X(\mathcal{S})=P(X^{-1}(\mathcal{S}))=P(\Omega)=1$, because every $\omega$ is mapped somewhere.
+Nonnegativity is inherited from $P$. For countable additivity, let $\{B_n\}$ be pairwise disjoint in
+$\mathcal{S}'$. Preimages preserve disjointness and distribute over unions,
+$X^{-1}\bigl(\bigsqcup_n B_n\bigr)=\bigsqcup_n X^{-1}(B_n)$, so by countable additivity of $P$,
+$$
+P_X\!\left(\bigsqcup_n B_n\right)
+=P\!\left(\bigsqcup_n X^{-1}(B_n)\right)
+=\sum_n P\bigl(X^{-1}(B_n)\bigr)
+=\sum_n P_X(B_n).\qquad\square
+$$
+:::
+
+This is result A.2. The law $P_X$ is the object we actually reason about; the underlying $\Omega$
+recedes into the background. A random variable $X$ on $\mathbb{R}$ is summarized by its **cumulative
+distribution function** (CDF)
+$$
+F_X(x):=P_X\bigl((-\infty,x]\bigr)=P(X\le x),\qquad x\in\mathbb{R}.
+$$
+Every CDF is nondecreasing, right-continuous, and satisfies $F_X(-\infty)=0$, $F_X(+\infty)=1$, and
+conversely every function with these properties is the CDF of a unique law on
+$(\mathbb{R},\mathcal{B}(\mathbb{R}))$; see @billingsley1995, §14. We write $F_X^{-1}$ for the
+generalized inverse (quantile function) $F_X^{-1}(u)=\inf\{x:F_X(x)\ge u\}$, the value below which a
+fraction $u$ of the distribution lies, the population version of a sample quantile; it returns in Part V
+to generate correlated covariates by the inverse-CDF method. The standard normal CDF and
+density are written $\Phi$ and $\phi$ throughout, following the notation chapter.
+
+The practical dividend of the pushforward is the **change-of-variables identity** for expectations,
+which lets us integrate over the values of $X$ rather than over $\Omega$:
+$$
+\mathbb{E}[h(X)]=\int_{\Omega}h(X(\omega))\,dP(\omega)=\int_{\mathcal{S}}h(s)\,dP_X(s),
+$$ {#eq-change-of-variables}
+valid for every measurable $h$ for which either side is defined. In words, to average any function of $X$
+we integrate over the *values* of $X$ weighted by its law $P_X$; the abstract sample space has done its
+job and disappears, which is why every later computation is phrased in terms of laws and densities rather
+than $\Omega$.
+
+The words introduced so far are easy to conflate. They line up as follows.
+
+| object | what it is | type | trial reading |
+|:---|:---|:---|:---|
+| event | a set of outcomes | subset of $\Omega$ | "high risk and responded" |
+| random variable $X$ | a measurement on outcomes | function $\Omega\to\mathbb{R}$ | severity, treatment, or response |
+| law / distribution $P_X$ | how often $X$ hits each value-set | measure on $\mathbb{R}$ | $P(X=1)=0.4$ |
+| CDF $F_X$ | the law accumulated up to $x$ | function $\mathbb{R}\to[0,1]$ | $F_X(0)=P(X\le 0)=0.6$ |
+| density / mass $f_X$ | the law per unit value | function on $\mathbb{R}$ | $f_X(1)=0.4,\ f_X(0)=0.6$ |
+| expectation $\mathbb{E}[X]$ | the law's center of mass | a single number | mean severity $\mathbb{E}[X]=0.4$ |
+
+The first three describe *where the randomness lives*; the last three are *summaries* of the law. A
+density exists only when the law is smooth enough (the continuous case) or sits on isolated points (the
+discrete case, where it is a mass function), but the CDF and the expectation always exist. We prove the
+meaning of these integrals next.
+
+## Expectation as an integral {#sec-expectation}
+
+The **expectation** of a random variable $X$ is its Lebesgue integral against $P$,
+$\mathbb{E}[X]:=\int_{\Omega}X\,dP$, defined in the usual three stages. For a nonnegative **simple**
+random variable $X=\sum_{k=1}^{m}c_k\mathbf{1}_{A_k}$ with $c_k\ge 0$ and $A_k\in\mathcal{F}$ (here the
+**indicator** $\mathbf{1}_{A}$ equals $1$ on the event $A$ and $0$ off it; we also write
+$\mathbf{1}\{X=x\}$ for the indicator of the event $\{X=x\}$), one sets
+$\mathbb{E}[X]=\sum_{k=1}^{m}c_k P(A_k)$. For a general nonnegative measurable $X$, one sets
+$\mathbb{E}[X]=\sup\{\mathbb{E}[S]: 0\le S\le X,\ S\text{ simple}\}\in[0,\infty]$. For a general $X$, one
+writes $X=X^{+}-X^{-}$ with $X^{\pm}=\max(\pm X,0)$ and sets
+$\mathbb{E}[X]=\mathbb{E}[X^{+}]-\mathbb{E}[X^{-}]$ whenever at least one term is finite; $X$ is
+**integrable**, written $X\in L^1$ (the space of integrable random variables), when
+$\mathbb{E}|X|<\infty$. The construction and the elementary
+properties (monotonicity, and additivity on simple functions) are standard; see @billingsley1995, §15.
+
+::: {.remark}
+**Reader translation.** Expectation is a weighted average, and the three-stage construction only makes
+that idea survive when the averaging has infinitely many pieces. For a discrete measurement it is the
+familiar sum $\sum_x x\,P(X=x)$: in @exm-toy-trial the severity $X$ is $\mathrm{Ber}(0.4)$, so
+$\mathbb{E}[X]=0\cdot 0.6+1\cdot 0.4=0.4$. For a continuous measurement the sum becomes the integral
+$\int x\,f_X(x)\,dx$. The simple-then-nonnegative-then-general staircase is precisely what guarantees
+these are one notion, so the single symbol $\mathbb{E}$ covers a finite trial average, a discrete mean,
+and a continuous integral without contradiction, and continues to work for unbounded outcomes.
+:::
+
+Two limit theorems govern the interchange of limits with integration and are cited, not reproved, here;
+they are the analytic backbone of every later argument that passes a limit inside an expectation. They
+constitute result A.3.
+
+::: {#thm-monotone-convergence}
+## Monotone convergence (cited)
+If $0\le X_n\uparrow X$ almost surely (the arrow $\uparrow$ denotes that $X_n$ increases to its limit, and
+**almost surely**, abbreviated a.s., means with probability one, that is, outside a set of outcomes of
+probability zero), that is, $X_n(\omega)$ is nondecreasing in $n$ with limit
+$X(\omega)$ for $P$-almost every $\omega$, then $\mathbb{E}[X_n]\uparrow\mathbb{E}[X]$.
+:::
+
+::: {#thm-dominated-convergence}
+## Dominated convergence (cited)
+If $X_n\to X$ almost surely and there is an integrable $Y$ with $|X_n|\le Y$ almost surely for all $n$,
+then $X$ is integrable and $\mathbb{E}[X_n]\to\mathbb{E}[X]$; moreover $\mathbb{E}|X_n-X|\to 0$.
+:::
+
+Proofs are in @billingsley1995, §16, the second deduced from Fatou's lemma. We will reference these as
+@thm-monotone-convergence and @thm-dominated-convergence. The first result we prove from scratch is the
+linearity of expectation, the most heavily used identity in the book.
+
+::: {#thm-expectation-linearity}
+## Linearity of expectation
+Let $X,Y\in L^1$ and $a,b\in\mathbb{R}$. Then $aX+bY\in L^1$ and
+$$
+\mathbb{E}[aX+bY]=a\,\mathbb{E}[X]+b\,\mathbb{E}[Y].
+$$
+:::
+
+::: {.proof}
+Integrability of $aX+bY$ follows from the triangle inequality $|aX+bY|\le|a|\,|X|+|b|\,|Y|$ and
+monotonicity of the integral. For the identity we proceed through the construction. For nonnegative
+simple functions $S=\sum_k c_k\mathbf{1}_{A_k}$ and $T=\sum_\ell d_\ell\mathbf{1}_{B_\ell}$, refining to
+the common partition generated by $\{A_k\}$ and $\{B_\ell\}$ shows
+$\mathbb{E}[\alpha S+\beta T]=\alpha\,\mathbb{E}[S]+\beta\,\mathbb{E}[T]$ for $\alpha,\beta\ge 0$, since
+on each atom of the refinement the integrand is a constant and $P$ is additive over the atoms. For
+nonnegative measurable $X,Y$, take simple $0\le S_n\uparrow X$ and $0\le T_n\uparrow Y$ (such sequences
+exist by the standard dyadic approximation: round $X$ down to the nearest multiple of $2^{-n}$ and cap at
+height $n$, giving simple functions that increase pointwise to $X$). Then $\alpha S_n+\beta T_n\uparrow \alpha X+\beta Y$, and
+@thm-monotone-convergence gives
+$$
+\mathbb{E}[\alpha X+\beta Y]=\lim_n\mathbb{E}[\alpha S_n+\beta T_n]
+=\alpha\lim_n\mathbb{E}[S_n]+\beta\lim_n\mathbb{E}[T_n]=\alpha\,\mathbb{E}[X]+\beta\,\mathbb{E}[Y]
+$$
+for $\alpha,\beta\ge 0$. Finally, for general integrable $X,Y$ and real $a,b$, decompose each variable
+into positive and negative parts and each coefficient into sign and magnitude, and combine the
+nonnegative case with the additive splitting $\mathbb{E}[Z]=\mathbb{E}[Z^{+}]-\mathbb{E}[Z^{-}]$; every
+term is finite by integrability, so the rearrangement is legitimate. $\square$
+:::
+
+::: {.remark}
+**Why this matters.** Linearity is the workhorse behind every weighted estimator in the book. An inverse
+probability weighted mean, a matching-adjusted average, and a network meta-analysis contrast are all
+linear combinations of responses, and linearity is what lets us pass expectations through them. We prove
+it from the construction, rather than assume it, because the unbiasedness arguments of Part IV and the
+limit theorems we later cite all rest on this identity holding exactly, not approximately.
+:::
+
+Linearity is half of result A.4; the tower property is the other half and is proved in
+@sec-conditional after we have conditional expectation in hand. We also record the second-moment
+summaries that organize all variance calculations to come.
+
+::: {#def-variance-covariance}
+## Variance, covariance, and the covariance matrix
+For $X,Y\in L^2$, that is, $\mathbb{E}[X^2]<\infty$ and $\mathbb{E}[Y^2]<\infty$, define
+$$
+\mathrm{Var}(X):=\mathbb{E}\bigl[(X-\mathbb{E}X)^2\bigr],\qquad
+\mathrm{Cov}(X,Y):=\mathbb{E}\bigl[(X-\mathbb{E}X)(Y-\mathbb{E}Y)\bigr].
+$$
+For a random vector $\mathbf{X}=(X_1,\dots,X_p)^{\top}$ with each $X_i\in L^2$ and mean
+$\boldsymbol{\mu}=\mathbb{E}[\mathbf{X}]$ (taken componentwise), the **covariance matrix** is the
+$p\times p$ matrix
+$$
+\boldsymbol{\Sigma}:=\mathrm{Cov}(\mathbf{X})
+:=\mathbb{E}\bigl[(\mathbf{X}-\boldsymbol{\mu})(\mathbf{X}-\boldsymbol{\mu})^{\top}\bigr],
+\qquad \Sigma_{ij}=\mathrm{Cov}(X_i,X_j).
+$$
+:::
+
+::: {.remark}
+**Reader translation.** Variance is the average squared distance of a measurement from its mean, a single
+number for spread; covariance is the signed version for a pair, positive when the two move together. The
+covariance matrix $\boldsymbol{\Sigma}$ packages all pairwise covariances of a random vector, and the
+identity @eq-var-quadratic-form below says the spread of any linear summary $\mathbf{a}^{\top}\mathbf{X}$
+is read off $\boldsymbol{\Sigma}$ as a quadratic form. This is the hinge between probability and the
+matrix algebra of Chapter 3.
+:::
+
+By linearity, $\mathrm{Var}(X)=\mathbb{E}[X^2]-(\mathbb{E}X)^2$ and $\mathrm{Cov}$ is symmetric and
+bilinear. A computation we will reuse: for a fixed vector $\mathbf{a}\in\mathbb{R}^p$,
+$$
+\mathrm{Var}(\mathbf{a}^{\top}\mathbf{X})
+=\mathbb{E}\bigl[(\mathbf{a}^{\top}(\mathbf{X}-\boldsymbol{\mu}))^2\bigr]
+=\mathbf{a}^{\top}\,\mathbb{E}\bigl[(\mathbf{X}-\boldsymbol{\mu})(\mathbf{X}-\boldsymbol{\mu})^{\top}\bigr]\,\mathbf{a}
+=\mathbf{a}^{\top}\boldsymbol{\Sigma}\,\mathbf{a},
+$$ {#eq-var-quadratic-form}
+which expresses the variance of a linear combination as a quadratic form in the covariance matrix. This
+identity is the bridge to @sec-cov-psd.
+
+## Conditional expectation and the tower property {#sec-conditional}
+
+For a discrete random variable $X$ with $P(X=x)>0$ one defines the conditional expectation
+$\mathbb{E}[Y\mid X=x]$ as the ratio $\mathbb{E}[Y\mathbf{1}\{X=x\}]/P(X=x)$, the average response among
+the patients with $X=x$. This is the everyday notion of a subgroup mean. The difficulty is that for a
+*continuous* $X$ every single value has probability zero, $P(X=x)=0$, so the ratio becomes the
+meaningless $0/0$ and the elementary definition collapses. The measure-theoretic definition repairs this
+not by rescuing the ratio but by characterizing the whole function $x\mapsto\mathbb{E}[Y\mid X=x]$ at
+once, through an averaging identity that never evaluates a probability-zero event. It reduces to the
+familiar subgroup mean whenever the subgroups have positive probability, as we verify in
+@exm-cond-exp-strata below.
+
+::: {#def-conditional-expectation}
+## Conditional expectation
+Let $Y\in L^1$ on $(\Omega,\mathcal{F},P)$ and let $\mathcal{G}\subseteq\mathcal{F}$ be a
+sub-$\sigma$-algebra. A **conditional expectation** of $Y$ given $\mathcal{G}$ is any
+$\mathcal{G}$-measurable random variable $Z$ with $Z\in L^1$ satisfying the **defining property**
+$$
+\mathbb{E}[Z\,\mathbf{1}_A]=\mathbb{E}[Y\,\mathbf{1}_A]\qquad\text{for all }A\in\mathcal{G}.
+$$ {#eq-cond-exp-defining}
+Any two such $Z$ agree almost surely; we fix one version and write $Z=\mathbb{E}[Y\mid\mathcal{G}]$. When
+$\mathcal{G}=\sigma(X)$ is the $\sigma$-algebra generated by a random variable or vector $X$, we write
+$\mathbb{E}[Y\mid X]$, and there is a measurable function $m$ with $\mathbb{E}[Y\mid X]=m(X)$ almost
+surely; the value $m(x)$ is what we mean by $\mathbb{E}[Y\mid X=x]$.
+:::
+
+::: {.remark}
+**Reader translation.** Think of $\mathcal{G}$ as the information you are allowed to use, and
+$\mathbb{E}[Y\mid\mathcal{G}]$ as your best guess of $Y$ given only that information. The defining
+property @eq-cond-exp-defining says the guess must get the totals right: on every event $A$ you are
+allowed to see, the guess and the truth average to the same thing. Two guesses that always agree on those
+events agree almost surely, which is why we speak of *a* version and then fix one. When the information is
+"the value of $X$," written $\mathcal{G}=\sigma(X)$, the guess is a function of $X$ and its value at $x$
+is the subgroup mean $\mathbb{E}[Y\mid X=x]$. Two sanity checks: $\mathbb{E}[Y\mid\mathcal{G}]=Y$ when $Y$
+is itself $\mathcal{G}$-measurable (you already know $Y$), and $\mathbb{E}[Y\mid\mathcal{G}]$ is the
+constant $\mathbb{E}[Y]$ when $\mathcal{G}$ carries no information about $Y$.
+:::
+
+The existence of a random variable satisfying @eq-cond-exp-defining is guaranteed by a deep theorem of
+measure theory, the **Radon-Nikodym theorem**. We record the construction for completeness and then never
+use its internals again; a reader meeting these words for the first time may take existence on faith and
+lose nothing that follows. Concretely, the set function
+$\nu(A):=\mathbb{E}[Y\,\mathbf{1}_A]$ for $A\in\mathcal{G}$ is a finite signed measure on
+$(\Omega,\mathcal{G})$, absolutely continuous with respect to the restriction $P|_{\mathcal{G}}$, so it
+has a $\mathcal{G}$-measurable density $Z=d\nu/dP|_{\mathcal{G}}$, which is @eq-cond-exp-defining; see
+@williams1991, §9. Uniqueness up to null sets is immediate: if $Z,Z'$ both satisfy
+@eq-cond-exp-defining, then $\mathbb{E}[(Z-Z')\mathbf{1}_A]=0$ for all $A\in\mathcal{G}$; taking
+$A=\{Z-Z'>0\}\in\mathcal{G}$ forces $P(Z-Z'>0)=0$, and likewise for the reverse inequality. This is
+result A.5. We record the operational properties; the tower property is the one we own and prove in
+full.
+
+The definition earns its keep by reducing to the elementary subgroup mean. We check this on the running
+trial, and read off the tower property it will satisfy.
+
+::: {#exm-cond-exp-strata}
+## Subgroup means in the toy trial
+Work on the control arm of @exm-toy-trial, where severity $X$ has $P(X=0)=0.6$ and $P(X=1)=0.4$ and the
+response risks are $\mathbb{E}[Y\mid X=0]=0.20$ and $\mathbb{E}[Y\mid X=1]=0.50$. Take
+$\mathcal{G}=\sigma(X)$.
+
+*The elementary ratio.* Since $X$ is discrete with positive cell probabilities,
+$$
+\mathbb{E}[Y\mid X=1]=\frac{\mathbb{E}[Y\,\mathbf{1}\{X=1\}]}{P(X=1)}=\frac{P(Y=1,\,X=1)}{P(X=1)}
+=\frac{0.4\cdot 0.50}{0.4}=0.50,
+$$
+and likewise $\mathbb{E}[Y\mid X=0]=0.20$. So $\mathbb{E}[Y\mid X]=m(X)$ with $m(0)=0.20$ and $m(1)=0.50$.
+
+*The defining property.* This same $m(X)$ satisfies @eq-cond-exp-defining. The nontrivial events of
+$\sigma(X)$ are $\{X=0\}$, $\{X=1\}$, and their union $\Omega$; on $A=\{X=1\}$,
+$$
+\mathbb{E}[m(X)\,\mathbf{1}_A]=0.50\cdot P(X=1)=0.50\cdot 0.4=0.20=\mathbb{E}[Y\,\mathbf{1}_A],
+$$
+and similarly on $\{X=0\}$, so the measure-theoretic guess and the elementary subgroup mean coincide.
+
+*The tower property in advance.* Averaging the subgroup means against the subgroup sizes recovers the
+overall mean,
+$$
+\mathbb{E}[Y]=0.6\cdot 0.20+0.4\cdot 0.50=0.12+0.20=0.32,
+$$
+which is the law of total expectation $\mathbb{E}[Y]=\mathbb{E}\bigl[\mathbb{E}[Y\mid X]\bigr]$. This
+"average the subgroup means and recover the whole" is the identity @thm-tower-property now proves in
+general.
+:::
+
+::: {#thm-tower-property}
+## Tower property
+Let $Y\in L^1$ and let $\mathcal{H}\subseteq\mathcal{G}\subseteq\mathcal{F}$ be nested
+sub-$\sigma$-algebras. Then $\mathbb{E}[Y\mid\mathcal{G}]\in L^1$ and
+$$
+\mathbb{E}\bigl[\,\mathbb{E}[Y\mid\mathcal{G}]\,\big|\,\mathcal{H}\,\bigr]=\mathbb{E}[Y\mid\mathcal{H}]
+\quad\text{a.s.};
+$$ {#eq-tower}
+in particular, taking $\mathcal{H}=\{\varnothing,\Omega\}$ the trivial $\sigma$-algebra,
+$$
+\mathbb{E}\bigl[\,\mathbb{E}[Y\mid\mathcal{G}]\,\bigr]=\mathbb{E}[Y].
+$$ {#eq-tower-mean}
+:::
+
+::: {.proof}
+Write $Z=\mathbb{E}[Y\mid\mathcal{G}]$. Integrability of $Z$: applying @eq-cond-exp-defining with the
+events $A^{+}=\{Z>0\}$ and $A^{-}=\{Z\le 0\}$, both in $\mathcal{G}$, gives
+$\mathbb{E}|Z|=\mathbb{E}[Z\mathbf{1}_{A^{+}}]-\mathbb{E}[Z\mathbf{1}_{A^{-}}]
+=\mathbb{E}[Y\mathbf{1}_{A^{+}}]-\mathbb{E}[Y\mathbf{1}_{A^{-}}]\le\mathbb{E}|Y|<\infty$, so $Z\in L^1$.
+
+Let $W=\mathbb{E}[Z\mid\mathcal{H}]$, which is $\mathcal{H}$-measurable by construction. To show
+$W=\mathbb{E}[Y\mid\mathcal{H}]$ it suffices, by uniqueness in @def-conditional-expectation, to verify
+the defining property $\mathbb{E}[W\mathbf{1}_A]=\mathbb{E}[Y\mathbf{1}_A]$ for every
+$A\in\mathcal{H}$. Fix such an $A$. Since $W=\mathbb{E}[Z\mid\mathcal{H}]$ and $A\in\mathcal{H}$, the
+defining property of $W$ gives $\mathbb{E}[W\mathbf{1}_A]=\mathbb{E}[Z\mathbf{1}_A]$. Since
+$A\in\mathcal{H}\subseteq\mathcal{G}$, the defining property of $Z=\mathbb{E}[Y\mid\mathcal{G}]$ gives
+$\mathbb{E}[Z\mathbf{1}_A]=\mathbb{E}[Y\mathbf{1}_A]$. Chaining the two equalities yields
+$\mathbb{E}[W\mathbf{1}_A]=\mathbb{E}[Y\mathbf{1}_A]$, which is @eq-tower. Specializing to the trivial
+$\mathcal{H}$, whose only events are $\varnothing$ and $\Omega$, the random variable
+$\mathbb{E}[Y\mid\mathcal{H}]$ is the constant $\mathbb{E}[Y]$, and @eq-tower-mean follows by taking
+expectations on both sides of @eq-tower, that is, by setting $A=\Omega$ in
+$\mathbb{E}[Z\mathbf{1}_A]=\mathbb{E}[Y\mathbf{1}_A]$. $\square$
+:::
+
+::: {.remark}
+**Why this matters.** The tower property is the engine of identification. In a trial we can estimate a
+*conditional* mean, the response within each covariate stratum; what a decision maker wants is a
+*marginal* mean in some target population. The tower property
+$\mathbb{E}[Y]=\mathbb{E}[\mathbb{E}[Y\mid X]]$ is precisely the bridge: average the stratum-specific
+means against the target's covariate distribution and you obtain the target's marginal mean, exactly as
+in @exm-cond-exp-strata. Every standardization, transportability, and population-adjustment formula later
+in the book, including the core ML-NMR estimand of Part V, is this identity with a particular choice of
+distribution to average over.
+:::
+
+The tower property completes result A.4. We will use the remaining standard properties of conditional
+expectation, proved in @williams1991, §9: linearity; **taking out what is known** (if a factor is already
+determined by the conditioning information, it slides outside the conditional expectation as a constant),
+namely
+$\mathbb{E}[g(X)Y\mid X]=g(X)\,\mathbb{E}[Y\mid X]$ for bounded measurable $g$ (for an indicator
+$g=\mathbf{1}_B$ with $B\in\sigma(X)$ this is immediate from @eq-cond-exp-defining, and the general case
+follows by linearity and @thm-monotone-convergence); and the fact that
+$\mathbb{E}[Y\mid\mathcal{G}]=\mathbb{E}[Y]$ when $Y$ is independent of $\mathcal{G}$. Two immediate
+corollaries are recorded next.
+
+::: {#cor-total-expectation}
+## Law of total expectation and total probability
+For $Y\in L^1$ and any sub-$\sigma$-algebra $\mathcal{G}$, $\mathbb{E}[Y]=\mathbb{E}[\mathbb{E}[Y\mid\mathcal{G}]]$.
+For an event $B$ and a countable partition $\{A_n\}$ of $\Omega$ into events with $P(A_n)>0$,
+$$
+P(B)=\sum_n P(B\mid A_n)\,P(A_n),\qquad P(B\mid A_n):=\frac{P(B\cap A_n)}{P(A_n)}.
+$$
+:::
+
+::: {.proof}
+The first claim is @eq-tower-mean. For the second, apply linearity and countable additivity to the
+indicator $\mathbf{1}_B=\sum_n\mathbf{1}_{B\cap A_n}$: taking expectations,
+$P(B)=\sum_n P(B\cap A_n)=\sum_n P(B\mid A_n)P(A_n)$, the last step by the definition of conditional
+probability. Interchanging expectation and the infinite sum of nonnegative terms is licensed by
+@thm-monotone-convergence applied to the partial sums. $\square$
+:::
+
+This is result A.9. The variance counterpart of the tower property is the decomposition that separates
+within-group from between-group variation; we will invoke it for mixed-count likelihoods later.
+
+::: {#cor-total-variance}
+## Law of total variance
+For $Y\in L^2$ and a random vector $X$,
+$$
+\mathrm{Var}(Y)=\mathbb{E}\bigl[\mathrm{Var}(Y\mid X)\bigr]+\mathrm{Var}\bigl(\mathbb{E}[Y\mid X]\bigr),
+$$ {#eq-total-variance}
+where $\mathrm{Var}(Y\mid X):=\mathbb{E}[(Y-\mathbb{E}[Y\mid X])^2\mid X]$.
+:::
+
+::: {.proof}
+Write $m(X)=\mathbb{E}[Y\mid X]$ and decompose $Y-\mathbb{E}Y=(Y-m(X))+(m(X)-\mathbb{E}Y)$. Squaring and
+taking expectations,
+$$
+\mathrm{Var}(Y)=\mathbb{E}[(Y-m(X))^2]+2\,\mathbb{E}[(Y-m(X))(m(X)-\mathbb{E}Y)]+\mathbb{E}[(m(X)-\mathbb{E}Y)^2].
+$$
+The cross term vanishes: conditioning on $X$ and taking out the $X$-measurable factor $m(X)-\mathbb{E}Y$,
+$$
+\mathbb{E}[(Y-m(X))(m(X)-\mathbb{E}Y)\mid X]=(m(X)-\mathbb{E}Y)\,\mathbb{E}[Y-m(X)\mid X]
+=(m(X)-\mathbb{E}Y)\cdot 0=0,
+$$
+since $\mathbb{E}[Y\mid X]=m(X)$; by @eq-tower-mean the unconditional cross term is then $0$. The first
+term equals $\mathbb{E}[\mathbb{E}[(Y-m(X))^2\mid X]]=\mathbb{E}[\mathrm{Var}(Y\mid X)]$ by the tower
+property. The third term is $\mathrm{Var}(m(X))=\mathrm{Var}(\mathbb{E}[Y\mid X])$ because
+$\mathbb{E}[m(X)]=\mathbb{E}Y$. Summing gives @eq-total-variance. $\square$
+:::
+
+::: {.remark}
+**Why this matters.** The law of total variance splits the variability of an outcome into a part *within*
+covariate strata and a part *between* them. For a hospital's monthly count of deaths it separates
+within-ward chance fluctuation from genuine between-ward differences in patient risk; the mixed-count
+likelihoods of Part V use exactly this split to attach the right variance to an aggregate event count,
+rather than the too-small variance a single binomial would suggest.
+:::
+
+## Independence and conditional independence {#sec-independence}
+
+Independence is the formal statement that knowledge of one variable conveys nothing about another.
+
+::: {#def-independence}
+## Independence
+Events $A,B\in\mathcal{F}$ are **independent** if $P(A\cap B)=P(A)P(B)$. Random vectors $X$ and $Y$ are
+**independent**, written $X\perp Y$, if their joint law is the product of their marginals, equivalently
+if
+$$
+\mathbb{E}[f(X)g(Y)]=\mathbb{E}[f(X)]\,\mathbb{E}[g(Y)]
+$$
+for all bounded measurable $f,g$. A family $\{X_i\}_{i\in I}$ is **mutually independent** if for every
+finite subset the joint law factors into the product of marginals.
+:::
+
+::: {.remark}
+**Reader translation.** Independence means learning one variable tells you nothing about the other, so
+their probabilities multiply. In @exm-toy-trial, if a fair coin assigned treatment regardless of
+severity, then $T\perp X$ and $P(T=1,\,X=1)=P(T=1)\,P(X=1)=0.5\cdot 0.4=0.20$. The expectation form
+$\mathbb{E}[f(X)g(Y)]=\mathbb{E}[f(X)]\,\mathbb{E}[g(Y)]$ is the same statement read through test
+functions: no function of one variable correlates with any function of the other.
+:::
+
+Independence implies uncorrelatedness: taking $f,g$ the identity on bounded variables, or passing to the
+limit under domination for $L^2$ variables, gives $\mathrm{Cov}(X,Y)=0$. The converse fails in general;
+@exr-uncorrelated-not-independent supplies a standard counterexample. The conditional version of
+independence is the relation on which the entire causal-inference apparatus of Part II rests.
+
+::: {#def-conditional-independence}
+## Conditional independence
+Random vectors $X$ and $Y$ are **conditionally independent given** $Z$, written $X\perp Y\mid Z$, if for
+all bounded measurable $f,g$,
+$$
+\mathbb{E}[f(X)g(Y)\mid Z]=\mathbb{E}[f(X)\mid Z]\,\mathbb{E}[g(Y)\mid Z]\quad\text{a.s.}
+$$ {#eq-cond-indep}
+Equivalently, the conditional joint law of $(X,Y)$ given $Z$ factors as the product of the conditional
+marginal laws.
+:::
+
+::: {.remark}
+**Reader translation.** Conditional independence says that *once you know $Z$*, learning $Y$ tells you
+nothing more about $X$. This is the language of adjustment. The defining assumption of a covariate-adjusted
+trial is that treatment is assigned without regard to the patient's potential outcomes once the
+covariates used in assignment are fixed, written $T\perp (Y(0),Y(1))\mid X$ and called *conditional
+ignorability* in Chapter 9. Reading $X$ for $Z$, $T$ for one variable, and a potential outcome for the
+other, every adjustment method in Part II is an effort to make a statement of exactly this shape hold.
+:::
+
+The relation $\cdot\perp\cdot\mid\cdot$ obeys a small algebra of inference rules, the **graphoid
+axioms**, which is what allows high-dimensional conditional-independence statements to be manipulated
+symbolically; this manipulation is exactly how the propensity-score reduction of Chapter 10 is justified,
+starting from the conditional ignorability of Chapter 9.
+
+The five rules below are the algebra of this relation. A first-time reader should take in the
+plain-language column of the roadmap, read the causal illustration in @exm-graphoid-binary, and treat the
+proof itself as optional; later chapters invoke the rules, not the proof technique.
+
+| axiom | symbolic form | plain meaning | where it is used |
+|:---|:---|:---|:---|
+| (G1) symmetry | $X\perp Y\mid Z\iff Y\perp X\mid Z$ | irrelevance is mutual | every manipulation |
+| (G2) decomposition | $X\perp(Y,W)\mid Z\Rightarrow X\perp Y\mid Z$ | irrelevant jointly, so irrelevant singly | dropping a nuisance variable |
+| (G3) weak union | $X\perp(Y,W)\mid Z\Rightarrow X\perp Y\mid(Z,W)$ | revealing more keeps irrelevance | conditioning on extra covariates |
+| (G4) contraction | $X\perp Y\mid Z$ and $X\perp W\mid(Z,Y)\Rightarrow X\perp(Y,W)\mid Z$ | combine two irrelevancies into one | building up an adjustment set |
+| (G5) intersection | two crossed irrelevancies $\Rightarrow$ joint irrelevance | holds only with overlap | justified under positivity |
+
+::: {#exm-graphoid-binary}
+## Conditional independence on three binary variables
+Let $X$ be a covariate, $T$ a treatment, and $Y$ an outcome, all binary, and suppose treatment is
+assigned by a coin whose bias depends only on $X$, so $P(T=1\mid X,Y)=e(X)$ with $e(0)=0.3$ and
+$e(1)=0.7$. Then $T\perp Y\mid X$, because given $X$ the assignment probability does not look at $Y$:
+$P(T=1\mid X,Y)=e(X)=P(T=1\mid X)$. Decomposition (G2) is the statement that if assignment ignores the
+*pair* $(Y,W)$ given $X$, where $W$ is, say, a downstream marker, then it ignores $Y$ alone given $X$:
+summing the joint factorization over the values of $W$ leaves the same product form. Contraction (G4)
+runs the other way: if assignment ignores $Y$ given $X$, and also ignores $W$ given $(X,Y)$, then it
+ignores the pair $(Y,W)$ given $X$. These are the moves that let us add or drop variables from an
+adjustment set without re-deriving everything, and they are exactly what the propensity-score argument of
+Chapter 10 uses.
+:::
+
+::: {#thm-graphoid-axioms}
+## Graphoid axioms
+The conditional-independence relation of @def-conditional-independence satisfies, for all random vectors
+$X,Y,Z,W$:
+
+- **(G1) Symmetry:** $X\perp Y\mid Z\iff Y\perp X\mid Z$.
+- **(G2) Decomposition:** $X\perp (Y,W)\mid Z\Rightarrow X\perp Y\mid Z$.
+- **(G3) Weak union:** $X\perp (Y,W)\mid Z\Rightarrow X\perp Y\mid (Z,W)$.
+- **(G4) Contraction:** $\bigl(X\perp Y\mid Z\bigr)\wedge\bigl(X\perp W\mid (Z,Y)\bigr)\Rightarrow X\perp (Y,W)\mid Z$.
+- **(G5) Intersection:** if the joint density of $(X,Y,Z,W)$ is strictly positive on its support, then
+  $\bigl(X\perp Y\mid (Z,W)\bigr)\wedge\bigl(X\perp W\mid (Z,Y)\bigr)\Rightarrow X\perp (Y,W)\mid Z$.
+
+[machine-checked: `theories/ConditionalIndep.v`, Lemmas `cond_indep_symmetry`,
+`cond_indep_decomposition`; Theorems `cond_indep_weak_union`, `cond_indep_contraction`]
+:::
+
+::: {.proof}
+**(G1)** is immediate, since @eq-cond-indep is symmetric under exchanging the pair $(f,X)$ with $(g,Y)$.
+
+**(G2)** Apply @eq-cond-indep with $g$ depending on the $Y$-coordinate alone, that is, take the test
+function on $(Y,W)$ to be $g(Y)\cdot 1$. The hypothesis $X\perp (Y,W)\mid Z$ then reads
+$\mathbb{E}[f(X)g(Y)\mid Z]=\mathbb{E}[f(X)\mid Z]\,\mathbb{E}[g(Y)\mid Z]$ for all bounded measurable
+$f,g$, which is precisely $X\perp Y\mid Z$.
+
+**(G3)** We must show $\mathbb{E}[f(X)g(Y)\mid Z,W]=\mathbb{E}[f(X)\mid Z,W]\,\mathbb{E}[g(Y)\mid Z,W]$.
+The hypothesis $X\perp(Y,W)\mid Z$ gives, for every bounded measurable $f$ and every bounded measurable
+$h$ of $(Y,W)$,
+$$
+\mathbb{E}[f(X)h(Y,W)\mid Z]=\mathbb{E}[f(X)\mid Z]\,\mathbb{E}[h(Y,W)\mid Z].
+$$
+Taking $h(Y,W)=k(W)$ a function of $W$ alone shows $X\perp W\mid Z$, whence
+$\mathbb{E}[f(X)\mid Z,W]=\mathbb{E}[f(X)\mid Z]$ almost surely: indeed, the right side is
+$(Z,W)$-measurable, and for any bounded $k$,
+$\mathbb{E}[\mathbb{E}[f(X)\mid Z]\,k(W)\mid Z]=\mathbb{E}[f(X)\mid Z]\,\mathbb{E}[k(W)\mid Z]
+=\mathbb{E}[f(X)k(W)\mid Z]$, which by the defining property identifies $\mathbb{E}[f(X)\mid Z]$ as a
+version of $\mathbb{E}[f(X)\mid Z,W]$. Now taking $h(Y,W)=g(Y)k(W)$ in the displayed identity and using
+taking-out-what-is-known on the $W$-measurable factors,
+$$
+\mathbb{E}\!\left[k(W)\,\mathbb{E}[f(X)g(Y)\mid Z,W]\,\middle|\,Z\right]
+=\mathbb{E}\!\left[k(W)\,\mathbb{E}[f(X)\mid Z,W]\,\mathbb{E}[g(Y)\mid Z,W]\,\middle|\,Z\right]
+$$
+for every bounded $k$, where on the right we substituted
+$\mathbb{E}[f(X)\mid Z,W]=\mathbb{E}[f(X)\mid Z]$ and reassembled. Since this holds for all bounded
+measurable $k$ of $W$, the two $(Z,W)$-measurable integrands agree almost surely, which is the claim.
+
+**(G4)** Fix bounded measurable $f,g,k$ acting on $X,Y,W$ respectively. By taking out what is known and
+the hypothesis $X\perp W\mid (Z,Y)$,
+$$
+\mathbb{E}[f(X)g(Y)k(W)\mid Z]
+=\mathbb{E}\bigl[g(Y)\,\mathbb{E}[f(X)k(W)\mid Z,Y]\,\big|\,Z\bigr]
+=\mathbb{E}\bigl[g(Y)\,\mathbb{E}[f(X)\mid Z,Y]\,\mathbb{E}[k(W)\mid Z,Y]\,\big|\,Z\bigr].
+$$
+The hypothesis $X\perp Y\mid Z$ gives $\mathbb{E}[f(X)\mid Z,Y]=\mathbb{E}[f(X)\mid Z]$, by the same
+argument as in (G3) with the roles of $W$ and $Y$ exchanged. Pulling the now $Z$-measurable factor
+$\mathbb{E}[f(X)\mid Z]$ outside,
+$$
+\mathbb{E}[f(X)g(Y)k(W)\mid Z]
+=\mathbb{E}[f(X)\mid Z]\,\mathbb{E}\bigl[g(Y)k(W)\,\big|\,Z\bigr],
+$$
+where we recognized $\mathbb{E}[g(Y)\,\mathbb{E}[k(W)\mid Z,Y]\mid Z]=\mathbb{E}[g(Y)k(W)\mid Z]$ by the
+tower property. Since $f,g,k$ were arbitrary bounded measurable functions, $X\perp(Y,W)\mid Z$.
+
+**(G5)** Under strict positivity of the joint density the proof factors the density logarithmically and
+is given in @hernan2020whatif (technical points) and, in full, in Pearl's development of graphical
+models; we cite it rather than reproduce the density bookkeeping. $\square$
+:::
+
+::: {.remark}
+**Reading the weak-union step (G3).** In words, (G3) says that if $X$ is irrelevant to the pair $(Y,W)$
+once $Z$ is known, then revealing $W$ as well cannot make $X$ relevant to $Y$. The proof first extracts
+$X\perp W\mid Z$ (so conditioning on $W$ does not change $X$'s conditional law), substitutes that fact
+inside the conditional expectation, and matches both sides against every test function of $W$. Each "by
+the defining property" step is just the totals-match rule of @def-conditional-expectation applied to a new
+event, and "taking out what is known" pulls out the factors already determined by the conditioning
+variables.
+:::
+
+This is result A.6. The first four axioms hold with no further assumption; only intersection requires
+positivity, which in the indirect-comparison setting is exactly the overlap condition that the target
+covariate density be positive wherever the source density is.
+
+::: {.remark}
+**Why this matters.** These rules are the symbolic engine behind covariate adjustment. The
+propensity-score reduction of Chapter 10, that adjusting for the scalar propensity score suffices whenever
+adjusting for the full covariate vector suffices, is a chain of weak union and contraction applied to
+$T\perp (Y(0),Y(1))\mid X$. The positivity hypothesis on (G5) is the same overlap condition that
+population-adjusted indirect comparison requires: the target covariate density must be positive wherever
+the source density is, or the adjustment is not identified.
+:::
+
+## Two fundamental inequalities {#sec-inequalities}
+
+We now prove the two inequalities that drive the qualitative phenomena of the rest of the book.
+
+### Jensen's inequality {#sec-jensen}
+
+Recall that $\varphi:\mathbb{R}\to\mathbb{R}$ is **convex** if
+$\varphi(\lambda x+(1-\lambda)y)\le\lambda\varphi(x)+(1-\lambda)\varphi(y)$ for all $x,y$ and
+$\lambda\in[0,1]$, and **strictly convex** if the inequality is strict whenever $x\ne y$ and
+$\lambda\in(0,1)$. The geometric content of convexity is that the graph lies above each of its tangent
+or supporting lines; the following lemma makes that precise and is the engine of the proof.
+
+::: {#lem-supporting-line}
+## Supporting line for a convex function
+Let $\varphi:\mathbb{R}\to\mathbb{R}$ be convex and $t\in\mathbb{R}$. The one-sided derivatives
+$\varphi'_{-}(t)$ and $\varphi'_{+}(t)$ exist with $\varphi'_{-}(t)\le\varphi'_{+}(t)$, and for every
+slope $a\in[\varphi'_{-}(t),\varphi'_{+}(t)]$,
+$$
+\varphi(x)\ge\varphi(t)+a\,(x-t)\qquad\text{for all }x\in\mathbb{R},
+$$ {#eq-supporting-line}
+with strict inequality for every $x\ne t$ when $\varphi$ is strictly convex.
+:::
+
+::: {.proof}
+The **slope inequality** for convex $\varphi$ states that for $s<t<u$,
+$$
+\frac{\varphi(t)-\varphi(s)}{t-s}\le\frac{\varphi(u)-\varphi(s)}{u-s}\le\frac{\varphi(u)-\varphi(t)}{u-t}.
+$$
+To see it, write $t=\lambda s+(1-\lambda)u$ with $\lambda=\frac{u-t}{u-s}\in(0,1)$, so that
+$1-\lambda=\frac{t-s}{u-s}$; convexity gives $\varphi(t)\le\lambda\varphi(s)+(1-\lambda)\varphi(u)$.
+Subtracting $\varphi(s)$ from both sides,
+$$
+\varphi(t)-\varphi(s)\le(1-\lambda)\bigl(\varphi(u)-\varphi(s)\bigr)=\frac{t-s}{u-s}\bigl(\varphi(u)-\varphi(s)\bigr),
+$$
+and dividing by the positive length $t-s$ gives the left inequality. Subtracting $\varphi(u)$ from both
+sides instead,
+$$
+\varphi(t)-\varphi(u)\le\lambda\bigl(\varphi(s)-\varphi(u)\bigr)=\frac{u-t}{u-s}\bigl(\varphi(s)-\varphi(u)\bigr),
+$$
+and dividing by the positive length $u-t$, then multiplying through by $-1$ to flip the sign, gives the
+right inequality. The
+inequality shows that the difference quotient $x\mapsto\frac{\varphi(x)-\varphi(t)}{x-t}$ is
+nondecreasing on each side of $t$ and that every quotient with $x<t$ is at most every quotient with
+$x>t$. Hence the right derivative $\varphi'_{+}(t)=\inf_{x>t}\frac{\varphi(x)-\varphi(t)}{x-t}$ and the
+left derivative $\varphi'_{-}(t)=\sup_{x<t}\frac{\varphi(x)-\varphi(t)}{x-t}$ exist and satisfy
+$\varphi'_{-}(t)\le\varphi'_{+}(t)$. For $a$ in this interval and $x>t$ we have
+$\frac{\varphi(x)-\varphi(t)}{x-t}\ge\varphi'_{+}(t)\ge a$, which rearranges to @eq-supporting-line; for
+$x<t$ we have $\frac{\varphi(x)-\varphi(t)}{x-t}\le\varphi'_{-}(t)\le a$, and multiplying by the negative
+quantity $x-t$ reverses the inequality to give @eq-supporting-line again. Strict convexity makes every
+difference quotient strictly monotone, so the inequalities are strict for $x\ne t$. $\square$
+:::
+
+::: {#thm-jensen}
+## Jensen's inequality
+Let $\varphi:\mathbb{R}\to\mathbb{R}$ be convex and let $X\in L^1$ with $\varphi(X)\in L^1$. Then
+$$
+\varphi\bigl(\mathbb{E}[X]\bigr)\le\mathbb{E}\bigl[\varphi(X)\bigr].
+$$ {#eq-jensen}
+If $\varphi$ is strictly convex and $X$ is nondegenerate, that is, not almost surely constant, the
+inequality is strict.
+:::
+
+::: {.proof}
+Set $t=\mathbb{E}[X]$ and choose any slope $a\in[\varphi'_{-}(t),\varphi'_{+}(t)]$. By
+@lem-supporting-line, the supporting-line inequality holds pointwise:
+$\varphi(X)\ge\varphi(t)+a\,(X-t)$ almost surely. Both sides are integrable, $\varphi(X)$ by hypothesis
+and the right side because $X\in L^1$, so taking expectations and using linearity,
+$$
+\mathbb{E}[\varphi(X)]\ge\varphi(t)+a\,\bigl(\mathbb{E}[X]-t\bigr)=\varphi(t)=\varphi(\mathbb{E}[X]),
+$$
+because $\mathbb{E}[X]-t=0$. This is @eq-jensen. If $\varphi$ is strictly convex and $X$ is
+nondegenerate, then @lem-supporting-line gives $\varphi(X)>\varphi(t)+a(X-t)$ on the event
+$\{X\ne t\}$, which has positive probability; the expectation of a random variable that is everywhere at
+least a given quantity and strictly greater on a set of positive probability is strictly greater, so the
+inequality in @eq-jensen is strict. $\square$
+:::
+
+This is result A.7. The **Jensen gap** $\mathbb{E}[\varphi(X)]-\varphi(\mathbb{E}[X])\ge 0$ measures the
+failure of $\varphi$ to commute with the expectation. The smallest instructive instance is
+$\varphi(x)=x^2$, for which the gap is exactly the variance:
+$\mathbb{E}[X^2]-(\mathbb{E}X)^2=\mathrm{Var}(X)$. In later chapters $\varphi$ will be the inverse link
+$g^{-1}$ of a generalized linear model, and the gap will be aggregation bias and non-collapsibility, made
+concrete in the next example.
+
+::: {#exm-jensen-logit}
+## Aggregation bias on the logit scale
+This is the instance of Jensen that drives non-collapsibility. Consider a population in two equally sized
+severity strata whose response risks are the active-arm risks of @exm-toy-trial, $p_{\text{low}}=0.5$ and
+$p_{\text{high}}=0.9$. On the log-odds (logit) scale the two linear predictors are
+$$
+\eta_{\text{low}}=\mathrm{logit}(0.5)=0,\qquad \eta_{\text{high}}=\mathrm{logit}(0.9)=\ln 9=2\ln 3.
+$$
+The true population-average risk is the average of the two risks,
+$$
+\mathbb{E}\bigl[\mathrm{logit}^{-1}(\eta)\bigr]=\tfrac12(0.5)+\tfrac12(0.9)=0.70.
+$$
+The risk you would predict by first averaging on the linear-predictor scale and then transforming back is
+$$
+\mathrm{logit}^{-1}\bigl(\mathbb{E}[\eta]\bigr)
+=\mathrm{logit}^{-1}\!\Bigl(\tfrac12\cdot 0+\tfrac12\cdot 2\ln 3\Bigr)
+=\mathrm{logit}^{-1}(\ln 3)=\frac{3}{1+3}=0.75.
+$$
+The two disagree, $0.70\ne 0.75$: the inverse link of the average linear predictor overstates the
+population risk by five percentage points. Since $\mathrm{logit}^{-1}$ is concave for $\eta\ge 0$,
+@thm-jensen predicts the direction, $\mathbb{E}[\mathrm{logit}^{-1}(\eta)]\le\mathrm{logit}^{-1}(\mathbb{E}[\eta])$.
+A model fit on the logit scale therefore cannot be collapsed to a population by averaging linear
+predictors and back-transforming; this gap is the source of the non-collapsibility of the odds ratio
+studied in Chapter 11.
+:::
+
+::: {.remark}
+**Why this matters.** Jensen's inequality is why "the effect in the average patient" and "the average
+effect over patients" are different numbers whenever the link is nonlinear. Aggregation bias in
+meta-regression, the non-collapsibility of odds and hazard ratios, and the failure of marginal effects to
+transport across populations are all the Jensen gap of @exm-jensen-logit wearing different clothes. The
+entire purpose of population adjustment, MAIC, STC, and ML-NMR, is to compute the average on the correct
+side of this inequality.
+:::
+
+### The Cauchy-Schwarz inequality for expectations {#sec-cauchy-schwarz}
+
+::: {#thm-cauchy-schwarz-exp}
+## Cauchy-Schwarz for expectations
+For random variables $X,Y\in L^2$,
+$$
+\bigl(\mathbb{E}[XY]\bigr)^2\le\mathbb{E}[X^2]\,\mathbb{E}[Y^2],
+$$ {#eq-cauchy-schwarz}
+with equality if and only if $X=0$ almost surely, or $Y=cX$ almost surely for some constant $c$.
+:::
+
+::: {.proof}
+First note $XY\in L^1$, since $|XY|\le\tfrac12(X^2+Y^2)$ by the inequality of arithmetic and geometric
+means, so the left side is defined. If $\mathbb{E}[X^2]=0$ then $X=0$ almost surely, both sides are $0$,
+and the equality case holds. Assume $\mathbb{E}[X^2]>0$. For every $\lambda\in\mathbb{R}$, nonnegativity
+of a square and linearity give
+$$
+0\le\mathbb{E}\bigl[(Y-\lambda X)^2\bigr]
+=\mathbb{E}[Y^2]-2\lambda\,\mathbb{E}[XY]+\lambda^2\,\mathbb{E}[X^2].
+$$
+The right side is a quadratic in $\lambda$ with positive leading coefficient that is nonnegative for all
+real $\lambda$; hence its discriminant is nonpositive,
+$$
+4\bigl(\mathbb{E}[XY]\bigr)^2-4\,\mathbb{E}[X^2]\,\mathbb{E}[Y^2]\le 0,
+$$
+which is @eq-cauchy-schwarz. Equality holds if and only if the discriminant is zero, that is, if and
+only if the quadratic has a real double root $\lambda^{*}$, at which
+$\mathbb{E}[(Y-\lambda^{*}X)^2]=0$, equivalently $Y=\lambda^{*}X$ almost surely. $\square$
+:::
+
+This is result A.8. Applied to a centered pair $(X-\mathbb{E}X,\,Y-\mathbb{E}Y)$ it gives the covariance
+bound $\mathrm{Cov}(X,Y)^2\le\mathrm{Var}(X)\,\mathrm{Var}(Y)$, so the correlation coefficient lies in
+$[-1,1]$. A second instance is the bound behind effective sample size. Take the probability space to be
+the index set $\{1,\dots,n\}$ equipped with the **empirical measure** $P(\{i\})=1/n$, and on it the two
+random variables $X(i)=w_i$ (the matching weight of patient $i$) and $Y(i)=1$. Then
+$\mathbb{E}[XY]=\frac{1}{n}\sum_i w_i$, $\mathbb{E}[X^2]=\frac{1}{n}\sum_i w_i^2$, and
+$\mathbb{E}[Y^2]=1$, so @eq-cauchy-schwarz reads
+$$
+\Bigl(\frac{1}{n}\sum_i w_i\Bigr)^2\le\frac{1}{n}\sum_i w_i^2,
+\qquad\text{equivalently}\qquad
+\Bigl(\sum_i w_i\Bigr)^2\le n\sum_i w_i^2.
+$$
+Rearranged, this is the effective sample size bound
+$\mathrm{ESS}=\bigl(\sum_i w_i\bigr)^2/\sum_i w_i^2\le n$, with equality if and only if all weights are
+equal.
+
+::: {.remark}
+**Why this matters.** The ESS bound is the formal reason matching-adjusted indirect comparison loses
+precision under poor covariate overlap. When the source and target populations differ sharply the weights
+$w_i$ become very unequal, the inequality is far from tight, and the effective sample size collapses well
+below $n$. Cauchy-Schwarz here is not an abstract nicety; it quantifies the precision cost of reweighting,
+which Chapter 18 develops in full.
+:::
+
+We also record the multidimensional integration theorem, result A.10, which licenses every interchange
+of the order of integration in the aggregate likelihoods of Part V.
+
+::: {#thm-fubini-tonelli}
+## Fubini-Tonelli (cited)
+Let $(\mathcal{X},\mathcal{A},\mu)$ and $(\mathcal{Y},\mathcal{B},\nu)$ be $\sigma$-finite measure
+spaces ($\sigma$-finite means each space can be covered by countably many pieces of finite measure;
+Lebesgue measure and every probability measure qualify). If $f:\mathcal{X}\times\mathcal{Y}\to[0,\infty]$ is jointly measurable, then the two iterated
+integrals and the double integral against the product measure $\mu\otimes\nu$ all agree (Tonelli). If
+instead $f$ is real-valued with $\int|f|\,d(\mu\otimes\nu)<\infty$, the iterated integrals are
+well-defined almost everywhere and equal the double integral (Fubini).
+:::
+
+A proof is in @billingsley1995, §18.
+
+::: {.remark}
+**Why this matters.** Fubini-Tonelli is the license to average in stages. In Part V an aggregate
+likelihood is built by first averaging an individual outcome over a covariate distribution within a study,
+then combining across studies or arms; the theorem guarantees that the order of these nested averages does
+not change the answer, so the integral defining the aggregate model is well posed.
+:::
+
+We turn to the structural fact that links the covariance matrix to
+the positive-definite theory of @sec-cov-psd.
+
+## Covariance matrices are positive semidefinite {#sec-cov-psd}
+
+The covariance matrix is not an arbitrary symmetric matrix; the quadratic-form identity
+@eq-var-quadratic-form forces it into the positive semidefinite cone, and conversely every member of
+that cone arises as a covariance. This is the precise sense in which the spectral theory of Chapter 3 is
+the right language for second moments. Recall from Chapter 3 the characterization
+@thm-pd-characterization, that a symmetric matrix $A$ is positive semidefinite ($A\succeq 0$) if and
+only if $\mathbf{a}^{\top}A\,\mathbf{a}\ge 0$ for all $\mathbf{a}$, equivalently if and only if all its
+eigenvalues are nonnegative, and the spectral theorem @thm-spectral-theorem, that a symmetric $A$
+factors as $A=Q\Lambda Q^{\top}$ with $Q$ orthogonal and $\Lambda$ diagonal.
+
+::: {#thm-cov-psd}
+## Covariance matrices and the PSD cone
+Let $\mathbf{X}$ be a random vector in $\mathbb{R}^p$ with all components in $L^2$ and covariance matrix
+$\boldsymbol{\Sigma}=\mathrm{Cov}(\mathbf{X})$. Then $\boldsymbol{\Sigma}$ is symmetric and positive
+semidefinite. Conversely, every symmetric positive semidefinite $\boldsymbol{\Sigma}\in\mathbb{R}^{p\times p}$
+is the covariance matrix of some random vector.
+:::
+
+::: {.proof}
+Symmetry holds because $\Sigma_{ij}=\mathrm{Cov}(X_i,X_j)=\mathrm{Cov}(X_j,X_i)=\Sigma_{ji}$. For
+positive semidefiniteness, fix $\mathbf{a}\in\mathbb{R}^p$. By the quadratic-form identity
+@eq-var-quadratic-form,
+$$
+\mathbf{a}^{\top}\boldsymbol{\Sigma}\,\mathbf{a}=\mathrm{Var}(\mathbf{a}^{\top}\mathbf{X})\ge 0,
+$$
+since a variance is the expectation of a square and hence nonnegative. As this holds for every
+$\mathbf{a}$, the characterization @thm-pd-characterization gives $\boldsymbol{\Sigma}\succeq 0$.
+
+For the converse, let $\boldsymbol{\Sigma}\succeq 0$ be symmetric. By the spectral theorem
+@thm-spectral-theorem write $\boldsymbol{\Sigma}=Q\Lambda Q^{\top}$ with $Q$ orthogonal and
+$\Lambda=\mathrm{diag}(\lambda_1,\dots,\lambda_p)$; by @thm-pd-characterization every $\lambda_i\ge 0$,
+so the **symmetric square root**
+$\boldsymbol{\Sigma}^{1/2}:=Q\,\mathrm{diag}(\sqrt{\lambda_1},\dots,\sqrt{\lambda_p})\,Q^{\top}$ is a
+well-defined symmetric matrix with $\boldsymbol{\Sigma}^{1/2}\boldsymbol{\Sigma}^{1/2}=\boldsymbol{\Sigma}$.
+Let $\mathbf{Z}=(Z_1,\dots,Z_p)^{\top}$ have independent components with $\mathbb{E}[Z_i]=0$ and
+$\mathrm{Var}(Z_i)=1$, so that $\mathrm{Cov}(\mathbf{Z})=I_p$, and set
+$\mathbf{X}=\boldsymbol{\Sigma}^{1/2}\mathbf{Z}$. Then $\mathbb{E}[\mathbf{X}]=\mathbf{0}$ and, using
+bilinearity of covariance under linear maps,
+$$
+\mathrm{Cov}(\mathbf{X})=\boldsymbol{\Sigma}^{1/2}\,\mathrm{Cov}(\mathbf{Z})\,\boldsymbol{\Sigma}^{1/2}
+=\boldsymbol{\Sigma}^{1/2}I_p\boldsymbol{\Sigma}^{1/2}=\boldsymbol{\Sigma}.\qquad\square
+$$
+:::
+
+::: {.remark}
+**Why this matters.** This theorem lets us treat "a covariance matrix" and "a positive semidefinite
+matrix" as the same object. Practically, it guarantees that any valid covariance we estimate can be
+factored as $\boldsymbol{\Sigma}^{1/2}\boldsymbol{\Sigma}^{1/2}$ and simulated from, and it is the reason
+the normal-approximation likelihoods of network meta-analysis, whose inputs are estimated covariance
+matrices of log-effects, are coherent probability models rather than formal expressions.
+:::
+
+The converse construction $\mathbf{X}=\boldsymbol{\mu}+\boldsymbol{\Sigma}^{1/2}\mathbf{Z}$, with
+$\mathbf{Z}$ a vector of standard normals, is exactly how we will build the general multivariate normal
+in @sec-mvn.
+
+## Moment generating functions {#sec-mgf}
+
+How can we find the distribution of a sum of independent variables without grinding through a convolution
+integral, and how can we read off moments without integrating against the density each time? Both are
+answered by a single transform. A distribution is often most conveniently encoded not through its density
+but through a transform that turns convolution into multiplication and differentiation into moment
+extraction.
+
+::: {#def-mgf}
+## Moment generating function
+The **moment generating function** (MGF) of a random vector $X$ in $\mathbb{R}^p$ is
+$$
+M_X(\mathbf{t}):=\mathbb{E}\bigl[e^{\mathbf{t}^{\top}X}\bigr],\qquad\mathbf{t}\in\mathbb{R}^p,
+$$
+defined for those $\mathbf{t}$ at which the expectation is finite. We say the MGF **exists** if it is
+finite for all $\mathbf{t}$ in some open neighborhood of the origin. For a scalar $X$ this reads
+$M_X(t)=\mathbb{E}[e^{tX}]$.
+:::
+
+::: {.remark}
+**Reader translation.** The moment generating function is a calculation device, not a modeling
+assumption. It repackages a whole distribution as one function of a dummy variable $\mathbf{t}$, with two
+payoffs: differentiating it at the origin reads off the moments (@thm-mgf-moments), and multiplying two of
+them yields the distribution of a sum (@thm-mgf-sum) without the difficult convolution that densities
+would require. We use it precisely to avoid repeated density integrations when establishing facts about
+the Poisson, the normal, and the multivariate normal. Following the notation chapter we keep the subscript
+unbolded, $M_X$, even when $X$ is a vector.
+:::
+
+The name is justified by the next result: where the MGF exists, it determines all moments by
+differentiation at the origin.
+
+::: {#thm-mgf-moments}
+## Moments from the MGF
+Suppose the scalar MGF $M_X$ is finite on $(-\delta,\delta)$ for some $\delta>0$. Then $X$ has finite
+moments of every order, $M_X$ is infinitely differentiable on $(-\delta,\delta)$, and
+$$
+M_X^{(k)}(0)=\mathbb{E}[X^k],\qquad k=0,1,2,\dots.
+$$
+:::
+
+::: {.proof}
+Fix $0<r<\delta$. The elementary bound $|x|^k\le k!\,r^{-k}e^{r|x|}$, valid because $e^{r|x|}\ge
+(r|x|)^k/k!$, together with $e^{r|x|}\le e^{rx}+e^{-rx}$, gives
+$|X|^k\le k!\,r^{-k}\bigl(e^{rX}+e^{-rX}\bigr)$. The right side is integrable, as
+$\mathbb{E}[e^{\pm rX}]=M_X(\pm r)<\infty$, so $\mathbb{E}|X|^k<\infty$ for every $k$. To differentiate
+under the expectation, fix $t\in(-\delta,\delta)$ and choose $r'$ with $|t|<r'<\delta$. For real $h$
+with $0<|h|<r'-|t|$ the difference quotient $\frac{e^{(t+h)X}-e^{tX}}{h}$ equals $Xe^{\theta X}$ for some
+$\theta$ between $t$ and $t+h$, by the mean value theorem, and since $|\theta|<r'$ it is bounded in
+absolute value by $|X|e^{r'|X|}$. Choosing $r''$ with $r'<r''<\delta$, the elementary bound
+$u\,e^{r'u}\le C\,e^{r''u}$ for $u\ge 0$, valid with $C=\frac{1}{e\,(r''-r')}$ because the function
+$u\mapsto u\,e^{-(r''-r')u}$ attains its maximum over $u\ge 0$ at $u=1/(r''-r')$ with value $C$, gives
+$|X|e^{r'|X|}\le C\bigl(e^{r''X}+e^{-r''X}\bigr)$, a
+dominating variable that is integrable because $M_X(\pm r'')<\infty$. As $h\to 0$ the quotients converge
+pointwise to $Xe^{tX}$, so the dominated convergence theorem @thm-dominated-convergence yields
+$M_X'(t)=\mathbb{E}[Xe^{tX}]$. Applying the same argument to $x\mapsto x^{j}e^{tx}$, whose increments are
+dominated by $|X|^{j+1}e^{r'|X|}\le C_j\bigl(e^{r''X}+e^{-r''X}\bigr)$, gives by induction
+$M_X^{(k)}(t)=\mathbb{E}[X^k e^{tX}]$ for every $k$ and every $t\in(-\delta,\delta)$. Evaluating at $t=0$
+gives $M_X^{(k)}(0)=\mathbb{E}[X^k]$. $\square$
+:::
+
+The MGF also identifies the law and turns independent sums into products. The first property is deep and
+is cited; the second we prove.
+
+::: {#thm-mgf-uniqueness}
+## Uniqueness and factorization (uniqueness cited)
+If two random vectors $X,Y$ have MGFs that are finite and equal on a common neighborhood of the origin,
+then $X$ and $Y$ have the same law. Consequently, if the joint MGF of $(X,Y)$ factors as
+$M_{(X,Y)}(\mathbf{s},\mathbf{t})=M_X(\mathbf{s})\,M_Y(\mathbf{t})$ on a neighborhood of the origin, then
+$X\perp Y$.
+:::
+
+::: {.proof}
+The uniqueness statement is classical and is proved by analytic continuation of the MGF to the complex
+plane, where it becomes the characteristic function whose inversion recovers the law; see
+@billingsley1995, §30. For the factorization consequence, let $\widetilde{P}=P_X\otimes P_Y$ be the
+product of the marginal laws, the law of an independent pair $(\widetilde{X},\widetilde{Y})$ with the
+given marginals. By @thm-fubini-tonelli,
+$$
+\mathbb{E}_{\widetilde P}\bigl[e^{\mathbf{s}^{\top}\widetilde X+\mathbf{t}^{\top}\widetilde Y}\bigr]
+=\mathbb{E}\bigl[e^{\mathbf{s}^{\top}X}\bigr]\,\mathbb{E}\bigl[e^{\mathbf{t}^{\top}Y}\bigr]
+=M_X(\mathbf{s})\,M_Y(\mathbf{t}),
+$$
+which by hypothesis equals the joint MGF of $(X,Y)$ near the origin. By the uniqueness statement applied
+to the pair, the joint law of $(X,Y)$ equals the product law $\widetilde{P}$, which is the definition of
+$X\perp Y$. $\square$
+:::
+
+::: {#thm-mgf-sum}
+## MGF of a sum of independent variables
+If $X\perp Y$ are scalar random variables whose MGFs are finite on a common neighborhood of the origin,
+then $M_{X+Y}(t)=M_X(t)\,M_Y(t)$ there. More generally, for mutually independent $X_1,\dots,X_n$,
+$M_{X_1+\cdots+X_n}(t)=\prod_{i=1}^n M_{X_i}(t)$.
+:::
+
+::: {.proof}
+By independence and the factorization of expectations of products of functions of independent variables,
+$$
+M_{X+Y}(t)=\mathbb{E}\bigl[e^{t(X+Y)}\bigr]=\mathbb{E}\bigl[e^{tX}e^{tY}\bigr]
+=\mathbb{E}[e^{tX}]\,\mathbb{E}[e^{tY}]=M_X(t)M_Y(t),
+$$
+the middle equality justified by @thm-fubini-tonelli applied to the nonnegative integrand
+$e^{tx}e^{ty}$ against the product law. The $n$-fold statement follows by induction, since a partial sum
+$X_1+\cdots+X_{n-1}$ is independent of $X_n$. $\square$
+:::
+
+We record two further elementary identities used repeatedly. For an affine transform,
+$M_{a+bX}(t)=e^{at}M_X(bt)$, immediate from
+$\mathbb{E}[e^{t(a+bX)}]=e^{at}\mathbb{E}[e^{(tb)X}]$; and for a vector $X$ and matrix $B$,
+$M_{BX}(\mathbf{t})=M_X(B^{\top}\mathbf{t})$. These power the multivariate normal calculus of @sec-mvn.
+
+## Core distributions {#sec-distributions}
+
+We pause the abstract development to collect the concrete distributions we will quote later, computing the
+mean, variance, and moment generating function of each once so the arithmetic need not be repeated. We
+then return to the multivariate normal in @sec-mvn, which leans on the univariate normal recorded here.
+The arithmetic in this section is elementary and worth carrying out once.
+
+::: {#def-bernoulli}
+## Bernoulli
+$X\sim\mathrm{Ber}(p)$, $p\in[0,1]$, takes the value $1$ with probability $p$ and $0$ with probability
+$1-p$. Then $\mathbb{E}[X]=p$, $\mathrm{Var}(X)=p(1-p)$, and $M_X(t)=(1-p)+pe^{t}$.
+:::
+
+The mean is $p\cdot 1+(1-p)\cdot 0=p$; the second moment is $\mathbb{E}[X^2]=p$ since $X^2=X$, so the
+variance is $p-p^2=p(1-p)$; the MGF is $(1-p)e^{0}+pe^{t}$.
+
+::: {#def-binomial}
+## Binomial
+$X\sim\mathrm{Bin}(n,p)$ is the number of successes in $n$ independent $\mathrm{Ber}(p)$ trials, with
+probability mass function $P(X=k)=\binom{n}{k}p^k(1-p)^{n-k}$ for $k=0,\dots,n$. Then
+$\mathbb{E}[X]=np$, $\mathrm{Var}(X)=np(1-p)$, and $M_X(t)=\bigl((1-p)+pe^{t}\bigr)^n$.
+:::
+
+Writing $X=\sum_{i=1}^n B_i$ with $B_i\sim\mathrm{Ber}(p)$ independent, linearity gives
+$\mathbb{E}[X]=np$, independence gives $\mathrm{Var}(X)=\sum_i\mathrm{Var}(B_i)=np(1-p)$, and
+@thm-mgf-sum gives $M_X(t)=\prod_i\bigl((1-p)+pe^t\bigr)=\bigl((1-p)+pe^t\bigr)^n$.
+
+::: {#def-poisson}
+## Poisson
+$X\sim\mathrm{Poi}(\lambda)$, $\lambda>0$, has $P(X=k)=e^{-\lambda}\lambda^k/k!$ for
+$k=0,1,2,\dots$. Then $\mathbb{E}[X]=\lambda$, $\mathrm{Var}(X)=\lambda$, and
+$M_X(t)=\exp\bigl(\lambda(e^t-1)\bigr)$.
+:::
+
+The MGF is
+$M_X(t)=\sum_{k\ge 0}e^{tk}e^{-\lambda}\lambda^k/k!
+=e^{-\lambda}\sum_{k\ge 0}(\lambda e^t)^k/k!=e^{-\lambda}e^{\lambda e^t}=\exp(\lambda(e^t-1))$,
+the interchange of sum and the implicit expectation being an absolutely convergent series. Then
+$M_X'(t)=\lambda e^t M_X(t)$ gives $\mathbb{E}[X]=M_X'(0)=\lambda$, and
+$M_X''(0)=\lambda+\lambda^2=\mathbb{E}[X^2]$ gives $\mathrm{Var}(X)=\lambda$, by @thm-mgf-moments. The
+Poisson is the law of rare events, made precise through the MGF.
+
+::: {#thm-poisson-limit}
+## Poisson limit of the binomial
+Fix $\lambda>0$. If $X_n\sim\mathrm{Bin}(n,\lambda/n)$, then $M_{X_n}(t)\to\exp(\lambda(e^t-1))$ for
+every $t$, and hence $X_n\xrightarrow{d}\mathrm{Poi}(\lambda)$.
+:::
+
+::: {.proof}
+By @def-binomial,
+$$
+M_{X_n}(t)=\Bigl(1-\tfrac{\lambda}{n}+\tfrac{\lambda}{n}e^t\Bigr)^n
+=\Bigl(1+\tfrac{\lambda(e^t-1)}{n}\Bigr)^n\longrightarrow\exp\bigl(\lambda(e^t-1)\bigr),
+$$
+using the standard limit $(1+a/n)^n\to e^a$ with $a=\lambda(e^t-1)$. The limit is the MGF of
+$\mathrm{Poi}(\lambda)$ from @def-poisson, finite in a neighborhood of $0$; by the continuity theorem for
+moment generating functions, convergence of MGFs on a neighborhood of the origin implies convergence in
+distribution (see @billingsley1995, §30). $\square$
+:::
+
+The continuity theorem is cited here; a quantitative total-variation version of this Poisson
+approximation, due to Le Cam, is proved in the multilevel network meta-regression chapters of Part V.
+The next distribution generalizes the binomial by allowing the success probabilities to differ across
+trials, and it is the law of an aggregate event count when individual risks vary, which is exactly the
+situation in covariate-adjusted meta-analysis.
+
+::: {#def-poisson-binomial}
+## Poisson binomial
+Let $\mathbf{p}=(p_1,\dots,p_n)\in[0,1]^n$ and let $B_1,\dots,B_n$ be independent with
+$B_i\sim\mathrm{Ber}(p_i)$. The law of $X=\sum_{i=1}^n B_i$ is the **Poisson binomial distribution**
+$\mathrm{PoBin}(\mathbf{p})$. Its probability mass function is
+$$
+P(X=k)=\sum_{\substack{A\subseteq\{1,\dots,n\}\\ |A|=k}}\ \prod_{i\in A}p_i\prod_{i\notin A}(1-p_i),
+\qquad k=0,\dots,n,
+$$
+its mean and variance are
+$$
+\mathbb{E}[X]=\sum_{i=1}^n p_i,\qquad \mathrm{Var}(X)=\sum_{i=1}^n p_i(1-p_i),
+$$
+and its MGF is $M_X(t)=\prod_{i=1}^n\bigl((1-p_i)+p_i e^t\bigr)$.
+:::
+
+::: {.remark}
+**Reader translation.** The Poisson binomial is the law of a head count when each coin has its own bias.
+If $100$ patients each carry their own baseline risk $p_i$ of an event, the total number of events is
+$\mathrm{PoBin}(\mathbf{p})$, not $\mathrm{Bin}(100,\bar p)$; the binomial is only the special case of
+equal risks. This is exactly the situation in covariate-adjusted meta-analysis, where individual risks
+vary with covariates, and it is why aggregate event counts there are modeled as Poisson binomial.
+:::
+
+The mass function lists the disjoint ways to obtain exactly $k$ successes; the mean and variance follow
+from linearity and independence as in the binomial case; the MGF follows from @thm-mgf-sum applied to
+the Bernoulli MGFs of @def-bernoulli. When all $p_i$ are equal to a common $p$, every quantity reduces
+to its $\mathrm{Bin}(n,p)$ counterpart. For a fixed mean $\sum_i p_i$, the variance $\sum_i p_i(1-p_i)
+=\sum_i p_i-\sum_i p_i^2$ is largest when the $p_i$ are equal, by convexity of $p\mapsto p^2$; spreading
+the risks apart reduces dispersion in the count. We verify all of this numerically in
+@sec-prob-worked.
+
+::: {#def-normal}
+## Normal
+$X\sim\mathcal{N}(\mu,\sigma^2)$, $\mu\in\mathbb{R}$, $\sigma^2>0$, has density
+$$
+f_X(x)=\frac{1}{\sqrt{2\pi}\,\sigma}\exp\!\Bigl(-\frac{(x-\mu)^2}{2\sigma^2}\Bigr),\qquad x\in\mathbb{R}.
+$$
+Then $\mathbb{E}[X]=\mu$, $\mathrm{Var}(X)=\sigma^2$, and $M_X(t)=\exp\bigl(\mu t+\tfrac12\sigma^2t^2\bigr)$.
+The case $\mu=0,\sigma^2=1$ is the **standard normal**, with density $\phi$ and CDF $\Phi$.
+:::
+
+::: {.remark}
+**Reader translation.** The normal is the familiar bell curve; its two parameters are the mean $\mu$ and
+the *variance* $\sigma^2$, not the standard deviation. Beware a convention shift coming in @sec-mvn: the
+univariate $\mathcal{N}(\mu,\sigma^2)$ takes a variance as its second argument, while the multivariate
+$\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})$ takes a covariance *matrix*, and the subscript $p$
+flags the dimension.
+:::
+
+::: {.proof}
+That $f_X$ integrates to $1$ is the Gaussian integral
+$\int_{\mathbb{R}}e^{-u^2/2}\,du=\sqrt{2\pi}$, established by the polar-coordinates evaluation of its
+square. For the MGF, substitute and complete the square in the exponent:
+$$
+tx-\frac{(x-\mu)^2}{2\sigma^2}
+=-\frac{\bigl(x-(\mu+\sigma^2 t)\bigr)^2}{2\sigma^2}+\mu t+\frac{\sigma^2 t^2}{2},
+$$
+an algebraic identity verified by expanding both sides. Therefore
+$$
+M_X(t)=\int_{\mathbb{R}}\frac{e^{tx}}{\sqrt{2\pi}\,\sigma}e^{-(x-\mu)^2/2\sigma^2}\,dx
+=e^{\mu t+\sigma^2 t^2/2}\int_{\mathbb{R}}\frac{1}{\sqrt{2\pi}\,\sigma}
+e^{-(x-(\mu+\sigma^2 t))^2/2\sigma^2}\,dx
+=e^{\mu t+\sigma^2 t^2/2},
+$$
+the remaining integral being that of a $\mathcal{N}(\mu+\sigma^2 t,\sigma^2)$ density, which equals $1$.
+Differentiating, $M_X'(t)=(\mu+\sigma^2 t)M_X(t)$ gives $\mathbb{E}[X]=M_X'(0)=\mu$, and
+$M_X''(0)=\sigma^2+\mu^2=\mathbb{E}[X^2]$ gives $\mathrm{Var}(X)=\sigma^2$, by @thm-mgf-moments.
+$\square$
+:::
+
+## The multivariate normal {#sec-mvn}
+
+The multivariate normal is the joint distribution that the central limit theorem produces for sums and
+that linear models assume for errors; its closure under affine maps and conditioning is what makes
+normal-theory inference tractable. We define it through its MGF, which is the cleanest route and which
+handles singular covariance matrices without special cases.
+
+::: {#def-mvn}
+## Multivariate normal
+A random vector $\mathbf{X}\in\mathbb{R}^p$ has the **multivariate normal distribution**
+$\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})$, with mean vector $\boldsymbol{\mu}\in\mathbb{R}^p$
+and symmetric positive semidefinite covariance matrix $\boldsymbol{\Sigma}\in\mathbb{R}^{p\times p}$, if
+its moment generating function is
+$$
+M_{\mathbf{X}}(\mathbf{t})=\exp\!\Bigl(\mathbf{t}^{\top}\boldsymbol{\mu}
++\tfrac12\,\mathbf{t}^{\top}\boldsymbol{\Sigma}\,\mathbf{t}\Bigr),\qquad\mathbf{t}\in\mathbb{R}^p.
+$$ {#eq-mvn-mgf}
+:::
+
+::: {.remark}
+**Reader translation.** We define the multivariate normal by its moment generating function rather than a
+density for one practical reason: the formula @eq-mvn-mgf makes sense even when $\boldsymbol{\Sigma}$ is
+singular, whereas the density @eq-mvn-density needs $\boldsymbol{\Sigma}^{-1}$ and breaks down. Singular
+covariance is not exotic; it is exactly what arises when one component is a deterministic linear
+combination of the others, the probabilistic face of perfect collinearity in a design matrix. The MGF
+definition handles the collinear and the full-rank cases with a single formula.
+:::
+
+The definition is consistent: such a law exists and is unique. Uniqueness is @thm-mgf-uniqueness.
+Existence is the construction $\mathbf{X}=\boldsymbol{\mu}+\boldsymbol{\Sigma}^{1/2}\mathbf{Z}$ with
+$\mathbf{Z}=(Z_1,\dots,Z_p)^{\top}$ a vector of independent standard normals, exactly the construction of
+@thm-cov-psd. Indeed its MGF is, by independence and the standard-normal MGF $\mathbb{E}[e^{sZ_i}]=e^{s^2/2}$,
+$$
+\mathbb{E}\bigl[e^{\mathbf{t}^{\top}(\boldsymbol{\mu}+\boldsymbol{\Sigma}^{1/2}\mathbf{Z})}\bigr]
+=e^{\mathbf{t}^{\top}\boldsymbol{\mu}}\prod_{i=1}^p\mathbb{E}\bigl[e^{(\boldsymbol{\Sigma}^{1/2}\mathbf{t})_i Z_i}\bigr]
+=e^{\mathbf{t}^{\top}\boldsymbol{\mu}}\exp\!\Bigl(\tfrac12\|\boldsymbol{\Sigma}^{1/2}\mathbf{t}\|_2^2\Bigr)
+=\exp\!\Bigl(\mathbf{t}^{\top}\boldsymbol{\mu}+\tfrac12\mathbf{t}^{\top}\boldsymbol{\Sigma}\mathbf{t}\Bigr),
+$$
+since $\|\boldsymbol{\Sigma}^{1/2}\mathbf{t}\|_2^2
+=\mathbf{t}^{\top}\boldsymbol{\Sigma}^{1/2}\boldsymbol{\Sigma}^{1/2}\mathbf{t}
+=\mathbf{t}^{\top}\boldsymbol{\Sigma}\mathbf{t}$. Thus @eq-mvn-mgf is the MGF of an honest random vector,
+whose mean is $\boldsymbol{\mu}$ and whose covariance is $\boldsymbol{\Sigma}$ by @thm-cov-psd.
+
+When $\boldsymbol{\Sigma}\succ 0$ is nonsingular the law has a density, obtained by the change of
+variables from $\mathbf{Z}$.
+
+::: {#prp-mvn-density}
+## Density of a nonsingular multivariate normal
+If $\boldsymbol{\Sigma}\succ 0$, then $\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})$ has density
+$$
+f_{\mathbf{X}}(\mathbf{x})=(2\pi)^{-p/2}\,\det(\boldsymbol{\Sigma})^{-1/2}
+\exp\!\Bigl(-\tfrac12(\mathbf{x}-\boldsymbol{\mu})^{\top}\boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu})\Bigr),
+\qquad\mathbf{x}\in\mathbb{R}^p.
+$$ {#eq-mvn-density}
+:::
+
+::: {.proof}
+The standard normal vector $\mathbf{Z}$ has density
+$(2\pi)^{-p/2}\exp(-\tfrac12\mathbf{z}^{\top}\mathbf{z})$, being a product of $p$ standard normal
+densities. Since $\boldsymbol{\Sigma}\succ 0$, the symmetric square root $\boldsymbol{\Sigma}^{1/2}$ is
+invertible, so $\mathbf{X}=\boldsymbol{\mu}+\boldsymbol{\Sigma}^{1/2}\mathbf{Z}$ is an invertible affine
+map with inverse $\mathbf{z}=\boldsymbol{\Sigma}^{-1/2}(\mathbf{x}-\boldsymbol{\mu})$ and Jacobian
+determinant $\det(\boldsymbol{\Sigma}^{-1/2})=\det(\boldsymbol{\Sigma})^{-1/2}$. The change-of-variables
+formula for densities gives
+$$
+f_{\mathbf{X}}(\mathbf{x})=(2\pi)^{-p/2}\exp\!\Bigl(-\tfrac12\|\boldsymbol{\Sigma}^{-1/2}(\mathbf{x}-\boldsymbol{\mu})\|_2^2\Bigr)\,\det(\boldsymbol{\Sigma})^{-1/2},
+$$
+and $\|\boldsymbol{\Sigma}^{-1/2}(\mathbf{x}-\boldsymbol{\mu})\|_2^2
+=(\mathbf{x}-\boldsymbol{\mu})^{\top}\boldsymbol{\Sigma}^{-1}(\mathbf{x}-\boldsymbol{\mu})$, which is
+@eq-mvn-density. $\square$
+:::
+
+The defining MGF makes the behavior under affine maps a one-line computation, and that single fact
+yields marginals, sums, and the normality of every linear combination.
+
+::: {#thm-mvn-linear}
+## Affine maps of a multivariate normal
+Let $\mathbf{X}\sim\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})$, let $B\in\mathbb{R}^{q\times p}$,
+and let $\mathbf{b}\in\mathbb{R}^q$. Then
+$$
+\mathbf{Y}=\mathbf{b}+B\mathbf{X}\sim\mathcal{N}_q\bigl(\mathbf{b}+B\boldsymbol{\mu},\,B\boldsymbol{\Sigma}B^{\top}\bigr).
+$$
+In particular every subvector of $\mathbf{X}$ is multivariate normal, and for any
+$\mathbf{a}\in\mathbb{R}^p$ the scalar $\mathbf{a}^{\top}\mathbf{X}\sim\mathcal{N}(\mathbf{a}^{\top}\boldsymbol{\mu},\mathbf{a}^{\top}\boldsymbol{\Sigma}\mathbf{a})$.
+:::
+
+::: {.proof}
+Compute the MGF of $\mathbf{Y}$ for $\mathbf{t}\in\mathbb{R}^q$, using the affine and matrix identities
+recorded after @thm-mgf-sum and the defining MGF @eq-mvn-mgf of $\mathbf{X}$:
+$$
+M_{\mathbf{Y}}(\mathbf{t})=\mathbb{E}\bigl[e^{\mathbf{t}^{\top}(\mathbf{b}+B\mathbf{X})}\bigr]
+=e^{\mathbf{t}^{\top}\mathbf{b}}\,M_{\mathbf{X}}(B^{\top}\mathbf{t})
+=e^{\mathbf{t}^{\top}\mathbf{b}}\exp\!\Bigl((B^{\top}\mathbf{t})^{\top}\boldsymbol{\mu}
++\tfrac12(B^{\top}\mathbf{t})^{\top}\boldsymbol{\Sigma}(B^{\top}\mathbf{t})\Bigr).
+$$
+The exponent equals
+$\mathbf{t}^{\top}(\mathbf{b}+B\boldsymbol{\mu})+\tfrac12\mathbf{t}^{\top}(B\boldsymbol{\Sigma}B^{\top})\mathbf{t}$,
+so $M_{\mathbf{Y}}$ is the MGF @eq-mvn-mgf with mean $\mathbf{b}+B\boldsymbol{\mu}$ and covariance
+$B\boldsymbol{\Sigma}B^{\top}$, the latter symmetric positive semidefinite because
+$\mathbf{s}^{\top}B\boldsymbol{\Sigma}B^{\top}\mathbf{s}=(B^{\top}\mathbf{s})^{\top}\boldsymbol{\Sigma}(B^{\top}\mathbf{s})\ge 0$.
+By @thm-mgf-uniqueness, $\mathbf{Y}\sim\mathcal{N}_q(\mathbf{b}+B\boldsymbol{\mu},B\boldsymbol{\Sigma}B^{\top})$.
+The marginal claim is the case $B=[\,I_k\ \ 0\,]$, $\mathbf{b}=\mathbf{0}$, and the scalar claim is the
+case $B=\mathbf{a}^{\top}$. $\square$
+:::
+
+::: {#exm-mvn-mini}
+## A two-dimensional normal, previewed
+To break the abstraction before the conditional-distribution proof, take the bivariate normal we will
+carry through @sec-prob-worked,
+$$
+\boldsymbol{\mu}=\begin{pmatrix}1\\2\end{pmatrix},\qquad
+\boldsymbol{\Sigma}=\begin{pmatrix}2&1\\1&1\end{pmatrix}.
+$$
+By @thm-mvn-linear the first coordinate is $X_1\sim\mathcal{N}(1,2)$, read straight off the diagonal, and
+the sum $X_1+X_2$ is the affine image with $B=(1,\ 1)$, giving $X_1+X_2\sim\mathcal{N}(3,5)$ since
+$B\boldsymbol{\mu}=3$ and $B\boldsymbol{\Sigma}B^{\top}=5$. No densities or integrals are needed; one
+matrix multiplication delivers the law of any linear summary. The conditioning, density, and Jensen-gap
+calculations for this same matrix are completed in @sec-prob-worked.
+:::
+
+For the conditional distribution we need the special feature of normality that uncorrelated jointly
+normal blocks are actually independent, a phenomenon that fails for general distributions.
+
+::: {#lem-normal-uncorrelated-independent}
+## Uncorrelated jointly normal blocks are independent
+Partition $\mathbf{X}\sim\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})$ as
+$\mathbf{X}=(\mathbf{X}_1,\mathbf{X}_2)$ with covariance blocks
+$\boldsymbol{\Sigma}=\begin{pmatrix}\boldsymbol{\Sigma}_{11}&\boldsymbol{\Sigma}_{12}\\
+\boldsymbol{\Sigma}_{21}&\boldsymbol{\Sigma}_{22}\end{pmatrix}$. If
+$\boldsymbol{\Sigma}_{12}=0$, then $\mathbf{X}_1\perp\mathbf{X}_2$.
+:::
+
+::: {.proof}
+Write $\mathbf{t}=(\mathbf{t}_1,\mathbf{t}_2)$ conformably. When $\boldsymbol{\Sigma}_{12}=0$ (hence
+$\boldsymbol{\Sigma}_{21}=\boldsymbol{\Sigma}_{12}^{\top}=0$), the quadratic form in @eq-mvn-mgf splits,
+$\mathbf{t}^{\top}\boldsymbol{\Sigma}\mathbf{t}
+=\mathbf{t}_1^{\top}\boldsymbol{\Sigma}_{11}\mathbf{t}_1+\mathbf{t}_2^{\top}\boldsymbol{\Sigma}_{22}\mathbf{t}_2$,
+and the linear form splits as
+$\mathbf{t}^{\top}\boldsymbol{\mu}=\mathbf{t}_1^{\top}\boldsymbol{\mu}_1+\mathbf{t}_2^{\top}\boldsymbol{\mu}_2$.
+Hence the joint MGF factors,
+$$
+M_{\mathbf{X}}(\mathbf{t}_1,\mathbf{t}_2)
+=\exp\!\Bigl(\mathbf{t}_1^{\top}\boldsymbol{\mu}_1+\tfrac12\mathbf{t}_1^{\top}\boldsymbol{\Sigma}_{11}\mathbf{t}_1\Bigr)
+\exp\!\Bigl(\mathbf{t}_2^{\top}\boldsymbol{\mu}_2+\tfrac12\mathbf{t}_2^{\top}\boldsymbol{\Sigma}_{22}\mathbf{t}_2\Bigr)
+=M_{\mathbf{X}_1}(\mathbf{t}_1)\,M_{\mathbf{X}_2}(\mathbf{t}_2),
+$$
+where the marginal MGFs are read off from @thm-mvn-linear. By the factorization criterion of
+@thm-mgf-uniqueness, $\mathbf{X}_1\perp\mathbf{X}_2$. $\square$
+:::
+
+::: {#thm-mvn-conditional}
+## Conditional distribution of a multivariate normal
+Partition $\mathbf{X}\sim\mathcal{N}_p(\boldsymbol{\mu},\boldsymbol{\Sigma})$ as above with
+$\boldsymbol{\Sigma}_{22}\succ 0$. Then the conditional distribution of $\mathbf{X}_1$ given
+$\mathbf{X}_2=\mathbf{x}_2$ is multivariate normal,
+$$
+\mathbf{X}_1\mid\mathbf{X}_2=\mathbf{x}_2\ \sim\
+\mathcal{N}\Bigl(\boldsymbol{\mu}_1+\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}(\mathbf{x}_2-\boldsymbol{\mu}_2),
+\ \boldsymbol{\Sigma}_{11}-\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\Sigma}_{21}\Bigr).
+$$ {#eq-mvn-conditional}
+The conditional covariance $\boldsymbol{\Sigma}_{1\mid 2}:=\boldsymbol{\Sigma}_{11}-\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\Sigma}_{21}$
+is the **Schur complement** of $\boldsymbol{\Sigma}_{22}$ (the residual covariance left in
+$\mathbf{X}_1$ after subtracting the part linearly explained by $\mathbf{X}_2$) and does not depend on
+$\mathbf{x}_2$.
+:::
+
+::: {.proof}
+Define the **regression residual**
+$\mathbf{U}:=\mathbf{X}_1-\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\mathbf{X}_2$. The pair
+$(\mathbf{U},\mathbf{X}_2)$ is the affine image of $\mathbf{X}$ under
+$$
+\begin{pmatrix}\mathbf{U}\\\mathbf{X}_2\end{pmatrix}
+=\underbrace{\begin{pmatrix}I&-\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\\0&I\end{pmatrix}}_{=:A}
+\begin{pmatrix}\mathbf{X}_1\\\mathbf{X}_2\end{pmatrix},
+$$
+so by @thm-mvn-linear it is jointly multivariate normal. Its cross-covariance vanishes:
+$$
+\mathrm{Cov}(\mathbf{U},\mathbf{X}_2)
+=\mathrm{Cov}(\mathbf{X}_1,\mathbf{X}_2)-\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\mathrm{Cov}(\mathbf{X}_2,\mathbf{X}_2)
+=\boldsymbol{\Sigma}_{12}-\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\Sigma}_{22}=0,
+$$
+so $\mathbf{U}\perp\mathbf{X}_2$ by @lem-normal-uncorrelated-independent. The mean and covariance of
+$\mathbf{U}$ are
+$$
+\mathbb{E}[\mathbf{U}]=\boldsymbol{\mu}_1-\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\mu}_2,
+\qquad
+\mathrm{Cov}(\mathbf{U})=\boldsymbol{\Sigma}_{11}-2\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\Sigma}_{21}
++\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\Sigma}_{22}\boldsymbol{\Sigma}_{22}^{-1}\boldsymbol{\Sigma}_{21}
+=\boldsymbol{\Sigma}_{1\mid 2},
+$$
+the cross terms combining because $\boldsymbol{\Sigma}_{21}=\boldsymbol{\Sigma}_{12}^{\top}$. Now recover
+$\mathbf{X}_1=\mathbf{U}+\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\mathbf{X}_2$ and compute the
+conditional MGF given $\mathbf{X}_2=\mathbf{x}_2$. Since the factor
+$\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\mathbf{X}_2$ becomes the constant
+$\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\mathbf{x}_2$ under the conditioning, and since
+$\mathbf{U}\perp\mathbf{X}_2$ implies $\mathbb{E}[e^{\mathbf{t}^{\top}\mathbf{U}}\mid\mathbf{X}_2]=\mathbb{E}[e^{\mathbf{t}^{\top}\mathbf{U}}]$
+(this is the one step that genuinely uses normality: for a general distribution $\mathbf{U}$ could be
+uncorrelated with $\mathbf{X}_2$ yet still dependent, but @lem-normal-uncorrelated-independent upgrades
+the vanishing cross-covariance to full independence, so conditioning on $\mathbf{X}_2$ leaves the law of
+$\mathbf{U}$ untouched),
+$$
+\mathbb{E}\bigl[e^{\mathbf{t}^{\top}\mathbf{X}_1}\,\big|\,\mathbf{X}_2=\mathbf{x}_2\bigr]
+=e^{\mathbf{t}^{\top}\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}\mathbf{x}_2}\,
+\mathbb{E}\bigl[e^{\mathbf{t}^{\top}\mathbf{U}}\bigr]
+=\exp\!\Bigl(\mathbf{t}^{\top}\bigl(\boldsymbol{\mu}_1+\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}(\mathbf{x}_2-\boldsymbol{\mu}_2)\bigr)
++\tfrac12\mathbf{t}^{\top}\boldsymbol{\Sigma}_{1\mid 2}\mathbf{t}\Bigr),
+$$
+where the last step substitutes the MGF @eq-mvn-mgf of $\mathbf{U}\sim\mathcal{N}(\mathbb{E}[\mathbf{U}],\boldsymbol{\Sigma}_{1\mid 2})$ and
+collects the linear terms. This is the MGF of the normal law on the right of @eq-mvn-conditional, so by
+@thm-mgf-uniqueness the conditional law is as claimed. $\square$
+:::
+
+The conditional mean
+$\boldsymbol{\mu}_1+\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}(\mathbf{x}_2-\boldsymbol{\mu}_2)$
+is an affine function of the conditioning value, the population analogue of a linear regression of
+$\mathbf{X}_1$ on $\mathbf{X}_2$, and the conditional covariance is constant in $\mathbf{x}_2$. These two
+features, linear conditional mean and homoskedastic conditional covariance, are the exact distributional
+content of the linear model of Chapter 6 and recur in every normal-approximation likelihood used in the
+network meta-analysis chapters.
+
+::: {.remark}
+**Why this matters.** The conditional mean of a multivariate normal is linear in the conditioning value,
+the population blueprint of linear regression: the regression coefficients are the population object
+$\boldsymbol{\Sigma}_{12}\boldsymbol{\Sigma}_{22}^{-1}$. For indirect comparison this is the object we
+integrate over a target population's covariate distribution to produce a population-average prediction,
+the move at the heart of ML-NMR in Part V. The constant (homoskedastic) conditional covariance is why the
+normal-theory likelihoods of network meta-analysis can carry a single residual variance.
+:::
+
+## A fully worked example {#sec-prob-worked}
+
+Where the toy trial of @exm-toy-trial gave us a discrete thread, we now run a continuous one. We carry a
+single bivariate normal through every theorem of @sec-cov-psd and @sec-mvn, with arithmetic the reader can
+reproduce by hand, and then verify the Poisson binomial mass function of @def-poisson-binomial on a small
+example.
+
+### A bivariate normal {#sec-worked-bvn}
+
+Let $\mathbf{X}=(X_1,X_2)^{\top}\sim\mathcal{N}_2(\boldsymbol{\mu},\boldsymbol{\Sigma})$ with
+$$
+\boldsymbol{\mu}=\begin{pmatrix}1\\2\end{pmatrix},\qquad
+\boldsymbol{\Sigma}=\begin{pmatrix}2&1\\1&1\end{pmatrix}.
+$$
+
+**Positive definiteness (@thm-cov-psd).** The matrix is symmetric. Its eigenvalues solve
+$\det(\boldsymbol{\Sigma}-\lambda I)=(2-\lambda)(1-\lambda)-1=\lambda^2-3\lambda+1=0$, giving
+$\lambda=\tfrac{3\pm\sqrt5}{2}\approx 2.618$ and $0.382$, both positive, so $\boldsymbol{\Sigma}\succ 0$;
+its determinant is $\det\boldsymbol{\Sigma}=2\cdot 1-1\cdot 1=1$. We may also confirm positive
+semidefiniteness through @eq-var-quadratic-form on a specific direction: for $\mathbf{a}=(1,-1)^{\top}$,
+$$
+\mathbf{a}^{\top}\boldsymbol{\Sigma}\mathbf{a}
+=\begin{pmatrix}1&-1\end{pmatrix}\begin{pmatrix}1\\0\end{pmatrix}=1
+=\mathrm{Var}(X_1-X_2)=\mathrm{Var}(X_1)+\mathrm{Var}(X_2)-2\,\mathrm{Cov}(X_1,X_2)=2+1-2=1\ge 0,
+$$
+where $\boldsymbol{\Sigma}\mathbf{a}=(2-1,\,1-1)^{\top}=(1,0)^{\top}$.
+
+**Marginals and correlation (@thm-mvn-linear, @thm-cauchy-schwarz-exp).** Reading off the diagonal,
+$X_1\sim\mathcal{N}(1,2)$ and $X_2\sim\mathcal{N}(2,1)$. The correlation is
+$\rho=\mathrm{Cov}(X_1,X_2)/\sqrt{\mathrm{Var}(X_1)\mathrm{Var}(X_2)}=1/\sqrt{2\cdot 1}=1/\sqrt2\approx 0.707$,
+and Cauchy-Schwarz is the statement $\mathrm{Cov}(X_1,X_2)^2=1\le 2=\mathrm{Var}(X_1)\,\mathrm{Var}(X_2)$,
+that is $\rho^2=\tfrac12\le 1$.
+
+**An affine map (@thm-mvn-linear).** Let $Y=X_1+X_2=B\mathbf{X}$ with $B=(1,\ 1)$. Then
+$Y\sim\mathcal{N}(B\boldsymbol{\mu},B\boldsymbol{\Sigma}B^{\top})$ with mean
+$B\boldsymbol{\mu}=1+2=3$ and variance
+$B\boldsymbol{\Sigma}B^{\top}=(1,1)\begin{pmatrix}2&1\\1&1\end{pmatrix}(1,1)^{\top}=(3,2)(1,1)^{\top}=5$,
+so $Y\sim\mathcal{N}(3,5)$. The direct check is
+$\mathrm{Var}(X_1+X_2)=2+1+2\cdot 1=5$.
+
+**The conditional distribution (@thm-mvn-conditional).** With
+$\boldsymbol{\Sigma}_{11}=2$, $\boldsymbol{\Sigma}_{12}=1$, $\boldsymbol{\Sigma}_{22}=1$, the
+conditional law of $X_1$ given $X_2=x_2$ has mean
+$\mu_1+\Sigma_{12}\Sigma_{22}^{-1}(x_2-\mu_2)=1+1\cdot(x_2-2)=x_2-1$ and variance
+$\Sigma_{11}-\Sigma_{12}\Sigma_{22}^{-1}\Sigma_{21}=2-1\cdot 1\cdot 1=1$. Hence
+$$
+X_1\mid X_2=x_2\ \sim\ \mathcal{N}(x_2-1,\ 1),\qquad\text{and at }x_2=4,\quad X_1\mid X_2=4\sim\mathcal{N}(3,1).
+$$
+Note that the conditional variance $1$ is smaller than the marginal variance $2$: conditioning on the
+correlated $X_2$ removes part of the uncertainty in $X_1$. This is the law of total variance
+@cor-total-variance in action,
+$$
+\mathrm{Var}(X_1)=\mathbb{E}[\mathrm{Var}(X_1\mid X_2)]+\mathrm{Var}(\mathbb{E}[X_1\mid X_2])
+=1+\mathrm{Var}(X_2-1)=1+1=2,\ \checkmark
+$$
+because $\mathrm{Var}(X_1\mid X_2)\equiv 1$ is constant and $\mathbb{E}[X_1\mid X_2]=X_2-1$ has variance
+$\mathrm{Var}(X_2)=1$.
+
+**The density (@prp-mvn-density).** Since $\det\boldsymbol{\Sigma}=1$ and
+$\boldsymbol{\Sigma}^{-1}=\begin{pmatrix}1&-1\\-1&2\end{pmatrix}$ (one checks
+$\boldsymbol{\Sigma}\boldsymbol{\Sigma}^{-1}=I$), the density is
+$$
+f_{\mathbf{X}}(\mathbf{x})=\frac{1}{2\pi}\exp\!\Bigl(-\tfrac12\bigl[(x_1-1)^2-2(x_1-1)(x_2-2)+2(x_2-2)^2\bigr]\Bigr),
+$$
+and at the mean $\mathbf{x}=\boldsymbol{\mu}=(1,2)^{\top}$ this is $f_{\mathbf{X}}(\boldsymbol{\mu})=1/(2\pi)\approx 0.159$.
+
+**The Jensen gap (@thm-jensen).** Apply the convex $\varphi(u)=u^2$ to $X_1\sim\mathcal{N}(1,2)$. The
+left side of @eq-jensen is $\varphi(\mathbb{E}[X_1])=1^2=1$; the right side is
+$\mathbb{E}[\varphi(X_1)]=\mathbb{E}[X_1^2]=\mathrm{Var}(X_1)+(\mathbb{E}X_1)^2=2+1=3$. The Jensen gap is
+$3-1=2$, which is exactly $\mathrm{Var}(X_1)$, as anticipated after @thm-jensen.
+
+### A Poisson binomial count {#sec-worked-pobin}
+
+Take $n=3$ trials with heterogeneous success probabilities
+$\mathbf{p}=(0.2,\,0.5,\,0.8)$, so $X\sim\mathrm{PoBin}(\mathbf{p})$ with failure probabilities
+$(0.8,\,0.5,\,0.2)$. The mass function of @def-poisson-binomial enumerates subsets:
+$$
+\begin{aligned}
+P(X=0)&=0.8\cdot 0.5\cdot 0.2=0.08,\\
+P(X=1)&=0.2\cdot 0.5\cdot 0.2+0.8\cdot 0.5\cdot 0.2+0.8\cdot 0.5\cdot 0.8=0.02+0.08+0.32=0.42,\\
+P(X=2)&=0.2\cdot 0.5\cdot 0.2+0.2\cdot 0.5\cdot 0.8+0.8\cdot 0.5\cdot 0.8=0.02+0.08+0.32=0.42,\\
+P(X=3)&=0.2\cdot 0.5\cdot 0.8=0.08,
+\end{aligned}
+$$
+which sum to $1$. The mean is $\mathbb{E}[X]=0.2+0.5+0.8=1.5$, confirmed from the mass function as
+$0(0.08)+1(0.42)+2(0.42)+3(0.08)=1.5$. The variance is
+$\mathrm{Var}(X)=0.2(0.8)+0.5(0.5)+0.8(0.2)=0.16+0.25+0.16=0.57$, confirmed as
+$\mathbb{E}[X^2]-(\mathbb{E}X)^2=(0.42+4\cdot 0.42+9\cdot 0.08)-1.5^2=2.82-2.25=0.57$. For contrast, a
+binomial $\mathrm{Bin}(3,0.5)$ has the same mean $1.5$ but the larger variance $3(0.5)(0.5)=0.75$;
+spreading the per-trial risks apart, at fixed total risk, has reduced the dispersion of the count, in
+keeping with the convexity remark after @def-poisson-binomial.
+
+## Notes and references {#sec-prob-notes}
+
+The measure-theoretic framework of @def-probability-space is Kolmogorov's; the closure properties
+(@lem-sigma-algebra-closure), the pushforward law (@prp-law-is-measure), the convergence theorems
+(@thm-monotone-convergence, @thm-dominated-convergence), conditional expectation through the
+Radon-Nikodym theorem (@def-conditional-expectation), Fubini-Tonelli (@thm-fubini-tonelli), and the
+uniqueness and continuity theorems for moment generating functions (@thm-mgf-uniqueness,
+@thm-poisson-limit) are standard and are proved in @billingsley1995 and @williams1991, which we cite for
+the results stated without proof. The load-bearing results of the chapter, the tower property
+(@thm-tower-property), Jensen's inequality (@thm-jensen) with its supporting-line lemma
+(@lem-supporting-line), the Cauchy-Schwarz inequality for expectations (@thm-cauchy-schwarz-exp), the
+positive semidefiniteness of covariance matrices (@thm-cov-psd), and the multivariate normal calculus
+(@thm-mvn-linear, @lem-normal-uncorrelated-independent, @thm-mvn-conditional), are proved here in full,
+the last group resting on the spectral theorem @thm-spectral-theorem and the positive-definiteness
+characterization @thm-pd-characterization of Chapter 3. The multivariate normal theory follows the
+treatment in @bingham2010regression, which we recommend for the linear-models reader; the causal framing
+of conditional independence and the role of expectation in identification is from @hernan2020whatif.
+
+The development corresponds to results A.1 through A.10 of the proof catalogue: A.1
+(@def-probability-space, @lem-sigma-algebra-closure), A.2 (@def-random-variable, @prp-law-is-measure),
+A.3 (@thm-monotone-convergence, @thm-dominated-convergence), A.4 (@thm-expectation-linearity,
+@thm-tower-property), A.5 (@def-conditional-expectation), A.6 (@def-conditional-independence,
+@thm-graphoid-axioms), A.7 (@thm-jensen), A.8 (@thm-cauchy-schwarz-exp), A.9 (@cor-total-expectation),
+and A.10 (@thm-fubini-tonelli). The asymptotic tools A.11 through A.13, the delta method, Slutsky's
+theorem, and the continuous mapping theorem, belong to the inference chapter that follows. The graphoid
+axioms @thm-graphoid-axioms have a machine-checked counterpart in the companion Coq development: the
+lemmas `cond_indep_symmetry` and `cond_indep_decomposition` and the theorems `cond_indep_weak_union` and
+`cond_indep_contraction` of `theories/ConditionalIndep.v` verify (G1) through (G4) for a discrete joint
+model. The foundational facts of @sec-prob-space through @sec-conditional are accepted in that
+development as axioms imported from the `mathcomp-analysis` library rather than reproved, as documented
+in its `AXIOMS.md`; the mathematical content here is the classical pen-and-paper version.
+
+## Exercises {#sec-prob-exercises}
+
+A starred exercise, marked $\star$, has a full worked solution in Appendix F. The first four exercises are
+warm-ups and interpretation; the proof-heavy and starred ones follow.
+
+::: {#exr-reweight-strata}
+## Warm-up: reweight two strata
+In @exm-toy-trial the control-arm risks are $0.20$ for low-risk patients and $0.50$ for high-risk
+patients. The source trial has severity shares $(0.6,0.4)$, while a target population has shares
+$(0.3,0.7)$. Using @cor-total-expectation, compute the marginal control response rate in the source and
+in the target, and explain in one sentence why they differ even though the within-stratum risks are
+identical.
+:::
+
+::: {#exr-jensen-logit-interpret}
+## Interpretation: average risk versus risk of the average
+Two equally sized subgroups have event risks $0.2$ and $0.8$. Compute the population-average risk, and
+separately compute the inverse-logit of the average log-odds. Which is larger, and which one should a
+decision maker report as the population risk? Relate your answer to @exm-jensen-logit and @thm-jensen.
+:::
+
+::: {#exr-ignorability-meaning}
+## Interpretation: which independence is ignorability?
+Let $T$ be treatment, $X$ baseline covariates, and $Y(0),Y(1)$ the potential outcomes. Using the notation
+of @def-conditional-independence, write the conditional-independence statement expressing "a
+covariate-adjusted trial assigns treatment without regard to prognosis once covariates are fixed."
+Explain in words why $T\perp (Y(0),Y(1))$ without conditioning is a stronger statement, and which one a
+covariate-adjusted analysis actually needs.
+:::
+
+::: {#exr-pobin-count}
+## Computation: a heterogeneous event count
+Three patients have event risks $\mathbf{p}=(0.1,0.4,0.6)$. Using @def-poisson-binomial, write out the
+full mass function of the event count $X\sim\mathrm{PoBin}(\mathbf{p})$, and verify from it that
+$\mathbb{E}[X]=\sum_i p_i$ and $\mathrm{Var}(X)=\sum_i p_i(1-p_i)$. Compare the variance with that of
+$\mathrm{Bin}(3,\bar p)$ at the same mean $\bar p=\tfrac13\sum_i p_i$.
+:::
+
+::: {#exr-borel-cantelli}
+## Closure and a tail event
+Using @lem-sigma-algebra-closure, show that for events $\{A_n\}$ the event "$A_n$ occurs for infinitely
+many $n$" equals $\limsup_n A_n$ and lies in $\mathcal{F}$. Show further that if
+$\sum_n P(A_n)<\infty$ then $P(\limsup_n A_n)=0$. (This is the first Borel-Cantelli lemma; use
+$P(\limsup_n A_n)\le P(\bigcup_{n\ge m}A_n)\le\sum_{n\ge m}P(A_n)$ and let $m\to\infty$.)
+:::
+
+::: {#exr-variance-identities}
+## Variance algebra
+For $X,Y\in L^2$ and constants $a,b,c$, prove from @def-variance-covariance that
+$\mathrm{Var}(aX+bY+c)=a^2\mathrm{Var}(X)+b^2\mathrm{Var}(Y)+2ab\,\mathrm{Cov}(X,Y)$, and deduce that the
+correlation coefficient lies in $[-1,1]$ using @thm-cauchy-schwarz-exp.
+:::
+
+::: {#exr-jensen-am-gm}
+## Jensen at work
+Let $X$ be a positive random variable in $L^1$ with $\log X\in L^1$. Using @thm-jensen with a suitable
+convex or concave $\varphi$, prove the inequality $\exp(\mathbb{E}[\log X])\le\mathbb{E}[X]$, the
+probabilistic form of the arithmetic-geometric mean inequality. Identify the convex function you used
+and state when equality holds.
+:::
+
+::: {#exr-uncorrelated-not-independent}
+## Uncorrelated but dependent
+Let $Z\sim\mathcal{N}(0,1)$ and set $X=Z$, $Y=Z^2$. Show that $\mathrm{Cov}(X,Y)=0$ yet $X$ and $Y$ are
+not independent. Explain why this does not contradict @lem-normal-uncorrelated-independent. (Hint:
+$(X,Y)$ is not jointly normal.)
+:::
+
+::: {#exr-mgf-poisson-sum}
+## Sums of Poissons
+Using @thm-mgf-sum and @def-poisson, prove that if $X\sim\mathrm{Poi}(\lambda)$ and
+$Y\sim\mathrm{Poi}(\nu)$ are independent then $X+Y\sim\mathrm{Poi}(\lambda+\nu)$. Then, using
+@thm-mvn-linear, prove the normal analogue: independent
+$X\sim\mathcal{N}(\mu_1,\sigma_1^2)$ and $Y\sim\mathcal{N}(\mu_2,\sigma_2^2)$ have
+$X+Y\sim\mathcal{N}(\mu_1+\mu_2,\sigma_1^2+\sigma_2^2)$.
+:::
+
+::: {#exr-conditional-bivariate}
+## Bivariate conditioning by hand
+For the bivariate normal of @sec-worked-bvn, derive the conditional distribution of $X_2$ given
+$X_1=x_1$ using @thm-mvn-conditional, and verify directly that
+$\mathbb{E}[\mathbb{E}[X_2\mid X_1]]=\mathbb{E}[X_2]=2$ via @cor-total-expectation. Compute the
+conditional variance and confirm the law of total variance @cor-total-variance for $X_2$.
+:::
+
+::: {#exr-cov-psd-construction}
+## Realizing a covariance (starred)
+$\star$ Let $\boldsymbol{\Sigma}=\begin{pmatrix}1&\rho\\\rho&1\end{pmatrix}$ with
+$\rho\in(-1,1)$. Using @thm-cov-psd, exhibit an explicit random vector with this covariance as a linear
+image of a standard normal pair, computing $\boldsymbol{\Sigma}^{1/2}$ from the spectral decomposition
+@thm-spectral-theorem. Determine for which $\rho$ the matrix fails to be positive definite and interpret
+the degenerate case via @lem-normal-uncorrelated-independent and @thm-mvn-conditional.
+:::
+
+::: {#exr-graphoid-counterexample}
+## The need for positivity (starred)
+$\star$ The intersection axiom (G5) of @thm-graphoid-axioms can fail without the positivity hypothesis.
+Construct a joint distribution of binary $(X,Y,Z,W)$, for instance one in which $X=Y$ deterministically
+and $W$ is degenerate, such that $X\perp Y\mid(Z,W)$ and $X\perp W\mid(Z,Y)$ both hold but
+$X\perp(Y,W)\mid Z$ fails. Explain precisely which step of a positivity-based proof breaks down.
+:::

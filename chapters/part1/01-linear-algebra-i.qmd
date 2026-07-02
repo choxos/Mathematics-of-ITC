@@ -1,0 +1,1751 @@
+---
+title: "Linear Algebra I: Vector Spaces, Linear Maps, and Rank"
+---
+
+## Why linear algebra comes first {#sec-la1-intro}
+
+Every quantitative method in this book is, at its core, an arithmetic of vectors and matrices. When we
+fit a regression to a clinical trial, when we ask whether a treatment effect can be estimated at all,
+when we adjust one study's population to match another's, or when we synthesize a network of trials
+into a single coherent comparison, we are manipulating a *design matrix* $\mathbf{X}$ that encodes who
+received what and a *coefficient vector* $\boldsymbol{\beta}$ that encodes the effects we wish to learn.
+The questions that matter for indirect treatment comparison turn out to be, almost without exception,
+questions about three features of such a matrix: its *column space* (what outcomes the model can
+reproduce), its *rank* (how many independent effects it can resolve), and its *null space* (which
+combinations of coefficients leave the predictions untouched and are therefore not identifiable from the
+data).
+
+Consider the simplest possible comparison: a single trial with a control arm and a treated arm. We
+record for each patient an intercept and a treatment indicator, giving a matrix with two columns. If
+those two columns are linearly independent, the trial can resolve a baseline level and a treatment
+effect, and the effect is estimable. If we carelessly add a third column for the control indicator, the
+three columns become linearly dependent, the rank drops, and the treatment effect is no longer uniquely
+determined by the data. This is the celebrated "dummy variable trap," and it is nothing more than a
+statement about the null space of a matrix. The entire theory of when an indirect comparison is
+identifiable, developed in Parts II through V, is built on exactly this vocabulary.
+
+This chapter develops that vocabulary from nothing. We define real vector spaces and their subspaces;
+we build the notions of span, linear independence, basis, and dimension, proving that dimension is
+well-defined; we define linear maps and show that matrices are exactly the linear maps between
+coordinate spaces, with matrix multiplication forced upon us by composition; we prove the
+rank-nullity theorem, the conservation law that governs all of the above; we assemble the four
+fundamental subspaces and their dimension counts; and we characterize exactly when a square matrix is
+invertible. We close with a worked design-matrix example that previews the regression theory of
+@sec-la1-intro's promise. The standard reference for this material, and the source of the
+four-fundamental-subspaces framing we adopt, is @strang2016.
+
+Throughout, scalars are real numbers. Everything generalizes verbatim to an arbitrary field, but the
+real field is all this book requires.
+
+**Why prove anything at all?** A working health researcher rarely proves theorems; software does the
+arithmetic. We nevertheless build this chapter proof by proof for one reason: every claim later in the
+book about when an indirect comparison is *identifiable*, *unbiased*, or *efficient* is, at bottom, a
+corollary of the few facts established here. If you trust the handful of proofs in this chapter, you can
+trust the identifiability claims of every chapter that follows, because each of those is the present
+machinery applied to a particular design matrix. We abstract for the same reason: every model in this
+book, ordinary regression, network meta-analysis (NMA), and multilevel network meta-regression
+(ML-NMR) alike, is a statement about a vector space, so a theorem proved once here applies to all of
+them at once. You do not need to memorize the proofs; you need to believe their conclusions, and the
+quickest route to belief is to have seen them done.
+
+**How to read this chapter.** Read the running example in @sec-la1-preview first and keep it open beside
+you. Every abstract definition that follows has, immediately after it, a short paragraph in plain
+language ("what this means") tying the object back to that trial, and every major theorem ends with a
+one-line "why this matters" connecting it to regression, NMA, or indirect treatment comparison (ITC).
+On a first pass you may skim the proofs and read only the statements, the translations, and the worked
+examples; the logic will still hang together.
+
+## A running example: a two-arm trial {#sec-la1-preview}
+
+Before any axioms, here is the concrete object this chapter is about, in numbers. Four patients enter a
+tiny trial. The first two receive control, the last two receive an active treatment. We also record one
+baseline covariate (say a centered age) and the observed outcome.
+
+| Patient $i$ | Arm | Treatment indicator $t_i$ | Outcome $y_i$ |
+|---|---|---|---|
+| 1 | control | 0 | $y_1$ |
+| 2 | control | 0 | $y_2$ |
+| 3 | treated | 1 | $y_3$ |
+| 4 | treated | 1 | $y_4$ |
+
+To model the outcome with a common baseline plus a treatment effect, we build a **design matrix** whose
+first column is the all-ones vector $\mathbf{1}_4=(1,1,1,1)^\top$ (it carries the intercept) and whose
+second column is the treatment indicator $\mathbf{t}=(0,0,1,1)^\top$. (The symbols $\mathbf{1}_n$ for
+the all-ones vector and $\mathbf{0}_n$ for the all-zeros vector are fixed in [Notation](/notation.qmd)
+and used without comment from here on.) Writing $\boldsymbol\beta=(\beta_0,\beta_1)^\top$ for the
+unknown coefficients,
+$$
+\mathbf{X}=\begin{pmatrix}1&0\\1&0\\1&1\\1&1\end{pmatrix}\in\mathbb{R}^{4\times 2},
+\qquad
+\mathbf{X}\boldsymbol\beta=\begin{pmatrix}\beta_0\\\beta_0\\\beta_0+\beta_1\\\beta_0+\beta_1\end{pmatrix}.
+$$
+The vector $\mathbf{X}\boldsymbol\beta$ is the column of *fitted values*: the model predicts outcome
+$\beta_0$ for every control patient and $\beta_0+\beta_1$ for every treated patient, so $\beta_1$ is the
+treatment effect. Three plain-language questions about this one matrix organize the entire chapter.
+
+- *Which outcome patterns can the model reproduce exactly?* Only vectors that are constant within each
+  arm, that is, of the form $(a,a,b,b)^\top$. This set is the **column space** of $\mathbf{X}$
+  (@sec-la1-four-subspaces); real data are never exactly of this form, which is why Chapter 2 *projects*
+  the data onto it.
+- *How many distinct effects can the trial resolve?* Two: a baseline and a treatment effect. This count
+  is the **rank** of $\mathbf{X}$ (@sec-la1-rank-nullity).
+- *Which changes in $\boldsymbol\beta$ leave every prediction unchanged?* For this $\mathbf{X}$, only the
+  zero change, so the effect is identifiable. This "do-nothing" set is the **null space**
+  (@sec-la1-systems).
+
+Now watch identifiability break. Suppose we greedily add a third column, the control indicator
+$\mathbf{c}=(1,1,0,0)^\top$, giving
+$$
+\mathbf{X}'=\begin{pmatrix}1&0&1\\1&0&1\\1&1&0\\1&1&0\end{pmatrix}\in\mathbb{R}^{4\times 3},
+\qquad
+\boldsymbol\beta=\begin{pmatrix}\beta_0\\\beta_1\\\beta_2\end{pmatrix}.
+$$
+Because $\mathbf{c}=\mathbf{1}_4-\mathbf{t}$, the three columns are redundant, and two *different*
+coefficient vectors now give *identical* predictions. For instance $\boldsymbol\beta=(0,1,0)^\top$ and
+$\boldsymbol\beta'=(1,0,-1)^\top$ both predict outcome $0$ for every control patient and $1$ for every
+treated patient. No quantity of data can choose between them: the treatment effect is no longer the
+value of a single coefficient. This is the dummy-variable trap, and we work it out in full in
+@exm-la1-nonidentifiability and @sec-la1-design-example. Everything between here and there is the
+machinery that explains exactly *why* the first design works and the second fails.
+
+A final orientation. The same letters denote different objects in different places; keeping their roles
+straight removes most of the difficulty a novice meets. The following table is worth rereading whenever
+a symbol feels ambiguous.
+
+| Symbol | Usual role in this chapter | Lives in | Trial reading |
+|---|---|---|---|
+| $A$, $\mathbf{X}$ | a matrix / a design matrix | $\mathbb{R}^{m\times n}$ | $m$ rows are patients, $n$ columns are model ingredients |
+| a column $\mathbf{a}_j$ of $A$ | one regressor (feature) | $\mathbb{R}^m$ | the values of one predictor across patients |
+| $\boldsymbol\beta$ | coefficient (parameter) vector | $\mathbb{R}^n$ | the unknown effects we want to estimate |
+| $\mathbf{y}$ | outcome (response) vector | $\mathbb{R}^m$ | one measured outcome per patient |
+| $\mathbf{X}\boldsymbol\beta$ | fitted values | $\mathbb{R}^m$ | the model's predicted outcome per patient |
+| $\mathbf{x}$ in $A\mathbf{x}=\mathbf{b}$ | a generic unknown / solution | $\mathbb{R}^n$ | whatever the system is being solved for |
+| $\mathbf{b}$ in $A\mathbf{x}=\mathbf{b}$ | a generic right-hand side | $\mathbb{R}^m$ | the pattern we are trying to reproduce |
+| $\mathbf{z}\in\mathcal{N}(A)$ | a null-space vector | $\mathbb{R}^n$ | a change in $\boldsymbol\beta$ that leaves all predictions unchanged |
+
+Here $m$ is the number of rows (patients) and $n$ the number of columns (model ingredients), matching
+the convention $A\in\mathbb{R}^{m\times n}$ used below. From Chapter 6 onward the design matrix is
+written $\mathbf{X}\in\mathbb{R}^{n\times p}$ with $n$ patients and $p$ columns; it is the same object
+with the letters relabeled, so do not let the swap trouble you.
+
+## Real vector spaces {#sec-la1-vector-spaces}
+
+Why does a health researcher need an abstraction at all, when the design matrix above is perfectly
+concrete? Because every model in this book, regression, NMA, and ML-NMR, lives in some vector space, and
+the few theorems we prove about vector spaces in general then apply to all of them without redoing the
+work. A vector space is an abstraction of the two operations we perform on arrows, on lists of numbers,
+and on functions alike: we add two of them, and we scale one of them by a number. The axioms below
+record exactly the properties of those operations that every later argument uses.
+
+::: {#def-vector-space}
+## Real vector space
+A **real vector space** is a set $V$ together with two operations, *addition*
+$+ \colon V \times V \to V$, written $(\mathbf{u},\mathbf{v}) \mapsto \mathbf{u}+\mathbf{v}$, and
+*scalar multiplication* $\cdot \colon \mathbb{R} \times V \to V$, written
+$(a,\mathbf{v}) \mapsto a\mathbf{v}$, such that the following eight axioms hold for all
+$\mathbf{u},\mathbf{v},\mathbf{w}\in V$ and all $a,b\in\mathbb{R}$.
+
+1. **(VS1) Commutativity.** $\mathbf{u}+\mathbf{v}=\mathbf{v}+\mathbf{u}$.
+2. **(VS2) Associativity of addition.**
+   $(\mathbf{u}+\mathbf{v})+\mathbf{w}=\mathbf{u}+(\mathbf{v}+\mathbf{w})$.
+3. **(VS3) Additive identity.** There exists an element $\mathbf{0}\in V$, the *zero vector*, with
+   $\mathbf{v}+\mathbf{0}=\mathbf{v}$ for every $\mathbf{v}$.
+4. **(VS4) Additive inverse.** For each $\mathbf{v}\in V$ there exists $-\mathbf{v}\in V$ with
+   $\mathbf{v}+(-\mathbf{v})=\mathbf{0}$.
+5. **(VS5) Scalar identity.** $1\,\mathbf{v}=\mathbf{v}$.
+6. **(VS6) Associativity of scalar multiplication.** $a(b\mathbf{v})=(ab)\mathbf{v}$.
+7. **(VS7) Distributivity over vector addition.**
+   $a(\mathbf{u}+\mathbf{v})=a\mathbf{u}+a\mathbf{v}$.
+8. **(VS8) Distributivity over scalar addition.** $(a+b)\mathbf{v}=a\mathbf{v}+b\mathbf{v}$.
+
+Elements of $V$ are called *vectors* and elements of $\mathbb{R}$ are called *scalars*.
+:::
+
+**What this means.** The eight axioms are not arbitrary; each is one common-sense rule about adding and
+scaling, and together they are exactly what later proofs cite, no more and no less. Read informally:
+
+| Axiom | In words |
+|---|---|
+| (VS1) commutativity | the order in which you add two vectors does not matter |
+| (VS2) associativity | how you group a chain of additions does not matter |
+| (VS3) zero | there is a "do-nothing" vector you can always add |
+| (VS4) inverse | every vector can be undone by adding its negative |
+| (VS5) scalar identity | scaling by the number $1$ changes nothing |
+| (VS6) scalar associativity | scaling twice equals scaling once by the product of the two numbers |
+| (VS7) distribute over vector sum | scaling a sum of vectors equals scaling each, then adding |
+| (VS8) distribute over scalar sum | scaling by ($a+b$) equals scaling by $a$, scaling by $b$, and adding the two results |
+
+The one most readers find strange is (VS8): "adding two scalars" is just ordinary addition of numbers,
+and the axiom says the vector responds to it consistently, for example $(2+3)\mathbf{v}=2\mathbf{v}+3\mathbf{v}$.
+
+The axioms make no reference to coordinates; that is their power. The canonical example, and the one
+this book mostly lives in, is coordinate space.
+
+::: {#exm-coordinate-space}
+## The coordinate space $\mathbb{R}^n$
+Fix a positive integer $n$. The set $\mathbb{R}^n$ of ordered $n$-tuples
+$\mathbf{x}=(x_1,\dots,x_n)^\top$ of real numbers, with addition and scalar multiplication defined
+entrywise,
+$$
+\mathbf{x}+\mathbf{y}=(x_1+y_1,\dots,x_n+y_n)^\top, \qquad a\mathbf{x}=(ax_1,\dots,ax_n)^\top,
+$$
+is a real vector space. The zero vector is $\mathbf{0}_n=(0,\dots,0)^\top$ and the additive inverse of
+$\mathbf{x}$ is $(-x_1,\dots,-x_n)^\top$. All eight axioms reduce to the corresponding arithmetic facts
+about real numbers applied coordinate by coordinate. We write vectors as columns by default.
+$\blacktriangleleft$
+:::
+
+**What this means.** This is the only space you must hold in your head. An outcome vector $\mathbf{y}$,
+a column of the design matrix, and a coefficient vector $\boldsymbol\beta$ are all elements of some
+$\mathbb{R}^n$; "adding vectors" and "scaling a vector" mean exactly the entrywise arithmetic above.
+Every abstract statement we prove specializes, by setting $V=\mathbb{R}^n$, to a fact about such lists
+of numbers.
+
+::: {#exm-other-spaces}
+## Matrices, polynomials, and functions
+Three further examples recur throughout the book.
+
+1. The set $\mathbb{R}^{m\times n}$ of $m\times n$ real matrices, with entrywise addition and scaling,
+   is a vector space of "the same shape" as $\mathbb{R}^{mn}$.
+2. The set $\mathcal{P}_d$ of real polynomials of degree at most $d$, with the usual addition and
+   scaling of polynomials, is a vector space; so is the set of all real polynomials.
+3. For any set $S$, the set $\mathbb{R}^S$ of all functions $f\colon S\to\mathbb{R}$, with
+   $(f+g)(s)=f(s)+g(s)$ and $(af)(s)=a\,f(s)$, is a vector space. Example 1 is the special case
+   $S=\{1,\dots,m\}\times\{1,\dots,n\}$. $\blacktriangleleft$
+:::
+
+**Why these appear.** The function-space view in part 3 is not idle generality: when ML-NMR integrates
+an individual-level model over a covariate distribution (Part V), it treats outcome models as elements
+of a function space and averages them, which is addition and scaling of functions in exactly the sense
+above. You do not need that machinery yet; note only that "vector" will sometimes mean "function," and
+the same eight rules apply.
+
+The axioms entail several facts so basic we use them without comment after this lemma. We prove them to
+show that nothing is assumed beyond @def-vector-space.
+
+::: {#lem-vector-space-basics}
+## Elementary consequences of the axioms
+Let $V$ be a real vector space. Then:
+
+1. the zero vector is unique, and each $\mathbf{v}$ has a unique additive inverse;
+2. $0\,\mathbf{v}=\mathbf{0}$ for every $\mathbf{v}\in V$;
+3. $a\,\mathbf{0}=\mathbf{0}$ for every $a\in\mathbb{R}$;
+4. $(-1)\mathbf{v}=-\mathbf{v}$ for every $\mathbf{v}\in V$;
+5. if $a\mathbf{v}=\mathbf{0}$ then $a=0$ or $\mathbf{v}=\mathbf{0}$.
+:::
+
+::: {.proof}
+(1) Suppose $\mathbf{0}$ and $\mathbf{0}'$ both satisfy (VS3), and consider the chain
+$\mathbf{0}=\mathbf{0}+\mathbf{0}'=\mathbf{0}'$. Read it term by term. The first equality
+$\mathbf{0}=\mathbf{0}+\mathbf{0}'$ holds because $\mathbf{0}'$ is an additive identity: (VS3) applied to
+$\mathbf{0}'$ says adding $\mathbf{0}'$ to anything (here to $\mathbf{0}$) changes nothing. The second
+equality $\mathbf{0}+\mathbf{0}'=\mathbf{0}'$ holds because $\mathbf{0}$ is an additive identity:
+commuting with (VS1) gives $\mathbf{0}+\mathbf{0}'=\mathbf{0}'+\mathbf{0}$, and (VS3) applied to
+$\mathbf{0}$ says adding $\mathbf{0}$ to $\mathbf{0}'$ changes nothing. So any two identities coincide,
+and the zero vector is unique. (Throughout, $\mathbf{0}$ is the identity we began with and $\mathbf{0}'$
+is any rival; the chain forces them equal.) If $\mathbf{w}$ and $\mathbf{w}'$ are both additive inverses
+of $\mathbf{v}$, then
+$$
+\mathbf{w}=\mathbf{w}+\mathbf{0}=\mathbf{w}+(\mathbf{v}+\mathbf{w}')
+=(\mathbf{w}+\mathbf{v})+\mathbf{w}'=\mathbf{0}+\mathbf{w}'=\mathbf{w}',
+$$
+using (VS3), (VS4) for $\mathbf{w}'$, (VS2), (VS1) with (VS4) for $\mathbf{w}$, and (VS3).
+
+(2) By (VS8), $0\,\mathbf{v}=(0+0)\mathbf{v}=0\,\mathbf{v}+0\,\mathbf{v}$. Add $-(0\,\mathbf{v})$ to both
+sides and use (VS2), (VS4), (VS3): $\mathbf{0}=0\,\mathbf{v}$.
+
+(3) By (VS7), $a\,\mathbf{0}=a(\mathbf{0}+\mathbf{0})=a\,\mathbf{0}+a\,\mathbf{0}$; cancel as in (2).
+
+(4) Using (VS8), (VS5), and part (2),
+$\mathbf{v}+(-1)\mathbf{v}=1\,\mathbf{v}+(-1)\mathbf{v}=(1+(-1))\mathbf{v}=0\,\mathbf{v}=\mathbf{0}$. By the
+uniqueness of inverses in (1), $(-1)\mathbf{v}=-\mathbf{v}$.
+
+(5) Suppose $a\mathbf{v}=\mathbf{0}$ and $a\neq 0$. Multiply by $a^{-1}$ and use (VS6), (VS5), and (3):
+$\mathbf{v}=1\,\mathbf{v}=(a^{-1}a)\mathbf{v}=a^{-1}(a\mathbf{v})=a^{-1}\mathbf{0}=\mathbf{0}$. $\square$
+:::
+
+**What this means.** These are the "of course" facts (scaling by zero gives the zero vector, the
+negative of $\mathbf{v}$ is $(-1)\mathbf{v}$) that you already believe for lists of numbers. The point
+of proving them is honesty: they follow from the eight axioms alone, so they hold in *every* vector
+space, including the function spaces that appear later, not just in $\mathbb{R}^n$.
+
+## Subspaces and span {#sec-la1-subspaces}
+
+The objects of real interest are not whole spaces but the flat pieces sitting inside them: the column
+space of a design matrix is a subspace of $\mathbb{R}^n$, and so is the set of fitted values a model can
+produce. A subspace is a subset that is itself a vector space under the inherited operations.
+
+::: {#def-subspace}
+## Subspace
+A subset $U\subseteq V$ of a real vector space $V$ is a **subspace** if it is itself a real vector
+space under the addition and scalar multiplication inherited from $V$. Equivalently, by the criterion of
+@lem-subspace-criterion below, $U$ is a subspace if and only if
+$$
+\mathbf{0}\in U,\qquad
+\mathbf{u},\mathbf{v}\in U\ \Rightarrow\ \mathbf{u}+\mathbf{v}\in U,\qquad
+a\in\mathbb{R},\ \mathbf{u}\in U\ \Rightarrow\ a\mathbf{u}\in U .
+$$
+:::
+
+**What this means.** Picture a subspace as a flat sheet through the origin: a line or plane through
+$\mathbf{0}$ inside ordinary space. "Through the origin" is the requirement $\mathbf{0}\in U$, and
+"flat" is the requirement that you cannot leave $U$ by adding or scaling its vectors. In our running
+trial the set of fitted-value patterns $\{(a,a,b,b)^\top\}$ is such a flat sheet inside $\mathbb{R}^4$;
+that sheet is the column space of $\mathbf{X}$.
+
+::: {#lem-subspace-criterion}
+## Subspace criterion
+A nonempty subset $U\subseteq V$ is a subspace of $V$ if and only if it is closed under linear
+combinations: for all $\mathbf{u},\mathbf{v}\in U$ and all $a,b\in\mathbb{R}$,
+$a\mathbf{u}+b\mathbf{v}\in U$.
+:::
+
+::: {.proof}
+Suppose $U$ is a subspace. Then it is closed under its addition and scalar multiplication, so
+$a\mathbf{u}\in U$, $b\mathbf{v}\in U$, and hence $a\mathbf{u}+b\mathbf{v}\in U$.
+
+Conversely, suppose $U$ is nonempty and closed under linear combinations. Pick any $\mathbf{u}_0\in U$;
+then $\mathbf{0}=0\,\mathbf{u}_0+0\,\mathbf{u}_0\in U$ by closure (using @lem-vector-space-basics(2)).
+Taking $a=b=1$ shows $U$ is closed under addition; taking $b=0$ shows it is closed under scalar
+multiplication; and $-\mathbf{u}=(-1)\mathbf{u}\in U$ by closure with @lem-vector-space-basics(4). The
+eight axioms (VS1) through (VS8) hold for elements of $U$ because they already hold for all elements of
+$V$ and the operations are the same. Hence $U$ is a vector space, that is, a subspace. $\square$
+:::
+
+**Why this matters.** This lemma is a labor-saving device. To certify that some set is a subspace you do
+not check all eight axioms; you check a single closure property (and that the set is nonempty). Every
+time we later claim "the column space," "the null space," or "the set of estimable contrasts" is a
+subspace, this one check is all we run.
+
+Every space $V$ has at least the two *trivial* subspaces $\{\mathbf{0}\}$ and $V$ itself. The
+intersection of subspaces is again a subspace, a fact we use repeatedly; the union is not, in general
+(Exercise @exr-la1-subspace-intersection).
+
+::: {#lem-intersection-subspace}
+## Intersections of subspaces
+If $\{U_\alpha\}_{\alpha\in A}$ is any family of subspaces of $V$, then
+$\bigcap_{\alpha\in A} U_\alpha$ is a subspace of $V$.
+:::
+
+::: {.proof}
+Write $U=\bigcap_\alpha U_\alpha$. Each $U_\alpha$ contains $\mathbf{0}$, so $\mathbf{0}\in U$ and $U$ is
+nonempty. If $\mathbf{u},\mathbf{v}\in U$ and $a,b\in\mathbb{R}$, then for every $\alpha$ we have
+$\mathbf{u},\mathbf{v}\in U_\alpha$, hence $a\mathbf{u}+b\mathbf{v}\in U_\alpha$ by
+@lem-subspace-criterion. As this holds for all $\alpha$, $a\mathbf{u}+b\mathbf{v}\in U$. By
+@lem-subspace-criterion, $U$ is a subspace. $\square$
+:::
+
+To build subspaces we take all linear combinations of a chosen set of vectors. This is the *span*.
+
+::: {#def-span}
+## Linear combination and span
+A **linear combination** of vectors $\mathbf{v}_1,\dots,\mathbf{v}_k\in V$ is any vector of the form
+$\sum_{i=1}^k c_i\mathbf{v}_i$ with $c_1,\dots,c_k\in\mathbb{R}$. For a subset $S\subseteq V$, the
+**span** of $S$, written $\operatorname{span}(S)$, is the set of all linear combinations of finitely
+many vectors of $S$:
+$$
+\operatorname{span}(S)=\Big\{\textstyle\sum_{i=1}^{k}c_i\mathbf{v}_i : k\ge 0,\ \mathbf{v}_i\in S,\
+c_i\in\mathbb{R}\Big\},
+$$
+with the convention $\operatorname{span}(\emptyset)=\{\mathbf{0}\}$ (the empty sum is $\mathbf{0}$). We
+say $S$ **spans** $V$, or $S$ is a **spanning set**, if $\operatorname{span}(S)=V$.
+:::
+
+**What this means.** The span of a set is every vector you can build by mixing its members with
+real-number weights, the way a pharmacist mixes stock solutions. In the running trial,
+$\operatorname{span}\{\mathbf{1}_4,\mathbf{t}\}$ is precisely the set of fitted-value patterns
+$\mathbf{X}\boldsymbol\beta$ as $\boldsymbol\beta$ ranges over all of $\mathbb{R}^2$, because
+$\mathbf{X}\boldsymbol\beta=\beta_0\mathbf{1}_4+\beta_1\mathbf{t}$ is exactly such a mixture. "The model
+can reproduce outcome $\mathbf{y}$" means "$\mathbf{y}$ lies in the span of the design columns."
+
+::: {#lem-span-smallest-subspace}
+## Span is the smallest containing subspace
+For any $S\subseteq V$, $\operatorname{span}(S)$ is a subspace of $V$, and it is the smallest subspace
+containing $S$: if $U$ is any subspace with $S\subseteq U$, then $\operatorname{span}(S)\subseteq U$.
+:::
+
+::: {.proof}
+That $\operatorname{span}(S)$ is a subspace is immediate from @lem-subspace-criterion: a linear
+combination of two linear combinations of elements of $S$ is again a (finite) linear combination of
+elements of $S$, and $\mathbf{0}\in\operatorname{span}(S)$ by the empty-sum convention. For minimality,
+let $U$ be a subspace with $S\subseteq U$. Any element of $\operatorname{span}(S)$ has the form
+$\sum_i c_i\mathbf{v}_i$ with $\mathbf{v}_i\in S\subseteq U$; since $U$ is closed under linear
+combinations (@lem-subspace-criterion, applied repeatedly), this element lies in $U$. Hence
+$\operatorname{span}(S)\subseteq U$. $\square$
+:::
+## Linear independence, basis, and dimension {#sec-la1-basis}
+
+A spanning set may be wasteful: some of its vectors may be expressible through the others. Stripping
+away that redundancy leads to the notions of independence and basis, and to the single most important
+invariant of a vector space, its dimension.
+
+::: {#def-linear-independence}
+## Linear independence
+A finite list of vectors $\mathbf{v}_1,\dots,\mathbf{v}_k$ in $V$ is **linearly independent** if the
+only scalars $c_1,\dots,c_k$ with
+$$
+c_1\mathbf{v}_1+\dots+c_k\mathbf{v}_k=\mathbf{0}
+$$
+are $c_1=\dots=c_k=0$. A list that is not linearly independent is **linearly dependent**; equivalently,
+it is dependent if some nontrivial linear combination of its vectors equals $\mathbf{0}$. An infinite
+set is linearly independent if every finite sublist is.
+:::
+
+**What this means.** Independence is the precise form of "no column is redundant given the others." A
+dependence relation $\sum_i c_i\mathbf{v}_i=\mathbf{0}$ with some $c_i\neq 0$ is a recipe for writing one
+vector in terms of the rest, so dependence is exactly the situation where a design column duplicates
+information already carried by the other columns, the structural cause of the dummy-variable trap.
+
+::: {#exm-la1-span-dependence}
+## A span, a dependent vector, and an independent one
+Work in $\mathbb{R}^3$ and take $\mathbf{v}_1=(1,0,0)^\top$ and $\mathbf{v}_2=(0,1,0)^\top$. Their span
+$\operatorname{span}\{\mathbf{v}_1,\mathbf{v}_2\}=\{(a,b,0)^\top:a,b\in\mathbb{R}\}$ is the horizontal
+plane, the floor at height zero. Now compare two candidate third vectors.
+
+- $\mathbf{v}_3=(2,3,0)^\top$ lies *in* that plane, because $\mathbf{v}_3=2\mathbf{v}_1+3\mathbf{v}_2$.
+  The list $\mathbf{v}_1,\mathbf{v}_2,\mathbf{v}_3$ is therefore linearly *dependent*: the relation
+  $2\mathbf{v}_1+3\mathbf{v}_2-\mathbf{v}_3=\mathbf{0}$ has nonzero coefficients. Adding $\mathbf{v}_3$
+  enlarges the list but not the span.
+- $\mathbf{w}=(0,0,1)^\top$ points straight up, *out of* the plane. The list
+  $\mathbf{v}_1,\mathbf{v}_2,\mathbf{w}$ is linearly *independent*, and its span is all of $\mathbb{R}^3$.
+
+The geometric picture, two vectors spanning a plane and a third either lying in the plane (dependent) or
+standing off it (independent), is the entire content of independence. The dependent third vector is the
+algebraic image of a redundant design column: it adds notation but no new modeling capacity.
+$\blacktriangleleft$
+:::
+
+Linear independence is exactly the property that representations as linear combinations, when they
+exist, are *unique*.
+
+::: {#lem-dependence}
+## Dependence lemma
+Let $\mathbf{v}_1,\dots,\mathbf{v}_k$ be a list in $V$ with $\mathbf{v}_1\neq\mathbf{0}$. The list is
+linearly dependent if and only if there is an index $i\in\{2,\dots,k\}$ such that
+$\mathbf{v}_i\in\operatorname{span}(\mathbf{v}_1,\dots,\mathbf{v}_{i-1})$. Moreover, for such an $i$,
+deleting $\mathbf{v}_i$ does not change the span:
+$\operatorname{span}(\mathbf{v}_1,\dots,\mathbf{v}_k)
+=\operatorname{span}(\mathbf{v}_1,\dots,\mathbf{v}_{i-1},\mathbf{v}_{i+1},\dots,\mathbf{v}_k)$.
+:::
+
+::: {.proof}
+If some $\mathbf{v}_i=\sum_{j<i}a_j\mathbf{v}_j$, then
+$a_1\mathbf{v}_1+\dots+a_{i-1}\mathbf{v}_{i-1}-\mathbf{v}_i=\mathbf{0}$ is a nontrivial relation (the
+coefficient of $\mathbf{v}_i$ is $-1$), so the list is dependent.
+
+Conversely, suppose the list is dependent, so $\sum_{j=1}^k c_j\mathbf{v}_j=\mathbf{0}$ with not all
+$c_j$ zero. Let $i$ be the largest index with $c_i\neq 0$. We choose the *largest* such index on purpose:
+because every coefficient beyond it vanishes ($c_j=0$ for $j>i$), the relation collapses to
+$c_i\mathbf{v}_i=-\sum_{j<i}c_j\mathbf{v}_j$, with only *earlier* vectors on the right. Any index with a
+nonzero coefficient could be solved for, but only the largest one is guaranteed to leave the remaining
+terms strictly to its left, which is the form the deletion arguments below require. Now $i\geq 2$: if
+$i=1$ we would have $c_1\mathbf{v}_1=\mathbf{0}$ with $c_1\neq 0$, forcing $\mathbf{v}_1=\mathbf{0}$ by
+@lem-vector-space-basics(5), contrary to hypothesis. Dividing by $c_i$,
+$\mathbf{v}_i=-c_i^{-1}\sum_{j<i}c_j\mathbf{v}_j\in\operatorname{span}(\mathbf{v}_1,\dots,\mathbf{v}_{i-1})$.
+
+For the last claim, write $U=\operatorname{span}(\mathbf{v}_1,\dots,\mathbf{v}_{i-1},\mathbf{v}_{i+1},
+\dots,\mathbf{v}_k)$. Clearly $U\subseteq\operatorname{span}(\mathbf{v}_1,\dots,\mathbf{v}_k)$. For the
+reverse inclusion it suffices to show $\mathbf{v}_i\in U$, and indeed
+$\mathbf{v}_i\in\operatorname{span}(\mathbf{v}_1,\dots,\mathbf{v}_{i-1})\subseteq U$. Hence any linear
+combination involving $\mathbf{v}_i$ can be rewritten without it, and the two spans coincide. $\square$
+:::
+
+**What this means.** A dependent list always has a "latest" redundant member that the earlier ones
+already build, and deleting it costs nothing. This is the engine of the thinning procedure
+(@lem-reduction-to-basis) that turns any spanning set into a non-redundant one, the abstract version of
+dropping a collinear column from a design matrix.
+
+::: {#def-basis}
+## Basis
+A **basis** of a vector space $V$ is a list (or set) of vectors that is linearly independent and spans
+$V$. A space is **finite-dimensional** if it has a finite spanning set; otherwise it is
+*infinite-dimensional*.
+:::
+
+**What this means.** A basis is a coordinate system: a spanning set with no redundancy, so every vector
+is built from it in exactly one way (the next lemma). For a design, a basis of the column space is a
+minimal set of columns that carries all the modeling capacity, with nothing duplicated.
+
+::: {#lem-unique-representation}
+## Unique representation in a basis
+If $\mathbf{v}_1,\dots,\mathbf{v}_n$ is a basis of $V$, then every $\mathbf{x}\in V$ has a unique
+expression $\mathbf{x}=\sum_{i=1}^n c_i\mathbf{v}_i$. The scalars $c_i$ are the **coordinates** of
+$\mathbf{x}$ in the basis.
+:::
+
+::: {.proof}
+Existence holds because the basis spans $V$. For uniqueness, suppose
+$\sum_i c_i\mathbf{v}_i=\sum_i c_i'\mathbf{v}_i$. Subtracting gives
+$\sum_i (c_i-c_i')\mathbf{v}_i=\mathbf{0}$, and linear independence forces $c_i-c_i'=0$ for every $i$.
+$\square$
+:::
+
+::: {#exm-standard-basis}
+## The standard basis of $\mathbb{R}^n$
+Let $\mathbf{e}_i\in\mathbb{R}^n$ be the vector with a $1$ in coordinate $i$ and $0$ elsewhere. The list
+$\mathbf{e}_1,\dots,\mathbf{e}_n$ is a basis of $\mathbb{R}^n$: it spans, because
+$\mathbf{x}=\sum_i x_i\mathbf{e}_i$, and it is independent, because $\sum_i c_i\mathbf{e}_i=\mathbf{0}$
+reads coordinatewise as $c_i=0$ for all $i$. The coordinates of $\mathbf{x}$ in the standard basis are
+its entries $x_i$. $\blacktriangleleft$
+:::
+We now establish the central fact of the section: in a finite-dimensional space, any two bases have the
+same number of elements. The engine is the following replacement theorem, due in essence to Steinitz.
+Its content is that an independent list can never be longer than a spanning list.
+
+::: {#thm-steinitz-exchange}
+## Steinitz exchange (replacement) theorem
+Let $V$ be a vector space. Suppose $\mathbf{u}_1,\dots,\mathbf{u}_m$ is linearly independent and
+$\mathbf{w}_1,\dots,\mathbf{w}_n$ spans $V$. Then $m\leq n$.
+:::
+
+::: {.proof}
+We show by induction on $k=0,1,\dots$ that, after suitable reindexing of the $\mathbf{w}$'s, the list
+$$
+\mathbf{u}_1,\dots,\mathbf{u}_k,\ \mathbf{w}_{k+1},\dots,\mathbf{w}_n
+$$
+spans $V$, for every $k$ up to $\min(m,n)$. The case $k=0$ is the hypothesis that the $\mathbf{w}$'s
+span. Assume the claim for some $k<m$; in particular $k\le n$, and we must also have $k<n$, as we now
+see while completing the step.
+
+By the inductive hypothesis the list $\mathbf{u}_1,\dots,\mathbf{u}_k,\mathbf{w}_{k+1},\dots,\mathbf{w}_n$
+spans $V$, so we may write
+$$
+\mathbf{u}_{k+1}=\sum_{i=1}^{k} b_i\,\mathbf{u}_i+\sum_{j=k+1}^{n} c_j\,\mathbf{w}_j .
+$$
+Not all of the $c_j$ can be zero: if they were, then $\mathbf{u}_{k+1}$ would be a linear combination of
+$\mathbf{u}_1,\dots,\mathbf{u}_k$, contradicting the linear independence of
+$\mathbf{u}_1,\dots,\mathbf{u}_{k+1}$. In particular the index set $\{k+1,\dots,n\}$ is nonempty, so
+$k<n$. Choose $j_0$ with $c_{j_0}\neq 0$ and reindex the remaining $\mathbf{w}$'s so that $j_0=k+1$. This
+relabeling is harmless: the vectors $\mathbf{w}_{k+1},\dots,\mathbf{w}_n$ enter the spanning hypothesis
+only as an unordered pool, so renaming which one we call $\mathbf{w}_{k+1}$ (namely the one whose
+coefficient $c_{j_0}$ is nonzero) changes no assumption; it merely places the vector we are about to
+evict in a convenient slot. Solving for $\mathbf{w}_{k+1}$,
+$$
+\mathbf{w}_{k+1}=c_{k+1}^{-1}\Big(\mathbf{u}_{k+1}-\sum_{i=1}^{k} b_i\mathbf{u}_i
+-\sum_{j=k+2}^{n} c_j\mathbf{w}_j\Big),
+$$
+which exhibits $\mathbf{w}_{k+1}$ as a linear combination of
+$\mathbf{u}_1,\dots,\mathbf{u}_{k+1},\mathbf{w}_{k+2},\dots,\mathbf{w}_n$. Hence replacing
+$\mathbf{w}_{k+1}$ by $\mathbf{u}_{k+1}$ preserves the span (anything expressible with $\mathbf{w}_{k+1}$
+is expressible without it), and the list
+$\mathbf{u}_1,\dots,\mathbf{u}_{k+1},\mathbf{w}_{k+2},\dots,\mathbf{w}_n$ spans $V$. This completes the
+induction.
+
+Now suppose, for contradiction, that $m>n$. Running the induction to $k=n$ shows that
+$\mathbf{u}_1,\dots,\mathbf{u}_n$ spans $V$. But then $\mathbf{u}_{n+1}$ (which exists, as $m>n$) lies in
+$\operatorname{span}(\mathbf{u}_1,\dots,\mathbf{u}_n)$, contradicting the linear independence of
+$\mathbf{u}_1,\dots,\mathbf{u}_m$. Therefore $m\leq n$. $\square$
+:::
+
+**Why this matters.** Each independent vector "evicts" one spanning vector, so you can never have more
+independent vectors than spanning ones. This is what makes dimension well-defined (next), and a
+well-defined dimension is what lets us speak of *the* number of effects a design can estimate. If two
+honest analysts counted estimable effects differently, the whole notion of identifiability would be
+incoherent; this theorem rules that out.
+
+::: {#exm-la1-steinitz-micro}
+## The replacement step on numbers
+Take $V=\mathbb{R}^2$. A spanning list is $\mathbf{w}_1=(1,0)^\top$, $\mathbf{w}_2=(0,1)^\top$,
+$\mathbf{w}_3=(2,1)^\top$ (three vectors, plainly redundant). An independent list is
+$\mathbf{u}_1=(1,1)^\top$, $\mathbf{u}_2=(1,-1)^\top$.
+
+*Step $k=0\to1$.* Express $\mathbf{u}_1$ in the spanning list:
+$\mathbf{u}_1=(1,1)^\top=1\cdot\mathbf{w}_1+1\cdot\mathbf{w}_2+0\cdot\mathbf{w}_3$. A nonzero coefficient
+sits on $\mathbf{w}_1$, so we relabel that vector as the one to evict and replace it by $\mathbf{u}_1$.
+The new list $\mathbf{u}_1,\mathbf{w}_2,\mathbf{w}_3$ still spans $\mathbb{R}^2$.
+
+*Step $k=1\to2$.* Express $\mathbf{u}_2$ in the current list:
+$\mathbf{u}_2=(1,-1)^\top=1\cdot\mathbf{u}_1-2\cdot\mathbf{w}_2+0\cdot\mathbf{w}_3$. A nonzero coefficient
+sits on a remaining $\mathbf{w}$, namely $\mathbf{w}_2$, so we evict $\mathbf{w}_2$ and replace it by
+$\mathbf{u}_2$. The new list $\mathbf{u}_1,\mathbf{u}_2,\mathbf{w}_3$ spans $\mathbb{R}^2$.
+
+Two independent vectors have now evicted two spanning vectors; only $\mathbf{w}_3$ is left over. There
+was no way to fit a third independent vector, since $\mathbf{u}_1,\mathbf{u}_2$ already span. That is
+$m=2\le n=3$ made visible. $\blacktriangleleft$
+:::
+
+::: {#cor-dimension-well-defined}
+## Dimension is well-defined
+Any two bases of a finite-dimensional vector space $V$ have the same number of elements.
+:::
+
+::: {.proof}
+Let $\mathbf{u}_1,\dots,\mathbf{u}_m$ and $\mathbf{w}_1,\dots,\mathbf{w}_n$ be two bases. The first is
+independent and the second spans, so @thm-steinitz-exchange gives $m\leq n$. Interchanging their roles
+(the second is independent and the first spans) gives $n\leq m$. Hence $m=n$. $\square$
+:::
+
+::: {#def-dimension}
+## Dimension
+The **dimension** $\dim V$ of a finite-dimensional vector space $V$ is the number of elements in any
+basis of $V$; by @cor-dimension-well-defined this number does not depend on the chosen basis. We set
+$\dim\{\mathbf{0}\}=0$, with the empty list as basis.
+:::
+
+**What this means.** Dimension is the number of independent directions a space has, equivalently the
+number of coordinates needed to name a point in it. For the column space of a design it counts the
+distinct effects the design can resolve; for the null space it counts the independent ways one can
+change the coefficients without changing any prediction. Both counts drive every degrees-of-freedom
+statement later in the book.
+
+Two existence results complete the picture: spanning sets can be thinned to bases, and independent lists
+can be fattened to bases. Both are constructive and elementary, and we use them in the proof of the
+rank-nullity theorem.
+
+::: {#lem-reduction-to-basis}
+## Every finite spanning set contains a basis
+If a finite list $\mathbf{w}_1,\dots,\mathbf{w}_n$ spans $V$, then some sublist of it is a basis of $V$.
+In particular every finite-dimensional space has a basis, and $\dim V\leq n$.
+:::
+
+::: {.proof}
+Scan the list from left to right. Delete $\mathbf{w}_1$ if $\mathbf{w}_1=\mathbf{0}$. Then, for
+$i=2,3,\dots$, delete $\mathbf{w}_i$ if it lies in the span of the vectors that precede it and have
+survived so far. By @lem-dependence each deletion leaves the span unchanged, so the surviving sublist
+still spans $V$. When the scan ends, no surviving vector is in the span of its predecessors, so by the
+contrapositive of @lem-dependence (and $\mathbf{w}_1\ne\mathbf{0}$ among survivors) the surviving list is
+linearly independent. An independent spanning list is a basis. Since the basis is a sublist of the
+original $n$ vectors, $\dim V\leq n$. $\square$
+:::
+
+**What this means.** This "deletion scan" is exactly the thinning of a redundant set of columns down to
+a non-redundant core; @exm-la1-elimination later carries it out on a concrete matrix, where the
+surviving columns are the *pivot columns*. Note one byproduct used repeatedly below: a space spanned by
+$n$ vectors has dimension at most $n$, because the scan can only shrink the list.
+
+::: {#lem-basis-extension}
+## Every independent list extends to a basis
+Let $V$ be finite-dimensional and let $\mathbf{u}_1,\dots,\mathbf{u}_k$ be linearly independent in $V$.
+Then there exist vectors $\mathbf{u}_{k+1},\dots,\mathbf{u}_n$ such that
+$\mathbf{u}_1,\dots,\mathbf{u}_n$ is a basis of $V$. Consequently $k\le \dim V$, with equality if and
+only if $\mathbf{u}_1,\dots,\mathbf{u}_k$ already spans $V$.
+:::
+
+::: {.proof}
+Let $\mathbf{v}_1,\dots,\mathbf{v}_d$ be a basis of $V$ (which exists by @lem-reduction-to-basis). The
+combined list
+$$
+\mathbf{u}_1,\dots,\mathbf{u}_k,\ \mathbf{v}_1,\dots,\mathbf{v}_d
+$$
+spans $V$, since it contains the spanning set $\mathbf{v}_1,\dots,\mathbf{v}_d$. Apply the deletion scan
+of @lem-reduction-to-basis to this combined list, processed left to right. Because
+$\mathbf{u}_1,\dots,\mathbf{u}_k$ is independent, no $\mathbf{u}_i$ lies in the span of its predecessors
+(which are among the other $\mathbf{u}$'s), so the scan never deletes a $\mathbf{u}$; it only deletes
+some of the $\mathbf{v}$'s. The result is a basis containing $\mathbf{u}_1,\dots,\mathbf{u}_k$. The
+inequality $k\le\dim V$ follows because the basis has $\dim V$ elements and contains the $k$ vectors
+$\mathbf{u}_i$; equality forces no $\mathbf{v}$ to survive, that is, the $\mathbf{u}$'s already span.
+$\square$
+:::
+
+::: {.remark}
+A useful corollary, used silently below: in a space of dimension $n$, any independent list of length $n$
+is automatically a basis (it cannot be extended, so it already spans), and any spanning list of length
+$n$ is automatically a basis (it cannot be reduced, so it is already independent). Counting suffices to
+certify a basis once the dimension is known.
+:::
+## Linear maps {#sec-la1-linear-maps}
+
+The maps that respect vector-space structure are the linear maps. They are the *structure-preserving
+maps* of the theory (in the language of abstract algebra, its *morphisms*; the word just means a map
+that respects the operations, and you need it nowhere else), and matrices are nothing but their
+coordinate descriptions.
+
+::: {#def-linear-map}
+## Linear map
+Let $V$ and $W$ be real vector spaces. A function $T\colon V\to W$ is a **linear map** (or *linear
+transformation*) if it preserves addition and scalar multiplication:
+$$
+T(\mathbf{u}+\mathbf{v})=T(\mathbf{u})+T(\mathbf{v}),\qquad
+T(a\mathbf{v})=a\,T(\mathbf{v})
+$$
+for all $\mathbf{u},\mathbf{v}\in V$ and $a\in\mathbb{R}$. Equivalently, $T$ is linear if and only if
+$T(a\mathbf{u}+b\mathbf{v})=a\,T(\mathbf{u})+b\,T(\mathbf{v})$ for all $\mathbf{u},\mathbf{v}\in V$ and
+$a,b\in\mathbb{R}$. A bijective linear map is an **isomorphism**, and $V,W$ are *isomorphic* when one
+exists. We write $T\mathbf{v}$ for $T(\mathbf{v})$.
+:::
+
+**What this means.** A linear map is a transformation that commutes with mixing: transform-then-mix
+equals mix-then-transform. The single most important example is "multiply by the design matrix,"
+$\boldsymbol\beta\mapsto\mathbf{X}\boldsymbol\beta$, which turns coefficients into fitted values;
+linearity is exactly the everyday fact that doubling all the effects doubles all the predictions, and
+adding two coefficient vectors adds their predictions.
+
+The equivalence of the two formulations is immediate: the single condition with $a=b=1$ gives additivity
+and with $b=0$ gives homogeneity, while conversely additivity and homogeneity combine to give the single
+condition. Any linear map sends $\mathbf{0}$ to $\mathbf{0}$, since
+$T\mathbf{0}=T(0\cdot\mathbf{0})=0\cdot T\mathbf{0}=\mathbf{0}$.
+
+::: {#def-kernel-image}
+## Kernel and image
+Let $T\colon V\to W$ be linear. The **kernel** (or *null space*) of $T$ is
+$$
+\ker T=\{\mathbf{v}\in V : T\mathbf{v}=\mathbf{0}\}\subseteq V,
+$$
+and the **image** (or *range*) of $T$ is
+$$
+\operatorname{im}T=\{T\mathbf{v} : \mathbf{v}\in V\}\subseteq W .
+$$
+:::
+
+**What this means.** Two readings you should carry forward. First, the kernel is the set of inputs the
+map sends to zero; for $T(\boldsymbol\beta)=\mathbf{X}\boldsymbol\beta$ it is the set of coefficient
+changes that leave every fitted value untouched. So if $\mathbf{z}\in\ker T$, then $\boldsymbol\beta$ and
+$\boldsymbol\beta+\mathbf{z}$ predict identically, and no data can tell them apart; this is
+non-identifiability, previewed in @sec-la1-preview and made precise in @sec-la1-systems. Second, the
+image is the set of reachable outputs; for the design map it is precisely the set of fitted-value
+patterns the model can produce. In matrix language the kernel is the *null space* and the image is the
+*column space*; the two words name the same objects, and we use them interchangeably from
+@sec-la1-rank-nullity on.
+
+::: {#lem-kernel-image-subspace}
+## Kernel and image are subspaces
+For a linear map $T\colon V\to W$, $\ker T$ is a subspace of $V$ and $\operatorname{im}T$ is a subspace
+of $W$.
+:::
+
+::: {.proof}
+Both contain the relevant zero vector: $T\mathbf{0}=\mathbf{0}$ shows $\mathbf{0}\in\ker T$ and
+$\mathbf{0}=T\mathbf{0}\in\operatorname{im}T$. For the kernel, if $\mathbf{u},\mathbf{v}\in\ker T$ and
+$a,b\in\mathbb{R}$, then
+$T(a\mathbf{u}+b\mathbf{v})=a\,T\mathbf{u}+b\,T\mathbf{v}=a\mathbf{0}+b\mathbf{0}=\mathbf{0}$, so
+$a\mathbf{u}+b\mathbf{v}\in\ker T$. For the image, if
+$\mathbf{w}_1=T\mathbf{u}_1,\ \mathbf{w}_2=T\mathbf{u}_2\in\operatorname{im}T$, then
+$a\mathbf{w}_1+b\mathbf{w}_2=T(a\mathbf{u}_1+b\mathbf{u}_2)\in\operatorname{im}T$. Both are subspaces by
+@lem-subspace-criterion. $\square$
+:::
+
+The kernel measures the failure of injectivity, exactly.
+
+::: {#lem-injective-trivial-kernel}
+## Injectivity equals trivial kernel
+A linear map $T\colon V\to W$ is injective if and only if $\ker T=\{\mathbf{0}\}$.
+:::
+
+::: {.proof}
+If $T$ is injective, then $T\mathbf{v}=\mathbf{0}=T\mathbf{0}$ forces $\mathbf{v}=\mathbf{0}$, so
+$\ker T=\{\mathbf{0}\}$. Conversely, suppose $\ker T=\{\mathbf{0}\}$ and $T\mathbf{u}=T\mathbf{v}$. Then
+$T(\mathbf{u}-\mathbf{v})=T\mathbf{u}-T\mathbf{v}=\mathbf{0}$, so
+$\mathbf{u}-\mathbf{v}\in\ker T=\{\mathbf{0}\}$, giving $\mathbf{u}=\mathbf{v}$. $\square$
+:::
+
+**Why this matters.** "Injective" means different inputs give different outputs, that is, different
+coefficient vectors give different predictions; by this lemma that happens exactly when the kernel is
+trivial. Identifiability of all coefficients is therefore the single condition $\ker T=\{\mathbf{0}\}$,
+which we will meet again as full column rank.
+
+A linear map is rigidly determined by its values on a basis. This single lemma is what makes matrices
+possible.
+
+::: {#lem-map-determined-by-basis}
+## A linear map is determined by its action on a basis
+Let $\mathbf{v}_1,\dots,\mathbf{v}_n$ be a basis of $V$ and let $\mathbf{w}_1,\dots,\mathbf{w}_n$ be any
+vectors in $W$. Then there exists a unique linear map $T\colon V\to W$ with $T\mathbf{v}_i=\mathbf{w}_i$
+for all $i$.
+:::
+
+::: {.proof}
+*Existence.* By @lem-unique-representation every $\mathbf{x}\in V$ has a unique expansion
+$\mathbf{x}=\sum_i c_i\mathbf{v}_i$. Define $T\mathbf{x}=\sum_i c_i\mathbf{w}_i$. This is well-defined
+because the $c_i$ are unique. It is linear: if $\mathbf{x}=\sum_i c_i\mathbf{v}_i$ and
+$\mathbf{y}=\sum_i d_i\mathbf{v}_i$, then $a\mathbf{x}+b\mathbf{y}=\sum_i(ac_i+bd_i)\mathbf{v}_i$, so
+$T(a\mathbf{x}+b\mathbf{y})=\sum_i(ac_i+bd_i)\mathbf{w}_i=a\,T\mathbf{x}+b\,T\mathbf{y}$. And
+$T\mathbf{v}_i=\mathbf{w}_i$ because $\mathbf{v}_i$ has coordinate vector $\mathbf{e}_i$.
+
+*Uniqueness.* If $S$ is linear with $S\mathbf{v}_i=\mathbf{w}_i$, then for any
+$\mathbf{x}=\sum_i c_i\mathbf{v}_i$, linearity gives
+$S\mathbf{x}=\sum_i c_i S\mathbf{v}_i=\sum_i c_i\mathbf{w}_i=T\mathbf{x}$. Hence $S=T$. $\square$
+:::
+## Matrices as linear maps {#sec-la1-matrices}
+
+We now specialize to coordinate spaces and show that the abstract maps of @sec-la1-linear-maps are
+*precisely* the matrices, with matrix multiplication forced by composition. First, recall the action of
+a matrix on a vector.
+
+For $A\in\mathbb{R}^{m\times n}$ with columns $\mathbf{a}_1,\dots,\mathbf{a}_n\in\mathbb{R}^m$ and a
+vector $\mathbf{x}=(x_1,\dots,x_n)^\top\in\mathbb{R}^n$, the **matrix-vector product** is the linear
+combination of columns
+$$
+A\mathbf{x}=\sum_{j=1}^{n} x_j\,\mathbf{a}_j,\qquad\text{equivalently}\qquad
+(A\mathbf{x})_i=\sum_{j=1}^{n} A_{ij}\,x_j .
+$$ {#eq-matvec}
+The two formulas agree because the $i$-th entry of $\sum_j x_j\mathbf{a}_j$ is $\sum_j x_j A_{ij}$. Define
+$T_A\colon\mathbb{R}^n\to\mathbb{R}^m$ by $T_A(\mathbf{x})=A\mathbf{x}$.
+
+**What this means.** The left-hand formula in @eq-matvec is the one to internalize: $A\mathbf{x}$ is the
+columns of $A$ mixed with weights from $\mathbf{x}$. So the fitted-value vector $\mathbf{X}\boldsymbol\beta$
+is the design columns blended in the proportions $\boldsymbol\beta$, which is why "reproducible outcomes"
+and "span of the columns" are the same set.
+
+::: {#prp-matrices-are-maps}
+## Matrices are exactly the linear maps between coordinate spaces
+For every $A\in\mathbb{R}^{m\times n}$, the map $T_A\colon\mathbb{R}^n\to\mathbb{R}^m$,
+$T_A(\mathbf{x})=A\mathbf{x}$, is linear. Conversely, for every linear map
+$T\colon\mathbb{R}^n\to\mathbb{R}^m$ there is a unique matrix $A\in\mathbb{R}^{m\times n}$ with
+$T=T_A$, namely the matrix whose $j$-th column is $T\mathbf{e}_j$:
+$$
+A=\big[\,T\mathbf{e}_1\ \ T\mathbf{e}_2\ \cdots\ T\mathbf{e}_n\,\big].
+$$
+:::
+
+::: {.proof}
+Linearity of $T_A$ follows from the column formula in @eq-matvec:
+$A(a\mathbf{x}+b\mathbf{y})=\sum_j(ax_j+by_j)\mathbf{a}_j
+=a\sum_j x_j\mathbf{a}_j+b\sum_j y_j\mathbf{a}_j=aA\mathbf{x}+bA\mathbf{y}$.
+
+Conversely, let $T$ be linear and set $A=[\,T\mathbf{e}_1\ \cdots\ T\mathbf{e}_n\,]$, so that the $j$-th
+column is $\mathbf{a}_j=T\mathbf{e}_j$. For any $\mathbf{x}=\sum_j x_j\mathbf{e}_j$, linearity gives
+$T\mathbf{x}=\sum_j x_j\,T\mathbf{e}_j=\sum_j x_j\mathbf{a}_j=A\mathbf{x}=T_A\mathbf{x}$, so $T=T_A$.
+Uniqueness: if $T_A=T_B$ then $A\mathbf{e}_j=B\mathbf{e}_j$ for all $j$, and $A\mathbf{e}_j$ is the
+$j$-th column of $A$, so $A$ and $B$ have the same columns, hence $A=B$. $\square$
+:::
+
+**Why this matters.** "Matrix" and "linear map between coordinate spaces" are two names for one thing,
+so every theorem we prove about abstract linear maps (the rank-nullity theorem, in particular) is
+automatically a theorem about design matrices. This is the payoff of the abstraction promised at the
+start of @sec-la1-vector-spaces.
+
+Composition of linear maps corresponds to a binary operation on matrices. Demanding that the operation
+represent composition forces its definition; this is the conceptual origin of the matrix product.
+
+::: {#thm-matrix-mult-composition}
+## Matrix multiplication is composition of linear maps
+Let $A\in\mathbb{R}^{m\times n}$ and $B\in\mathbb{R}^{n\times p}$, with associated maps
+$T_A\colon\mathbb{R}^n\to\mathbb{R}^m$ and $T_B\colon\mathbb{R}^p\to\mathbb{R}^n$. The composite
+$T_A\circ T_B\colon\mathbb{R}^p\to\mathbb{R}^m$ is linear, and its matrix is the product $AB$ defined by
+$$
+(AB)_{ik}=\sum_{j=1}^{n} A_{ij}B_{jk},\qquad i=1,\dots,m,\ \ k=1,\dots,p .
+$$ {#eq-matmul}
+That is, $T_A\circ T_B=T_{AB}$, equivalently $A(B\mathbf{x})=(AB)\mathbf{x}$ for all
+$\mathbf{x}\in\mathbb{R}^p$.
+:::
+
+::: {.proof}
+A composite of linear maps is linear: $(T_A\circ T_B)(a\mathbf{x}+b\mathbf{y})
+=T_A\big(aT_B\mathbf{x}+bT_B\mathbf{y}\big)=a(T_A\circ T_B)\mathbf{x}+b(T_A\circ T_B)\mathbf{y}$. By
+@prp-matrices-are-maps the composite is $T_C$ for a unique matrix $C\in\mathbb{R}^{m\times p}$ whose
+$k$-th column is $(T_A\circ T_B)\mathbf{e}_k=T_A(T_B\mathbf{e}_k)=A\mathbf{b}_k$, where
+$\mathbf{b}_k=B\mathbf{e}_k$ is the $k$-th column of $B$. The $i$-th entry of the $k$-th column is
+therefore, by @eq-matvec,
+$$
+C_{ik}=(A\mathbf{b}_k)_i=\sum_{j=1}^{n} A_{ij}(\mathbf{b}_k)_j=\sum_{j=1}^{n} A_{ij}B_{jk}.
+$$
+Defining the matrix product $AB$ by exactly this formula @eq-matmul makes $C=AB$, so
+$T_A\circ T_B=T_{AB}$. $\square$
+:::
+
+**Why this matters.** The notation chapter's hat matrix and the residual maker, and every "first do
+this linear step, then that one" in later chapters, are compositions of linear maps; this theorem says
+their combined effect is again multiplication by a single matrix, computed by @eq-matmul. You may treat
+the row-by-column rule as a black box, knowing it is forced by the requirement that it represent doing
+one map after another.
+
+::: {.remark}
+Read in reverse, @thm-matrix-mult-composition explains every formal property of matrix multiplication
+without computation. Associativity $(AB)C=A(BC)$ holds because composition of functions is associative.
+Multiplication is generally noncommutative because composition is. The identity matrix
+$I_n=[\mathbf{e}_1\ \cdots\ \mathbf{e}_n]$ represents the identity map, so $AI_n=A$ and $I_mA=A$. We use
+these facts freely from now on.
+:::
+## Rank and the rank-nullity theorem {#sec-la1-rank-nullity}
+
+Two of the subspaces attached to a matrix already have names from @def-kernel-image, in the language of
+maps. We give them their matrix names now, so that nothing below refers forward. For
+$A\in\mathbb{R}^{m\times n}$, the **column space**
+$$
+\mathcal{C}(A)=\operatorname{im}T_A=\{A\mathbf{x}:\mathbf{x}\in\mathbb{R}^n\}\subseteq\mathbb{R}^m
+$$
+is the image of $T_A$ (by @eq-matvec, the span of the columns), and the **null space**
+$$
+\mathcal{N}(A)=\ker T_A=\{\mathbf{x}\in\mathbb{R}^n:A\mathbf{x}=\mathbf{0}\}\subseteq\mathbb{R}^n
+$$
+is the kernel of $T_A$. Both are subspaces by @lem-kernel-image-subspace. (The remaining two of the
+four fundamental subspaces, the row space and the left null space, are assembled in @def-column-space;
+we need only $\mathcal{C}(A)$ and $\mathcal{N}(A)$ here.) With these we can define the single most
+important integer attached to a matrix and prove the conservation law relating it to the null space. We
+state the theorem first for abstract maps, where the proof is cleanest, and then read off the matrix
+form.
+
+::: {#def-rank}
+## Rank and nullity
+Let $A\in\mathbb{R}^{m\times n}$. The **rank** of $A$ is the dimension of its column space,
+$$
+\operatorname{rank}(A)=\dim\mathcal{C}(A)=\dim\operatorname{im}T_A ,
+$$
+and the **nullity** of $A$ is $\dim\mathcal{N}(A)=\dim\ker T_A$. For a general linear map
+$T\colon V\to W$ between finite-dimensional spaces we likewise call $\dim\operatorname{im}T$ the rank of
+$T$ and $\dim\ker T$ its nullity.
+:::
+
+**What this means.** Rank counts the number of genuinely independent pieces of information the columns
+carry, that is, how many distinct effects the design can actually resolve. Two columns that are scalar
+multiples, or three columns with a hidden dependence like intercept-plus-two-indicators, contribute
+fewer to the rank than their count suggests. Nullity counts the leftover directions in coefficient space
+along which nothing observable changes.
+
+::: {#thm-rank-nullity}
+## Rank-nullity theorem
+Let $T\colon V\to W$ be a linear map with $\dim V=n<\infty$. Then
+$$
+\dim\ker T+\dim\operatorname{im}T=\dim V .
+$$ {#eq-rank-nullity}
+In matrix form, for $A\in\mathbb{R}^{m\times n}$,
+$$
+\operatorname{rank}(A)+\dim\mathcal{N}(A)=n ,
+$$
+the number of columns of $A$.
+:::
+
+::: {.proof}
+Let $k=\dim\ker T$ and choose a basis $\mathbf{u}_1,\dots,\mathbf{u}_k$ of $\ker T$ (a subspace of the
+finite-dimensional $V$, hence finite-dimensional). By @lem-basis-extension extend it to a basis
+$$
+\mathbf{u}_1,\dots,\mathbf{u}_k,\ \mathbf{w}_1,\dots,\mathbf{w}_r
+$$
+of $V$, where $k+r=\dim V=n$. We claim that $T\mathbf{w}_1,\dots,T\mathbf{w}_r$ is a basis of
+$\operatorname{im}T$; granting the claim, $\dim\operatorname{im}T=r=n-k$, which is @eq-rank-nullity.
+
+*Spanning.* Let $\mathbf{y}\in\operatorname{im}T$, say $\mathbf{y}=T\mathbf{x}$. Expand $\mathbf{x}$ in
+the basis: $\mathbf{x}=\sum_{i=1}^k a_i\mathbf{u}_i+\sum_{j=1}^r b_j\mathbf{w}_j$. Applying $T$ and using
+$T\mathbf{u}_i=\mathbf{0}$ (the $\mathbf{u}_i$ lie in $\ker T$),
+$$
+\mathbf{y}=T\mathbf{x}=\sum_{i=1}^k a_i\underbrace{T\mathbf{u}_i}_{=\mathbf{0}}
++\sum_{j=1}^r b_j\,T\mathbf{w}_j=\sum_{j=1}^r b_j\,T\mathbf{w}_j .
+$$
+So $\operatorname{im}T=\operatorname{span}(T\mathbf{w}_1,\dots,T\mathbf{w}_r)$.
+
+*Independence.* Suppose $\sum_{j=1}^r b_j\,T\mathbf{w}_j=\mathbf{0}$. Then
+$T\big(\sum_j b_j\mathbf{w}_j\big)=\mathbf{0}$, so $\sum_j b_j\mathbf{w}_j\in\ker T$, and we may write it
+in the kernel basis: $\sum_{j=1}^r b_j\mathbf{w}_j=\sum_{i=1}^k a_i\mathbf{u}_i$ for some scalars $a_i$.
+Rearranged,
+$$
+\sum_{i=1}^k(-a_i)\mathbf{u}_i+\sum_{j=1}^r b_j\mathbf{w}_j=\mathbf{0}.
+$$
+Because $\mathbf{u}_1,\dots,\mathbf{u}_k,\mathbf{w}_1,\dots,\mathbf{w}_r$ is a basis, hence independent,
+every coefficient vanishes; in particular all $b_j=0$. Thus $T\mathbf{w}_1,\dots,T\mathbf{w}_r$ is
+independent.
+
+Being independent and spanning, $T\mathbf{w}_1,\dots,T\mathbf{w}_r$ is a basis of $\operatorname{im}T$,
+proving the claim and the theorem. The matrix form is the special case $V=\mathbb{R}^n$, $W=\mathbb{R}^m$,
+$T=T_A$, where $\dim\operatorname{im}T_A=\operatorname{rank}(A)$ and $\dim\ker T_A=\dim\mathcal{N}(A)$.
+$\square$
+:::
+
+**Why this matters.** Rank-nullity is the conservation law behind every degrees-of-freedom count in the
+book. Read on the columns of a design: the $n$ columns split into $\operatorname{rank}(A)$ that carry
+estimable effects plus $\dim\mathcal{N}(A)$ that are pure redundancy. This is why a model with more
+columns than the data can support has a nontrivial null space, and why adding a column that is collinear
+with the others raises the nullity instead of the rank, "stealing" a direction from the effect you
+actually wanted to estimate rather than adding information. The companion count on the rows, that a trial
+with $m$ patients fitting $r$ independent effects leaves $m-r$ residual degrees of freedom, is the same
+theorem applied to the orthogonal-complement side and reappears throughout the regression chapters.
+
+A first dividend: isomorphisms preserve dimension, and finite-dimensional spaces are classified by a
+single number.
+
+::: {#cor-iso-preserves-dim}
+## Isomorphisms preserve dimension
+If $T\colon V\to W$ is an isomorphism of finite-dimensional spaces, then $\dim V=\dim W$. Conversely, any
+two real vector spaces of the same finite dimension are isomorphic; in particular every $n$-dimensional
+real vector space is isomorphic to $\mathbb{R}^n$.
+:::
+
+::: {.proof}
+If $T$ is an isomorphism then $\ker T=\{\mathbf{0}\}$ (injectivity, @lem-injective-trivial-kernel) and
+$\operatorname{im}T=W$ (surjectivity), so @eq-rank-nullity gives
+$\dim V=0+\dim W=\dim W$. Conversely, if $\dim V=\dim W=n$, choose bases
+$\mathbf{v}_1,\dots,\mathbf{v}_n$ of $V$ and $\mathbf{w}_1,\dots,\mathbf{w}_n$ of $W$ and let $T$ be the
+unique linear map with $T\mathbf{v}_i=\mathbf{w}_i$ (@lem-map-determined-by-basis). It carries a basis to
+a basis, so it is surjective (the image contains a spanning set) and injective (a relation
+$\sum c_i\mathbf{w}_i=\mathbf{0}$ forces all $c_i=0$, so $\ker T=\{\mathbf{0}\}$), hence an isomorphism.
+Taking $W=\mathbb{R}^n$ gives the last statement. $\square$
+:::
+## The four fundamental subspaces {#sec-la1-four-subspaces}
+
+Every matrix $A\in\mathbb{R}^{m\times n}$ carries four subspaces, two in $\mathbb{R}^n$ and two in
+$\mathbb{R}^m$. Their dimensions are governed by a single number, the rank, and they pair off into
+orthogonal complements. This is the organizing picture of @strang2016, and it is the picture every
+later identifiability argument draws on. Keep one slogan in mind: two of the subspaces live in
+*coefficient space* $\mathbb{R}^n$ (where $\boldsymbol\beta$ lives) and two live in *outcome space*
+$\mathbb{R}^m$ (where $\mathbf{y}$ lives); the summary table after the theorem keeps them straight.
+
+::: {#def-column-space}
+## The four fundamental subspaces
+For $A\in\mathbb{R}^{m\times n}$ we define:
+
+- the **column space** $\mathcal{C}(A)=\operatorname{span}(\mathbf{a}_1,\dots,\mathbf{a}_n)
+  =\{A\mathbf{x}:\mathbf{x}\in\mathbb{R}^n\}\subseteq\mathbb{R}^m$, the span of the columns;
+- the **row space** $\mathcal{C}(A^\top)=\{A^\top\mathbf{y}:\mathbf{y}\in\mathbb{R}^m\}
+  \subseteq\mathbb{R}^n$, the span of the rows (written as column vectors);
+- the **null space** $\mathcal{N}(A)=\{\mathbf{x}\in\mathbb{R}^n : A\mathbf{x}=\mathbf{0}\}
+  \subseteq\mathbb{R}^n$;
+- the **left null space** $\mathcal{N}(A^\top)=\{\mathbf{y}\in\mathbb{R}^m : A^\top\mathbf{y}=\mathbf{0}\}
+  \subseteq\mathbb{R}^m$, equivalently $\{\mathbf{y} : \mathbf{y}^\top A=\mathbf{0}^\top\}$.
+
+That $\mathcal{C}(A)=\{A\mathbf{x}\}$ is the content of @eq-matvec: $A\mathbf{x}$ ranges over all linear
+combinations of the columns as $\mathbf{x}$ ranges over $\mathbb{R}^n$. The four subspaces are subspaces
+by @lem-span-smallest-subspace and @lem-kernel-image-subspace.
+:::
+
+**What this means.** The column space and null space are the two we met already: outcomes the model can
+reproduce, and coefficient-changes that do nothing. The row space is the span of the rows, which turns
+out to be the set of coefficient directions the data *can* see; the left null space is its outcome-space
+mirror, the outcome patterns the model can *never* reproduce (pure residual directions). The running
+example computes all four explicitly in @exm-design-matrix, and the table below gives the trial reading
+of each at a glance.
+
+The first structural theorem equates two a priori different counts: the number of independent columns and
+the number of independent rows. We prove it through a rank factorization, which is useful in its own
+right.
+
+::: {#thm-row-rank-column-rank}
+## Row rank equals column rank
+For every $A\in\mathbb{R}^{m\times n}$, $\dim\mathcal{C}(A^\top)=\dim\mathcal{C}(A)$. Equivalently,
+$\operatorname{rank}(A^\top)=\operatorname{rank}(A)$.
+:::
+
+::: {.proof}
+Let $r=\dim\mathcal{C}(A)=\operatorname{rank}(A)$ and choose a basis
+$\mathbf{c}_1,\dots,\mathbf{c}_r$ of $\mathcal{C}(A)$. Form $C=[\mathbf{c}_1\ \cdots\ \mathbf{c}_r]
+\in\mathbb{R}^{m\times r}$. Each column $\mathbf{a}_j$ of $A$ lies in $\mathcal{C}(A)$, so it is a unique
+combination $\mathbf{a}_j=\sum_{k=1}^r F_{kj}\mathbf{c}_k=C\mathbf{f}_j$, where
+$\mathbf{f}_j=(F_{1j},\dots,F_{rj})^\top$. Assembling the $\mathbf{f}_j$ as columns of
+$F\in\mathbb{R}^{r\times n}$ gives a factorization of $A$ as a tall matrix times a short one, with the
+shared inner dimension equal to the rank; this is called the **rank factorization**,
+$$
+A=CF,\qquad C\in\mathbb{R}^{m\times r},\ F\in\mathbb{R}^{r\times n}.
+$$ {#eq-rank-factorization}
+Transposing, $A^\top=F^\top C^\top$. Every column of $A^\top=F^\top C^\top$ is, by @eq-matvec, a linear
+combination of the columns of $F^\top$, so
+$\mathcal{C}(A^\top)\subseteq\mathcal{C}(F^\top)$. Since $F^\top\in\mathbb{R}^{n\times r}$ has only $r$
+columns, its column space is spanned by those $r$ vectors, and a space spanned by $r$ vectors has
+dimension at most $r$ (the deletion scan of @lem-reduction-to-basis can only shrink a spanning set);
+hence $\dim\mathcal{C}(F^\top)\le r$ and therefore
+$$
+\operatorname{rank}(A^\top)=\dim\mathcal{C}(A^\top)\le r=\operatorname{rank}(A).
+$$
+This inequality holds for every matrix; applying it to $A^\top$ in place of $A$ gives
+$\operatorname{rank}(A)=\operatorname{rank}\big((A^\top)^\top\big)\le\operatorname{rank}(A^\top)$.
+The two inequalities give equality. $\square$
+:::
+
+**Why this matters.** For a rectangular design this is genuinely surprising: the number of independent
+*patient-side* patterns (rows) equals the number of independent *covariate-side* effects (columns). It
+means you may compute the rank, hence the count of estimable effects, from whichever side is smaller or
+more convenient, and you get the same answer. Every later use of "$\operatorname{rank}(\mathbf{X})$"
+silently relies on this single number being side-independent.
+We can now compute all four dimensions, and we record the orthogonality that pairs the subspaces. For
+vectors $\mathbf{x},\mathbf{y}$ in a coordinate space, write $\mathbf{x}\perp\mathbf{y}$ ("$\mathbf{x}$ is
+orthogonal to $\mathbf{y}$") when $\langle\mathbf{x},\mathbf{y}\rangle=\mathbf{x}^\top\mathbf{y}=0$, and
+for a subspace $\mathcal{M}\subseteq\mathbb{R}^d$ let
+$\mathcal{M}^\perp=\{\mathbf{z}\in\mathbb{R}^d : \mathbf{z}^\top\mathbf{m}=0\text{ for all }
+\mathbf{m}\in\mathcal{M}\}$ denote its **orthogonal complement**, the set of vectors at a right angle to
+everything in $\mathcal{M}$. You do not need any geometry beyond this definition yet: the projections
+that turn the resulting splits into "nearest-point" decompositions are built in Chapter 2
+(@thm-projection-theorem), and we use only the definition and the elementary identities below. The
+load-bearing step is a one-line fact, which we isolate so it is not buried in the proof.
+
+::: {#lem-orthogonality-linear-combinations}
+## Orthogonality to a spanning set
+Let $\mathbf{x}\in\mathbb{R}^d$ and let
+$\mathcal{M}=\operatorname{span}(\mathbf{a}^{(1)},\dots,\mathbf{a}^{(s)})\subseteq\mathbb{R}^d$. If
+$\mathbf{x}\perp\mathbf{a}^{(i)}$ for every $i$, then $\mathbf{x}\perp\mathbf{m}$ for every
+$\mathbf{m}\in\mathcal{M}$; that is, $\mathbf{x}\in\mathcal{M}^\perp$. Being orthogonal to a spanning set
+is the same as being orthogonal to the whole subspace.
+:::
+
+::: {.proof}
+Any $\mathbf{m}\in\mathcal{M}$ has the form $\mathbf{m}=\sum_i c_i\mathbf{a}^{(i)}$, and then
+$\mathbf{x}^\top\mathbf{m}=\mathbf{x}^\top\sum_i c_i\mathbf{a}^{(i)}=\sum_i c_i\,\mathbf{x}^\top\mathbf{a}^{(i)}
+=\sum_i c_i\cdot 0=0$. $\square$
+:::
+
+::: {#thm-four-subspaces}
+## Dimensions and orthogonality of the four subspaces
+Let $A\in\mathbb{R}^{m\times n}$ have rank $r$. Then the four fundamental subspaces have dimensions
+$$
+\dim\mathcal{C}(A)=r,\quad
+\dim\mathcal{C}(A^\top)=r,\quad
+\dim\mathcal{N}(A)=n-r,\quad
+\dim\mathcal{N}(A^\top)=m-r .
+$$ {#eq-four-dims}
+Moreover the null space and row space are orthogonal complements in $\mathbb{R}^n$, and the left null
+space and column space are orthogonal complements in $\mathbb{R}^m$:
+$$
+\mathcal{N}(A)=\mathcal{C}(A^\top)^{\perp},\qquad
+\mathcal{N}(A^\top)=\mathcal{C}(A)^{\perp}.
+$$ {#eq-four-orth}
+:::
+
+::: {.proof}
+*Dimensions.* The first equality is the definition of rank. The second is @thm-row-rank-column-rank.
+For the null space, apply the matrix rank-nullity theorem @thm-rank-nullity to $A$ (whose domain is
+$\mathbb{R}^n$): $\dim\mathcal{N}(A)=n-\operatorname{rank}(A)=n-r$. For the left null space, apply
+@thm-rank-nullity to $A^\top\in\mathbb{R}^{n\times m}$ (whose domain is $\mathbb{R}^m$):
+$\dim\mathcal{N}(A^\top)=m-\operatorname{rank}(A^\top)=m-r$, using
+$\operatorname{rank}(A^\top)=r$ from @thm-row-rank-column-rank.
+
+*Orthogonality.* Let $\mathbf{a}^{(1)},\dots,\mathbf{a}^{(m)}$ denote the rows of $A$, viewed as vectors
+in $\mathbb{R}^n$; they span $\mathcal{C}(A^\top)$. By the entrywise formula @eq-matvec, the $i$-th entry
+of $A\mathbf{x}$ is the inner product $(\mathbf{a}^{(i)})^\top\mathbf{x}$. Hence
+$$
+\mathbf{x}\in\mathcal{N}(A)
+\iff A\mathbf{x}=\mathbf{0}
+\iff (\mathbf{a}^{(i)})^\top\mathbf{x}=0\ \text{for all }i
+\iff \mathbf{x}\perp\mathbf{a}^{(i)}\ \text{for all }i .
+$$
+By @lem-orthogonality-linear-combinations, the last condition (orthogonality to every row) is equivalent
+to orthogonality to all of $\mathcal{C}(A^\top)$, that is, to $\mathbf{x}\in\mathcal{C}(A^\top)^\perp$.
+Therefore $\mathcal{N}(A)=\mathcal{C}(A^\top)^\perp$. Replacing $A$ by $A^\top$ gives the companion
+identity $\mathcal{N}(A^\top)=\mathcal{C}(A)^\perp$. $\square$
+:::
+
+**Why this matters.** This single theorem is the backbone of every identifiability and degrees-of-freedom
+statement that follows. The dimension count $\dim\mathcal{N}(A)=n-r$ says exactly how many independent
+non-identifiable coefficient directions a design has (zero precisely when the columns are independent),
+and the orthogonality $\mathcal{N}(A^\top)=\mathcal{C}(A)^\perp$ says the data split cleanly into a part
+the model explains and a residual part it cannot, which is the geometry ordinary least squares exploits
+in Chapter 6. The following table is the version to keep beside the worked example.
+
+| Subspace | Symbol | Lives in | Dimension | Trial / model reading |
+|---|---|---|---|---|
+| Column space | $\mathcal{C}(A)$ | outcome space $\mathbb{R}^m$ | $r$ | the outcome patterns the model can reproduce exactly (fitted values) |
+| Left null space | $\mathcal{N}(A^\top)$ | outcome space $\mathbb{R}^m$ | $m-r$ | outcome patterns no coefficients can reproduce (pure residual directions) |
+| Row space | $\mathcal{C}(A^\top)$ | coefficient space $\mathbb{R}^n$ | $r$ | the coefficient directions the data constrain (estimable directions) |
+| Null space | $\mathcal{N}(A)$ | coefficient space $\mathbb{R}^n$ | $n-r$ | coefficient changes that leave every prediction unchanged (non-identifiable directions) |
+
+The two rows in outcome space are orthogonal complements of each other, and so are the two rows in
+coefficient space: $\mathbb{R}^m$ splits into "what the model can fit" plus "what it cannot," and
+$\mathbb{R}^n$ splits into "what the data can see" plus "what they are blind to."
+
+::: {.remark}
+The dimension counts in @eq-four-dims and the orthogonality relations in @eq-four-orth fit together: in
+$\mathbb{R}^n$ the subspaces $\mathcal{C}(A^\top)$ and $\mathcal{N}(A)$ have complementary dimensions
+$r$ and $n-r$ and are mutually orthogonal, and one checks immediately that they meet only at the origin
+(if $\mathbf{x}$ lies in both, then $\mathbf{x}\perp\mathbf{x}$, so
+$\|\mathbf{x}\|_2^2=\mathbf{x}^\top\mathbf{x}=0$ and $\mathbf{x}=\mathbf{0}$). They therefore decompose
+$\mathbb{R}^n$ as an *internal direct sum*, written $\mathbb{R}^n=\mathcal{C}(A^\top)\oplus\mathcal{N}(A)$:
+the symbol $\oplus$ means that every vector splits into one piece from each summand in exactly one way,
+here a part the model can see plus a part it cannot. (You do not need direct sums again until Chapter 2;
+the one-line reading just given is all that is required here.) Likewise
+$\mathbb{R}^m=\mathcal{C}(A)\oplus\mathcal{N}(A^\top)$. That this direct sum is *orthogonal* in the strong
+sense that every vector has a unique nearest point in each summand, realized by an orthogonal projection
+matrix, is the orthogonal projection theorem @thm-projection-theorem of Chapter 2; the hat matrix
+@def-hat-matrix of regression is exactly the projection onto $\mathcal{C}(\mathbf{X})$. We state the
+geometry now and prove it there.
+:::
+## Solvability of linear systems {#sec-la1-systems}
+
+The column space answers the most basic question one can ask of a matrix: which right-hand sides
+$\mathbf{b}$ admit a solution $\mathbf{x}$ to $A\mathbf{x}=\mathbf{b}$, and how many solutions are there?
+
+::: {#prp-system-solvability}
+## Existence and structure of solutions
+Let $A\in\mathbb{R}^{m\times n}$ and $\mathbf{b}\in\mathbb{R}^m$. Then:
+
+1. **(Existence.)** $A\mathbf{x}=\mathbf{b}$ has at least one solution if and only if
+   $\mathbf{b}\in\mathcal{C}(A)$.
+2. **(Structure.)** If $\mathbf{x}_0$ is any one solution, then the full solution set is the affine
+   subspace
+   $$
+   \{\mathbf{x} : A\mathbf{x}=\mathbf{b}\}=\mathbf{x}_0+\mathcal{N}(A)
+   =\{\mathbf{x}_0+\mathbf{z} : \mathbf{z}\in\mathcal{N}(A)\}.
+   $$
+3. **(Uniqueness.)** When a solution exists, it is unique if and only if
+   $\mathcal{N}(A)=\{\mathbf{0}\}$, that is, if and only if the columns of $A$ are linearly independent.
+4. **(Universal solvability.)** $A\mathbf{x}=\mathbf{b}$ has a solution for every
+   $\mathbf{b}\in\mathbb{R}^m$ if and only if $\mathcal{C}(A)=\mathbb{R}^m$, that is, if and only if
+   $\operatorname{rank}(A)=m$ (full row rank).
+:::
+
+::: {.proof}
+(1) By @def-column-space, $\mathcal{C}(A)=\{A\mathbf{x}:\mathbf{x}\in\mathbb{R}^n\}$, which is precisely
+the set of attainable right-hand sides.
+
+(2) Suppose $A\mathbf{x}_0=\mathbf{b}$. If $A\mathbf{x}=\mathbf{b}$ as well, then
+$A(\mathbf{x}-\mathbf{x}_0)=\mathbf{b}-\mathbf{b}=\mathbf{0}$, so
+$\mathbf{x}-\mathbf{x}_0\in\mathcal{N}(A)$, giving $\mathbf{x}\in\mathbf{x}_0+\mathcal{N}(A)$.
+Conversely, for any $\mathbf{z}\in\mathcal{N}(A)$,
+$A(\mathbf{x}_0+\mathbf{z})=A\mathbf{x}_0+A\mathbf{z}=\mathbf{b}+\mathbf{0}=\mathbf{b}$, so every element
+of $\mathbf{x}_0+\mathcal{N}(A)$ is a solution.
+
+(3) By (2) the solution set is a single point exactly when $\mathcal{N}(A)=\{\mathbf{0}\}$. The columns
+$\mathbf{a}_j$ are independent if and only if $\sum_j x_j\mathbf{a}_j=A\mathbf{x}=\mathbf{0}$ forces
+$\mathbf{x}=\mathbf{0}$, that is, $\mathcal{N}(A)=\{\mathbf{0}\}$.
+
+(4) Solvability for all $\mathbf{b}$ means $\mathcal{C}(A)=\mathbb{R}^m$. Since
+$\mathcal{C}(A)\subseteq\mathbb{R}^m$ and $\dim\mathcal{C}(A)=\operatorname{rank}(A)$, equality of the
+subspaces is equivalent to equality of dimensions $\operatorname{rank}(A)=m$ (a subspace of $\mathbb{R}^m$
+equal in dimension to the whole space must be the whole space, by @lem-basis-extension). $\square$
+:::
+
+**Reader translation (affine subspaces and cosets).** A set of the form
+$\mathbf{x}_0+\mathcal{N}(A)=\{\mathbf{x}_0+\mathbf{z}:\mathbf{z}\in\mathcal{N}(A)\}$ is a *subspace
+shifted off the origin* by the fixed vector $\mathbf{x}_0$. Such a shifted subspace is called an **affine
+subspace**, or a **coset** of $\mathcal{N}(A)$; unlike a subspace it need not contain $\mathbf{0}$. Part
+(2) says the solutions of $A\mathbf{x}=\mathbf{b}$ form one flat sheet of this kind: take any single
+solution $\mathbf{x}_0$, then add anything the matrix sends to zero. When the null space is trivial the
+sheet collapses to a single point (the unique solution); when it is not, there are infinitely many
+solutions, all differing by null-space vectors. The word "coset" returns only in the identifiability
+discussion just below.
+
+### Identifiability as a null-space condition {#sec-la1-identifiability}
+
+This short subsection is the chapter's payoff for the indirect-comparison reader, so we give it its own
+heading rather than leaving it as an aside. The single most important consequence of the structure
+theorem is that, in a linear model, the parameter you can learn is not the coefficient vector itself but
+its coset.
+
+::: {.remark}
+This proposition is the algebraic skeleton of *identifiability* in regression and indirect comparison. In
+a linear model the parameter $\boldsymbol\beta$ enters only through $\mathbf{X}\boldsymbol\beta$, so two
+parameter values that differ by an element of $\mathcal{N}(\mathbf{X})$ produce identical predictions and
+cannot be distinguished by any amount of data. The treatment effect is identifiable precisely when the
+relevant contrast is constant on the coset $\boldsymbol\beta+\mathcal{N}(\mathbf{X})$; uniqueness of the
+parameter itself requires $\mathcal{N}(\mathbf{X})=\{\mathbf{0}\}$, full column rank. We return to this in
+the worked example and, in earnest, in Chapter 6.
+:::
+
+Here "contrast" means a fixed linear combination of the coefficients, $\mathbf{c}^\top\boldsymbol\beta$,
+such as "treated coefficient minus control coefficient." Saying it is *constant on the coset* means it
+takes the same value at $\boldsymbol\beta$ and at every $\boldsymbol\beta+\mathbf{z}$ with
+$\mathbf{z}\in\mathcal{N}(\mathbf{X})$, so the data, which see only the coset, pin it down. The next
+example makes the abstraction concrete with two coefficient vectors you can compare by eye.
+
+::: {#exm-la1-nonidentifiability}
+## Two coefficient vectors, one set of predictions
+Return to the over-parameterized design $\mathbf{X}'=[\mathbf{1}_4\ \ \mathbf{t}\ \ \mathbf{c}]$ of
+@sec-la1-preview, with $\mathbf{t}=(0,0,1,1)^\top$, $\mathbf{c}=(1,1,0,0)^\top$, and coefficients
+$\boldsymbol\beta=(\beta_0,\beta_1,\beta_2)^\top$ (intercept, treatment coefficient, control
+coefficient). The fitted values are
+$$
+\mathbf{X}'\boldsymbol\beta=\beta_0\mathbf{1}_4+\beta_1\mathbf{t}+\beta_2\mathbf{c}
+=\begin{pmatrix}\beta_0+\beta_2\\\beta_0+\beta_2\\\beta_0+\beta_1\\\beta_0+\beta_1\end{pmatrix},
+$$
+predicting $\beta_0+\beta_2$ for each control patient and $\beta_0+\beta_1$ for each treated patient.
+Because $\mathbf{c}=\mathbf{1}_4-\mathbf{t}$, the column relation
+$\mathbf{1}_4-\mathbf{t}-\mathbf{c}=\mathbf{0}$ shows $(1,-1,-1)^\top\in\mathcal{N}(\mathbf{X}')$, and one
+checks $\mathcal{N}(\mathbf{X}')=\operatorname{span}\{(1,-1,-1)^\top\}$.
+
+Now take the two coefficient vectors
+$$
+\boldsymbol\beta=(0,1,0)^\top,\qquad \boldsymbol\beta'=\boldsymbol\beta+(1,-1,-1)^\top=(1,0,-1)^\top .
+$$
+They are plainly different, yet
+$$
+\mathbf{X}'\boldsymbol\beta=(0,0,1,1)^\top=\mathbf{X}'\boldsymbol\beta' :
+$$
+both predict outcome $0$ for every control patient and $1$ for every treated patient. No amount of data
+can prefer one over the other, so the *individual* coefficients are not identifiable. What *is* identified
+is the treatment-versus-control contrast $\beta_1-\beta_2$: it equals $1-0=1$ for $\boldsymbol\beta$ and
+$0-(-1)=1$ for $\boldsymbol\beta'$, the same value, because the contrast vector $\mathbf{c}_{\!*}=(0,1,-1)^\top$
+satisfies $\mathbf{c}_{\!*}^\top(1,-1,-1)^\top=0$, that is, $\mathbf{c}_{\!*}\perp\mathcal{N}(\mathbf{X}')$.
+This is the precise meaning of "the contrast is constant on the coset": estimable contrasts are exactly
+those orthogonal to the null space. $\blacktriangleleft$
+:::
+## Elementary row operations and the invariance of rank {#sec-la1-row-ops}
+
+In practice rank, bases of the four subspaces, and solutions of systems are computed by Gaussian
+elimination, which transforms a matrix by *elementary row operations*. We record why these operations
+leave rank unchanged. There are three:
+
+1. swapping two rows;
+2. multiplying a row by a nonzero scalar;
+3. adding a scalar multiple of one row to another.
+
+Each is realized by left multiplication by an **elementary matrix** $E\in\mathbb{R}^{m\times m}$,
+obtained by performing the operation on $I_m$. Each elementary matrix is invertible, its inverse being
+the elementary matrix of the reverse operation (swap the same rows back; scale by the reciprocal; subtract
+the same multiple). The key fact is that multiplying by *any* invertible matrix preserves rank.
+
+::: {#lem-invertible-preserves-rank}
+## Invertible factors preserve rank
+Let $A\in\mathbb{R}^{m\times n}$. If $P\in\mathbb{R}^{m\times m}$ is invertible then
+$\operatorname{rank}(PA)=\operatorname{rank}(A)$, and if $Q\in\mathbb{R}^{n\times n}$ is invertible then
+$\operatorname{rank}(AQ)=\operatorname{rank}(A)$. In particular elementary row operations preserve rank,
+and they preserve the null space $\mathcal{N}(A)$ exactly.
+:::
+
+::: {.proof}
+*Left multiplication.* The map $\mathbf{v}\mapsto P\mathbf{v}$ is an isomorphism of $\mathbb{R}^m$
+(invertible, hence bijective and linear). We have
+$\mathcal{C}(PA)=\{PA\mathbf{x}:\mathbf{x}\in\mathbb{R}^n\}=P\big(\{A\mathbf{x}\}\big)=P\,\mathcal{C}(A)$,
+the image of $\mathcal{C}(A)$ under the isomorphism $P$. An isomorphism maps a basis of a subspace to a
+basis of its image (it preserves independence and spanning), so $\dim P\,\mathcal{C}(A)=\dim\mathcal{C}(A)$,
+giving $\operatorname{rank}(PA)=\operatorname{rank}(A)$. Moreover, since $P$ is invertible,
+$PA\mathbf{x}=\mathbf{0}\iff A\mathbf{x}=\mathbf{0}$, so $\mathcal{N}(PA)=\mathcal{N}(A)$ exactly.
+
+*Right multiplication.* Because $Q$ is invertible, the map $\mathbf{x}\mapsto Q\mathbf{x}$ is onto
+$\mathbb{R}^n$, so as $\mathbf{x}$ ranges over $\mathbb{R}^n$ so does $Q\mathbf{x}$; hence
+$\mathcal{C}(AQ)=\{A(Q\mathbf{x})\}=\{A\mathbf{u}:\mathbf{u}\in\mathbb{R}^n\}=\mathcal{C}(A)$, and a
+fortiori the dimensions agree. Elementary row operations are left multiplications by invertible
+elementary matrices, so they preserve both rank and null space. $\square$
+:::
+
+By Gaussian elimination, every matrix can be brought by elementary row operations to a *row-echelon
+form*. Two terms suffice. A **pivot** is the first (leftmost) nonzero entry of a nonzero row. A matrix is
+in **row-echelon form** when it is a staircase: every pivot sits strictly to the right of the pivot in the
+row above, and any all-zero rows are at the bottom. It is in **reduced row-echelon form** (RREF) when, in
+addition, every pivot equals $1$ and is the only nonzero entry in its column. The pivots fall in certain
+columns of the original matrix, called the **pivot columns**. The existence of these forms is the
+elimination algorithm; we take it as standard and refer the reader to @strang2016 for the procedure. What
+matters here is that the pivots count the rank, which we first see on a concrete matrix and then prove.
+
+::: {#exm-la1-elimination}
+## Rank, null space, and a column-space basis by elimination
+Take
+$$
+B=\begin{pmatrix}1&1&2\\1&2&3\\2&3&5\end{pmatrix}.
+$$
+Eliminate below the first pivot (the $1$ in position $1,1$): replace row $2$ by (row $2$ $-$ row $1$) and
+row $3$ by (row $3$ $-2\cdot$ row $1$),
+$$
+\begin{pmatrix}1&1&2\\1&2&3\\2&3&5\end{pmatrix}\longrightarrow
+\begin{pmatrix}1&1&2\\0&1&1\\0&1&1\end{pmatrix}.
+$$
+Now eliminate below the second pivot (the $1$ in position $2,2$): replace row $3$ by (row $3$ $-$ row $2$),
+giving the row-echelon form
+$$
+U=\begin{pmatrix}1&1&2\\0&1&1\\0&0&0\end{pmatrix}.
+$$
+There are two pivots, in columns $1$ and $2$, so $\operatorname{rank}(B)=2$ and (by @thm-rank-nullity)
+$\dim\mathcal{N}(B)=3-2=1$. Clearing above the second pivot (row $1$ $-$ row $2$) reaches the reduced
+form
+$$
+R=\begin{pmatrix}1&0&1\\0&1&1\\0&0&0\end{pmatrix}.
+$$
+
+*Null space.* Column $3$ has no pivot, so $x_3$ is a *free variable*. Reading $R$, the equations are
+$x_1+x_3=0$ and $x_2+x_3=0$, so $x_1=-x_3$ and $x_2=-x_3$. Setting $x_3=1$ gives the basis
+$\mathcal{N}(B)=\operatorname{span}\{(-1,-1,1)^\top\}$, of dimension $1$, as predicted.
+
+*Column-space basis.* The pivot columns are columns $1$ and $2$, so the *corresponding columns of the
+original $B$*, namely $(1,1,2)^\top$ and $(1,2,3)^\top$, form a basis of $\mathcal{C}(B)$. (This is the
+deletion scan of @lem-reduction-to-basis in action: column $3$ is discarded because
+$(2,3,5)^\top=(1,1,2)^\top+(1,2,3)^\top$ lies in the span of its predecessors.)
+
+*Row-space basis.* The nonzero rows of $U$, namely $(1,1,2)$ and $(0,1,1)$, form a basis of the row
+space $\mathcal{C}(B^\top)$, again of dimension $2=\operatorname{rank}(B)$. $\blacktriangleleft$
+:::
+
+::: {#prp-rank-equals-pivots}
+## Rank equals the number of pivots
+Let $U$ be a row-echelon form of $A\in\mathbb{R}^{m\times n}$, obtained by elementary row operations.
+Then the nonzero rows of $U$ form a basis of the row space $\mathcal{C}(A^\top)$, and consequently
+$\operatorname{rank}(A)$ equals the number of pivots (nonzero rows) of $U$.
+:::
+
+::: {.proof}
+Row operations are invertible left multiplications, so by the argument of @lem-invertible-preserves-rank
+applied to $A^\top$ they do not change the row space: the rows of $U$ and the rows of $A$ span the same
+subspace $\mathcal{C}(A^\top)$ of $\mathbb{R}^n$. (Each row of $U$ is a linear combination of rows of $A$
+and vice versa, since the operations are reversible.) Hence the nonzero rows of $U$ span
+$\mathcal{C}(A^\top)$.
+
+They are also independent. Suppose $\mathbf{u}^{(1)},\dots,\mathbf{u}^{(s)}$ are the nonzero rows, with
+the pivot of $\mathbf{u}^{(t)}$ in column $p_t$, where $p_1<p_2<\dots<p_s$ by the echelon staircase.
+Suppose $\sum_{t=1}^s c_t\mathbf{u}^{(t)}=\mathbf{0}$. Look at column $p_1$, the leftmost pivot column:
+only $\mathbf{u}^{(1)}$ has a nonzero entry there (every later row has zeros in all columns up to and
+including its predecessors' pivots, in particular in column $p_1$), so the $p_1$-entry of the combination
+is $c_1\,U_{1,p_1}=0$ with $U_{1,p_1}\neq 0$, forcing $c_1=0$. With $c_1=0$, repeat at column $p_2$ to get
+$c_2=0$, and so on; all $c_t=0$. Thus the nonzero rows are independent and form a basis of
+$\mathcal{C}(A^\top)$, whose dimension is $\operatorname{rank}(A^\top)=\operatorname{rank}(A)$ by
+@thm-row-rank-column-rank. The number of nonzero rows is the number $s$ of pivots. $\square$
+:::
+
+**Why this matters.** This is the practical face of rank. To find how many independent effects a design
+can resolve, run elimination and count pivots; the pivot columns name a non-redundant set of model
+columns, and the free (non-pivot) columns are exactly the redundant ones responsible for any
+non-identifiability. The next time software reports a "rank-deficient model matrix," it has found fewer
+pivots than columns.
+
+## Characterizations of invertibility {#sec-la1-invertibility}
+
+A square matrix is invertible when it has a two-sided multiplicative inverse. For square matrices a
+remarkable collapse occurs: a long list of a priori distinct conditions, about solutions, columns, rank,
+and one-sided inverses, are all equivalent. This theorem is used constantly, for instance to certify that
+the normal-equations matrix $\mathbf{X}^\top\mathbf{X}$ of regression can be inverted.
+
+::: {#def-invertible}
+## Invertible matrix
+A matrix $A\in\mathbb{R}^{n\times n}$ is **invertible** (or *nonsingular*) if there exists
+$B\in\mathbb{R}^{n\times n}$ with $AB=BA=I_n$. Such a $B$ is unique when it exists: if $AB=BA=I_n$ and
+$AB'=B'A=I_n$ then $B=BI_n=B(AB')=(BA)B'=I_nB'=B'$. We write $B=A^{-1}$.
+:::
+
+**What this means.** "Invertible" means the matrix can be perfectly undone: $A^{-1}$ exactly reverses
+what $A$ does, so $A\mathbf{x}=\mathbf{b}$ can always be solved by $\mathbf{x}=A^{-1}\mathbf{b}$. The
+synonym *nonsingular* means precisely the same thing; this book uses "invertible" throughout, and the two
+words may be read interchangeably whenever a source you consult prefers the other.
+
+The next theorem lists ten conditions that are all equivalent to invertibility. That is a lot to hold in
+mind at once, so before the statement here is a map. The conditions fall into four groups that say the
+same thing in four languages, and the proof links the groups along a short cycle of implications.
+
+| Group | Conditions | What the group says |
+|---|---|---|
+| Inverse conditions | (1), (2), (3), (10) | a genuine inverse exists (two-sided, or one-sided; and $A^\top$ inverts too) |
+| Rank conditions | (4), (5), (6), (7) | the columns are independent and span; the rank is full |
+| Solution conditions | (8), (9) | every system $A\mathbf{x}=\mathbf{b}$ has exactly one solution; the map is a bijection |
+
+The proof establishes the arrows in the following table; together they form cycles that link all ten
+conditions, so any one implies every other.
+
+| Implication proved | Role |
+|---|---|
+| (4) $\Leftrightarrow$ (5) $\Leftrightarrow$ (7) $\Leftrightarrow$ (6) | the rank group is internally equivalent |
+| (4),(6) $\Leftrightarrow$ (9) $\Leftrightarrow$ (8) | ties the rank group to the solution group |
+| (9) $\Rightarrow$ (1) | a bijection has a linear inverse matrix |
+| (1) $\Rightarrow$ (2) and (1) $\Rightarrow$ (3) | a genuine inverse is in particular one-sided |
+| (2) $\Rightarrow$ (4) | a left inverse kills the null space |
+| (3) $\Rightarrow$ (6) | a right inverse forces the columns to span |
+| (1) $\Leftrightarrow$ (10) | transpose |
+
+::: {#thm-invertibility-characterization}
+## Characterizations of invertibility
+For a square matrix $A\in\mathbb{R}^{n\times n}$, the following are equivalent.
+
+1. $A$ is invertible.
+2. $A$ has a left inverse: $BA=I_n$ for some $B\in\mathbb{R}^{n\times n}$.
+3. $A$ has a right inverse: $AC=I_n$ for some $C\in\mathbb{R}^{n\times n}$.
+4. $\mathcal{N}(A)=\{\mathbf{0}\}$; equivalently $A\mathbf{x}=\mathbf{0}$ has only the trivial solution.
+5. The columns of $A$ are linearly independent.
+6. The columns of $A$ span $\mathbb{R}^n$, that is, $\mathcal{C}(A)=\mathbb{R}^n$.
+7. $\operatorname{rank}(A)=n$ ($A$ has full rank).
+8. For every $\mathbf{b}\in\mathbb{R}^n$, the system $A\mathbf{x}=\mathbf{b}$ has a unique solution.
+9. The linear map $T_A\colon\mathbb{R}^n\to\mathbb{R}^n$ is a bijection.
+10. $A^\top$ is invertible.
+
+Each of these is moreover equivalent to $\det(A)\neq 0$; we take this last equivalence from the theory of
+determinants (@strang2016, Chapter 5) rather than reproving it here.
+:::
+
+::: {.proof}
+We first establish the equivalence of (4) through (9), which is pure rank-nullity, and then close the
+loop through the inverse conditions (1), (2), (3), and (10).
+
+*(4) $\Leftrightarrow$ (5) $\Leftrightarrow$ (7) $\Leftrightarrow$ (6).* By @prp-system-solvability(3),
+$\mathcal{N}(A)=\{\mathbf{0}\}$ is the same statement as the columns being independent, giving
+(4) $\Leftrightarrow$ (5). The matrix rank-nullity theorem @thm-rank-nullity for the square $A$ reads
+$\operatorname{rank}(A)+\dim\mathcal{N}(A)=n$, so $\mathcal{N}(A)=\{\mathbf{0}\}$ if and only if
+$\operatorname{rank}(A)=n$, giving (4) $\Leftrightarrow$ (7). Finally
+$\operatorname{rank}(A)=\dim\mathcal{C}(A)$ and $\mathcal{C}(A)\subseteq\mathbb{R}^n$, so
+$\operatorname{rank}(A)=n$ if and only if $\mathcal{C}(A)=\mathbb{R}^n$ (a subspace of full dimension is
+the whole space), giving (7) $\Leftrightarrow$ (6).
+
+*(4),(6) $\Leftrightarrow$ (9) $\Leftrightarrow$ (8).* The map $T_A$ is injective if and only if
+$\ker T_A=\mathcal{N}(A)=\{\mathbf{0}\}$ (@lem-injective-trivial-kernel), that is, condition (4); it is
+surjective if and only if $\operatorname{im}T_A=\mathcal{C}(A)=\mathbb{R}^n$, that is, condition (6).
+Hence $T_A$ is bijective, condition (9), if and only if both (4) and (6) hold; but we have just shown (4)
+and (6) are equivalent to each other, so any one of them is equivalent to (9). Bijectivity of $T_A$ is the
+statement that $A\mathbf{x}=\mathbf{b}$ has exactly one solution for each $\mathbf{b}$, condition (8).
+Thus (8) $\Leftrightarrow$ (9).
+
+*(9) $\Rightarrow$ (1).* If $T_A$ is a bijection it has an inverse function
+$T_A^{-1}\colon\mathbb{R}^n\to\mathbb{R}^n$. This inverse is linear: for
+$\mathbf{u}=T_A\mathbf{x}$ and $\mathbf{v}=T_A\mathbf{y}$,
+$T_A^{-1}(a\mathbf{u}+b\mathbf{v})=T_A^{-1}\big(T_A(a\mathbf{x}+b\mathbf{y})\big)=a\mathbf{x}+b\mathbf{y}
+=a\,T_A^{-1}\mathbf{u}+b\,T_A^{-1}\mathbf{v}$. By @prp-matrices-are-maps it is $T_B$ for a matrix
+$B\in\mathbb{R}^{n\times n}$. Then $T_A\circ T_B=T_B\circ T_A=\mathrm{id}$, and by
+@thm-matrix-mult-composition this says $AB=BA=I_n$. So $A$ is invertible.
+
+*(1) $\Rightarrow$ (2) and (1) $\Rightarrow$ (3).* Immediate: $A^{-1}$ is both a left and a right inverse.
+
+*(2) $\Rightarrow$ (4).* Suppose $BA=I_n$. If $A\mathbf{x}=\mathbf{0}$ then
+$\mathbf{x}=I_n\mathbf{x}=BA\mathbf{x}=B\mathbf{0}=\mathbf{0}$, so $\mathcal{N}(A)=\{\mathbf{0}\}$.
+
+*(3) $\Rightarrow$ (6).* Suppose $AC=I_n$. For any $\mathbf{b}\in\mathbb{R}^n$,
+$A(C\mathbf{b})=(AC)\mathbf{b}=I_n\mathbf{b}=\mathbf{b}$, so $\mathbf{b}\in\mathcal{C}(A)$; hence
+$\mathcal{C}(A)=\mathbb{R}^n$.
+
+These implications close the loop. Indeed (2) $\Rightarrow$ (4) $\Rightarrow$ (9) $\Rightarrow$ (1)
+$\Rightarrow$ (2), so (1), (2), (4), (9) are equivalent; and (3) $\Rightarrow$ (6) $\Rightarrow$ (9)
+$\Rightarrow$ (1) $\Rightarrow$ (3), folding in (3). Together with the chain of the first two paragraphs,
+all of (1) through (9) are equivalent.
+
+*(1) $\Leftrightarrow$ (10).* If $AB=BA=I_n$, transpose: $B^\top A^\top=A^\top B^\top=I_n^\top=I_n$, so
+$A^\top$ is invertible with $(A^\top)^{-1}=(A^{-1})^\top$. The converse applies the same to $A^\top$,
+whose transpose is $A$. (Equivalently, $\operatorname{rank}(A^\top)=\operatorname{rank}(A)$ by
+@thm-row-rank-column-rank, so $A$ has full rank if and only if $A^\top$ does, conditions (7) for each.)
+$\square$
+:::
+
+**Why this matters.** This theorem is the workhorse behind "the treatment effect is uniquely estimable."
+In Chapter 6 the least-squares coefficients solve
+$\mathbf{X}^\top\mathbf{X}\boldsymbol\beta=\mathbf{X}^\top\mathbf{y}$, which has a unique solution exactly
+when the $p\times p$ matrix $\mathbf{X}^\top\mathbf{X}$ is invertible, that is (condition 7) when it has
+full rank, which Exercise @exr-la1-gram-rank shows happens precisely when $\mathbf{X}$ has full column
+rank. So "the columns of the design are independent" (no dummy-variable trap) and "the treatment effect
+has a unique estimate" are, through this chain of equivalences, the same statement.
+
+::: {.remark}
+Two observations sharpen the theorem. First, for *square* matrices a one-sided inverse is automatically
+two-sided: if $BA=I_n$ then, by the proof, $A$ is invertible, and
+$B=B(AA^{-1})=(BA)A^{-1}=A^{-1}$, so $B$ is the genuine inverse; symmetrically for a right inverse. This
+is special to square matrices and fails for rectangular ones. Second, the determinant condition links to
+the spectral theory of Chapter 3: $A$ is invertible if and only if $0$ is not an eigenvalue, because
+$\mathcal{N}(A)\neq\{\mathbf{0}\}$ is exactly the existence of a nonzero $\mathbf{x}$ with
+$A\mathbf{x}=0\cdot\mathbf{x}$. The singular value decomposition @thm-svd makes the same statement through
+singular values: $A$ is invertible if and only if all $n$ singular values are positive.
+:::
+## A worked example: the two-arm design matrix {#sec-la1-design-example}
+
+We close by analyzing in full the very matrix that opened the chapter in @sec-la1-preview, now with every
+tool in hand. The computation can be verified entirely by hand and previews the regression machinery of
+Chapter 6. Recall the tiny clinical comparison: four patients, the first two on control and the last two
+on an active treatment. We model an outcome with an intercept (a common baseline) and a treatment
+indicator. The design matrix, with first column the intercept $\mathbf{1}_4$ and second column the
+treatment indicator $\mathbf{t}=(0,0,1,1)^\top$, is
+$$
+\mathbf{X}=\begin{pmatrix}1&0\\1&0\\1&1\\1&1\end{pmatrix}\in\mathbb{R}^{4\times 2},
+\qquad
+\boldsymbol\beta=\begin{pmatrix}\beta_0\\\beta_1\end{pmatrix},
+$$
+so that $\mathbf{X}\boldsymbol\beta=(\beta_0,\beta_0,\beta_0+\beta_1,\beta_0+\beta_1)^\top$: every control
+patient is predicted to have outcome $\beta_0$ and every treated patient $\beta_0+\beta_1$, making
+$\beta_1$ the treatment effect.
+
+::: {#exm-design-matrix}
+## Four subspaces of a two-arm design
+We compute, for the matrix $\mathbf{X}$ above (here $m=4$, $n=p=2$), all four fundamental subspaces, the
+rank, and the consequences for solving $\mathbf{X}\boldsymbol\beta=\mathbf{y}$.
+
+**Rank.** The two columns $\mathbf{1}_4$ and $\mathbf{t}$ are not scalar multiples of each other, so they
+are linearly independent and $\operatorname{rank}(\mathbf{X})=2$. As $n=p=2$, the matrix has *full column
+rank*.
+
+**Column space.** $\mathcal{C}(\mathbf{X})=\operatorname{span}\{\mathbf{1}_4,\mathbf{t}\}\subseteq
+\mathbb{R}^4$ is two-dimensional. A vector $\mathbf{v}=(v_1,v_2,v_3,v_4)^\top$ lies in it if and only if
+$\mathbf{v}=\beta_0\mathbf{1}_4+\beta_1\mathbf{t}$ for some scalars, that is, $v_1=v_2=\beta_0$ and
+$v_3=v_4=\beta_0+\beta_1$. So the column space is exactly the set of vectors that are *constant within
+each treatment group*.
+
+**Null space.** Solve $\mathbf{X}\boldsymbol\beta=\mathbf{0}$. Reading the rows,
+$\beta_0=0$ and $\beta_0+\beta_1=0$, hence $\beta_0=\beta_1=0$. Thus
+$\mathcal{N}(\mathbf{X})=\{\mathbf{0}\}\subseteq\mathbb{R}^2$, of dimension $0$. Rank-nullity checks out:
+$\operatorname{rank}(\mathbf{X})+\dim\mathcal{N}(\mathbf{X})=2+0=2=p$.
+
+**Row space.** $\mathcal{C}(\mathbf{X}^\top)\subseteq\mathbb{R}^2$ is spanned by the rows $(1,0)$ and
+$(1,1)$ (the distinct rows of $\mathbf{X}$). These are independent, so the row space is all of
+$\mathbb{R}^2$, of dimension $2=\operatorname{rank}(\mathbf{X})$, as @thm-four-subspaces requires.
+
+**Left null space.** By @eq-four-dims its dimension is $m-r=4-2=2$. A vector
+$\mathbf{y}=(y_1,y_2,y_3,y_4)^\top$ lies in $\mathcal{N}(\mathbf{X}^\top)$ if and only if it is orthogonal
+to both columns: $\mathbf{1}_4^\top\mathbf{y}=y_1+y_2+y_3+y_4=0$ and
+$\mathbf{t}^\top\mathbf{y}=y_3+y_4=0$. The second equation gives $y_4=-y_3$, and substituting into the
+first gives $y_1+y_2=0$, so $y_2=-y_1$. Hence
+$$
+\mathcal{N}(\mathbf{X}^\top)=\operatorname{span}\Big\{(1,-1,0,0)^\top,\ (0,0,1,-1)^\top\Big\},
+$$
+the *within-group mean-zero contrasts*. One verifies directly that each basis vector is orthogonal to
+$\mathbf{1}_4$ and to $\mathbf{t}$, confirming $\mathcal{N}(\mathbf{X}^\top)=\mathcal{C}(\mathbf{X})^\perp$
+of @eq-four-orth.
+
+**Solvability.** By @prp-system-solvability(1), $\mathbf{X}\boldsymbol\beta=\mathbf{y}$ has a solution if
+and only if $\mathbf{y}\in\mathcal{C}(\mathbf{X})$, that is, if and only if $y_1=y_2$ and $y_3=y_4$. Real
+outcome data almost never satisfy this, which is the whole reason we *project* the data onto
+$\mathcal{C}(\mathbf{X})$ and solve in the least-squares sense; that projection is the subject of
+Chapter 2, and the resulting estimator is the ordinary least squares estimator of Chapter 6. When a
+solution does exist it is unique here, because $\mathcal{N}(\mathbf{X})=\{\mathbf{0}\}$
+(@prp-system-solvability(3)).
+
+**The normal-equations matrix.** Anticipating Chapter 6, compute the Gram matrix
+$$
+\mathbf{X}^\top\mathbf{X}=
+\begin{pmatrix}\mathbf{1}_4^\top\mathbf{1}_4 & \mathbf{1}_4^\top\mathbf{t}\\
+\mathbf{t}^\top\mathbf{1}_4 & \mathbf{t}^\top\mathbf{t}\end{pmatrix}
+=\begin{pmatrix}4&2\\2&2\end{pmatrix},
+\qquad \det(\mathbf{X}^\top\mathbf{X})=4\cdot 2-2\cdot 2=4\neq 0 .
+$$
+Because $\det\neq 0$, the matrix is invertible by @thm-invertibility-characterization, with
+$$
+(\mathbf{X}^\top\mathbf{X})^{-1}=\frac{1}{4}\begin{pmatrix}2&-2\\-2&4\end{pmatrix}
+=\begin{pmatrix}\tfrac12 & -\tfrac12\\[2pt] -\tfrac12 & 1\end{pmatrix}.
+$$
+(One checks $\begin{pmatrix}4&2\\2&2\end{pmatrix}\begin{pmatrix}\tfrac12&-\tfrac12\\-\tfrac12&1\end{pmatrix}
+=\begin{pmatrix}1&0\\0&1\end{pmatrix}$ by hand.) The invertibility of $\mathbf{X}^\top\mathbf{X}$ is no
+accident: it holds exactly because $\mathbf{X}$ has full column rank, the equivalence proved in general in
+Exercise @exr-la1-gram-rank. This is the precise condition under which the regression coefficients, and
+hence the treatment effect $\beta_1$, are uniquely estimable. $\blacktriangleleft$
+:::
+
+::: {.remark}
+## Collinearity and non-identifiability
+Suppose we had instead included a redundant third column, the control indicator
+$\mathbf{c}=(1,1,0,0)^\top=\mathbf{1}_4-\mathbf{t}$, forming
+$\mathbf{X}'=[\mathbf{1}_4\ \ \mathbf{t}\ \ \mathbf{c}]\in\mathbb{R}^{4\times 3}$. Now the columns satisfy
+the linear dependence $\mathbf{1}_4-\mathbf{t}-\mathbf{c}=\mathbf{0}$, so
+$\mathcal{N}(\mathbf{X}')\ni(1,-1,-1)^\top\neq\mathbf{0}$ and one computes
+$\mathcal{N}(\mathbf{X}')=\operatorname{span}\{(1,-1,-1)^\top\}$, of dimension $1$. By rank-nullity
+$\operatorname{rank}(\mathbf{X}')=3-1=2$: adding the column did not raise the rank. Consequently
+$\mathbf{X}'^\top\mathbf{X}'\in\mathbb{R}^{3\times 3}$ has rank $2<3$ and is *not* invertible, so the
+normal equations no longer pin down a unique coefficient vector. Concretely, as computed in
+@exm-la1-nonidentifiability, the distinct coefficient vectors $(0,1,0)^\top$ and $(1,0,-1)^\top$ produce
+the identical fitted values $(0,0,1,1)^\top$, so no data can choose between them. This is the "dummy
+variable trap": the intercept and the two group indicators are collinear, and the treatment effect is
+identifiable only as the contrast $\beta_{\text{trt}}-\beta_{\text{ctrl}}$, a linear functional that is
+constant along the null direction $(1,-1,-1)^\top$. The remedy practiced everywhere in this book, dropping
+one indicator, is exactly the restoration of full column rank. Identifiability in indirect comparison is,
+at bottom, this same statement about null spaces.
+:::
+## Notes and references {#sec-la1-notes}
+
+The development of vector spaces, bases, and dimension through the Steinitz exchange theorem
+(@thm-steinitz-exchange) is classical and is treated in any linear-algebra text; we follow the spirit of
+@strang2016, the standard reference for the applied theory and the origin of the "four fundamental
+subspaces" organizing picture (@def-column-space, @thm-four-subspaces). The rank factorization
+@eq-rank-factorization used to prove that row rank equals column rank (@thm-row-rank-column-rank) is
+standard; the proof given here is self-contained. The rank-nullity theorem (@thm-rank-nullity) is the
+load-bearing result of the chapter and is proved in full; everything in later chapters that counts
+degrees of freedom, from the residual degrees of freedom of regression to the dimension of an estimable
+contrast space, is an application of it.
+
+We have stated the orthogonality of the four subspaces (@eq-four-orth) and proved the elementary
+set-equalities, but deferred the projection geometry that realizes the orthogonal decomposition
+$\mathbb{R}^n=\mathcal{C}(\mathbf{X}^\top)\oplus\mathcal{N}(\mathbf{X})$ to the orthogonal projection
+theorem @thm-projection-theorem and the Gram-Schmidt construction @thm-gram-schmidt of Chapter 2. The
+existence and algorithm of (reduced) row-echelon form, used in @prp-rank-equals-pivots, and the
+determinant characterization of invertibility in @thm-invertibility-characterization, are taken from
+@strang2016 rather than reproved; full determinant theory is not needed in this book beyond this one
+equivalence, and the eigenvalue and singular-value characterizations of invertibility are returned to in
+Chapter 3 (@thm-spectral-theorem, @thm-svd, @thm-pd-characterization). The design-matrix example of
+@sec-la1-design-example is the seed of the linear-model theory developed from first principles in
+Chapter 6 (@def-linear-model, @thm-ols-normal-equations, @def-hat-matrix); the invertibility of
+$\mathbf{X}^\top\mathbf{X}$ under full column rank, previewed there and proved in Exercise
+@exr-la1-gram-rank, is the algebraic precondition for the existence and uniqueness of the least-squares
+estimator.
+
+This chapter has no counterpart in the `ITC_Coq` development and therefore carries no machine-checked
+tags.
+
+## Exercises {#sec-la1-exercises}
+
+Exercises marked with a star ($\star$) have a full worked solution in Appendix F. The tag after each
+title flags its flavor: *warm-up* and *interpretation* exercises need only the ideas, not heavy
+algebra, and are the place to start; *computation* exercises ask you to grind a small example by hand;
+*proof* and *starred challenge* exercises build machinery used later in the book. Begin with the
+warm-ups, which use the running two-arm trial of @sec-la1-preview.
+
+::: {#exr-la1-warmup-fitted}
+## Fitted values by hand (warm-up)
+Using the running two-arm design
+$\mathbf{X}=\begin{pmatrix}1&0\\1&0\\1&1\\1&1\end{pmatrix}$ of @sec-la1-preview and the coefficient
+vector $\boldsymbol\beta=(5,3)^\top$: (a) compute the fitted-value vector $\mathbf{X}\boldsymbol\beta$ by
+hand. (b) Which patients share a predicted outcome, and why? (c) What is the predicted treatment effect,
+that is, the predicted treated outcome minus the predicted control outcome?
+:::
+
+::: {#exr-la1-warmup-redundant}
+## Spotting a redundant column (warm-up)
+Consider the three columns $\mathbf{1}_4=(1,1,1,1)^\top$, $\mathbf{t}=(0,0,1,1)^\top$, and
+$\mathbf{c}=(1,1,0,0)^\top$. (a) Write $\mathbf{c}$ as a linear combination of $\mathbf{1}_4$ and
+$\mathbf{t}$. (b) Explain in one sentence why a design built from all three columns has rank $2$, not
+$3$. (c) In plain words, what goes wrong if you try to estimate a separate intercept, control effect, and
+treatment effect from these three columns?
+:::
+
+::: {#exr-la1-interpret-estimable}
+## Which effect can you estimate? (interpretation)
+A trialist fits an outcome model with an intercept, a control-group indicator, and a treatment-group
+indicator, and is surprised the software cannot return unique estimates of the three coefficients. (a)
+Identify the null-space direction responsible (see @sec-la1-identifiability). (b) Explain which single
+quantity built from the coefficients *is* determined by the data, and why, referring to
+@exm-la1-nonidentifiability. (c) State the one-line fix and say what, if anything, is lost.
+:::
+
+::: {#exr-la1-four-subspaces-compute}
+## Computing the four subspaces (computation)
+Let
+$$
+A=\begin{pmatrix}1&2&1\\2&4&3\\3&6&4\end{pmatrix}.
+$$
+(a) Show that $\operatorname{rank}(A)=2$ by exhibiting a dependence among the rows and among the columns.
+(b) Find a basis and the dimension of each of $\mathcal{C}(A)$, $\mathcal{C}(A^\top)$, $\mathcal{N}(A)$,
+and $\mathcal{N}(A^\top)$. (c) Verify the dimension counts of @thm-four-subspaces and check explicitly
+that your null-space basis vector is orthogonal to your row-space basis vectors.
+:::
+
+::: {#exr-la1-elementary-rank}
+## Rank by elimination (computation)
+Bring the matrix $A$ of @exr-la1-four-subspaces-compute to reduced row-echelon form by elementary row
+operations, and confirm that the number of pivots equals the rank you found, as guaranteed by
+@prp-rank-equals-pivots. Use the pivot columns to read off a basis of $\mathcal{C}(A)$ consisting of
+columns of $A$. (Worked template: @exm-la1-elimination.)
+:::
+
+::: {#exr-la1-subspace-intersection}
+## Intersections, unions, and sums of subspaces (proof)
+Let $U$ and $W$ be subspaces of a vector space $V$. (a) Prove that $U\cap W$ is a subspace. (b) Give an
+explicit example of two subspaces of $\mathbb{R}^2$ whose union is not a subspace. (c) Prove that the sum
+$U+W=\{\mathbf{u}+\mathbf{w}:\mathbf{u}\in U,\ \mathbf{w}\in W\}$ is a subspace, and is the smallest
+subspace containing $U\cup W$.
+:::
+
+::: {#exr-la1-design-collinear}
+## The dummy-variable trap (computation and interpretation)
+For the augmented design $\mathbf{X}'=[\mathbf{1}_4\ \ \mathbf{t}\ \ \mathbf{c}]$ of the remark in
+@sec-la1-design-example, with $\mathbf{t}=(0,0,1,1)^\top$ and $\mathbf{c}=(1,1,0,0)^\top$: (a) verify that
+$\mathcal{N}(\mathbf{X}')=\operatorname{span}\{(1,-1,-1)^\top\}$; (b) compute
+$\mathbf{X}'^\top\mathbf{X}'$ and show it is singular by exhibiting a nonzero vector in its null space;
+(c) explain, using @prp-system-solvability, why the individual coefficients are not identifiable while the
+contrast $\beta_{\mathbf{t}}-\beta_{\mathbf{c}}$ is.
+:::
+
+::: {#exr-la1-rank-product}
+## Rank of a product (proof)
+Let $A\in\mathbb{R}^{m\times n}$ and $B\in\mathbb{R}^{n\times p}$. (a) Prove that
+$\mathcal{C}(AB)\subseteq\mathcal{C}(A)$ and $\mathcal{N}(B)\subseteq\mathcal{N}(AB)$. (b) Deduce
+$\operatorname{rank}(AB)\le\min\{\operatorname{rank}(A),\operatorname{rank}(B)\}$. (c) Show that if $A$ has
+full column rank (its columns independent) then $\operatorname{rank}(AB)=\operatorname{rank}(B)$, and if
+$B$ has full row rank then $\operatorname{rank}(AB)=\operatorname{rank}(A)$.
+:::
+
+::: {#exr-la1-rank-one}
+## Rank-one matrices (proof)
+Let $\mathbf{u}\in\mathbb{R}^m$ and $\mathbf{v}\in\mathbb{R}^n$ be nonzero. (a) Prove that the outer
+product $\mathbf{u}\mathbf{v}^\top\in\mathbb{R}^{m\times n}$ has rank exactly $1$, and describe its column
+space and row space. (b) Conversely, prove that every matrix of rank $1$ can be written as
+$\mathbf{u}\mathbf{v}^\top$ for some nonzero $\mathbf{u},\mathbf{v}$. (Hint for (b): a rank-one matrix has
+a one-dimensional column space spanned by some $\mathbf{u}$; express each column as a multiple of
+$\mathbf{u}$.)
+:::
+
+::: {#exr-la1-left-right-inverse}
+## One-sided inverses of a square matrix (proof)
+Let $A\in\mathbb{R}^{n\times n}$. Prove directly from @thm-invertibility-characterization that if $A$ has
+a right inverse $C$ with $AC=I_n$, then $A$ is invertible and $C=A^{-1}$. Then give a $2\times 3$ matrix
+$A$ and a $3\times 2$ matrix $C$ with $AC=I_2$ but $CA\neq I_3$, showing that the square hypothesis is
+essential.
+:::
+
+::: {#exr-la1-map-unique-matrix}
+## Linear maps are matrices (proof)
+Without appealing to @prp-matrices-are-maps, prove from @lem-map-determined-by-basis that every linear map
+$T\colon\mathbb{R}^n\to\mathbb{R}^m$ equals $T_A$ for a unique $A\in\mathbb{R}^{m\times n}$, and identify
+the columns of $A$. Then prove that $T$ is injective if and only if the columns of $A$ are independent,
+and surjective if and only if they span $\mathbb{R}^m$.
+:::
+
+::: {#exr-la1-dim-sum}
+## Dimension of a sum (starred challenge)
+$\star$ Let $U$ and $W$ be finite-dimensional subspaces of a vector space $V$. Prove the dimension formula
+$$
+\dim(U+W)=\dim U+\dim W-\dim(U\cap W).
+$$
+(Hint: start from a basis of $U\cap W$ and extend it, using @lem-basis-extension, to a basis of $U$ and
+separately to a basis of $W$; prove that the combined list is a basis of $U+W$.) A solution appears in
+Appendix F.
+:::
+
+::: {#exr-la1-gram-rank}
+## The Gram matrix and full column rank (starred challenge)
+$\star$ Let $\mathbf{X}\in\mathbb{R}^{n\times p}$. (a) Prove that
+$\mathcal{N}(\mathbf{X}^\top\mathbf{X})=\mathcal{N}(\mathbf{X})$. (Hint: if
+$\mathbf{X}^\top\mathbf{X}\mathbf{v}=\mathbf{0}$, consider
+$\mathbf{v}^\top\mathbf{X}^\top\mathbf{X}\mathbf{v}=\|\mathbf{X}\mathbf{v}\|_2^2$.) (b) Deduce that
+$\operatorname{rank}(\mathbf{X}^\top\mathbf{X})=\operatorname{rank}(\mathbf{X})$, and hence that the
+$p\times p$ Gram matrix $\mathbf{X}^\top\mathbf{X}$ is invertible if and only if $\mathbf{X}$ has full
+column rank $p$. (c) Conclude that the normal-equations system
+$\mathbf{X}^\top\mathbf{X}\boldsymbol\beta=\mathbf{X}^\top\mathbf{y}$ has a unique solution exactly when
+$\mathbf{X}$ has full column rank, the algebraic foundation of ordinary least squares developed in
+Chapter 6. A solution appears in Appendix F.
+:::

@@ -1,0 +1,1261 @@
+---
+title: "Multilevel Network Meta-Regression I: The Aggregation Principle"
+---
+
+## Introduction {#sec-agg-intro}
+
+Part IV gave two ways to repair the indirect comparison once one trial hands us individual patient data
+(IPD). Matching-adjusted indirect comparison (MAIC, Chapter 18) reweights the IPD trial so that its
+weighted covariate moments equal the aggregate comparator's, then reads off the relative effect in the
+reweighted pseudo-population; simulated treatment comparison (STC, Chapter 19) fits an outcome regression
+to the IPD and predicts what its arms would do in the comparator's covariate distribution. Both are
+*pairwise* repairs of a single Bucher triangle, both target the *comparator* population and no other, and
+both buy their cure with assumptions that are exact only on a linear scale. On a nonlinear link such as the
+logit or the log, matching covariate *means* and plugging those means into the model is not the same as
+averaging the model over the population: the difference is the ecological bias of @def-ecological-bias, and
+it is the residue that @thm-failure-of-bucher could not remove from aggregate data alone.
+
+This chapter opens Part V with the method that resolves all three limitations at once: multilevel network
+meta-regression (ML-NMR), introduced by @phillippo2020mlnmr and @phillippo2019thesis. The idea is a single
+change of viewpoint. Instead of repairing one triangle at a time, write *one* individual-level outcome model
+for the whole network, with study baselines, prognostic main effects, and treatment-by-covariate effect
+modifiers (the **individual model**, @def-individual-model). Every study, whether it reports IPD or only
+summaries, is a sample from this one model restricted to its own covariate distribution. For a study that
+reports only aggregate data (AgD), the quantity we can predict is not an individual outcome but a *study
+average*, and the correct study average is obtained by integrating the individual model over that study's
+covariate distribution (the **aggregate model**, @def-aggregate-model). The bridge between the two levels is
+the **aggregation theorem** (@thm-aggregation): the mean outcome of an AgD arm is the integral of the
+inverse link of the linear predictor against the covariate density,
+$$
+\theta_{\bullet jk}=\int_{\mathcal X} g^{-1}\!\big(\eta_{jk}(\mathbf x)\big)\,f_j(\mathbf x)\,d\mathbf x .
+$$
+This single identity is the whole of ML-NMR's claim to coherence. IPD studies contribute their patients one
+by one, with no integration because each covariate vector is observed; AgD studies contribute through the
+integral, with the covariate distribution standing in for the individuals we cannot see. The two contributions
+enter one likelihood and estimate one set of parameters.
+
+The aggregation theorem also explains, in one line, why everyone before us was biased. If you do the cheap
+thing and plug the *mean* covariate into the model, you compute $g^{-1}(\eta_{jk}(\bar{\mathbf x}_j))$, the
+inverse link *of the average*; the correct quantity is the *average of the inverse link*. Because $g^{-1}$ is
+nonlinear, Jensen's inequality (@thm-jensen) separates the two, and the gap is exactly the ecological bias
+(@thm-aggregation-bias). ML-NMR removes that gap not by an approximation but by performing the integral. The
+remainder of the chapter studies the integral itself across the three links that organize the applied
+literature. On the identity link the inverse link is affine, the integral is the mean, and aggregation is
+*exact*: there is nothing to integrate and ML-NMR collapses to ordinary meta-regression on covariate means
+(@thm-identity-link-exact). On the log link with normally distributed covariates the integral is the moment
+generating function of a normal (@def-mgf), which we know in closed form, and the aggregate mean is an
+explicit exponential (@thm-log-link-mgf). On the logit link the integral is the mean of a logit-normal, which
+has *no* elementary closed form (@thm-logit-no-closed-form); this is the obstruction that forces the
+quasi-Monte Carlo machinery of Chapter 22. An optional unifying lemma (@lem-agg-heat-flow, developed in @sec-agg-heat) shows that all three cases
+are one object viewed three ways: the aggregate mean is the inverse link smoothed by the heat semigroup, and
+the three links differ only in whether that smoothing has a closed form.
+
+We close with a fully worked numerical example, computable by hand on a calculator, that contrasts the naive
+plug-in aggregate mean with the integrated one on the logit scale, exhibits the sign reversal of the bias
+between a low-risk and a high-risk arm, and reads off the resulting distortion of the marginal odds ratio. The
+chapter owns results H.1 to H.7 of the proof catalogue. Throughout, $g$ is the link function of
+@def-link-function, $\eta_{jk}$ the study-$j$, arm-$k$ linear predictor, $f_j$ the study-$j$ covariate density,
+and $\boldsymbol\xi$ the full parameter vector, all as in [Notation](/notation.qmd). Later chapters of Part V
+build on this foundation: discrete outcomes and the approximation theory (Chapter 21), numerical integration by
+copulas and low-discrepancy sequences (Chapter 22), target-population estimands, identifiability, and the
+sense in which ML-NMR generalizes standard network meta-analysis (Chapter 23), Bayesian computation (Chapter
+24), general likelihoods (Chapter 25), and the unanchored extension ML-UMR (Chapter 26).
+
+## A running clinical example {#sec-agg-running}
+
+Before any formalism, fix a concrete picture to carry through the chapter. It is deliberately small, and every abstract object introduced below will be pointed back to it.
+
+::: {.remark}
+**The plaque psoriasis network (running example).** Suppose a health technology assessment (HTA) body must choose between two active drugs for moderate-to-severe plaque psoriasis: treatment $B$, a new interleukin-17 (IL-17) inhibitor, and treatment $C$, an established competitor. The outcome is **PASI 75**, a binary success indicator equal to $1$ if a patient achieves a $75\%$ reduction in the Psoriasis Area and Severity Index by week 12 and $0$ otherwise. No trial compares $B$ against $C$ directly. Instead:
+
+- an **IPD trial** randomizes patients to placebo $A$ and the new drug $B$, and reports every patient's covariates and outcome, including whether the patient is *biologic-naive* (has never taken a biologic drug) or *biologic-experienced*;
+- an **AgD trial** randomizes patients to placebo $A$ and the competitor $C$, but reports only arm-level summaries: how many patients in each arm achieved PASI 75, the arm sizes, and the mean and standard deviation of the covariates.
+
+The analyst wants the relative effect of $B$ versus $C$ in a chosen target population. This is the anchored indirect comparison of Part III (both trials share the placebo anchor $A$), now with a mix of individual and aggregate evidence. Two features of the outcome drive everything. First, PASI 75 response depends on covariates: biologic-naive patients respond more often, and the IL-17 inhibitor $B$ works especially well in them, so *biologic-naive status is an effect modifier* of the $B$-versus-placebo contrast. Second, because the outcome is binary, the natural model is logistic regression, whose link is nonlinear; and it is exactly on a nonlinear link that "average the patients, then predict" and "predict at the average patient" come apart. $\blacktriangleleft$
+:::
+
+Why insist on a *population-averaged* (marginal) answer rather than the effect at some typical patient? Because that is what the decision maker buys. An HTA body reimburses a drug for a whole target population and wants the average response it will produce there; it does not want the response of a hypothetical patient whose every covariate sits exactly at the population mean, a patient who may not exist. The estimand of interest is therefore the *marginal* effect in the target population, and the central technical question of this chapter is how to compute an arm's marginal response from an individual-level model. (The choice of target population, and the precise estimand, are the subject of Chapter 23; here the target is simply each AgD study's own population.)
+
+What ML-NMR does with the two trials is asymmetric, and the asymmetry is the whole method. For the IPD trial it uses each patient one at a time: it reads that patient's covariates, forms the predicted response, and compares it with the observed outcome. For the AgD trial it cannot do this, because it never sees an individual patient's covariates; it sees only that (say) $37$ of $100$ patients on arm $C$ responded, together with the arm's covariate summaries. So it must predict the arm's *average* response, and the correct average is obtained by running the individual model across the whole spread of covariates in that arm and averaging the predictions. That spread of covariates is the study's **case mix**, written $f_j$ below. For the AgD trial the case mix is not observed patient-by-patient; it is reconstructed from the reported means, standard deviations, and (where available) correlations. We treat that reconstruction as given for now and return to it in Chapter 22; the reader should simply hold the picture that $f_j$ is "the distribution of patient types in study $j$."
+
+By the end of the chapter we will compute, for a single AgD study of this kind, that plugging the mean covariate into the logistic model reports a $B$-versus-$C$ odds ratio inflated by about $8\%$ relative to the correct integrated value, a distortion produced entirely by predicting at the average patient instead of averaging over patients. Everything between here and there is the machinery that makes that statement precise and general.
+
+## The network and its covariate distributions {#sec-agg-setup}
+
+We fix the data structure for the whole of Part V.
+
+::: {.remark}
+**The mixed network.** A network comprises $J$ studies indexed by $j$ and $K$ treatments indexed by $k$.
+Study $j$ randomizes patients to a subset of the treatments (its *arms*); we write $k$ for an arm and reuse
+$k$ for the treatment given on that arm, the network being connected in the sense of Chapter 15 so that every
+treatment is reachable. Each study is one of two kinds. An **IPD study** reports, for every patient $i$ on
+arm $k$, the baseline covariate vector $\mathbf x_{ijk}\in\mathbb R^d$, the arm, and the outcome $Y_{ijk}$. An
+**AgD study** reports only summaries: arm sizes $n_{jk}$, an outcome summary per arm (an event count, a sample
+mean, a Kaplan-Meier curve), and enough covariate information to pin down a covariate distribution, typically
+the per-covariate means and standard deviations and, with luck, a correlation matrix. The covariate
+distribution of study $j$ is a probability density $f_j$ on the covariate space $\mathcal X\subseteq\mathbb R^d$,
+with distribution function $F_j$, mean $\bar{\mathbf x}_j=\int_{\mathcal X}\mathbf x\,f_j(\mathbf x)\,d\mathbf x$,
+and covariance $\boldsymbol\Sigma_j$. For an IPD study $f_j$ is the empirical distribution of the observed
+covariates, known exactly; for an AgD study $f_j$ must be reconstructed from the reported marginal summaries
+and a dependence assumption, the construction we postpone to Chapter 22. Discrete covariates replace the
+density $f_j$ by a probability mass function and the integral by a sum throughout, with no change to any
+statement of this chapter. $\blacktriangleleft$
+:::
+
+The phrase "covariate distribution of a study" deserves a word, because it is where ML-NMR parts company with
+the per-patient potential-outcomes language of Part II. We treat the covariate vector of a randomly drawn
+patient in study $j$ as a random variable $X$ with law $f_j$, and we treat the outcome model as fixed across
+the network. The randomness in an AgD summary then has two sources: the sampling of covariates from $f_j$ and
+the conditional sampling of outcomes given covariates. Integrating out the first source is precisely the
+aggregation operation. We make this explicit now.
+
+::: {.remark}
+**What is known about $f_j$, and what is reconstructed.** For an IPD study $f_j$ is not modeled at all: it is the observed empirical distribution of the covariates, so any average against $f_j$ is just a sample average over the actual patients. For an AgD study $f_j$ is a genuine modeling assumption. A trial that reports only the mean and standard deviation of age and of body-mass index pins down each covariate's *marginal* distribution (often taken normal, or a suitable bounded law), but says nothing about how the covariates co-vary. To get the *joint* case mix $f_j$ one must supply the missing dependence, typically by assuming a Gaussian copula (Chapter 22) with a correlation borrowed from the IPD study or from external data, for instance a correlation of $0.3$ between age and body-mass index. This is real modeling with real uncertainty, and it is the price an AgD study pays for not releasing its patients. We carry $f_j$ as given throughout this chapter and treat its construction, and the sensitivity of the answer to it, in Chapter 22. $\blacktriangleleft$
+:::
+
+## The individual-level model {#sec-agg-individual}
+
+The model is the IPD network meta-regression of Chapter 17 written for an arbitrary number of studies and
+treatments. Its only novelty relative to that chapter is the use to which we put it: it will be the *common*
+model from which both IPD and AgD likelihoods descend.
+
+::: {#def-individual-model}
+## The ML-NMR individual-level model
+Fix a link function $g$ (@def-link-function) with inverse $g^{-1}$. For individual $i$ in study $j$ on arm
+$k$ with covariate vector $\mathbf x\in\mathcal X$, the **individual-level model** specifies the conditional
+mean outcome $\theta_{ijk}=\mathbb E[Y_{ijk}\mid X=\mathbf x,\,\text{arm }k]$ through the linear predictor
+$$
+g(\theta_{ijk})=\eta_{jk}(\mathbf x)
+:=\mu_j+\mathbf x^\top\boldsymbol\beta_1+\mathbf x^\top\boldsymbol\beta_{2,k}+\gamma_k ,
+$$ {#eq-agg-individual-model}
+where
+$$
+\mu_j\ \text{is the study-}j\text{ baseline},\quad
+\boldsymbol\beta_1\ \text{prognostic main effects},\quad
+\boldsymbol\beta_{2,k}\ \text{effect-modifier interactions},\quad
+\gamma_k\ \text{the treatment effect},
+$$
+subject to the reference-treatment constraints $\boldsymbol\beta_{2,1}=\mathbf 0$ and $\gamma_1=0$ for the
+network reference treatment $k=1$. Conditional on the covariate and the arm, outcomes are drawn independently
+from an outcome family $\pi_{\mathrm{Ind}}$ (the conditional distribution of the outcome given its mean; for
+PASI 75 this is the Bernoulli or binomial law, for a count the Poisson, for a continuous measurement the
+normal) with mean $\theta_{ijk}$ and possible dispersion parameter
+$\boldsymbol\phi$,
+$$
+Y_{ijk}\mid X=\mathbf x,\ \text{arm }k\ \sim\ \pi_{\mathrm{Ind}}\!\big(g^{-1}(\eta_{jk}(\mathbf x)),\,\boldsymbol\phi\big).
+$$
+The full parameter vector is
+$\boldsymbol\xi=\big(\{\mu_j\}_{j=1}^J,\ \boldsymbol\beta_1,\ \{\boldsymbol\beta_{2,k}\}_{k=2}^K,\ \{\gamma_k\}_{k=2}^K,\ \boldsymbol\phi\big)$.
+We write $\boldsymbol\beta_{\mathrm{tot},k}:=\boldsymbol\beta_1+\boldsymbol\beta_{2,k}$ for the **total
+covariate slope** on arm $k$, so that
+$\eta_{jk}(\mathbf x)=\mu_j+\gamma_k+\mathbf x^\top\boldsymbol\beta_{\mathrm{tot},k}$ is affine in
+$\mathbf x$ (affine means linear plus a constant: a straight-line function of $\mathbf x$, with no squared or
+self-interaction terms, so that its average equals its value at the average covariate). $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reading the four terms.** The decomposition @eq-agg-individual-model is the GLM linear predictor of
+@def-link-function organized by causal role. The baseline $\mu_j$ is a study-specific intercept; it absorbs
+the prognostic level of study $j$ and is treated either as a free fixed effect or, in a random-effects
+version, as exchangeable across studies (@def-random-effects, @def-exchangeability). The prognostic slope
+$\boldsymbol\beta_1$ multiplies the covariate the *same way on every arm*: it shifts the outcome level but
+cancels from any within-study contrast, so it is *not* an effect modifier. The interaction
+$\boldsymbol\beta_{2,k}$ multiplies the covariate *differently across arms*: it bends the conditional
+treatment contrast and is therefore the effect modification of @def-effect-modifier. The treatment effect
+$\gamma_k$ is the arm-$k$-versus-reference contrast at $\mathbf x=\mathbf 0$. The shared effect modifier
+assumption (@def-sema) is the structural hypothesis $\boldsymbol\beta_{2,k}$ shared across the treatments
+being compared; it is what makes the network identifiable from a mix of IPD and AgD, a matter we take up in
+Chapter 23. The whole apparatus reduces to standard network meta-analysis when $\boldsymbol\beta_1=\mathbf 0$
+and every $\boldsymbol\beta_{2,k}=\mathbf 0$, and to IPD network meta-regression when every study reports IPD;
+both reductions are proved in Chapter 23. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Clinical translation of the model terms.** For the running example, with the single covariate $x=$
+biologic-naive status, the four terms read as follows.
+
+| Symbol | Name | Plain meaning in the running example |
+|---|---|---|
+| $\mu_j$ | study baseline | log-odds of PASI 75 in study $j$ for a placebo patient at $\mathbf x=\mathbf 0$ |
+| $\gamma_k$ | treatment effect | how much arm $k$ shifts the log-odds versus placebo, at $\mathbf x=\mathbf 0$ |
+| $\boldsymbol\beta_1$ | prognostic effect | how biologic-naive status shifts response *the same way on every arm* |
+| $\boldsymbol\beta_{2,k}$ | effect modification | how biologic-naive status shifts the *benefit* of arm $k$ specifically |
+| $f_j$ | case mix | the fraction of biologic-naive versus experienced patients in study $j$ |
+
+The distinction between the two slopes is the whole reason effect modification matters. Suppose biologic-naive
+patients respond better *whatever they take*: that is a prognostic effect, carried by $\boldsymbol\beta_1$, and
+it raises both arms equally, so it cancels from the $B$-minus-placebo contrast. Now suppose instead that being
+biologic-naive makes the IL-17 inhibitor $B$ work *even better* than it makes placebo look: that is effect
+modification, carried by $\boldsymbol\beta_{2,B}$, and it does *not* cancel from the contrast. A study with more
+biologic-naive patients will then report a larger $B$-versus-placebo effect, purely through its case mix. That
+is why an indirect comparison across studies with different case mixes needs the covariate model at all.
+
+The constraints $\boldsymbol\beta_{2,1}=\mathbf 0$ and $\gamma_1=0$ are **identifiability conventions**, not
+clinical claims. They fix the reference treatment $k=1$ as the origin against which the others are measured,
+exactly as a regression with a categorical predictor drops one level as its baseline. They do not assert that
+the reference treatment has no biological effect or no effect modification; they only say that the *other*
+treatments are measured relative to it. $\blacktriangleleft$
+:::
+
+This is result H.1 of the proof catalogue (corresponds to H.1; Phillippo et al. 2020, Eq. 2; Phillippo 2019,
+Eq. 4.1b).
+
+::: {.remark}
+**Why a shared effect modifier assumption is needed (preview).** The interaction $\boldsymbol\beta_{2,k}$ is the
+one thing an AgD study cannot see directly: an AgD study reports one number per arm, so it cannot reveal how
+outcome varies with covariate *within* an arm. Only an IPD study exposes that within-study slope. ML-NMR can
+still use AgD studies to help estimate effect modification, but only under the **shared effect modifier
+assumption** (SEMA, @def-sema): the interaction coefficients $\boldsymbol\beta_{2,k}$ are the same across
+studies, because they attach to the treatment, not to the study. Under SEMA the IPD trial estimates
+$\boldsymbol\beta_{2,B}$, and the AgD trial's case mix $f_j$ then tells us how much of its reported effect is
+explained by that same interaction, which is what links the two into one estimable model. If SEMA fails, say
+the IL-17 inhibitor's effect modification by biologic-naive status differs between the IPD and AgD populations,
+then the AgD study's single summary per arm cannot separate a genuine treatment effect from a case-mix artifact,
+and the indirect comparison is not identified from aggregate data alone. This is the same identification wall
+that Chapter 16 hit for standard NMA; ML-NMR does not repeal it, it makes the assumption explicit and testable
+wherever IPD overlaps. The full identifiability analysis is Chapter 23. $\blacktriangleleft$
+:::
+
+## The aggregate-level model {#sec-agg-aggregate}
+
+An AgD study reports an arm average, not individual outcomes. The model for that average must be a function of
+the parameters $\boldsymbol\xi$ and the study covariate distribution $f_j$, and the right function is the one
+that respects the level at which the nonlinearity acts.
+
+::: {#def-aggregate-model}
+## The ML-NMR aggregate-level model
+For an AgD study $j$ on arm $k$ with covariate density $f_j$, the **aggregate-level mean outcome** is the
+average over the covariate distribution of the response-scale conditional mean,
+$$
+\theta_{\bullet jk}:=\int_{\mathcal X} g^{-1}\!\big(\eta_{jk}(\mathbf x)\big)\,f_j(\mathbf x)\,d\mathbf x ,
+$$ {#eq-agg-aggregate-mean}
+the bullet subscript $\bullet$ denoting the average over individuals. Read $\theta_{\bullet jk}$ as "the
+dot-mean": it is the model-predicted arm-level response (an event risk, a mean, or a rate) for study $j$ and
+arm $k$ after averaging over that study's case mix, and the bullet marks the individual index that has been
+averaged away. The reported arm summary is modeled by an
+aggregate outcome family with this mean,
+$$
+\text{summary}_{jk}\ \sim\ \pi_{\mathrm{Agg}}\!\big(\theta_{\bullet jk},\,n_{jk}\big),
+$$
+for example $\mathrm{Bin}(n_{jk},\theta_{\bullet jk})$ for a binary event count, the appropriate normal law
+for a continuous sample mean, or a count model for an event rate. $\blacktriangleleft$
+:::
+
+One statistical point deserves to be said in the main text rather than buried, because most readers meet ML-NMR
+through binary outcomes. For a binary outcome the arm's event count is a sum of $n_{jk}$ patient-level Bernoulli
+draws whose success probabilities $g^{-1}(\eta_{jk}(\mathbf x_i))$ *differ from patient to patient*, since the
+covariates differ. A sum of non-identical Bernoulli variables is a Poisson-binomial random variable
+(@def-poisson-binomial), not a binomial; the binomial law $\mathrm{Bin}(n_{jk},\theta_{\bullet jk})$ used in
+@def-aggregate-model therefore replaces those varying probabilities by their common average $\theta_{\bullet jk}$
+and is, strictly, an approximation. It is an excellent approximation when the probabilities do not vary wildly
+across the arm, and Chapter 21 quantifies exactly when it is safe; we flag it now so the reader knows from the
+outset that the "right" aggregate law for binary data is not quite the binomial they might expect.
+
+::: {.remark}
+**Integrate the response scale, not the link scale.** The single decision that defines ML-NMR is *where* the
+inverse link is applied. Equation @eq-agg-aggregate-mean applies $g^{-1}$ to the linear predictor at each
+covariate value and *then* averages; it does not average the linear predictor and then apply $g^{-1}$. The
+two operations agree only when $g^{-1}$ is affine. For every other link they differ by the ecological bias of
+@def-ecological-bias, and the order in @eq-agg-aggregate-mean is the order that matches the data-generating
+process, because the data are generated patient by patient at the response scale and only then summed. The
+choice of $\pi_{\mathrm{Agg}}$ is a separate modeling step; for binary outcomes the exact law of the event
+count is a Poisson binomial (@def-poisson-binomial) rather than a binomial, and the discrepancy and its
+control are the subject of Chapter 21. In this chapter we study the mean @eq-agg-aggregate-mean, which all
+choices of $\pi_{\mathrm{Agg}}$ share. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**A first taste of the gap, in one line of arithmetic.** Take a single arm of the running example whose patients
+split evenly into two covariate groups, and suppose the individual model gives a PASI 75 response probability of
+$0.60$ for the biologic-naive half and $0.10$ for the biologic-experienced half. The arm's true average response
+is the *average of the two risks*,
+$$
+\theta_\bullet=\tfrac12(0.60)+\tfrac12(0.10)=0.35 .
+$$
+The naive alternative summarizes the arm by its average log-odds and converts back. The two log-odds are
+$\mathrm{logit}(0.60)=0.405$ and $\mathrm{logit}(0.10)=-2.197$, their average is $-0.896$, and
+$$
+\theta^{\mathrm{naive}}=\mathrm{expit}(-0.896)=0.290 .
+$$
+The true arm response is $35\%$; the plug-in reports $29\%$. The six-percentage-point gap is pure Jensen
+inequality: averaging on the risk scale is not the same as averaging on the log-odds scale and converting back.
+This tiny sum is the whole chapter in miniature. The theorems below say when the gap is zero (identity link),
+when it has a closed form (log link), when it changes sign (logit), and how it distorts a treatment contrast.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Response scale versus link scale, by outcome type.** The order-of-operations warning is easiest to hold onto
+through the three outcome types a reader will actually meet. The *response scale* is where the outcome lives (a
+risk, a rate, a mean); the *link scale* is where the model is linear (log-odds, log-rate, or the mean itself).
+Aggregation must average on the response scale.
+
+| Outcome type | Example endpoint | Response scale $\theta$ | Link scale $\eta$ | Link $g$ | Aggregation |
+|---|---|---|---|---|---|
+| Continuous | change in PASI score, blood pressure | mean | mean | identity | exact (@sec-agg-identity) |
+| Count or rate | exacerbations or relapses per year | rate | log-rate | log | closed form under normal covariates (@sec-agg-log) |
+| Binary | PASI 75 response, mortality | risk (probability) | log-odds | logit | numerical only (@sec-agg-logit) |
+
+The three rows are the three sections that close the chapter, and the last column is their punchline: the more
+the response scale bends away from the link scale, the more aggregation costs, from nothing on the identity link
+to an unavoidable numerical integral on the logit. $\blacktriangleleft$
+:::
+
+This is result H.2 of the proof catalogue (corresponds to H.2; Phillippo 2019, Eq. 4.1d).
+
+## The aggregation theorem {#sec-agg-theorem}
+
+We now prove that @eq-agg-aggregate-mean is forced, not chosen: it is the mean of the marginal outcome of an
+AgD patient, and the AgD likelihood is built from the same integral. The argument is elementary, resting only
+on the chain rule for densities, Fubini's theorem (@thm-fubini-tonelli), and the tower property
+(@cor-total-expectation), also called the law of iterated expectations, but it is the load-bearing identity of
+the whole method.
+
+In words, before the symbols: imagine for a moment that we *could* see every patient in the AgD arm. We would
+evaluate each patient's conditional response from the individual model, and their likelihood contributions would
+simply multiply, exactly as for an IPD study. We cannot see them; we see only the arm summary. The theorem says
+that averaging the individual model over the plausible covariate values, weighted by the case mix $f_j$,
+reproduces precisely the marginal law of one such unseen patient, and hence the arm summary. Two consequences
+follow, and they are why the theorem is worth proving. The arm's *mean* is the integral @eq-agg-aggregate-mean
+(part (b)), and the arm's *likelihood* is built from that same integral (part (c)). Any other rule for turning
+the individual model into an arm prediction, in particular the plug-in rule of the next section, would be
+inconsistent with this data-generating process and would bias the estimated treatment effects. That is the
+sense in which the integral is forced, not chosen.
+
+::: {#thm-aggregation}
+## Aggregation theorem
+Adopt the individual-level model @eq-agg-individual-model, and suppose that within study $j$ the covariate
+vector $X$ of a randomly drawn patient has law $f_j$ and that, conditional on $X=\mathbf x$ and arm $k$, the
+outcome $Y$ has the family $\pi_{\mathrm{Ind}}(g^{-1}(\eta_{jk}(\mathbf x)),\boldsymbol\phi)$ with conditional
+density or mass function $L_{i\mid x}(\boldsymbol\xi;y,\mathbf x):=\pi_{\mathrm{Ind}}(y\mid g^{-1}(\eta_{jk}(\mathbf x)),\boldsymbol\phi)$.
+Then:
+
+**(a) Marginal individual likelihood.** The outcome of a patient whose covariate is not observed (the AgD
+case) has marginal density or mass function
+$$
+L_i(\boldsymbol\xi;y)=\int_{\mathcal X} L_{i\mid x}(\boldsymbol\xi;y,\mathbf x)\,f_j(\mathbf x)\,d\mathbf x .
+$$ {#eq-agg-marginal-likelihood}
+
+**(b) Aggregate mean.** The marginal mean outcome of an AgD patient on arm $k$ in study $j$ is the integral
+@eq-agg-aggregate-mean,
+$$
+\mathbb E[Y_{ijk}]=\int_{\mathcal X} g^{-1}\!\big(\eta_{jk}(\mathbf x)\big)\,f_j(\mathbf x)\,d\mathbf x=\theta_{\bullet jk}.
+$$ {#eq-agg-mean-identity}
+
+**(c) Aggregate likelihood.** If the $n_{jk}$ patients of arm $k$ in study $j$ have independent covariate
+draws from $f_j$ and conditionally independent outcomes $\mathbf y_{jk}=(y_{1jk},\dots,y_{n_{jk}jk})$, their
+joint marginal likelihood factors,
+$$
+\bar L_{jk}(\boldsymbol\xi;\mathbf y_{jk})=\prod_{i=1}^{n_{jk}} L_i(\boldsymbol\xi;y_{ijk}),
+$$ {#eq-agg-aggregate-likelihood}
+and when only a summary statistic of $\mathbf y_{jk}$ is reported, the likelihood of that summary is its law
+under the aggregate family $\pi_{\mathrm{Agg}}(\theta_{\bullet jk},n_{jk})$ of @def-aggregate-model.
+:::
+
+::: {.proof}
+**(a).** By the chain rule for densities the joint density of $(Y,X)$ for an AgD patient on arm $k$ factors as
+the product of the conditional density of $Y$ given $X$ and the marginal density of $X$,
+$$
+p(y,\mathbf x\mid\boldsymbol\xi)=p(y\mid\mathbf x,\boldsymbol\xi)\,f_j(\mathbf x)
+=L_{i\mid x}(\boldsymbol\xi;y,\mathbf x)\,f_j(\mathbf x).
+$$
+The marginal density of $Y$ is obtained by integrating out $\mathbf x$,
+$$
+L_i(\boldsymbol\xi;y)=\int_{\mathcal X} p(y,\mathbf x\mid\boldsymbol\xi)\,d\mathbf x
+=\int_{\mathcal X} L_{i\mid x}(\boldsymbol\xi;y,\mathbf x)\,f_j(\mathbf x)\,d\mathbf x,
+$$
+which is @eq-agg-marginal-likelihood. The integrand is nonnegative and jointly measurable, so by the Tonelli
+half of @thm-fubini-tonelli the integral is well defined and $L_i(\boldsymbol\xi;\cdot)$ is a genuine density:
+integrating it over $y$ and exchanging the order of integration, $\int_y\int_{\mathbf x} L_{i\mid x}f_j
+=\int_{\mathbf x}\big(\int_y L_{i\mid x}\,dy\big)f_j=\int_{\mathbf x} 1\cdot f_j=1$, since each conditional law
+$L_{i\mid x}(\boldsymbol\xi;\cdot,\mathbf x)$ integrates to one.
+
+**(b).** By the model the conditional mean is $\mathbb E[Y\mid X=\mathbf x]=g^{-1}(\eta_{jk}(\mathbf x))$. The
+tower property (@cor-total-expectation) gives
+$$
+\mathbb E[Y_{ijk}]=\mathbb E\big[\,\mathbb E[Y\mid X]\,\big]
+=\mathbb E\big[g^{-1}(\eta_{jk}(X))\big]
+=\int_{\mathcal X} g^{-1}(\eta_{jk}(\mathbf x))\,f_j(\mathbf x)\,d\mathbf x=\theta_{\bullet jk},
+$$
+the last equality being the definition of expectation under $f_j$. Equivalently, multiply
+@eq-agg-marginal-likelihood by $y$ and integrate, exchanging the order of integration by the Fubini half of
+@thm-fubini-tonelli (legitimate whenever $\mathbb E|Y|<\infty$, which holds for every outcome family used in
+practice): $\int_y y\,L_i(\boldsymbol\xi;y)\,dy=\int_{\mathbf x}\big(\int_y y\,L_{i\mid x}\,dy\big)f_j
+=\int_{\mathbf x} g^{-1}(\eta_{jk}(\mathbf x))\,f_j(\mathbf x)\,d\mathbf x$, the inner integral being the
+conditional mean. This is @eq-agg-mean-identity.
+
+**(c).** Conditional on $\boldsymbol\xi$, distinct patients have independent covariate draws and conditionally
+independent outcomes, so the pairs $(Y_{ijk},X_{ijk})$ are mutually independent; independence is preserved
+under the marginalization of part (a), because a function (here the marginal density) of independent random
+variables computed coordinatewise yields independent marginals. Hence the joint marginal density of
+$\mathbf y_{jk}$ is the product @eq-agg-aggregate-likelihood. If the data reduce to a summary statistic
+$T(\mathbf y_{jk})$, its likelihood is by definition the density or mass of $T$ under the joint law; modeling
+that law by $\pi_{\mathrm{Agg}}(\theta_{\bullet jk},n_{jk})$, whose mean is $\theta_{\bullet jk}$ by part (b),
+is the aggregate-level model of @def-aggregate-model. $\square$
+:::
+
+::: {.remark}
+**Why this is the defining identity.** Part (b) is the sentence "the aggregate mean is the integral of the
+inverse link against the covariate density," and it is the whole content of ML-NMR's coherence claim. An IPD
+study evaluates @eq-agg-individual-model at each observed $\mathbf x_{ijk}$ and needs no integral; an AgD study
+evaluates the integral @eq-agg-aggregate-mean against $f_j$. Both feed the *same* parameters $\boldsymbol\xi$
+into one likelihood, the product over studies of @eq-agg-aggregate-likelihood and the IPD analogue. The price
+of admission is the integral, and the rest of Part V is the study of how to compute it: in closed form when
+the link and covariate distribution permit (the next three sections), and by numerical integration when they
+do not (Chapter 22). $\blacktriangleleft$
+:::
+
+This is result H.3 of the proof catalogue (corresponds to H.3; Phillippo 2019, Eq. 4.1c; Phillippo et al.
+2020, Section 3).
+
+::: {.remark}
+**IPD and AgD contributions, side by side.** Make the two likelihood contributions concrete on the running
+example. Suppose the AgD trial reports that $37$ of the $100$ patients on its competitor arm $C$ achieved PASI
+75. ML-NMR models that count with the aggregate law of @def-aggregate-model, $\mathrm{Bin}(100,\theta_{\bullet
+jC})$, where the single arm-level risk $\theta_{\bullet jC}$ is itself the case-mix average
+@eq-agg-aggregate-mean of the individual risks $\mathrm{expit}(\eta_{jC}(\mathbf x))$ over that arm's covariate
+distribution $f_j$. Contrast the IPD trial: there a patient with observed covariate $\mathbf x_i$ on arm $B$
+contributes the *conditional* Bernoulli factor
+$\mathrm{expit}(\eta_{jB}(\mathbf x_i))^{y_i}\big(1-\mathrm{expit}(\eta_{jB}(\mathbf x_i))\big)^{1-y_i}$, with no
+integral, because the covariate is known. The two study types thus differ only in whether the covariate is
+integrated out: IPD conditions on each observed $\mathbf x_i$; AgD integrates over the unseen ones. Both feed the
+*same* coefficients $\mu_j,\gamma_k,\boldsymbol\beta_1,\boldsymbol\beta_{2,k}$. One point of possible confusion:
+parts (a) and (c) wrote a per-patient marginal likelihood $L_i$ for the AgD arm even though we never observe an
+individual AgD patient. That is a derivational device. Writing the per-patient marginal first makes the
+arm-summary likelihood, the thing we actually fit, drop out cleanly from the independence in part (c).
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reduction to standard network meta-analysis (the bridge from Chapter 15).** A reader arriving from Chapter 15
+can see the old model sitting inside this one. Set $\boldsymbol\beta_1=\mathbf 0$ and every
+$\boldsymbol\beta_{2,k}=\mathbf 0$, so there are no covariate terms. Then $\eta_{jk}(\mathbf x)=\mu_j+\gamma_k$
+does not depend on $\mathbf x$, the integral @eq-agg-aggregate-mean has a constant integrand, and
+$$
+\theta_{\bullet jk}=\int_{\mathcal X} g^{-1}(\mu_j+\gamma_k)\,f_j(\mathbf x)\,d\mathbf x=g^{-1}(\mu_j+\gamma_k),
+$$
+with no dependence on $f_j$ at all. The aggregate likelihood @eq-agg-aggregate-likelihood then reduces to the
+standard network meta-analysis likelihood with study baselines $\mu_j$ and treatment effects $\gamma_k$:
+aggregation does nothing, because there is nothing to average over. Consequently aggregation bias vanishes
+identically here for *every* link, consistent with @thm-aggregation-bias below (the linear predictor is
+degenerate, $\mathrm{Var}(\eta_{jk}(X))=0$). Standard NMA is thus the covariate-free corner of ML-NMR; the full
+statement, including the reduction to IPD network meta-regression, is Chapter 23. $\blacktriangleleft$
+:::
+
+## The aggregation-bias theorem {#sec-agg-bias}
+
+The temptation, and the practice of pre-ML-NMR meta-regression, is to skip the integral and feed the model the
+study mean covariate. We now show exactly what that costs. Define the **plug-in (naive) aggregate mean**
+$$
+\theta^{\mathrm{naive}}_{\bullet jk}:=g^{-1}\!\big(\eta_{jk}(\bar{\mathbf x}_j)\big),
+\qquad
+\bar{\mathbf x}_j=\int_{\mathcal X}\mathbf x\,f_j(\mathbf x)\,d\mathbf x ,
+$$ {#eq-agg-naive}
+the inverse link evaluated at the linear predictor of the mean covariate. Because $\eta_{jk}$ is affine,
+linearity of expectation gives $\eta_{jk}(\bar{\mathbf x}_j)=\mathbb E[\eta_{jk}(X)]$, so
+$\theta^{\mathrm{naive}}_{\bullet jk}=g^{-1}\big(\mathbb E[\eta_{jk}(X)]\big)$ is the inverse link *of the
+average linear predictor*, whereas the correct $\theta_{\bullet jk}=\mathbb E\big[g^{-1}(\eta_{jk}(X))\big]$ is
+the *average of the inverse link*. Jensen's inequality is the precise statement of their difference. It is worth
+naming the two objects clearly, because the whole chapter turns on keeping them apart: the plug-in is a
+*conditional* prediction (the response at one covariate value, namely the mean) wearing the costume of an arm
+summary, whereas the integral is the genuinely *marginal* prediction (the response averaged over the arm's case
+mix). "Marginal over $f_j$" and "conditional at a covariate value" are different quantities on any curved link,
+and ML-NMR's target estimand is the marginal one while the model is written conditionally.
+
+::: {#thm-aggregation-bias}
+## Aggregation bias
+Let $\eta_{jk}(X)$ be the linear predictor evaluated at the random covariate $X\sim f_j$, with
+$\bar{\mathbf x}_j=\mathbb E[X]$, and suppose $g^{-1}$ is convex or concave on an interval containing the
+support of $\eta_{jk}(X)$. Then the plug-in and integrated aggregate means @eq-agg-naive and
+@eq-agg-aggregate-mean satisfy
+$$
+\begin{aligned}
+g^{-1}\ \text{convex on the support}&:\quad \theta^{\mathrm{naive}}_{\bullet jk}\ \le\ \theta_{\bullet jk},\\
+g^{-1}\ \text{concave on the support}&:\quad \theta^{\mathrm{naive}}_{\bullet jk}\ \ge\ \theta_{\bullet jk},
+\end{aligned}
+$$ {#eq-agg-bias}
+and the inequality is an equality if and only if either $g^{-1}$ is affine on the support of
+$\eta_{jk}(X)$ or $\eta_{jk}(X)$ is degenerate, the latter meaning
+$\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}=0$. The signed
+discrepancy is exactly the ecological bias of @def-ecological-bias,
+$$
+\mathrm{EB}_{jk}:=\theta^{\mathrm{naive}}_{\bullet jk}-\theta_{\bullet jk}
+=g^{-1}\!\big(\eta_{jk}(\bar{\mathbf x}_j)\big)-\int_{\mathcal X} g^{-1}\!\big(\eta_{jk}(\mathbf x)\big)f_j(\mathbf x)\,d\mathbf x .
+$$ {#eq-agg-eb}
+:::
+
+::: {.proof}
+Apply Jensen's inequality (@thm-jensen) with the convex function $\varphi=g^{-1}$ and the integrable random
+variable $W:=\eta_{jk}(X)$. The inequality reads $\varphi(\mathbb E[W])\le\mathbb E[\varphi(W)]$, that is
+$g^{-1}(\mathbb E[\eta_{jk}(X)])\le\mathbb E[g^{-1}(\eta_{jk}(X))]$. By the affine identity
+$\mathbb E[\eta_{jk}(X)]=\eta_{jk}(\bar{\mathbf x}_j)$ the left side is $\theta^{\mathrm{naive}}_{\bullet jk}$
+and by @eq-agg-aggregate-mean the right side is $\theta_{\bullet jk}$, which is the convex case of
+@eq-agg-bias. If $g^{-1}$ is concave then $-g^{-1}$ is convex and the same argument applied to $-g^{-1}$
+reverses the inequality, giving the concave case.
+
+For the equality case, the strict form of @thm-jensen states that for a strictly convex $\varphi$ the
+inequality is strict unless $W$ is almost surely constant. Decompose: if $g^{-1}$ is affine on the support,
+then $g^{-1}(w)=a+bw$ there and $\mathbb E[g^{-1}(W)]=a+b\,\mathbb E[W]=g^{-1}(\mathbb E[W])$, an equality;
+this is the degenerate-curvature case. Otherwise $g^{-1}$ is strictly convex (or strictly concave) on a
+subinterval that $W$ charges with positive probability, and then equality forces $W$ to be almost surely
+constant, that is $\eta_{jk}(X)=\eta_{jk}(\bar{\mathbf x}_j)$ almost surely. Since $\eta_{jk}$ is affine with
+slope $\boldsymbol\beta_{\mathrm{tot},k}$, this says $\boldsymbol\beta_{\mathrm{tot},k}^\top(X-\bar{\mathbf x}_j)=0$
+almost surely, equivalently $\mathrm{Var}(\eta_{jk}(X))=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}=0$,
+which is the stated degeneracy. The identity @eq-agg-eb is @eq-agg-naive minus @eq-agg-aggregate-mean and
+coincides termwise with the ecological-bias formula @eq-ecological-bias of @def-ecological-bias. $\square$
+:::
+
+::: {.remark}
+**This is the resolution of @thm-failure-of-bucher.** Chapter 16 diagnosed the bias of the unadjusted
+indirect comparison as a difference of population-averaged conditional contrasts that did not cancel
+(@thm-failure-of-bucher), and named the arm-level residue the ecological bias (@def-ecological-bias). Theorem
+@thm-aggregation-bias shows that the residue is exactly the gap between plugging in the mean and integrating,
+and @thm-aggregation shows that ML-NMR closes the gap by *doing the integral* @eq-agg-aggregate-mean rather
+than approximating it. MAIC and STC attack the same gap by other means: MAIC's first-moment matching
+(@thm-maic-exponential-weights) makes $\bar{\mathbf x}$ agree across populations but leaves the within-population
+curvature gap untouched unless higher moments are matched too, and STC's mean-covariate prediction is precisely
+the plug-in @eq-agg-naive unless the regression is centered and integrated (@thm-marginal-stc-unbiased).
+ML-NMR is the systematic cure because it never plugs in. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why this matters for an indirect comparison.** A reader might shrug at an arm-level bias of a percentage point
+or two. The point is that an indirect comparison is a *contrast* of arm means, and the biases need not cancel.
+Each arm has its own total slope $\boldsymbol\beta_{\mathrm{tot},k}$, sits at its own mean linear predictor
+$m_k$, and therefore lives in its own curvature region of $g^{-1}$; on the logit link one arm can be in the
+convex region and the other in the concave region, so the plug-in underestimates one arm and overestimates the
+other. When we subtract to form the treatment contrast, the two biases *add* rather than cancel. A small,
+innocuous-looking error in each arm becomes a systematic distortion of the exact quantity the HTA body is
+deciding on. The worked example @exm-agg-logit-discrete makes this concrete: two arm-level biases of about
+$1\%$ combine into an $8\%$ inflation of the odds ratio. This is the practical reason ML-NMR integrates rather
+than plugs in. $\blacktriangleleft$
+:::
+
+The qualitative sign in @eq-agg-bias is sharpened to a quantity by a second-order expansion, which we will use
+to predict the bias in the worked example and to read off the closed-form cases that follow.
+
+### The leading-order bias {#sec-agg-leading-bias}
+
+The next lemma is the workhorse of the chapter: it converts the qualitative sign of the bias into a number,
+proportional to the variance of the linear predictor, and it is exactly what the log and logit results below
+specialize. A reader in a hurry can take away one sentence: *the aggregation bias is, to leading order, half the
+curvature of the inverse link times the variance of the linear predictor.*
+
+::: {#lem-agg-bias-expansion}
+## Leading-order aggregation bias
+Suppose $g^{-1}$ is three times continuously differentiable with bounded third derivative on a neighborhood
+of $m:=\eta_{jk}(\bar{\mathbf x}_j)$, and write $v:=\mathrm{Var}(\eta_{jk}(X))=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}$
+for the variance of the linear predictor. Then, as the covariate distribution concentrates so that $v\to 0$
+with the standardized linear predictor having bounded third absolute moment,
+$$
+\theta_{\bullet jk}=g^{-1}(m)+\tfrac12\,(g^{-1})''(m)\,v+o(v),
+\qquad
+\theta_{\bullet jk}-\theta^{\mathrm{naive}}_{\bullet jk}=\tfrac12\,(g^{-1})''(m)\,v+o(v).
+$$ {#eq-agg-bias-expansion}
+In particular the integrated mean exceeds the plug-in mean to leading order exactly where $g^{-1}$ is convex
+($(g^{-1})''(m)>0$), in agreement with @thm-aggregation-bias, and the leading bias is proportional to the
+variance of the linear predictor, which is the quadratic form
+$\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}$ in the total slope.
+:::
+
+::: {.proof}
+Write $\eta_{jk}(X)=m+\sqrt v\,U$, where $U:=(\eta_{jk}(X)-m)/\sqrt v$ has mean $0$ and variance $1$; this is
+legitimate because $\mathbb E[\eta_{jk}(X)]=m$ by the affine identity. Taylor's theorem with Lagrange remainder
+gives, for some $\zeta$ between $m$ and $\eta_{jk}(X)$,
+$$
+g^{-1}(\eta_{jk}(X))=g^{-1}(m)+(g^{-1})'(m)\,\sqrt v\,U+\tfrac12 (g^{-1})''(m)\,v\,U^2+\tfrac16 (g^{-1})'''(\zeta)\,v^{3/2}U^3 .
+$$
+Take expectations. The linear term vanishes because $\mathbb E[U]=0$; the quadratic term gives
+$\tfrac12(g^{-1})''(m)\,v$ because $\mathbb E[U^2]=1$; and the remainder is bounded in absolute value by
+$\tfrac16\big(\sup|(g^{-1})'''|\big)\,v^{3/2}\,\mathbb E|U|^3$, which is $O(v^{3/2})=o(v)$ under the bounded
+third-moment hypothesis. Hence $\theta_{\bullet jk}=\mathbb E[g^{-1}(\eta_{jk}(X))]=g^{-1}(m)+\tfrac12(g^{-1})''(m)v+o(v)$.
+Subtracting $\theta^{\mathrm{naive}}_{\bullet jk}=g^{-1}(m)$ gives the second display. $\square$
+:::
+
+This refinement and @thm-aggregation-bias are result H.4 of the proof catalogue (corresponds to H.4;
+Phillippo 2019, Eq. 4.8).
+
+## A unifying view: aggregation is heat flow {#sec-agg-heat}
+
+::: {.remark}
+**Optional section; read it for insight, skip it to keep moving.** This section is structural insight, not
+machinery you need in order to fit or interpret an ML-NMR model. A reader who wants the method can jump straight
+to @sec-agg-identity and lose nothing operationally. The payoff for staying is a single organizing picture that
+answers a question the next three sections would otherwise raise one at a time: *why do the identity, log, and
+probit links keep closed-form aggregate means while the logit does not?* The answer is that averaging a function
+against a normal distribution is the same operation as letting heat diffuse for a moment, and only some functions
+stay simple under diffusion. The same picture tells you the *sign* of the aggregation bias at a glance and
+reproduces the leading-order expansion of the previous section as the first instant of the flow. None of this is
+required; it is the "one picture for three theorems," offered for the reader who wants to see the unity.
+$\blacktriangleleft$
+:::
+
+Before specializing to the three links, we record the structural fact that ties their closed-form behavior
+together. When the linear predictor is normally distributed, which by the affine-image theorem
+(@thm-mvn-linear) happens exactly when the covariates are jointly normal, the integrated aggregate mean is the
+inverse link *smoothed by Gaussian convolution* (each value of the inverse link is replaced by a
+normal-weighted average of its nearby values), and Gaussian convolution is the *heat semigroup* (the operation
+that evolves a temperature profile forward in time under the heat equation). The three links then differ only in
+whether the heat flow of the inverse link is elementary.
+
+::: {#lem-agg-heat-flow}
+## The aggregate mean is a heat flow of the inverse link
+Let $\psi:\mathbb R\to\mathbb R$ be measurable with $|\psi(z)|\le Ce^{a|z|}$ for some constants $C,a$, and
+suppose $\psi$ is twice continuously differentiable with $|\psi'|,|\psi''|\le C e^{a|z|}$. For
+$\eta\sim\mathcal N(m,\tau)$ with $\tau\ge 0$ define
+$$
+u(m,\tau):=\mathbb E[\psi(\eta)]=\int_{\mathbb R}\psi(z)\,\phi(z;m,\tau)\,dz,
+$$
+where $\phi(\cdot;m,\tau)$ is the $\mathcal N(m,\tau)$ density. Then $u$ solves the heat equation
+$$
+\frac{\partial u}{\partial \tau}=\frac12\,\frac{\partial^2 u}{\partial m^2},
+\qquad
+\lim_{\tau\downarrow 0} u(m,\tau)=\psi(m),
+$$ {#eq-agg-heat-equation}
+so that $u(\cdot,\tau)=e^{(\tau/2)\,\partial_m^2}\psi$ is the inverse link diffused for "time" $\tau$ equal to
+the variance of the linear predictor. Consequently, if the covariates in study $j$ are jointly normal,
+$X\sim\mathcal N(\bar{\mathbf x}_j,\boldsymbol\Sigma_j)$, then with $\psi=g^{-1}$,
+$m=\eta_{jk}(\bar{\mathbf x}_j)$, and $\tau=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}$,
+the aggregate mean is $\theta_{\bullet jk}=u(m,\tau)$.
+:::
+
+::: {.proof}
+The $\mathcal N(m,\tau)$ density is a translate of the heat kernel: writing $G(\xi,\tau)=(2\pi\tau)^{-1/2}
+\exp(-\xi^2/2\tau)$ we have $\phi(z;m,\tau)=G(z-m,\tau)$, and a direct differentiation verifies that $G$
+solves $\partial_\tau G=\tfrac12\partial_\xi^2 G$ on $\tau>0$. Indeed
+$\partial_\tau G=G\big(-\tfrac1{2\tau}+\tfrac{\xi^2}{2\tau^2}\big)$ and
+$\partial_\xi G=-\tfrac{\xi}{\tau}G$, so $\partial_\xi^2 G=\big(\tfrac{\xi^2}{\tau^2}-\tfrac1\tau\big)G
+=2\partial_\tau G$. Because $G(z-m,\tau)$ depends on $m$ and $z$ only through $z-m$, we have
+$\partial_m\phi=-\partial_z\phi$ and hence $\partial_m^2\phi=\partial_z^2\phi$, while
+$\partial_\tau\phi=\tfrac12\partial_z^2\phi=\tfrac12\partial_m^2\phi$. Therefore, differentiating under the
+integral sign,
+$$
+\partial_\tau u=\int\psi(z)\,\partial_\tau\phi\,dz=\tfrac12\int\psi(z)\,\partial_m^2\phi\,dz=\tfrac12\,\partial_m^2 u,
+$$
+which is @eq-agg-heat-equation. The differentiations under the integral are justified by dominated
+convergence: the $m$- and $\tau$-derivatives of $\phi(z;m,\tau)$ are $\phi$ times polynomials in
+$(z-m)/\tau$, and the growth bound $|\psi(z)|\le Ce^{a|z|}$ times such a Gaussian-with-polynomial factor is
+integrable and locally bounded uniformly in $(m,\tau)$ on compact subsets of $\{\tau>0\}$, by completing the
+square in the exponent. For the initial condition, substitute $z=m+\sqrt\tau\,s$ to write
+$u(m,\tau)=\int\psi(m+\sqrt\tau\,s)\,\phi(s;0,1)\,ds$; as $\tau\downarrow0$ the integrand converges pointwise
+to $\psi(m)\phi(s;0,1)$ and is dominated by $C e^{a|m|}e^{a\sqrt\tau|s|}\phi(s;0,1)\le C'e^{a|m|}(e^{as}+e^{-as})\phi(s;0,1)$
+for $\tau\le1$, an integrable bound, so dominated convergence gives $u(m,\tau)\to\psi(m)\int\phi(s;0,1)ds=\psi(m)$.
+The final claim is the affine-image theorem (@thm-mvn-linear): for $X\sim\mathcal N(\bar{\mathbf x}_j,\boldsymbol\Sigma_j)$
+the scalar $\eta_{jk}(X)=\mu_j+\gamma_k+X^\top\boldsymbol\beta_{\mathrm{tot},k}$ is normal with mean
+$\eta_{jk}(\bar{\mathbf x}_j)=m$ and variance $\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}=\tau$,
+so $\theta_{\bullet jk}=\mathbb E[g^{-1}(\eta_{jk}(X))]=u(m,\tau)$. $\square$
+:::
+
+::: {.remark}
+**One picture for three theorems.** The heat-flow view organizes the rest of the chapter. The variance $\tau$
+plays the role of time: at $\tau=0$ (a degenerate covariate distribution, all mass at $\bar{\mathbf x}_j$) there
+is no diffusion and $\theta_{\bullet jk}=g^{-1}(m)=\theta^{\mathrm{naive}}_{\bullet jk}$, no aggregation bias;
+as $\tau$ grows the inverse link is smoothed and the bias accumulates. The leading-order expansion
+@eq-agg-bias-expansion is the first step of the heat flow, $u\approx\psi+\tfrac{\tau}{2}\psi''$. The identity
+link is the fixed point of the flow ($\psi''=0$); the log link is an eigen-type orbit on which the flow stays
+exponential; the probit link is carried by the flow to a rescaled probit; and the logit link is carried to a
+function with no elementary name. We take these in turn. $\blacktriangleleft$
+:::
+
+## The identity link: exact aggregation {#sec-agg-identity}
+
+On the identity scale the inverse link is the identity map, which is affine, so the equality case of
+@thm-aggregation-bias holds *for every covariate distribution*, not only the normal one. This is the one link
+on which ML-NMR needs no integral.
+
+::: {#thm-identity-link-exact}
+## Exactness of identity-link aggregation
+Suppose $g$ is the identity link, $g^{-1}(z)=z$. Then for every study covariate distribution $f_j$ with mean
+$\bar{\mathbf x}_j$, the integrated and plug-in aggregate means coincide and equal the linear predictor at the
+mean covariate,
+$$
+\theta_{\bullet jk}=\int_{\mathcal X}\eta_{jk}(\mathbf x)\,f_j(\mathbf x)\,d\mathbf x
+=\mu_j+\gamma_k+\bar{\mathbf x}_j^\top\boldsymbol\beta_{\mathrm{tot},k}
+=\eta_{jk}(\bar{\mathbf x}_j)=\theta^{\mathrm{naive}}_{\bullet jk},
+$$ {#eq-agg-identity}
+so the aggregation bias @eq-agg-eb vanishes identically. Conversely, if a link makes
+$\theta_{\bullet jk}=\theta^{\mathrm{naive}}_{\bullet jk}$ for *every* covariate distribution supported on an
+open set, then $g^{-1}$ is affine on that set.
+:::
+
+::: {.proof}
+For the identity link $g^{-1}(\eta_{jk}(\mathbf x))=\eta_{jk}(\mathbf x)$, so @eq-agg-aggregate-mean reads
+$\theta_{\bullet jk}=\int\eta_{jk}(\mathbf x)f_j(\mathbf x)\,d\mathbf x=\mathbb E[\eta_{jk}(X)]$. Since
+$\eta_{jk}$ is affine, linearity of expectation gives
+$\mathbb E[\eta_{jk}(X)]=\mu_j+\gamma_k+\mathbb E[X]^\top\boldsymbol\beta_{\mathrm{tot},k}=\eta_{jk}(\bar{\mathbf x}_j)$,
+which is @eq-agg-identity; the plug-in @eq-agg-naive is the same quantity, so $\mathrm{EB}_{jk}=0$.
+
+For the converse, suppose $g^{-1}(\mathbb E[W])=\mathbb E[g^{-1}(W)]$ for $W=\eta_{jk}(X)$ under every covariate
+law on an open set, equivalently $\psi(\mathbb E[W])=\mathbb E[\psi(W)]$ for $\psi=g^{-1}$ and every law of $W$
+on the open interval $I:=\eta_{jk}(\text{open set})$. Take $W$ to put mass $\tfrac12$ at each of two points
+$w_1,w_2\in I$; then the identity reads $\psi\big(\tfrac{w_1+w_2}{2}\big)=\tfrac12\psi(w_1)+\tfrac12\psi(w_2)$,
+which is *Jensen's functional equation* (also called the midpoint-affine or Cauchy-Jensen equation): the value
+at a midpoint equals the average of the values at the two endpoints, for every pair of points. It is a standard
+fact that a function that is midpoint-affine on an interval and continuous there must be genuinely affine, a
+straight line $\psi(w)=a+bw$; continuity is what upgrades the midpoint identity (which on its own only pins down
+values at dyadic averages) to affinity at every point. Here continuity is free, because $g$, hence $g^{-1}$, is
+$C^2$ by @def-link-function. Hence $\psi=g^{-1}$ is affine on $I$. $\square$
+:::
+
+::: {.remark}
+**ML-NMR on the identity scale is meta-regression on means.** When @eq-agg-identity holds, the aggregate
+likelihood @eq-agg-aggregate-likelihood depends on the covariate distribution only through its mean
+$\bar{\mathbf x}_j$, and ML-NMR reduces to the familiar network meta-regression that regresses study-level
+outcomes on study-level mean covariates. This is the precise sense in which the identity scale is benign:
+there is no within-study aggregation to do, only across-study regression, and the second moments of $f_j$ are
+irrelevant. It is also why first-moment matching is exactly sufficient for MAIC on the identity scale, a point
+flagged in the moment-balance discussion of Chapter 18; the curvature that first-moment matching ignores is
+present on every other scale and absent on this one. Identity-scale exactness is the friendly exception, not
+the rule: continuous outcomes summarized by means are often modeled this way, but binary, count, and
+time-to-event outcomes live on the curved scales of the next two sections. $\blacktriangleleft$
+:::
+
+This is result H.5 of the proof catalogue (corresponds to H.5; Phillippo 2019, Section 4.3.2).
+
+## The log link: a closed form through the moment generating function {#sec-agg-log}
+
+On the log scale the inverse link is the exponential, which is convex, so by @thm-aggregation-bias the plug-in
+mean underestimates the truth. When the covariates are jointly normal the integral @eq-agg-aggregate-mean is
+the moment generating function of a normal random variable evaluated at $t=1$, and we computed that transform
+in closed form in Chapter 4. The result is one of the few exact aggregate means in ML-NMR and underlies the
+closed-form Poisson aggregate likelihood of Chapter 21.
+
+::: {#thm-log-link-mgf}
+## Closed-form log-link aggregation under normal covariates
+Suppose $g$ is the log link, $g^{-1}(z)=e^{z}$, and that the covariates in study $j$ are jointly normal,
+$X\sim\mathcal N(\bar{\mathbf x}_j,\boldsymbol\Sigma_j)$. Then the aggregate mean @eq-agg-aggregate-mean is
+$$
+\theta_{\bullet jk}=\exp\!\Big(\mu_j+\gamma_k+\bar{\mathbf x}_j^\top\boldsymbol\beta_{\mathrm{tot},k}
++\tfrac12\,\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\,\boldsymbol\beta_{\mathrm{tot},k}\Big),
+\qquad \boldsymbol\beta_{\mathrm{tot},k}=\boldsymbol\beta_1+\boldsymbol\beta_{2,k}.
+$$ {#eq-agg-log-mgf}
+Equivalently $\theta_{\bullet jk}=\theta^{\mathrm{naive}}_{\bullet jk}\cdot\exp\!\big(\tfrac12\,\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}\big)$,
+so the plug-in mean is biased downward by the exact multiplicative factor
+$e^{\,v/2}\ge 1$ with $v=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}$,
+with equality only when the total slope $\boldsymbol\beta_{\mathrm{tot},k}$ lies in the null space of
+$\boldsymbol\Sigma_j$.
+:::
+
+::: {.proof}
+Set $W:=\eta_{jk}(X)=\mu_j+\gamma_k+X^\top\boldsymbol\beta_{\mathrm{tot},k}$, an affine function of the normal
+vector $X$. By the affine-image theorem (@thm-mvn-linear), $W$ is univariate normal with mean and variance
+$$
+m:=\mathbb E[W]=\mu_j+\gamma_k+\bar{\mathbf x}_j^\top\boldsymbol\beta_{\mathrm{tot},k},
+\qquad
+v:=\mathrm{Var}(W)=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k},
+$$
+so $W\sim\mathcal N(m,v)$. By @eq-agg-aggregate-mean and the definition of the moment generating function
+(@def-mgf),
+$$
+\theta_{\bullet jk}=\mathbb E[e^{W}]=M_W(1),
+$$
+the MGF of $W$ at $t=1$. The MGF of $\mathcal N(m,v)$ is $M_W(t)=\exp(mt+\tfrac12 v t^2)$, the scalar case
+$p=1$ of the multivariate-normal MGF @eq-mvn-mgf. Evaluating at $t=1$ gives
+$\theta_{\bullet jk}=\exp(m+\tfrac12 v)$, which is @eq-agg-log-mgf. The factorization
+$\exp(m+\tfrac12 v)=e^{m}\cdot e^{v/2}=\theta^{\mathrm{naive}}_{\bullet jk}\cdot e^{v/2}$ follows from
+$\theta^{\mathrm{naive}}_{\bullet jk}=g^{-1}(m)=e^{m}$, and $v=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}\ge 0$
+because $\boldsymbol\Sigma_j\succeq 0$ (@thm-cov-psd), with $v=0$ if and only if
+$\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}=\mathbf 0$. $\square$
+:::
+
+::: {.remark}
+**Consistency with the bias and heat-flow results.** The multiplicative factor $e^{v/2}\ge1$ is the exact form
+of the downward plug-in bias predicted qualitatively by @thm-aggregation-bias (convex $g^{-1}=\exp$, hence
+$\theta^{\mathrm{naive}}\le\theta_\bullet$) and to leading order by @eq-agg-bias-expansion: there
+$(g^{-1})''(m)=e^{m}$, so the leading bias is $\tfrac12 e^{m}v=\tfrac{v}{2}\theta^{\mathrm{naive}}$, matching
+the expansion $e^{m}(e^{v/2}-1)=e^{m}(\tfrac{v}{2}+o(v))$. The closed form is also the heat flow of
+@lem-agg-heat-flow with $\psi=\exp$: the function $u(m,\tau)=e^{m+\tau/2}$ solves
+$\partial_\tau u=\tfrac12\partial_m^2 u$ with $u(m,0)=e^m$, because both $\partial_\tau u$ and
+$\tfrac12\partial_m^2 u$ equal $\tfrac12 e^{m+\tau/2}$; the exponential is carried by the heat semigroup to a
+shifted exponential, which is why the log link keeps a closed form. The two hypotheses are essential. Drop
+joint normality, and $\mathbb E[e^{W}]$ is the MGF of a non-normal law, generally not elementary; drop the log
+link, and $W$ is still normal but $\mathbb E[g^{-1}(W)]$ is no longer an MGF. The first failure is repaired by
+numerical integration (Chapter 22); the second is the subject of the next section. $\blacktriangleleft$
+:::
+
+This is result H.6 of the proof catalogue (corresponds to H.6; Phillippo 2019, Section 4.3.2).
+
+## The logit link: no elementary closed form {#sec-agg-logit}
+
+Binary outcomes are modeled on the logit scale, where $g^{-1}(z)=\mathrm{expit}(z):=e^{z}/(1+e^{z})$ is the
+standard logistic function, the cumulative distribution function of the logistic law. It is bounded, smooth,
+convex for $z<0$ and concave for $z>0$, with the inflection at $z=0$. The change of curvature across $z=0$ is
+what makes the logit aggregation bias different in kind from the log: it has no fixed sign, it vanishes at a
+symmetric configuration, and the integral that defines $\theta_{\bullet jk}$ has no elementary closed form even
+for normal covariates. We prove the structural facts in full and then explain the absence of a closed form by
+contrast with the probit link, whose superficially similar integral *is* elementary.
+
+The practical bottom line comes first, because it is what a data analyst needs and it does not depend on the
+proofs: for a binary outcome with genuinely varying covariates, the aggregate risk usually cannot be written in
+closed form and must be computed by numerical integration (Chapter 22), and the plug-in error can point either
+way depending on the arm's baseline risk. Here is the risk interpretation of that sign, stated before we prove
+it. Because $\mathrm{expit}$ is convex below zero and concave above zero, and because the mean linear predictor
+$m$ is below zero exactly when the arm's average risk is below $50\%$:
+
+- in a *low-risk* arm (mean risk below $50\%$, so $m<0$), covariate heterogeneity pulls the true average risk
+  *upward* relative to the plug-in value: the plug-in underestimates;
+- in a *high-risk* arm (mean risk above $50\%$, so $m>0$), heterogeneity pulls the true average risk
+  *downward*: the plug-in overestimates;
+- at exactly $50\%$ ($m=0$), the two effects balance and the bias is zero, however spread out the covariates
+  are.
+
+The following table is that picture in numbers. It tabulates $\mathrm{expit}$ and the sign of its curvature
+along the linear-predictor axis, and reads off the direction in which integrating moves the arm risk away from
+the naive plug-in value.
+
+| Mean linear predictor $m$ | Arm mean risk $\mathrm{expit}(m)$ | Curvature $\mathrm{expit}''(m)$ | Plug-in versus truth |
+|---|---|---|---|
+| $-2$ | $0.12$ | $>0$ (convex) | plug-in underestimates |
+| $-1$ | $0.27$ | $>0$ (convex) | plug-in underestimates |
+| $\phantom{-}0$ | $0.50$ | $0$ (inflection) | no bias |
+| $+1$ | $0.73$ | $<0$ (concave) | plug-in overestimates |
+| $+2$ | $0.88$ | $<0$ (concave) | plug-in overestimates |
+
+This is the qualitative content of @thm-logit-no-closed-form(c) below; the worked example
+@exm-agg-logit-discrete realizes it with real numbers, one arm on each side of the inflection.
+
+::: {#prp-agg-probit-closed-form}
+## The probit aggregate mean is elementary
+Suppose the inverse link is the standard normal distribution function, $g^{-1}=\Phi$ (the probit link), and
+the linear predictor is normal, $\eta_{jk}(X)\sim\mathcal N(m,\tau)$ with $\tau\ge0$. Then the aggregate mean
+is the elementary closed form
+$$
+\theta_{\bullet jk}=\mathbb E[\Phi(\eta_{jk}(X))]=\Phi\!\Big(\frac{m}{\sqrt{1+\tau}}\Big).
+$$ {#eq-agg-probit}
+:::
+
+::: {.proof}
+This is the Gaussian probit integral established in Chapter 16 as @lem-limits-probit-integral, with
+$a=0,\,b=1$ and the roles $(m,\sigma^2)\leftrightarrow(m,\tau)$: there it is shown that for
+$Z\sim\mathcal N(m,\tau)$ one has $\mathbb E[\Phi(a+bZ)]=\Phi\big((a+bm)/\sqrt{1+b^2\tau}\big)$, by writing
+$\Phi(a+bZ)=P(U\le a+bZ\mid Z)$ for an independent standard normal $U$ and standardizing the normal difference
+$U-bZ$ through its moment generating function. Specializing $a=0,b=1$ gives @eq-agg-probit. Equivalently, in
+the heat-flow language of @lem-agg-heat-flow, $u(m,\tau)=\Phi(m/\sqrt{1+\tau})$ solves
+$\partial_\tau u=\tfrac12\partial_m^2 u$ with $u(m,0)=\Phi(m)$: writing $u=\Phi(m\,(1+\tau)^{-1/2})$ and
+$\varphi=\Phi'$, one computes $\partial_m u=\varphi\,(1+\tau)^{-1/2}$,
+$\partial_m^2 u=\varphi'\,(1+\tau)^{-1}=-\tfrac{m}{(1+\tau)^{2}}\varphi$ using $\varphi'(x)=-x\varphi(x)$, and
+$\partial_\tau u=-\tfrac{m}{2}(1+\tau)^{-3/2}\varphi=\tfrac12\partial_m^2 u$, with $u(m,0)=\Phi(m)$. $\square$
+:::
+
+::: {.remark}
+**Probit is easy, logit is not: the same integral, two fates.** It is worth seeing the divide numerically before
+the theorem explains it. Take a normal linear predictor with mean $m=1$ and variance $\tau=1$. The probit
+aggregate mean is elementary by @eq-agg-probit,
+$$
+\Phi\!\Big(\frac{1}{\sqrt{1+1}}\Big)=\Phi(0.7071)=0.7602 .
+$$
+The logit aggregate mean is the same shape of integral, with $\mathrm{expit}$ in place of $\Phi$, but it has no
+such formula; evaluated numerically it is
+$$
+J(1,1)=\int_{\mathbb R}\mathrm{expit}(z)\,\phi(z;1,1)\,dz=0.6967 .
+$$
+Two nearby S-shaped links, fed identical $(m,\tau)$, give different aggregate risks ($0.760$ versus $0.697$),
+and only one of the two can be written down. The next theorem isolates exactly why. $\blacktriangleleft$
+:::
+
+::: {#thm-logit-no-closed-form}
+## Logit-link aggregation: structure and the absence of a closed form
+Let the inverse link be $g^{-1}=\mathrm{expit}$ and let the linear predictor be normal,
+$\eta_{jk}(X)\sim\mathcal N(m,\tau)$ with $\tau>0$, where $m=\eta_{jk}(\bar{\mathbf x}_j)$ and
+$\tau=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}$. Define the
+**logit-normal integral**
+$$
+J(m,\tau):=\int_{\mathbb R}\mathrm{expit}(z)\,\phi(z;m,\tau)\,dz=\theta_{\bullet jk}\in(0,1).
+$$ {#eq-agg-logit-integral}
+Then:
+
+**(a) Reflection and the symmetric point.** $J(m,\tau)=1-J(-m,\tau)$ for all $m$, and in particular
+$J(0,\tau)=\tfrac12$ for every $\tau\ge0$. Thus when the linear predictor at the mean covariate is zero the
+aggregation bias @eq-agg-eb vanishes *exactly*, despite $g^{-1}$ being nonlinear and $\tau>0$.
+
+**(b) Monotonicity.** $J(\cdot,\tau)$ is strictly increasing, with
+$\partial_m J(m,\tau)=\mathbb E[\mathrm{expit}'(\eta_{jk}(X))]=\mathbb E[\mathrm{expit}(\eta)(1-\mathrm{expit}(\eta))]>0$.
+
+**(c) Sign of the bias.** To leading order in $\tau$, $\theta_{\bullet jk}-\theta^{\mathrm{naive}}_{\bullet jk}
+=\tfrac12\,\mathrm{expit}''(m)\,\tau+o(\tau)$ with $\mathrm{expit}''(m)=\mathrm{expit}(m)(1-\mathrm{expit}(m))(1-2\,\mathrm{expit}(m))$,
+which is positive for $m<0$ and negative for $m>0$: the plug-in mean *underestimates* the integrated mean in
+the low-risk region ($m<0$) and *overestimates* it in the high-risk region ($m>0$).
+
+**(d) No elementary closed form.** Unlike the probit aggregate mean @eq-agg-probit, the logit-normal integral
+$J(m,\tau)$ admits no representation as a finite combination of elementary functions of $(m,\tau)$; the
+aggregate likelihood under the logit link must therefore be evaluated by numerical integration.
+:::
+
+::: {.proof}
+**(a).** The logistic function satisfies $\mathrm{expit}(-z)=1-\mathrm{expit}(z)$, since
+$\mathrm{expit}(z)+\mathrm{expit}(-z)=\frac{e^{z}}{1+e^{z}}+\frac{1}{1+e^{z}}=1$. Substitute $z\mapsto -z$ in
+@eq-agg-logit-integral and use the Gaussian symmetry $\phi(-z;m,\tau)=\phi(z;-m,\tau)$:
+$$
+J(m,\tau)=\int \mathrm{expit}(z)\phi(z;m,\tau)\,dz
+=\int \mathrm{expit}(-z)\phi(-z;m,\tau)\,dz
+=\int\big(1-\mathrm{expit}(z)\big)\phi(z;-m,\tau)\,dz=1-J(-m,\tau).
+$$
+Setting $m=0$ gives $J(0,\tau)=1-J(0,\tau)$, hence $J(0,\tau)=\tfrac12$. Since
+$\theta^{\mathrm{naive}}_{\bullet jk}=\mathrm{expit}(0)=\tfrac12$ as well, the bias @eq-agg-eb is zero at
+$m=0$.
+
+**(b).** Because $\mathrm{expit}$ is smooth with all derivatives bounded, differentiation under the integral is
+justified by dominated convergence (the $m$-derivative of $\phi$ is $\phi$ times a linear factor, integrable
+against a bounded function). Hence $\partial_m J(m,\tau)=\int\mathrm{expit}(z)\,\partial_m\phi(z;m,\tau)\,dz$;
+integrating by parts, or equivalently using $\partial_m\phi=-\partial_z\phi$ and moving the derivative onto
+$\mathrm{expit}$, gives $\partial_m J=\int\mathrm{expit}'(z)\phi(z;m,\tau)\,dz=\mathbb E[\mathrm{expit}'(\eta)]$.
+Since $\mathrm{expit}'(z)=\mathrm{expit}(z)(1-\mathrm{expit}(z))\in(0,\tfrac14]$ is strictly positive, the
+integral is strictly positive, so $J(\cdot,\tau)$ is strictly increasing.
+
+**(c).** Apply the leading-order expansion @lem-agg-bias-expansion with $g^{-1}=\mathrm{expit}$, whose third
+derivative is bounded; then $\theta_{\bullet jk}-\theta^{\mathrm{naive}}_{\bullet jk}=\tfrac12\mathrm{expit}''(m)\tau+o(\tau)$.
+Writing $\sigma:=\mathrm{expit}(m)$, we have $\mathrm{expit}'=\sigma(1-\sigma)$ and, differentiating again,
+$\mathrm{expit}''=\sigma'(1-2\sigma)=\sigma(1-\sigma)(1-2\sigma)$. The factor $\sigma(1-\sigma)>0$ always, and
+$1-2\sigma$ has the sign of $-m$ because $\sigma=\mathrm{expit}(m)>\tfrac12\iff m>0$. Hence
+$\mathrm{expit}''(m)>0$ for $m<0$ and $<0$ for $m>0$, giving the stated signs.
+
+**(d).** We argue by contrast with the probit case and by the structure of the integral. First reduce: by the
+heat-flow lemma @lem-agg-heat-flow, $J(m,\tau)=u(m,\tau)$ is the solution of the heat equation
+$\partial_\tau u=\tfrac12\partial_m^2 u$ with initial data $u(m,0)=\mathrm{expit}(m)$. For the probit initial
+data $\Phi$ the solution is the elementary rescaled probit @eq-agg-probit, because $\Phi$ is itself a Gaussian
+integral and Gaussian convolution of a Gaussian integral is again a Gaussian integral, only with an enlarged
+variance; this is the algebraic miracle exploited in @prp-agg-probit-closed-form. The logistic initial data
+$\mathrm{expit}$ enjoys no such stability: it is not a Gaussian integral, and its Gaussian convolution is the
+mean of a logit-normal random variable, a transcendental function of $(m,\tau)$ for which no closed form in
+elementary functions, nor in the error function with elementary arguments, is known. The obstruction is
+specifically the Gaussian weight, not the logistic function alone: the indefinite integral
+$\int\mathrm{expit}(z)\,dz=\log(1+e^{z})$ is elementary (the softplus function), so the difficulty in
+@eq-agg-logit-integral is introduced entirely by integrating against $\phi$. We record the standard fact, used
+throughout the ML-NMR literature (@phillippo2020mlnmr), that $J(m,\tau)$ is non-elementary and must be computed
+numerically; the structural facts (a) to (c) are exactly the qualitative information that survives the absence
+of a formula, and Chapter 22 supplies the numerical method that evaluates @eq-agg-logit-integral to controlled
+error. $\square$
+:::
+
+::: {.remark}
+**The honest status of part (d).** Parts (a) to (c) are theorems in the full sense: the reflection identity,
+the value $\tfrac12$ at $m=0$, strict monotonicity, and the sign of the leading bias are proved without
+appeal to authority. Part (d) is the assertion that no elementary antiderivative-style formula exists, and we
+have argued it rather than invoked a Liouville-type impossibility theorem, because the latter is outside the
+scope of this book. The argument is the right one for the purpose: it isolates the obstruction (the Gaussian
+weight, since $\mathrm{expit}$ alone has the elementary antiderivative $\log(1+e^{z})$), and it exhibits the
+neighboring probit problem that *does* have a closed form (@prp-agg-probit-closed-form), so the reader sees
+precisely why logit and probit, so alike in shape, diverge under aggregation. The practical consequence is
+unambiguous and is what matters for the method: every binary-outcome ML-NMR model must integrate
+@eq-agg-logit-integral numerically, which is the computational problem that occupies Chapter 22. A popular
+approximation, the probit substitution $\mathrm{expit}(z)\approx\Phi(\kappa z)$ with
+$\kappa=\sqrt{\pi/8}\approx0.6267$ chosen to match the slopes at the origin (so that
+$\kappa\,\phi(0)=\mathrm{expit}'(0)=\tfrac14$), turns @eq-agg-logit-integral into the elementary
+@eq-agg-probit and is sometimes used as a fast initializer; it is an approximation, not an identity, and
+ML-NMR uses exact numerical integration in the fitted model. $\blacktriangleleft$
+:::
+
+This is result H.7 of the proof catalogue (corresponds to H.7; Phillippo 2019, Section 4.3.2). The probit
+companion @prp-agg-probit-closed-form is the aggregation counterpart of @lem-limits-probit-integral of
+Chapter 16.
+
+## A fully worked example {#sec-agg-example}
+
+We compute the plug-in and integrated aggregate means in two settings: a binary outcome on the logit scale
+with a discrete covariate, where the integral is a finite sum and every number is verifiable on a calculator,
+and a count outcome on the log scale with a normal covariate, where the closed form @eq-agg-log-mgf applies.
+The logit example is the more instructive, because it exhibits the sign reversal of the bias between arms and
+its consequence for the marginal odds ratio.
+
+### Logit link with a binary effect modifier {#sec-agg-example-logit}
+
+::: {#exm-agg-logit-discrete}
+## Plug-in versus integrated aggregate risk on the logit scale
+Continue the running plaque psoriasis example, now zooming into a single AgD study $j$ that reports PASI 75
+response (a binary outcome) on two arms: a reference arm $C$, an established comparator, and an active arm $B$,
+the new IL-17 inhibitor. The one binary effect modifier is $x\in\{0,1\}$, with $x=1$ for biologic-naive patients
+and $x=0$ for biologic-experienced, and its study prevalence is $q:=P(x=1)=0.5$ (the study is half
+biologic-naive). The covariate distribution $f_j$ is the two-point law with $f_j(0)=f_j(1)=\tfrac12$ and mean
+$\bar x_j=q=0.5$. On the logit scale ($g=\mathrm{logit}$, $g^{-1}=\mathrm{expit}$) take the individual model
+@eq-agg-individual-model with
+$$
+\mu_j=-1,\qquad \beta_1=0.5\ (\text{prognostic}),\qquad \beta_{2,B}=1.0\ (\text{effect modifier}),\qquad \gamma_B=0.8,
+$$
+and reference-arm constraints $\beta_{2,C}=0,\ \gamma_C=0$. The total slopes are
+$\beta_{\mathrm{tot},C}=\beta_1=0.5$ and $\beta_{\mathrm{tot},B}=\beta_1+\beta_{2,B}=1.5$, and the arm linear
+predictors are $\eta_C(x)=-1+0.5x$ and $\eta_B(x)=-1+1.5x+0.8=-0.2+1.5x$.
+
+**Conditional risks at the two covariate values.** Evaluating $\mathrm{expit}$ (rounding to five decimals):
+
+| arm | $x$ | $\eta(x)$ | $\mathrm{expit}(\eta(x))$ |
+|---|---|---|---|
+| $C$ | $0$ | $-1.00$ | $0.26894$ |
+| $C$ | $1$ | $-0.50$ | $0.37754$ |
+| $B$ | $0$ | $-0.20$ | $0.45017$ |
+| $B$ | $1$ | $\phantom{-}1.30$ | $0.78583$ |
+
+**Integrated aggregate risks** (the correct ML-NMR quantities), by @eq-agg-aggregate-mean with the two-point
+$f_j$:
+$$
+\theta_{\bullet C}=\tfrac12(0.26894)+\tfrac12(0.37754)=0.32324,\qquad
+\theta_{\bullet B}=\tfrac12(0.45017)+\tfrac12(0.78583)=0.61800.
+$$
+
+**Plug-in aggregate risks** (the naive quantities), by @eq-agg-naive at $\bar x_j=0.5$, where
+$\eta_C(0.5)=-0.75$ and $\eta_B(0.5)=0.55$:
+$$
+\theta^{\mathrm{naive}}_{\bullet C}=\mathrm{expit}(-0.75)=0.32082,\qquad
+\theta^{\mathrm{naive}}_{\bullet B}=\mathrm{expit}(0.55)=0.63414.
+$$
+
+**Arm-level bias and the sign reversal.** The ecological biases @eq-agg-eb are
+$$
+\mathrm{EB}_C=\theta^{\mathrm{naive}}_{\bullet C}-\theta_{\bullet C}=0.32082-0.32324=-0.00242,\qquad
+\mathrm{EB}_B=0.63414-0.61800=+0.01614.
+$$
+The reference arm has $m_C=\eta_C(0.5)=-0.75<0$, where $\mathrm{expit}$ is convex, so the plug-in
+*underestimates* ($\mathrm{EB}_C<0$); the active arm has $m_B=\eta_B(0.5)=0.55>0$, where $\mathrm{expit}$ is
+concave, so the plug-in *overestimates* ($\mathrm{EB}_B>0$). This is the sign reversal of
+@thm-logit-no-closed-form(c), and it is the crux: the bias does not cancel across arms but compounds in the
+contrast.
+
+**The marginal odds ratio.** The reported estimand is the marginal $B$-versus-$C$ log odds ratio in study $j$,
+$g(\theta_{\bullet B})-g(\theta_{\bullet C})$ on the logit scale. The integrated (ML-NMR) value is
+$$
+\mathrm{logit}(0.61800)-\mathrm{logit}(0.32324)=0.48107-(-0.73893)=1.22000,
+$$
+whereas the plug-in value telescopes, because $\mathrm{logit}\circ\mathrm{expit}$ is the identity, to the
+conditional log odds ratio at the mean covariate:
+$$
+\mathrm{logit}(\theta^{\mathrm{naive}}_{\bullet B})-\mathrm{logit}(\theta^{\mathrm{naive}}_{\bullet C})
+=\eta_B(0.5)-\eta_C(0.5)=0.55-(-0.75)=1.30000=\gamma_B+\beta_{2,B}\,\bar x_j .
+$$
+The naive aggregation thus reports the conditional-at-the-mean log odds ratio $1.30000$, while the correct
+marginal log odds ratio is $1.22000$. The ecological bias of the contrast is
+$$
+1.30000-1.22000=0.08000\ \text{on the log-odds scale},
+$$
+an odds-ratio inflation of $e^{0.08000}=1.0833$, roughly an eight percent distortion produced entirely by
+plugging in the mean instead of integrating. ML-NMR reports $1.22000$; pre-ML-NMR meta-regression on the mean
+covariate reports $1.30000$. In HTA terms, the naive analysis would credit the IL-17 inhibitor with an odds
+ratio of $e^{1.30000}=3.669$ against the comparator, when the correct population-average figure is
+$e^{1.22000}=3.387$: a real difference in the number a reimbursement decision would rest on, and it came from
+nothing but the order of two operations. $\blacktriangleleft$
+:::
+
+A remark on what made this hand-computable: the discrete covariate turned the integral @eq-agg-aggregate-mean
+into a two-term sum, so the logit-normal obstruction of @thm-logit-no-closed-form did not arise; with a
+continuous covariate the same contrast would require the numerical integration of Chapter 22. Note also the
+clean identity that the *plug-in* marginal log odds ratio equals exactly the conditional log odds ratio at the
+mean covariate, $\gamma_B+\beta_{2,B}\bar x_j$, which is why naive meta-regression silently estimates a
+conditional, not a marginal, effect; the difference is the non-collapsibility gap of @def-non-collapsibility,
+here realized as aggregation bias.
+
+### Log link with a normal covariate {#sec-agg-example-log}
+
+::: {#exm-agg-log-gaussian}
+## Closed-form aggregate rate on the log scale
+Consider an AgD study $j$ reporting a count outcome on the log scale ($g=\log$, $g^{-1}=\exp$) with a single
+continuous covariate $X\sim\mathcal N(\bar x_j,\sigma_j^2)$, $\bar x_j=2$, $\sigma_j^2=1$. Take the active-arm
+parameters $\mu_j=0$, $\beta_1=0.3$, $\beta_{2,k}=0.2$, $\gamma_k=0.5$, so
+$\beta_{\mathrm{tot},k}=\beta_1+\beta_{2,k}=0.5$ and
+$v=\beta_{\mathrm{tot},k}^2\sigma_j^2=0.25\cdot1=0.25$. The mean linear predictor is
+$m=\mu_j+\gamma_k+\bar x_j\beta_{\mathrm{tot},k}=0+0.5+2(0.5)=1.5$.
+
+By the closed form @eq-agg-log-mgf,
+$$
+\theta_{\bullet jk}=\exp\!\big(m+\tfrac12 v\big)=\exp(1.5+0.125)=\exp(1.625)=5.0784,
+$$
+while the plug-in rate is
+$$
+\theta^{\mathrm{naive}}_{\bullet jk}=\exp(m)=\exp(1.5)=4.4817 .
+$$
+The plug-in underestimates by the exact multiplicative factor $e^{v/2}=e^{0.125}=1.1331$, a thirteen percent
+correction; the leading-order prediction of @eq-agg-bias-expansion, $\theta_\bullet-\theta^{\mathrm{naive}}
+\approx\tfrac12 e^{m}v=\tfrac12(4.4817)(0.25)=0.5602$, is close to the exact difference
+$5.0784-4.4817=0.5967$, the small discrepancy being the $o(v)$ curvature beyond second order. Because $\exp$
+is convex everywhere, the bias here has a fixed sign ($\theta^{\mathrm{naive}}\le\theta_\bullet$ always), in
+contrast to the logit case where the sign reversed between arms. $\blacktriangleleft$
+:::
+
+## Aggregation bias and non-collapsibility {#sec-agg-noncollapse}
+
+The worked example ended on a claim that deserves its own statement, because it links this chapter to a
+long-running debate in epidemiology. Recall the two odds ratios it produced. The plug-in log odds ratio was
+exactly $1.30$, and it equaled the *conditional* log odds ratio at the mean covariate,
+$\gamma_B+\beta_{2,B}\bar x_j$; the integrated log odds ratio was $1.22$, the *marginal* log odds ratio in the
+study population. They differ not because of any estimation error but because the odds ratio is
+**non-collapsible** (@def-non-collapsibility): the population-average of conditional odds ratios is not the odds
+ratio of the population-average risks, even with no confounding and no modeling mistake.
+
+This is worth isolating, because it is a genuine source of confusion. Aggregation bias, as this chapter defines
+it, is a Jensen gap between "predict at the mean" and "average the predictions." Non-collapsibility is the
+statement that the odds ratio, specifically, changes when you marginalize a conditional model over a covariate,
+even a covariate that is not a confounder. On the logit scale these are two names for one piece of arithmetic:
+marginalizing the conditional logistic model over the case mix *is* the integral @eq-agg-aggregate-mean, and the
+gap it opens between the conditional-at-the-mean contrast and the marginal contrast *is* the non-collapsibility
+of the odds ratio. The worked example shows the marginal odds ratio $e^{1.22}=3.39$ pulled toward the null
+relative to the conditional $e^{1.30}=3.67$; this attenuation toward the null is the characteristic direction of
+odds-ratio non-collapsibility for a covariate that affects the outcome, and it is why a marginal odds ratio from
+an aggregate trial and a conditional odds ratio from a patient-level model are not directly comparable numbers.
+
+Two practical consequences follow. First, an analyst must decide which estimand the decision maker wants; ML-NMR
+targets the marginal effect in a stated population and computes it honestly by integrating, whereas plug-in
+meta-regression silently reports a conditional-at-the-mean effect and mislabels it as a population effect.
+Second, the risk difference and the log risk ratio are *collapsible* in the no-confounding case, so on the
+identity and log links this particular gap does not arise. (Aggregation can still bias the log link through
+Jensen, as @thm-log-link-mgf shows, but that is variance-driven curvature, not non-collapsibility.) The odds
+ratio is the scale on which the two phenomena coincide, which is why binary outcomes are where the fights
+happen. Chapter 7 introduced non-collapsibility for a single logistic regression; this section has shown that it
+is the same phenomenon as logit aggregation bias, now playing out across a network.
+
+## Notes and references {#sec-agg-notes}
+
+Multilevel network meta-regression was introduced by @phillippo2020mlnmr and developed at length in the
+doctoral thesis @phillippo2019thesis, whose Chapter 4 is the source of the aggregation principle treated here.
+The individual model @eq-agg-individual-model is their Equation (2) and thesis Equation (4.1b); the aggregate
+mean @eq-agg-aggregate-mean is thesis Equation (4.1d); the aggregation theorem @thm-aggregation is the
+likelihood identity of thesis Equation (4.1c) and the manuscript's Section 3; and the aggregation-bias
+identity @eq-agg-eb is thesis Equation (4.8). The names "individual-level model" and "aggregate-level model"
+follow the multilevel-modeling reading in which patients are nested within studies, and the two levels are
+linked by integration rather than by the usual random intercept.
+
+The aggregation-bias theorem @thm-aggregation-bias is Jensen's inequality (@thm-jensen) applied to the inverse
+link, and it is the same mathematical fact as the ecological bias of aggregate regression (@def-ecological-bias)
+diagnosed in Chapter 16 and as the non-collapsibility of marginal effects (@def-non-collapsibility) discussed
+in Chapter 7. The leading-order expansion @lem-agg-bias-expansion is the delta-method or Laplace heuristic made
+into a theorem with a remainder bound; it is folklore in the ecological-inference literature. The heat-flow
+lemma @lem-agg-heat-flow is the observation that Gaussian smoothing is the heat semigroup
+$e^{(\tau/2)\partial^2}$; we have not seen it stated for ML-NMR, though it is implicit whenever a closed-form
+aggregate mean is derived under normal covariates, and it gives the cleanest account of why the log and probit
+links keep closed forms (their inverse links, $\exp$ and $\Phi$, are stable under Gaussian convolution) while
+the logit link does not. The probit closed form @prp-agg-probit-closed-form reuses the Gaussian probit integral
+of @owen1956, derived in this book as @lem-limits-probit-integral.
+
+The log-link closed form @thm-log-link-mgf is the log-normal mean and is standard; it underlies the
+closed-form Poisson aggregate likelihood that Chapter 21 takes up. The logit-normal integral
+@eq-agg-logit-integral is the mean of a logit-normal distribution; its non-elementarity (@thm-logit-no-closed-form)
+is well known and is the reason ML-NMR for binary outcomes is a numerical-integration method, treated in
+Chapter 22 via Sklar's theorem (@sklar1959), Sobol' sequences (@sobol1967), and the quasi-Monte Carlo error
+theory descending from the Koksma-Hlawka inequality. The probit substitution
+$\mathrm{expit}(z)\approx\Phi(\kappa z)$ mentioned in the remark after @thm-logit-no-closed-form is the
+logistic-to-normal slope match; it is an approximation only and is not used in the fitted ML-NMR likelihood,
+which integrates numerically.
+
+There is no machine-checked counterpart to this chapter. The Coq development accompanying the book
+(@phillippo2019thesis notwithstanding) formalizes the potential-outcomes, propensity-score, MAIC, and STC
+material of Parts II to IV but stops short of ML-NMR, whose mathematical content is the numerical analysis of
+Chapters 21 and 22 rather than the algebra of the earlier parts; we note this gap in the work log. The
+aggregation identity @thm-aggregation is, however, a single application of the chain rule, Fubini's theorem
+(@thm-fubini-tonelli), and the tower property (@cor-total-expectation), all of which are formalized in the
+probability libraries the development depends on, so a future formalization would be short.
+
+## Exercises {#sec-agg-exercises}
+
+A starred exercise ($\star$) has a full worked solution in Appendix F. The exercises are graded: the first two
+are warm-ups and interpretation questions that need only arithmetic and the ideas of the chapter; the later ones
+build to the algebra and the proofs. Read the warm-ups even if you skip the proofs, since they carry the applied
+message.
+
+::: {#exr-agg-same-mean-different-prediction}
+## Warm-up: same mean covariate, different aggregate risk
+Two AgD studies enroll patients for the same binary outcome on the logit scale and report the *same* mean
+covariate $\bar x$, but study 1's patients are tightly clustered around $\bar x$ while study 2's are widely
+spread. Explain in one short paragraph, without any calculation, why the ML-NMR aggregate risk can differ
+between the two studies even though their plug-in risks $\mathrm{expit}(\eta(\bar x))$ are identical. Which
+study's true risk sits further from its plug-in value, and why? (You are re-deriving in words why matching only
+the mean covariate, as first-moment MAIC does, cannot by itself remove aggregation bias.)
+:::
+
+::: {#exr-agg-mini-arithmetic}
+## Warm-up: the six-point gap by hand
+An arm splits evenly into two covariate groups with individual PASI 75 response probabilities $0.60$ and $0.10$.
+(a) Compute the true aggregate response as the average of the two risks. (b) Compute the two log-odds, average
+them, and apply $\mathrm{expit}$ to obtain the plug-in response. (c) Confirm the plug-in underestimates, and say
+which case of @thm-aggregation-bias (convex or concave $g^{-1}$) you are in by checking the sign of the mean
+log-odds. (This is the mini-example of @sec-agg-aggregate redone from scratch.)
+:::
+
+::: {#exr-agg-prevalence}
+## Bias as a function of prevalence ($\star$)
+Repeat the logit worked example @exm-agg-logit-discrete with the effect-modifier prevalence changed to
+$q=P(x=1)=0.3$, keeping all four parameters $\mu_j=-1,\ \beta_1=0.5,\ \beta_{2,B}=1.0,\ \gamma_B=0.8$.
+(a) Recompute the integrated aggregate risks $\theta_{\bullet C},\theta_{\bullet B}$ as the two-point averages
+$(1-q)\,\mathrm{expit}(\eta(0))+q\,\mathrm{expit}(\eta(1))$. (b) Recompute the plug-in risks at
+$\bar x_j=q=0.3$. (c) Confirm that the plug-in marginal log odds ratio again equals
+$\gamma_B+\beta_{2,B}\bar x_j$ exactly, and report the ecological bias of the contrast. (d) Explain, using
+@thm-logit-no-closed-form(c), why decreasing $q$ moves both arms' mean linear predictors $m_C,m_B$ downward
+and what that does to the sign of each arm's bias.
+:::
+
+::: {#exr-agg-identity-uniqueness}
+## The identity link is the only universally exact link ($\star$)
+Prove that a twice-differentiable link $g$ satisfies $\theta_{\bullet jk}=\theta^{\mathrm{naive}}_{\bullet jk}$
+for *every* nondegenerate covariate distribution and every choice of total slope
+$\boldsymbol\beta_{\mathrm{tot},k}$ if and only if $g$ is the identity link up to an affine reparameterization,
+that is $g^{-1}(z)=a+bz$ with $b\ne0$. (Hint: by @thm-identity-link-exact the condition forces $g^{-1}$ affine
+on every interval; deduce $g^{-1}$ is globally affine, and translate this into a statement about $g$.) Conclude
+that aggregation bias is unavoidable on any genuinely nonlinear scale, including the logit, log, probit, and
+complementary log-log.
+:::
+
+::: {#exr-agg-log-multiplicative}
+## Variance, not mean, drives the log-link bias
+On the log scale with normal covariates, use @thm-log-link-mgf to show that the multiplicative plug-in bias
+$\theta_{\bullet jk}/\theta^{\mathrm{naive}}_{\bullet jk}=e^{v/2}$ depends on the covariate distribution only
+through the variance $v=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}$
+of the linear predictor and not at all through its mean. Two studies with identical covariate means
+$\bar{\mathbf x}_j$ but different covariance matrices therefore have identical plug-in rates but different true
+rates; compute the ratio of their true rates when $\boldsymbol\Sigma_j$ is scaled by a factor $c>0$.
+:::
+
+::: {#exr-agg-heat-verify}
+## Verifying the heat-flow lemma on the three links
+Using @lem-agg-heat-flow, verify directly that each of the following is the solution $u(m,\tau)$ of the heat
+equation $\partial_\tau u=\tfrac12\partial_m^2 u$ with the stated initial data, and identify which link each
+corresponds to. (a) $u(m,\tau)=m$ with $u(m,0)=m$. (b) $u(m,\tau)=e^{m+\tau/2}$ with $u(m,0)=e^m$.
+(c) $u(m,\tau)=\Phi(m/\sqrt{1+\tau})$ with $u(m,0)=\Phi(m)$. (d) Explain why no elementary $u$ exists for
+$u(m,0)=\mathrm{expit}(m)$, relating your answer to @thm-logit-no-closed-form(d).
+:::
+
+::: {#exr-agg-second-moment}
+## When first-moment matching is not enough
+Two AgD studies report the same covariate mean $\bar x=0$ for a single continuous effect modifier, but study 1
+has variance $\sigma_1^2=0.25$ and study 2 has variance $\sigma_2^2=4$. The outcome is binary on the logit
+scale with $\eta(x)=\beta_{\mathrm{tot}}\,x$ and $\beta_{\mathrm{tot}}=1$. (a) Using
+@thm-logit-no-closed-form(a), show that *both* studies have aggregate risk exactly $\tfrac12$, so that here the
+variance does not bias the arm mean. (b) Now shift the baseline to $\eta(x)=0.8+x$ so that the mean linear
+predictor is $m=0.8$; using @lem-agg-bias-expansion, estimate the aggregation bias in each study to leading
+order and explain why first-moment matching (which equates $\bar x$ but ignores $\sigma^2$) leaves a residual
+bias that differs between the two studies. Relate this to the second-moment-matching remark in Chapter 18.
+:::
+
+::: {#exr-agg-correlated}
+## Closed-form aggregation with two correlated covariates
+Let $\mathbf X\sim\mathcal N(\bar{\mathbf x}_j,\boldsymbol\Sigma_j)$ in $\mathbb R^2$ with
+$\bar{\mathbf x}_j=(1,2)^\top$ and $\boldsymbol\Sigma_j=\begin{pmatrix}1&0.5\\0.5&2\end{pmatrix}$, log link,
+and total slope $\boldsymbol\beta_{\mathrm{tot},k}=(0.4,-0.3)^\top$, with $\mu_j=0$ and $\gamma_k=0.2$.
+(a) Compute $m=\mu_j+\gamma_k+\bar{\mathbf x}_j^\top\boldsymbol\beta_{\mathrm{tot},k}$ and
+$v=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}$. (b) Report the
+integrated aggregate rate $\theta_{\bullet jk}=e^{m+v/2}$ and the plug-in rate $e^m$. (c) Show that flipping
+the sign of the off-diagonal covariance to $-0.5$ changes $v$ and hence the bias, even though the marginal
+variances and means are unchanged, and interpret this as the dependence of aggregation bias on the joint, not
+merely marginal, covariate distribution.
+:::
+
+::: {#exr-agg-nma-reduction}
+## Reduction to network meta-analysis
+Show that when $\boldsymbol\beta_1=\mathbf 0$ and $\boldsymbol\beta_{2,k}=\mathbf 0$ for every $k$, the linear
+predictor @eq-agg-individual-model reduces to $\eta_{jk}=\mu_j+\gamma_k$, the integral
+@eq-agg-aggregate-mean reduces to $\theta_{\bullet jk}=g^{-1}(\mu_j+\gamma_k)$ with no dependence on $f_j$, and
+hence the aggregate likelihood @eq-agg-aggregate-likelihood is exactly the standard network meta-analysis
+likelihood with study baselines $\mu_j$ and treatment effects $\gamma_k$. (This is the NMA special case proved
+in full generality in Chapter 23.) Explain why aggregation bias is identically zero in this case for *every*
+link, and reconcile this with @thm-aggregation-bias.
+:::
+
+::: {#exr-agg-jensen-gap-bound}
+## A two-sided bound on the logit aggregation bias
+Let $\eta_{jk}(X)\sim\mathcal N(m,\tau)$ on the logit scale. Using $0\le\mathrm{expit}''(z)\le$ its maximum
+modulus and the exact second-moment identity $\mathbb E[(\eta-m)^2]=\tau$, prove the nonasymptotic bound
+$$
+\big|\,\theta_{\bullet jk}-\theta^{\mathrm{naive}}_{\bullet jk}\,\big|\ \le\ \tfrac12\Big(\sup_z|\mathrm{expit}''(z)|\Big)\,\tau
+=\tfrac{1}{12\sqrt3}\,\tau,
+$$
+where $\sup_z|\mathrm{expit}''(z)|=1/(6\sqrt3)$ is attained at $z=\pm\log(2+\sqrt3)$. (Hint: bound the
+Taylor remainder of @lem-agg-bias-expansion by the supremum of the second derivative rather than discarding
+it, using $\mathrm{expit}(\eta)-\mathrm{expit}(m)-\mathrm{expit}'(m)(\eta-m)=\tfrac12\mathrm{expit}''(\zeta)(\eta-m)^2$.)
+Compare this guaranteed bound with the exact bias computed in @exm-agg-logit-discrete.
+:::
+
+Solutions to the starred exercises @exr-agg-prevalence and @exr-agg-identity-uniqueness appear in Appendix F.

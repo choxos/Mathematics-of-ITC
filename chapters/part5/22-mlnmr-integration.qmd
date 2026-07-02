@@ -1,0 +1,1564 @@
+---
+title: "Multilevel Network Meta-Regression III: Numerical Integration Theory"
+---
+
+## Introduction {#sec-qmc-intro}
+
+Here is the practical problem this chapter solves, stated for a health researcher before any mathematics.
+Picture an aggregate-data trial of a new plaque-psoriasis drug that publishes only summaries: the mean
+patient age, the mean baseline severity score, and the proportion of patients who are biomarker-positive.
+We want the average probability that a patient on this arm achieves a treatment response, so that the trial
+can be entered into a network and the drug compared indirectly against its competitors. Because the
+response probability is a nonlinear (logistic) function of a patient's covariates, that average is an
+integral over the arm's covariate distribution; and if we compute the integral badly, the modeled response
+rate is wrong, the odds ratio of this drug versus a comparator is wrong, and the reimbursement
+recommendation a health technology assessment (HTA) agency issues on the strength of that odds ratio is
+wrong. This chapter is the mathematics of computing that integral well. Its organizing idea, which we
+announce now and prove at the end (@sec-qmc-pipeline), is that the covariate points at which we evaluate the
+model are chosen once, deterministically, and reused unchanged at every step of the model fit. That single
+decision, invisible in the statement of the integral, is exactly what separates the method used in practice
+from a naive random simulation, and it is the reason the chapter builds toward deterministic
+quasi-Monte Carlo rather than stopping at ordinary Monte Carlo.
+
+Chapter 20 reduced the entire aggregate-data contribution of multilevel network meta-regression
+(ML-NMR) to a single integral. For an aggregate-data (AgD) study $j$ reporting an arm $k$ with covariate
+density $f_j$, the aggregate-level mean outcome is the response-scale average of the individual conditional
+mean (@def-aggregate-model),
+$$
+\theta_{\bullet jk}\;=\;\int_{\mathcal{X}} g^{-1}\big(\eta_{jk}(\mathbf{x})\big)\,f_j(\mathbf{x})\,d\mathbf{x},
+\qquad
+\eta_{jk}(\mathbf{x})=\mu_j+\mathbf{x}^\top\boldsymbol{\beta}_1+\mathbf{x}^\top\boldsymbol{\beta}_{2,k}+\gamma_k,
+$$ {#eq-qmc-aggregation}
+and the aggregation theorem (@thm-aggregation) showed that the AgD likelihood is built from this one
+quantity. The aggregation-bias theorem (@thm-aggregation-bias) explained why the integral cannot be
+shortcut by plugging the covariate mean into $g^{-1}$: for a nonlinear link the average of $g^{-1}(\eta)$
+is not $g^{-1}$ of the average. Two links escaped: the identity link, where @eq-qmc-aggregation collapses
+to a function of the mean alone (@thm-identity-link-exact), and the log link with jointly Gaussian
+covariates, where the moment generating function (@def-mgf) supplies a closed form (@thm-log-link-mgf).
+The link that matters most for health technology assessment, the logit, escaped neither: @eq-qmc-aggregation
+has no elementary closed form for any non-degenerate covariate distribution (@thm-logit-no-closed-form).
+The discrete-outcome aggregate likelihoods of Chapter 21, the Poisson and Poisson-binomial constructions
+(@thm-poisson-aggregate, @thm-poisson-binomial-pgf) and their approximations (@thm-le-cam-tv,
+@thm-adjusted-binomial), all rest on the same integral through the success probabilities
+$p_{ijk}=g^{-1}(\eta_{jk}(\mathbf{x}))$. ML-NMR is therefore only as good as our ability to evaluate
+@eq-qmc-aggregation numerically. This chapter builds that ability from the ground up and proves the error
+guarantees that make it trustworthy.
+
+Two features of the problem dictate the machinery. First, the dimension. The integral runs over
+$\mathcal{X}\subseteq\mathbb{R}^{d}$ where $d$ is the number of covariates entered into the model,
+typically three to ten. Deterministic product quadrature, which is essentially perfect in one dimension,
+collapses under the curse of dimensionality: $k$ nodes per axis means $k^{d}$ nodes in total, and the cost
+of a fixed accuracy grows exponentially in $d$ (@thm-quadrature-error, @cor-tensor-quadrature-curse).
+Plain Monte Carlo (MC) integration escapes the curse with a dimension-free root-mean-square error of order
+$N^{-1/2}$ (@thm-mc-rmse), but $N^{-1/2}$ is slow, and, more damagingly, the re-randomization it requires
+injects noise into the likelihood and destroys the smooth Hamiltonian that gradient-based Markov chain
+Monte Carlo needs (@def-hmc, @carpenter2017stan). Quasi-Monte Carlo (QMC) keeps a single deterministic
+point set and replaces randomness by uniformity, achieving an error of order $(\log N)^{d}/N$, nearly
+$1/N$, governed by the Koksma-Hlawka inequality (@thm-koksma-hlawka) and realized by low-discrepancy
+sequences such as Sobol' points (@def-sobol-net). This is the integration rule used throughout ML-NMR.
+
+Second, the input. We do not know $f_j$. An AgD study reports marginal summaries of each covariate, a
+mean and sometimes a standard deviation or a proportion, but almost never the joint distribution. The
+device that turns marginal information into a full joint law is the copula. Sklar's theorem
+(@thm-sklar) separates any joint distribution into its marginals and a copula carrying the dependence;
+the Gaussian copula (@def-gaussian-copula) supplies a default dependence structure parameterized by a
+correlation matrix borrowed from individual patient data (IPD) or expert judgment; and the probability
+integral transform (@thm-inverse-cdf) maps uniform inputs onto whatever marginal distribution each
+covariate is assumed to follow. Assembling these pieces gives the ML-NMR integration pipeline
+(@thm-hypercube-integration): generate Sobol' points in the unit hypercube, push them through a Gaussian
+copula and inverse-CDF margins to land at covariate vectors distributed as $f_j$, and average
+$g^{-1}(\eta_{jk})$ over them. We close with a fully worked logit example whose every node, weight, and
+running estimate the reader can reproduce by hand, and a two-covariate trace that exhibits the copula step
+explicitly.
+
+Throughout, $g$ is the link function (@def-link-function), $\eta_{jk}$ the linear predictor of the
+individual model (@def-individual-model), and $\Phi,\phi$ the standard normal distribution and density
+functions. We write $\mathrm{expit}(z)=g^{-1}(z)=e^{z}/(1+e^{z})$ for the inverse logit, also called the logistic
+function; a health researcher meets it as the map that turns a log-odds back into a probability. The
+covariate density and distribution functions of study $j$ are $f_j$ and $F_j$, with marginal distribution
+functions $F_{j,1},\dots,F_{j,d}$ and covariate correlation matrix $\boldsymbol{\Omega}_j$, all from
+[Notation](/notation.qmd). This chapter corresponds to results H.12 to H.19 of the proof catalogue.
+
+We fix one concrete scenario now and return to it at every transition, so that each abstract object
+acquires a definite job. It is the running thread of the chapter.
+
+::: {#exm-qmc-psoriasis}
+## Running example: an aggregate psoriasis arm
+An aggregate-data (AgD) trial arm of a psoriasis biologic reports three covariate summaries and nothing
+about their joint distribution: mean age $45$ years (standard deviation $12$), mean baseline severity score
+$18$ (standard deviation $6$), and proportion biomarker-positive $0.30$. So $d=3$ covariates enter the
+model: $x_1=\text{age}$, $x_2=\text{baseline severity}$, $x_3=\text{biomarker status}$. From an
+individual-patient-data (IPD) study in the same network we have fitted the individual model, a logistic
+regression whose linear predictor $\eta_{jk}(\mathbf{x})$ combines a study baseline, prognostic effects, and
+treatment-by-covariate interactions (the effect modifiers), and from that IPD study we also borrow a
+covariate correlation matrix, say age and severity correlated at $0.3$. Our target is the arm's average
+response probability
+$$
+\theta_{\bullet jk}=\int_{\mathcal{X}}\mathrm{expit}\big(\eta_{jk}(\mathbf{x})\big)\,f_j(\mathbf{x})\,d\mathbf{x},
+$$
+the number that, contrasted with the same quantity on a comparator arm, becomes the odds ratio the HTA
+agency will act on. Everything the chapter builds is in service of computing this one integral: the
+**margins** ($x_1,x_2$ modeled as normal from the reported means and standard deviations, $x_3$ as a
+Bernoulli from the reported proportion) fix each covariate's own distribution; the **copula** supplies the
+missing dependence (which ages tend to accompany which severities); the **Sobol' nodes** are the covariate
+profiles at which we evaluate $\mathrm{expit}(\eta_{jk})$; and the **average** over those profiles is
+$\theta_{\bullet jk}$. In @sec-qmc-example we carry a stripped-down version of this arm, a single
+standardized severity covariate, all the way through the arithmetic to a final number a reader can check by
+hand. $\blacktriangleleft$
+:::
+
+**What this chapter will do, in order.** The path from the integral to a trustworthy number has two halves,
+a numerical half and a dependence-modeling half, and they meet in the pipeline of @sec-qmc-pipeline.
+
+- Show why a covariate grid is hopeless beyond a few covariates (@sec-qmc-quadrature).
+- Escape the curse with random Monte Carlo, then see why its noise is fatal inside a Bayesian fit
+  (@sec-qmc-montecarlo).
+- Replace random points with evenly spread deterministic ones and bound the error by the Koksma-Hlawka
+  inequality (@sec-qmc-koksma), realized by Sobol' nets (@sec-qmc-sobol).
+- Build synthetic covariate profiles from an AgD study's summaries using the probability integral transform
+  (@sec-qmc-pit), Sklar's theorem (@sec-qmc-sklar), and the Gaussian copula (@sec-qmc-gaussian).
+- Assemble the pipeline and prove its error bound (@sec-qmc-pipeline), then compute a full logit example by
+  hand (@sec-qmc-example).
+
+## Reducing the aggregation integral to the unit cube {#sec-qmc-reduction}
+
+Every method in this chapter computes an integral against a probability density. It is convenient to fix,
+once, the two equivalent forms in which @eq-qmc-aggregation will appear. The first is the
+expectation form
+$$
+\theta_{\bullet jk}=\mathbb{E}_{\mathbf{X}\sim f_j}\big[g^{-1}(\eta_{jk}(\mathbf{X}))\big],
+$$ {#eq-qmc-expectation}
+which is what MC estimates directly by sampling $\mathbf{X}$. The second is the unit-cube form. Suppose we
+have a map $T:[0,1]^{d}\to\mathcal{X}$ that transports the uniform distribution on the cube to $f_j$, in
+the sense that $\mathbf{X}=T(\mathbf{U})$ has density $f_j$ whenever $\mathbf{U}$ is uniform on $[0,1]^{d}$.
+In plain terms, $T$ is the recipe that turns a list of uniform numbers between $0$ and $1$ into a plausible
+covariate profile for the aggregate study: feed it $(0.5,0.5,0.5)$ and it returns a patient of median age,
+median severity, and so on; feed it a whole grid of uniform inputs and it returns a whole cloud of
+synthetic patients whose distribution matches $f_j$. Constructing this recipe from the marginal and
+correlation summaries an AgD study reports is the entire job of @sec-qmc-sklar to @sec-qmc-pipeline.
+
+Then, writing $\varphi:=g^{-1}\circ\eta_{jk}$ for the integrand on covariate space and $\psi:=\varphi\circ T$
+for its **pullback** to the cube (the same integrand, re-expressed as a function of the uniform inputs
+$\mathbf{u}$ rather than of the covariates $\mathbf{x}=T(\mathbf{u})$), the change-of-variables identity
+gives
+$$
+\theta_{\bullet jk}
+=\int_{\mathcal{X}}\varphi(\mathbf{x})\,f_j(\mathbf{x})\,d\mathbf{x}
+=\mathbb{E}_{\mathbf{U}\sim\mathrm{Unif}([0,1]^{d})}\big[\psi(\mathbf{U})\big]
+=\int_{[0,1]^{d}}\psi(\mathbf{u})\,d\mathbf{u}.
+$$ {#eq-qmc-pullback}
+
+All @eq-qmc-pullback does is rename the variable of integration: the same average, first written over
+covariate space with weight $f_j$, is rewritten over the unit cube with the flat (uniform) weight, at the
+price of pushing the covariate values through the recipe $T$ inside the integrand. It is worth seeing a
+first number before the machinery. Take the running example (@exm-qmc-psoriasis) stripped to a single
+standardized severity covariate with a standard normal margin, so $T=\Phi^{-1}$ and, with a treatment arm
+whose linear predictor is $\eta(x)=0.5+x$, the integrand on the cube is
+$\psi(u)=\mathrm{expit}\big(0.5+\Phi^{-1}(u)\big)$. Three evenly spread inputs already give a rough answer:
+
+| $u$ | $x=\Phi^{-1}(u)$ | $\psi(u)=\mathrm{expit}(0.5+x)$ |
+|---|---|---|
+| $0.25$ | $-0.6745$ | $0.4565$ |
+| $0.50$ | $0$ | $0.6225$ |
+| $0.75$ | $0.6745$ | $0.7640$ |
+
+Their average is $0.6143$, already within about $0.012$ of the true value $\theta_\bullet=0.6020$ that
+@sec-qmc-example computes carefully. Everything between here and there is about choosing those input points
+so that the average converges fast and smoothly, and about building $T$ for realistic multi-covariate arms.
+
+The whole of the dependence-modeling apparatus, Sklar's theorem, the Gaussian copula, and the inverse-CDF
+transform, exists to construct the transport map $T$ from the marginal and correlation summaries that an
+AgD study reports; that construction is @sec-qmc-sklar to @sec-qmc-pipeline. The whole of the numerical
+apparatus, quadrature, MC, and QMC, exists to approximate the cube integral on the right of
+@eq-qmc-pullback by a finite average over points $\{\mathbf{u}^{(n)}\}_{n=1}^{N}\subset[0,1]^{d}$,
+$$
+\theta_{\bullet jk}\approx\widehat\theta_{\bullet jk}^{(N)}
+=\frac{1}{N}\sum_{n=1}^{N}\psi(\mathbf{u}^{(n)})
+=\frac{1}{N}\sum_{n=1}^{N}g^{-1}\big(\eta_{jk}(T(\mathbf{u}^{(n)}))\big);
+$$ {#eq-qmc-cubature}
+that approximation, and its error, is @sec-qmc-quadrature to @sec-qmc-sobol. The single design decision
+that ties the two halves together, and that distinguishes ML-NMR from a naive simulation, is that the
+point set $\{\mathbf{u}^{(n)}\}$ and the covariate nodes $\{T(\mathbf{u}^{(n)})\}$ are fixed in advance and
+reused at every evaluation of the likelihood; only $\eta_{jk}$, through the parameter vector
+$\boldsymbol{\xi}$, changes as the sampler explores the posterior. We return to the consequences of that
+decision in @sec-qmc-pipeline.
+
+One notational caution before the numerical theory. The next three sections (@sec-qmc-quadrature to
+@sec-qmc-koksma) are general facts about integrating a function over an interval or a cube, so they call
+that function a generic $f$, in keeping with the numerical-analysis literature. This generic integrand $f$
+is not the covariate density: our covariate density is $f_j$, and the specific integrand those theorems get
+applied to is the ML-NMR pullback $\psi$ of @eq-qmc-pullback. When in doubt, $f$ inside a quadrature or
+discrepancy theorem means "whatever function is being integrated," and for us that function is $\psi$.
+
+## Gaussian quadrature and the curse of dimensionality {#sec-qmc-quadrature}
+
+This section answers the first question a numerically minded reader asks: why not just lay down a grid of
+covariate values, evaluate the model on the grid, and average? In one dimension a well-chosen grid is not
+merely adequate, it is superb, and we prove exactly how superb. The catch is that the obvious way to build a
+grid in several dimensions multiplies its size beyond reach, and that failure is what forces the rest of the
+chapter. We begin with the gold standard for one-dimensional integration of a smooth function and then show
+why it does not survive the passage to several covariates. The rule is Gauss-Legendre quadrature: choose $k$
+nodes and $k$ weights, $2k$ numbers in all, and spend that budget so as to integrate exactly every
+polynomial of degree up to $2k-1$. That maximal exactness is what gives Gauss quadrature its
+super-algebraic accuracy on smooth integrands.
+
+We prove the one-dimensional error formula in full, even though the curse of dimensionality will make us
+abandon the method, because its error structure is the benchmark against which Monte Carlo and
+quasi-Monte Carlo are measured for the rest of the chapter: it is the accuracy we are trading away in
+exchange for freedom from the dimension. The proof uses two classical facts about the Legendre
+polynomials $P_0,P_1,P_2,\dots$, the orthogonal polynomials on $[-1,1]$ (each $P_k$ has degree $k$, and
+$\int_{-1}^{1}P_k(x)q(x)\,dx=0$ for every polynomial $q$ of degree below $k$; this orthogonality is the one
+property we use). The second tool is Hermite interpolation: given $k$ nodes, the unique polynomial of
+degree at most $2k-1$ that matches both $f$ and its derivative $f'$ at every node, whose remainder we quote
+in the proof. Both are standard (Stoer and Bulirsch, Section 3.6, cited in @sec-qmc-notes); a reader
+willing to take the error formula @eq-qmc-gauss-error on faith can skip the proof and lose nothing needed
+later.
+
+::: {#thm-quadrature-error}
+## Gauss-Legendre quadrature error
+Let $f\in C^{2k}[-1,1]$, that is, $f$ has $2k$ continuous derivatives on $[-1,1]$. Let $x_1,\dots,x_k$ be
+the $k$ roots of the Legendre polynomial $P_k$ (orthogonal on $[-1,1]$ with respect to Lebesgue measure),
+and let $w_1,\dots,w_k>0$ be the unique weights for which the rule
+$$
+Q_k[f]:=\sum_{i=1}^{k} w_i\,f(x_i)
+$$
+is exact on polynomials of degree at most $k-1$. Then:
+
+1. **(Degree of exactness.)** $Q_k[p]=\int_{-1}^{1}p(x)\,dx$ for every polynomial $p$ of degree at most
+$2k-1$.
+
+2. **(Error formula.)** There exists $\xi\in(-1,1)$ such that
+$$
+\int_{-1}^{1} f(x)\,dx-Q_k[f]
+=\frac{2^{2k+1}\,(k!)^{4}}{(2k+1)\,[(2k)!]^{3}}\;f^{(2k)}(\xi).
+$$ {#eq-qmc-gauss-error}
+
+3. **(Composite order.)** If $[-1,1]$ is partitioned into panels of width $h$ and the $k$-node rule is
+applied on each panel, the total error is $O(h^{2k})$ as $h\to 0$ with $k$ fixed and $f^{(2k)}$ bounded.
+:::
+
+::: {.proof}
+*Part 1.* The defining property of the Legendre polynomial $P_k$ is orthogonality:
+$\int_{-1}^{1}P_k(x)q(x)\,dx=0$ for every polynomial $q$ with $\deg q<k$ (a classical fact about orthogonal
+polynomials; see the references). Let $p$ have $\deg p\le 2k-1$. Polynomial division by $P_k$ writes
+$p=q\,P_k+r$ with $\deg q\le k-1$ and $\deg r\le k-1$. Integrating,
+$$
+\int_{-1}^{1}p=\int_{-1}^{1}q\,P_k+\int_{-1}^{1}r=0+\int_{-1}^{1}r,
+$$
+the first integral vanishing by orthogonality since $\deg q<k$. Evaluating the rule, and using
+$P_k(x_i)=0$ at every node,
+$$
+Q_k[p]=\sum_i w_i\big(q(x_i)P_k(x_i)+r(x_i)\big)=\sum_i w_i\,r(x_i)=Q_k[r].
+$$
+Because $\deg r\le k-1$, the rule integrates $r$ exactly by its defining property, so
+$Q_k[r]=\int_{-1}^{1}r$. Combining, $Q_k[p]=\int_{-1}^{1}r=\int_{-1}^{1}p$.
+
+*Part 2.* Let $H$ be the Hermite interpolating polynomial of degree at most $2k-1$ that matches $f$ and
+$f'$ at each node: $H(x_i)=f(x_i)$ and $H'(x_i)=f'(x_i)$ for $i=1,\dots,k$. The Hermite remainder formula
+states that for each $x\in[-1,1]$ there is $\zeta_x\in(-1,1)$ with
+$$
+f(x)-H(x)=\frac{f^{(2k)}(\zeta_x)}{(2k)!}\,\omega(x)^{2},
+\qquad \omega(x):=\prod_{i=1}^{k}(x-x_i).
+$$
+Since $\deg H\le 2k-1$, Part 1 gives $Q_k[H]=\int_{-1}^{1}H$, and since $H(x_i)=f(x_i)$ we have
+$Q_k[H]=Q_k[f]$. Therefore
+$$
+\int_{-1}^{1}f-Q_k[f]=\int_{-1}^{1}(f-H)
+=\frac{1}{(2k)!}\int_{-1}^{1}f^{(2k)}(\zeta_x)\,\omega(x)^{2}\,dx.
+$$
+The kernel $\omega(x)^{2}\ge 0$, so the integral mean value theorem yields a single $\xi\in(-1,1)$ with
+$$
+\int_{-1}^{1}f-Q_k[f]=\frac{f^{(2k)}(\xi)}{(2k)!}\int_{-1}^{1}\omega(x)^{2}\,dx.
+$$
+It remains to evaluate $\int_{-1}^{1}\omega^{2}$. The nodes are the roots of $P_k$, so $\omega$ is the
+monic Legendre polynomial: $\omega=P_k/c_k$, where $c_k=\dfrac{(2k)!}{2^{k}(k!)^{2}}$ is the leading
+coefficient of the standard Legendre polynomial. With the normalization
+$\int_{-1}^{1}P_k(x)^{2}\,dx=\dfrac{2}{2k+1}$,
+$$
+\int_{-1}^{1}\omega(x)^{2}\,dx=\frac{1}{c_k^{2}}\int_{-1}^{1}P_k^{2}
+=\frac{2^{2k}(k!)^{4}}{[(2k)!]^{2}}\cdot\frac{2}{2k+1}
+=\frac{2^{2k+1}(k!)^{4}}{(2k+1)[(2k)!]^{2}}.
+$$
+Dividing by $(2k)!$ gives the constant in @eq-qmc-gauss-error.
+
+*Part 3.* On a panel $[a,a+h]$ substitute $x=a+\tfrac{h}{2}(1+t)$, so
+$\int_a^{a+h}f=\tfrac{h}{2}\int_{-1}^{1}\tilde f(t)\,dt$ with $\tilde f(t)=f(a+\tfrac{h}{2}(1+t))$ and
+$\tilde f^{(2k)}=(h/2)^{2k}f^{(2k)}$. Applying Part 2 to $\tilde f$, the panel error is
+$$
+\frac{h}{2}\cdot\frac{2^{2k+1}(k!)^{4}}{(2k+1)[(2k)!]^{3}}\Big(\tfrac{h}{2}\Big)^{2k}f^{(2k)}(\xi_a)
+=C_k\,h^{2k+1}f^{(2k)}(\xi_a),
+$$
+with $C_k=\dfrac{(k!)^{4}}{(2k+1)[(2k)!]^{3}}$ a constant depending only on $k$. Summing over the $2/h$
+panels and bounding $|f^{(2k)}|$ by its supremum,
+$$
+\Big|\int_{-1}^{1}f-\sum_{\text{panels}}Q_k\Big|
+\le \frac{2}{h}\cdot C_k\,h^{2k+1}\sup_{[-1,1]}|f^{(2k)}|
+=2\,C_k\,h^{2k}\sup_{[-1,1]}|f^{(2k)}|=O(h^{2k}).\qquad\square
+$$
+:::
+
+::: {.remark}
+**What "order $2k$" buys, and what it cannot.** The single-interval constant @eq-qmc-gauss-error decays
+super-exponentially in $k$: by Stirling's approximation
+$\dfrac{2^{2k+1}(k!)^{4}}{(2k+1)[(2k)!]^{3}}\sim\dfrac{\pi}{4^{2k}\,(2k)!}$ up to lower-order factors, so for
+an analytic integrand whose derivatives satisfy $|f^{(2k)}|\le (2k)!\,R^{-2k}$ (radius of convergence
+$R>1$) the error falls like $R^{-2k}$, geometric in the number of nodes. This is the spectral accuracy that
+makes a handful of Gauss nodes integrate a smooth one-dimensional function to machine precision. The
+composite reading of Part 3, error $O(h^{2k})$ at fixed $k$, is the form quoted in the catalogue; it is the
+relevant one when the integrand has limited smoothness and one refines the mesh rather than raising the
+node count. $\blacktriangleleft$
+:::
+
+The trouble is that ML-NMR integrates over several covariates at once, and the only elementary way to lift
+a one-dimensional rule to $\mathbb{R}^{d}$ is to take a tensor product: place a grid of $k^{d}$ nodes, one
+factor per axis. The accuracy per axis is inherited, but the node count is not.
+
+::: {#cor-tensor-quadrature-curse}
+## The curse of dimensionality for product quadrature
+Let $f\in C^{2k}([-1,1]^{d})$ with all pure $2k$-th order partial derivatives bounded. The tensor-product
+Gauss-Legendre rule with $k$ nodes per axis uses $N=k^{d}$ function evaluations and has error
+$$
+\Big|\int_{[-1,1]^{d}} f-\sum_{i_1=1}^{k}\cdots\sum_{i_d=1}^{k} w_{i_1}\cdots w_{i_d}\,
+f(x_{i_1},\dots,x_{i_d})\Big|=O\!\big(k^{-2k}\big)=O\!\big(N^{-2k/d}\big).
+$$
+For fixed per-axis budget $k$, the exponent $2k/d$ of $N$ degrades with the dimension $d$; equivalently, to
+hold the error at a tolerance $\epsilon$ the cost grows like $N=k^{d}$, exponentially in $d$.
+:::
+
+::: {.proof}
+Write the cube integral as an iterated integral and apply @thm-quadrature-error one axis at a time.
+Holding $x_2,\dots,x_d$ fixed, the one-dimensional rule in $x_1$ incurs error bounded by
+$E_k\sup|\partial_1^{2k} f|$, where $E_k=\frac{2^{2k+1}(k!)^4}{(2k+1)[(2k)!]^3}$ is the single-interval
+constant; integrating that bound over the remaining axes and then quadrating them in turn, the total error
+is at most $E_k\sum_{m=1}^{d}\sup|\partial_m^{2k} f|\cdot 2^{d-1}$, a finite multiple of $E_k=O(k^{-2k})$;
+the factor $2^{d-1}$ is the product of the interval lengths accumulated as each already-quadrated axis
+contributes its width $2$ to the bound. Writing the node count as $N=k^{d}$, so that $k=N^{1/d}$, the error
+$O(k^{-2k})$ becomes $O(N^{-2k/d})$. $\square$
+:::
+
+The exponent $2k/d$ tells the whole story, and it is worth reading carefully because it is easy to
+misread. With $k$ held fixed, $-2k/d$ is a constant, so refining a product grid does not improve the rate
+with $N$; and raising $k$ to sharpen the per-axis accuracy is self-defeating, because it also multiplies the
+node count $N=k^{d}$. In one dimension a five-node rule ($k=5$) integrates a smooth function with error
+$O(N^{-10})$, spectacular; in ten dimensions the same per-axis rule needs $N=5^{10}\approx 10^{7}$ nodes
+just to place five points on each axis, and reaching error $O(N^{-1})$ is all one can hope for. To make the
+threshold concrete, return to the running example (@exm-qmc-psoriasis). Three covariates at five nodes each
+is $5^{3}=125$ nodes, which sounds harmless. But this integral is not evaluated once. It is evaluated once
+per AgD arm; a plaque-psoriasis network may carry a dozen AgD arms; and the whole set of integrals is
+recomputed at every leapfrog step of every iteration of the Markov chain Monte Carlo fit, tens of thousands
+of times. At $d=3$ the $125$-node grid is tolerable, but real ML-NMR analyses reach into more covariates:
+in a plaque-psoriasis network the effect modifiers may include age, baseline severity, disease duration,
+weight, and biomarker status; in a network of newly diagnosed multiple myeloma (NDMM) treatments they may
+include age, disease stage, and cytogenetic risk. At $d=8$, five nodes per axis is $5^{8}\approx 3.9\times
+10^{5}$ nodes, multiplied again by arms and by tens of thousands of posterior evaluations: product
+quadrature is out. ML-NMR routinely runs at $d=3$ to $10$, and the next two sections develop the two ways
+around the curse, both of which decouple the error rate from $d$ in the exponent.
+
+::: {.remark}
+**Why this matters for indirect comparison.** Everything downstream of ML-NMR depends on
+$\theta_{\bullet jk}$ being right. It is the modeled event rate on an AgD arm; the contrast of two such
+rates on the linear-predictor scale is the relative effect that the network synthesizes, and it is the
+number an HTA agency reads as the odds ratio of one drug versus another. A biased integral biases that odds
+ratio and can flip a cost-effectiveness verdict. Product quadrature would in principle deliver the integral
+to near-machine precision, but at the dimensions and repetition counts of a real network it is
+computationally impossible, which is exactly why the reliable-but-slow and reliable-but-fast alternatives of
+the following sections are needed rather than merely nice to have. $\blacktriangleleft$
+:::
+
+## Monte Carlo integration and its dimension-free rate {#sec-qmc-montecarlo}
+
+Monte Carlo integration replaces the deterministic grid by independent random draws. The plain-language
+idea is one every health researcher already trusts: to estimate an average over a population, draw a random
+sample and average over the sample. Here the "population" is the arm's covariate distribution $f_j$ and the
+quantity averaged is the response probability $\mathrm{expit}(\eta_{jk}(\mathbf{x}))$, so we simulate many
+synthetic patients from $f_j$, compute each one's modeled response probability, and average. The larger the
+sample, the closer the sample average sits to the true integral; the price is that a random sample is
+noisy, and halving that noise takes four times the sample. Its error analysis is nothing more than the
+variance of a sample mean, but the conclusion is striking: the rate of convergence does not depend on the
+dimension at all.
+
+::: {#thm-mc-rmse}
+## Monte Carlo root-mean-square error
+Let $\mathbf{U}_1,\dots,\mathbf{U}_N$ be independent and identically distributed with common density $f$ on
+a domain $\mathcal{D}\subseteq\mathbb{R}^{d}$, let $h:\mathcal{D}\to\mathbb{R}$ satisfy
+$\sigma^{2}:=\mathrm{Var}_f(h(\mathbf{U}))<\infty$, and let $I=\mathbb{E}_f[h(\mathbf{U})]=\int_{\mathcal{D}}h\,f$.
+The Monte Carlo estimator $\widehat I_N=\frac{1}{N}\sum_{n=1}^{N}h(\mathbf{U}_n)$ satisfies:
+
+1. **(Unbiasedness.)** $\mathbb{E}[\widehat I_N]=I$.
+
+2. **(Root-mean-square error.)** $\mathrm{Var}(\widehat I_N)=\sigma^{2}/N$, hence the root-mean-square error is
+$$
+\mathrm{RMSE}(\widehat I_N)=\sqrt{\mathbb{E}\big[(\widehat I_N-I)^{2}\big]}=\frac{\sigma}{\sqrt N}=O(N^{-1/2}),
+$$ {#eq-qmc-mc-rmse}
+a rate that does not depend on the dimension $d$.
+
+3. **(Asymptotic normality.)** $\sqrt N\,(\widehat I_N-I)\xrightarrow{d}\mathcal{N}(0,\sigma^{2})$.
+:::
+
+::: {.proof}
+Each summand $h(\mathbf{U}_n)$ has, by construction, mean $I$ and variance $\sigma^{2}$.
+
+*Part 1.* By linearity of expectation,
+$\mathbb{E}[\widehat I_N]=\frac{1}{N}\sum_{n=1}^{N}\mathbb{E}[h(\mathbf{U}_n)]=\frac{1}{N}\cdot N I=I$.
+
+*Part 2.* The draws are independent, so the covariances between distinct summands vanish and the variance
+of the sum is the sum of the variances:
+$$
+\mathrm{Var}(\widehat I_N)=\frac{1}{N^{2}}\sum_{n=1}^{N}\mathrm{Var}\big(h(\mathbf{U}_n)\big)
+=\frac{1}{N^{2}}\cdot N\sigma^{2}=\frac{\sigma^{2}}{N}.
+$$
+Because $\widehat I_N$ is unbiased, its mean-square error equals its variance, and the root-mean-square
+error is its square root, $\sigma/\sqrt N$. The variance
+$\sigma^{2}=\int_{\mathcal{D}}\big(h(\mathbf{u})-I\big)^{2}f(\mathbf{u})\,d\mathbf{u}$ is a single number
+attached to the integrand and the sampling law; the dimension $d$ enters only through that number, never
+through the exponent of $N$.
+
+*Part 3.* The variables $h(\mathbf{U}_n)$ are independent and identically distributed with finite variance
+$\sigma^{2}$, so the Lindeberg-Lévy central limit theorem (the independent-and-identically-distributed
+central limit theorem proved in Chapter 5) gives
+$\sqrt N\,(\widehat I_N-I)=\frac{1}{\sqrt N}\sum_{n=1}^{N}\big(h(\mathbf{U}_n)-I\big)\xrightarrow{d}
+\mathcal{N}(0,\sigma^{2})$. $\square$
+:::
+
+::: {.remark}
+**A free variance bound for bounded links.** For the logit link the integrand of @eq-qmc-pullback is
+$\psi=\mathrm{expit}\circ\eta_{jk}\circ T\in(0,1)$. A random variable supported in $[0,1]$ has variance at
+most $1/4$ (Popoviciu's inequality: the variance of a $[a,b]$-valued variable is at most $(b-a)^2/4$,
+attained by the two-point law at the endpoints). Hence $\sigma^{2}\le 1/4$ and, for the logit aggregate
+mean, the Monte Carlo root-mean-square error obeys the explicit, distribution-free bound
+$\mathrm{RMSE}\le 1/(2\sqrt N)$ regardless of the covariate dimension. With $N=10^{4}$ draws this is at
+most $0.005$ on the probability scale. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why ML-NMR does not use plain Monte Carlo.** Two defects rule it out as the integration rule inside a
+Bayesian fit. The first is the rate: $N^{-1/2}$ is slow, and the integral in @eq-qmc-aggregation is
+re-evaluated once per study and arm at every leapfrog step of Hamiltonian Monte Carlo (@def-hmc), so a slow
+rule multiplies the cost of the entire posterior computation. The second, and decisive, defect is
+stochasticity. If the points $\mathbf{U}_n$ are redrawn at each likelihood evaluation, then
+$\widehat\theta_{\bullet jk}^{(N)}(\boldsymbol{\xi})$ is a random function of the parameters, its gradient
+in $\boldsymbol{\xi}$ is corrupted by Monte Carlo noise, and the Hamiltonian that Hamiltonian Monte Carlo
+integrates is no longer conserved; the sampler's acceptance probability degrades and its stationarity
+guarantee (@thm-mh-stationarity) is lost. Fixing a single point set removes the noise but forfeits the
+independence on which @thm-mc-rmse rests. The resolution, deterministic low-discrepancy points, is the
+subject of the next section. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**In plain terms: why a jittery likelihood breaks the fit.** The Bayesian fit that ML-NMR runs (Hamiltonian
+Monte Carlo, @def-hmc, Chapter 24) explores the space of parameter values by rolling a ball across the
+likelihood surface, using the slope (the gradient) of that surface to decide where to go next. This works
+only if the surface is a fixed, smooth landscape: the same parameters must always give the same likelihood,
+and nearby parameters must give nearby likelihoods. If we recompute the aggregation integral with a fresh
+random sample of synthetic patients at each step, the surface trembles underfoot, the same parameters give a
+slightly different height each time, the slope is corrupted by that trembling, and the ball wanders instead
+of settling into the posterior. The cure is to fix the synthetic patients once, so the surface stands
+still. That makes the likelihood reproducible and differentiable, at the cost of giving up the independence
+that the Monte Carlo error bound relied on, which is why we need a new, deterministic error theory. The
+three natural point-set choices line up as follows.
+
+| Point-set choice | Error rate | Reproducible? | Smooth in the parameters? | Verdict for ML-NMR |
+|---|---|---|---|---|
+| Fresh random points, redrawn each step | $O(N^{-1/2})$ | no | no (jitters) | breaks the fit |
+| Fixed pseudorandom points, drawn once | $O(N^{-1/2})$ | yes | yes | usable but slow |
+| Fixed Sobol' (low-discrepancy) points | $O((\log N)^{d}/N)$ | yes | yes | the method used |
+
+Fixing the points already buys reproducibility and smoothness; choosing them to be evenly spread rather than
+random buys, in addition, the far faster error rate. The next section proves that faster rate.
+:::
+
+## Quasi-Monte Carlo: the Koksma-Hlawka inequality {#sec-qmc-koksma}
+
+Monte Carlo gave a probabilistic error, a variance that shrinks on average but leaves the realized error on
+any one sample random. Having decided to fix the points once, we can no longer appeal to that probabilistic
+argument, and we instead want a deterministic ceiling: a bound that holds for certain on the specific point
+set we chose. Quasi-Monte Carlo keeps the equal-weight average of @eq-qmc-cubature but replaces the random
+points by a deterministic set chosen to fill the cube as evenly as possible. The deterministic ceiling
+factors, beautifully, into two independent pieces: how evenly the points are spread, and how wildly the
+integrand moves. "Evenly spread" is made precise by **discrepancy**, a measure of how far the empirical
+distribution of the points departs from the uniform distribution; "how wildly the integrand moves" is made
+precise by its **variation**. The error is at most the product of the two: spread the points evenly (small
+discrepancy) and the average is accurate unless the integrand is very rough (large variation). This clean
+statement is the Koksma-Hlawka inequality. We first define its two ingredients, and after each definition
+pause to say, in plain terms, what it measures.
+
+::: {#def-star-discrepancy}
+## Star discrepancy
+For a point set $P_N=\{\mathbf{u}_1,\dots,\mathbf{u}_N\}\subset[0,1]^{d}$ and a corner box
+$[\mathbf{0},\mathbf{u})=\prod_{i=1}^{d}[0,u_i)$, the **local discrepancy** is the signed gap between the
+fraction of points in the box and its volume,
+$$
+\Delta_N(\mathbf{u})=\frac{1}{N}\,\#\{n:\mathbf{u}_n\in[\mathbf{0},\mathbf{u})\}-\prod_{i=1}^{d}u_i,
+$$
+and the **star discrepancy** is its worst case over all corner boxes,
+$$
+D_N^{*}(P_N)=\sup_{\mathbf{u}\in[0,1]^{d}}\big|\Delta_N(\mathbf{u})\big|.
+$$ {#eq-qmc-star-disc}
+A point set is said to be of **low discrepancy** if $D_N^{*}(P_N)=O\big((\log N)^{d}/N\big)$.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation: discrepancy is unevenness.** Discrepancy asks a simple fairness question. Take any
+box anchored at the origin corner, say the lower-left quarter of the unit square; the fraction of your
+points that fall inside it should be about its area, one quarter. Local discrepancy is the gap between the
+actual fraction and the area for one such box, and star discrepancy is the worst gap over every anchored box
+at once. A point set with small star discrepancy is evenly spread at every scale, with no clumps and no
+gaps; a set with large star discrepancy has some region that is over- or under-populated. Independent random
+points clump by chance and have star discrepancy of order $N^{-1/2}$; a low-discrepancy set drives it down
+to nearly $1/N$, which is the whole source of the quasi-Monte Carlo advantage. $\blacktriangleleft$
+:::
+
+::: {#def-hardy-krause-variation}
+## Hardy-Krause variation
+For $f:[0,1]\to\mathbb{R}$ the **total variation** is
+$V(f)=\sup\sum_{m}\big|f(t_{m})-f(t_{m-1})\big|$, the supremum over all partitions
+$0=t_0<t_1<\dots<t_M=1$; $f$ has **bounded variation** if $V(f)<\infty$, and then for $f\in C^{1}$,
+$V(f)=\int_0^1|f'(t)|\,dt$. In $d$ dimensions, the **Vitali variation** $V^{(d)}(f)$ is the supremum over
+grid partitions of $\sum|\Delta f|$, where $\Delta f$ is the $d$-fold alternating difference of $f$ over a
+grid box; for $f\in C^{d}$, $V^{(d)}(f)=\int_{[0,1]^{d}}\big|\partial_{1}\cdots\partial_{d}f\big|\,d\mathbf{u}$.
+The **Hardy-Krause variation** anchored at $\mathbf{1}$ sums the Vitali variations of $f$ restricted to
+every face of the cube,
+$$
+V_{\mathrm{HK}}(f)=\sum_{\emptyset\ne J\subseteq\{1,\dots,d\}}V^{(|J|)}\big(f|_{J}\big),
+$$ {#eq-qmc-hk}
+where $f|_{J}$ is the restriction of $f$ to the face $\{u_i=1:i\notin J\}$, a function of the coordinates
+indexed by $J$. $f$ has **bounded Hardy-Krause variation** if $V_{\mathrm{HK}}(f)<\infty$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation: variation is total roughness.** This is the hardest definition in the chapter, so
+here is the picture. In one dimension, total variation $V(f)$ is the total up-and-down travel of the graph:
+add up every rise and every fall, and for a smooth $f$ this is $\int_0^1|f'|$. A gently sloping function has
+small variation; a function that oscillates violently, or jumps, has large variation. The multivariable
+generalization adds one new idea, the **alternating difference**, which measures not just up-and-down travel
+but twisting. Over a rectangle $[a_1,b_1]\times[a_2,b_2]$ the two-dimensional alternating difference is the
+signed corner sum
+$$
+f(b_1,b_2)-f(a_1,b_2)-f(b_1,a_2)+f(a_1,a_2),
+$$
+which is zero for any function that is additive in its two coordinates and grows only when the coordinates
+interact; the Vitali variation $V^{(d)}$ totals the absolute alternating differences over all grid
+rectangles, capturing how much the function twists across the interior. The Hardy-Krause variation then
+totals the roughness over the whole cube and over every lower-dimensional face of it: for $d=2$ it sums the
+ordinary variation of $f$ along the top edge ($J=\{1\}$), the ordinary variation along the right edge
+($J=\{2\}$), and the Vitali variation over the whole square ($J=\{1,2\}$). The faces are taken at the top
+corner, "anchored at $\mathbf{1}$": the coordinates not in $J$ are frozen at $1$, a bookkeeping convention
+(one could equally anchor at $\mathbf{0}$) that ensures every face and the interior are counted once. The
+one thing to remember is the headline: **$V_{\mathrm{HK}}(f)$ is a single number, large when $f$ is rough,
+jumpy, or strongly interacting, and small when $f$ is smooth and mild.** It is the $V_{\mathrm{HK}}$ of
+[Notation](/notation.qmd), and in the error bound it plays exactly the role its name suggests: a penalty for
+integrand roughness. $\blacktriangleleft$
+:::
+
+In one dimension the face sum @eq-qmc-hk has the single term $J=\{1\}$, so $V_{\mathrm{HK}}(f)=V(f)$ is
+ordinary total variation, and the corner boxes of @eq-qmc-star-disc are the intervals $[0,u)$. We prove
+the inequality in full in this one-dimensional case, where it is due to Koksma, and then state the
+multidimensional form due to Hlawka.
+
+::: {#thm-koksma-hlawka}
+## Koksma-Hlawka inequality
+Let $f:[0,1]^{d}\to\mathbb{R}$ have bounded Hardy-Krause variation $V_{\mathrm{HK}}(f)<\infty$. For every
+point set $P_N=\{\mathbf{u}_1,\dots,\mathbf{u}_N\}\subset[0,1]^{d}$,
+$$
+\bigg|\frac{1}{N}\sum_{n=1}^{N}f(\mathbf{u}_n)-\int_{[0,1]^{d}}f(\mathbf{u})\,d\mathbf{u}\bigg|
+\;\le\; V_{\mathrm{HK}}(f)\,D_N^{*}(P_N).
+$$ {#eq-qmc-kh}
+Consequently, for a low-discrepancy point set the quasi-Monte Carlo error is
+$O\big(V_{\mathrm{HK}}(f)\,(\log N)^{d}/N\big)$, nearly $1/N$ and, for moderate $d$, far better than the
+$N^{-1/2}$ of plain Monte Carlo (@thm-mc-rmse).
+:::
+
+::: {.proof}
+*The one-dimensional case ($d=1$), in full.* Take $f\in C^{1}[0,1]$; the general bounded-variation case is
+recovered at the end. Let $P_N=\{u_1,\dots,u_N\}\subset(0,1)$, and let
+$F_N(u)=\frac{1}{N}\#\{n:u_n\le u\}$ be the empirical distribution function of the points, a nondecreasing
+step function rising from $0$ to $1$. The local discrepancy is $\Delta_N(u)=F_N(u)-u$, and by
+@eq-qmc-star-disc, $D_N^{*}=\sup_{u\in[0,1]}|\Delta_N(u)|$.
+
+Apply the fundamental theorem of calculus to write each value as an integral of the derivative. For each
+point, $f(u_n)=f(1)-\int_{u_n}^{1}f'(u)\,du=f(1)-\int_0^1\mathbf{1}\{u>u_n\}f'(u)\,du$. Averaging over $n$
+and interchanging the finite sum with the integral,
+$$
+\frac{1}{N}\sum_{n=1}^{N}f(u_n)
+=f(1)-\int_0^1\Big(\frac{1}{N}\sum_{n=1}^{N}\mathbf{1}\{u>u_n\}\Big)f'(u)\,du
+=f(1)-\int_0^1 F_N(u)\,f'(u)\,du,
+$$
+where we used $\frac{1}{N}\sum_n\mathbf{1}\{u>u_n\}=F_N(u)$ for all but the finitely many $u\in P_N$, a set
+of Lebesgue measure zero that does not affect the integral. The exact integral admits the same treatment:
+substituting $f(u)=f(1)-\int_u^1 f'(t)\,dt$ and applying Fubini's theorem to swap the order of integration
+over the triangle $\{0\le u\le t\le 1\}$,
+$$
+\int_0^1 f(u)\,du=f(1)-\int_0^1\!\!\int_u^1 f'(t)\,dt\,du
+=f(1)-\int_0^1 f'(t)\Big(\int_0^t du\Big)dt=f(1)-\int_0^1 t\,f'(t)\,dt.
+$$
+Subtracting the two displays, the constants $f(1)$ cancel and the derivative integrals combine:
+$$
+\frac{1}{N}\sum_{n=1}^{N}f(u_n)-\int_0^1 f(u)\,du
+=-\int_0^1\big(F_N(u)-u\big)f'(u)\,du=-\int_0^1\Delta_N(u)\,f'(u)\,du.
+$$ {#eq-qmc-koksma-identity}
+This is the one-dimensional Hardy-Krause identity: the integration error is the integral of the local
+discrepancy against $df$. Bounding the integral by the supremum of $|\Delta_N|$ times the $L^1$ norm of
+$f'$,
+$$
+\bigg|\frac{1}{N}\sum_{n=1}^{N}f(u_n)-\int_0^1 f\bigg|
+\le\Big(\sup_{u\in[0,1]}|\Delta_N(u)|\Big)\int_0^1|f'(u)|\,du
+=D_N^{*}\,V(f),
+$$
+using $V(f)=\int_0^1|f'|$ for $f\in C^1$ (@def-hardy-krause-variation). This is @eq-qmc-kh for $d=1$.
+
+For general $f$ of bounded variation on $[0,1]$, replace the derivative integrals by Riemann-Stieltjes
+integrals against $df$: integration by parts for the Riemann-Stieltjes integral, valid because the step
+function $\Delta_N$ and the bounded-variation $f$ may be taken to share no discontinuities (perturb the
+endpoints if necessary), gives
+$\frac1N\sum_n f(u_n)-\int_0^1 f=\int_0^1 f\,d\Delta_N=-\int_0^1\Delta_N\,df$, and
+$|\!\int_0^1\Delta_N\,df|\le\sup|\Delta_N|\int_0^1|df|=D_N^{*}V(f)$, where $\int_0^1|df|=V(f)$ is the total
+variation. The bound @eq-qmc-kh follows in the same form.
+
+*The multidimensional case.* The identity @eq-qmc-koksma-identity generalizes to
+$$
+\frac{1}{N}\sum_{n=1}^{N}f(\mathbf{u}_n)-\int_{[0,1]^{d}}f
+=\sum_{\emptyset\ne J\subseteq\{1,\dots,d\}}(-1)^{|J|}\int_{[0,1]^{|J|}}
+\Delta_N\big(\mathbf{u}_J,\mathbf{1}\big)\,d_{\mathbf{u}_J} f|_{J}(\mathbf{u}_J),
+$$
+a sum of $2^{d}-1$ face integrals of the local discrepancy against the mixed differentials of the face
+restrictions; bounding each by $\sup|\Delta_N|=D_N^{*}$ times the corresponding Vitali variation and
+summing yields @eq-qmc-kh with $V_{\mathrm{HK}}(f)$ from @eq-qmc-hk. The multivariate Hardy-Krause identity
+and the discrepancy rate $D_N^{*}=O((\log N)^d/N)$ for low-discrepancy sequences are classical; we cite
+Niederreiter (1992, Chapters 2 and 4) for the full development and do not reproduce the multidimensional
+integration-by-parts bookkeeping here. $\square$
+:::
+
+::: {.remark}
+**Why this matters, and what the multidimensional identity says.** The inequality @eq-qmc-kh is the
+theorem that licenses the entire QMC program of ML-NMR: it promises that if we spread the covariate nodes
+evenly (small $D_N^{*}$) and the response-probability integrand is not pathological (finite
+$V_{\mathrm{HK}}$), then the aggregate mean $\theta_{\bullet jk}$ we compute is close to the truth by a
+margin we can name in advance, node by node, with no appeal to chance. The realized error on a specific
+Sobol' net is genuinely bounded, not merely bounded on average. As for the multidimensional identity we did
+not prove in full: it says the integration error decomposes into $2^{d}-1$ contributions, one for each
+nonempty subset of coordinates, and each contribution is the local discrepancy integrated against the
+roughness of $f$ on the corresponding face of the cube. Geometrically, the whole-cube term ($J=\{1,\dots,d\}$)
+charges for how the points fail to fill the interior weighted by how much $f$ twists across it, while the
+lower-dimensional terms charge for the same failure restricted to the edges and faces where some coordinates
+are pinned to the anchor. Summing all $2^{d}-1$ charges and bounding each by $D_N^{*}$ times a Vitali
+variation reassembles the Hardy-Krause variation and gives @eq-qmc-kh. The reader who wants the bookkeeping
+will find it in Niederreiter; the reader who wants the moral has it already: error is unevenness times
+roughness. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Deterministic, not probabilistic.** The contrast with @thm-mc-rmse is sharp. Monte Carlo gives a
+probabilistic statement, a variance and a limiting normal law; the realized error on any one point set is
+random. Koksma-Hlawka gives a deterministic, worst-case ceiling on the error of a specific point set,
+factored cleanly into a property of the integrand, $V_{\mathrm{HK}}(f)$, and a property of the points,
+$D_N^{*}$. The factorization is what lets ML-NMR fix the points once and reason about the error of the
+resulting deterministic likelihood approximation (@def-integration-error-monitoring of Chapter 24 turns the
+$N$-versus-$N/2$ comparison into a practical convergence check). $\blacktriangleleft$
+:::
+
+::: {.remark}
+**When the integrand misbehaves.** The bound @eq-qmc-kh is only as good as $V_{\mathrm{HK}}(f)$ is finite,
+and there are two ways the ML-NMR pullback integrand $\psi$ of @eq-qmc-pullback can have infinite
+Hardy-Krause variation. The first is a discrete covariate margin. If covariate $i$ is binary or ordinal,
+its inverse distribution function $F_{j,i}^{-1}$ is a step function, so $\psi$ jumps across the coordinate
+hyperplanes where the step occurs; a function with a jump transverse to an axis has infinite Vitali
+variation on the faces it crosses, and the smooth QMC rate @eq-qmc-kh need not hold. The second is an
+unbounded integrand, for instance a log link with $\eta$ unbounded on the support, where $g^{-1}=\exp$
+grows without bound. For continuous margins and a bounded smooth link such as the logit, $\psi$ is smooth
+and bounded and $V_{\mathrm{HK}}(\psi)$ is finite. For discrete margins, randomized QMC, in which the
+deterministic net is randomly scrambled (Owen, 1998), recovers near-optimal rates, but in a probabilistic
+rather than a deterministic Koksma-Hlawka sense. $\blacktriangleleft$
+:::
+
+::: {#exm-qmc-discrete-jump}
+## A discrete margin makes the integrand jump
+Take the biomarker covariate of the running example (@exm-qmc-psoriasis) alone: binary $X$ with
+$P(X=1)=0.3$, so its distribution function is the step $F(x)=0.7$ on $[0,1)$ and $F(x)=1$ on $[1,\infty)$,
+and its quantile function is $F^{-1}(u)=0$ for $u\le 0.7$ and $F^{-1}(u)=1$ for $u>0.7$. On an arm with
+linear predictor $\eta(x)=-0.5+x$, the cube integrand $\psi(u)=\mathrm{expit}(-0.5+F^{-1}(u))$ is flat, then
+jumps:
+
+| $u$ | $F^{-1}(u)$ | $\psi(u)=\mathrm{expit}(-0.5+F^{-1}(u))$ |
+|---|---|---|
+| $0.20$ | $0$ | $0.3775$ |
+| $0.50$ | $0$ | $0.3775$ |
+| $0.70$ | $0$ | $0.3775$ |
+| $0.75$ | $1$ | $0.6225$ |
+| $0.90$ | $1$ | $0.6225$ |
+
+The integrand cliff-jumps by $0.6225-0.3775=0.2450$ across $u=0.7$. In one dimension this single jump still
+has finite total variation ($0.2450$), so the Koksma-Hlawka bound survives and QMC works, though it loses
+its edge over evenly spaced grids near the cliff. The real damage is dimensional. When this binary covariate
+is correlated with a continuous covariate through the Gaussian copula (@sec-qmc-gaussian), the correlating
+step tilts the jump surface off the coordinate axis, and a jump across a tilted surface has *infinite*
+Hardy-Krause variation (Owen, 2005): the bound @eq-qmc-kh then reads $|\text{error}|\le\infty$ and promises
+nothing. This is precisely the misbehavior flagged above, and the practical fix, randomized (scrambled)
+Sobol' nets, recovers good average-case accuracy at the cost of the deterministic guarantee.
+$\blacktriangleleft$
+:::
+
+## Sobol' sequences as digital nets {#sec-qmc-sobol}
+
+The Koksma-Hlawka inequality is only useful if we can exhibit point sets whose star discrepancy actually
+attains the low-discrepancy rate $O((\log N)^{d}/N)$. The construction used by ML-NMR software is the
+Sobol' sequence (@sobol1967). Its design principle is that the points should be perfectly equidistributed
+not merely overall but within every box of a family of dyadic boxes at once; the formalization of "perfect
+equidistribution in dyadic boxes" is the digital net.
+
+Before the construction, the four properties a user actually relies on. A Sobol' sequence is **deterministic**
+(the same points every time, so the likelihood is reproducible), **evenly spread** (low discrepancy, so the
+average converges fast), **nested** (the first $N/2$ points are a subset of the first $N$, so doubling the
+node count reuses all previous work and lets the $N$-versus-$N/2$ convergence check of @sec-qmc-example
+compare like with like), and **cheap to generate** (each point is a handful of bitwise operations). Two
+further practical reasons pick Sobol' over the other classical low-discrepancy families (Halton, Faure,
+Niederreiter): Joe and Kuo (2008) published well-tested direction numbers up to dimension $21{,}200$, far
+beyond any ML-NMR need, and those tables ship inside the software (`multinma`, and the Stan and `qrng`
+libraries it builds on), so the covariate nodes are reproducible across machines. The construction below is
+optional reading; a user who trusts the software can take the four properties above and skip to
+@sec-qmc-pit.
+
+The definition uses one piece of algebra worth naming in advance. $\mathbb{F}_2=\{0,1\}$ is the field of two
+elements, where addition is exclusive-or (XOR: $1\oplus 1=0$) and multiplication is the ordinary product; a
+**primitive polynomial** over $\mathbb{F}_2$ is, loosely, an irreducible polynomial whose powers cycle
+through all nonzero remainders, the algebraic device that guarantees the direction numbers it generates do
+not fall into a short repeating pattern and so keep the coordinate well spread. One caution for anyone
+implementing the recurrence below: the multiplications by $2$ and by $2^{\ell}$ are ordinary integer
+multiplications, and only the combining operation $\oplus$ is over $\mathbb{F}_2$; mixing the two up is the
+classic implementation bug.
+
+::: {#def-sobol-net}
+## Digital $(t,m,s)$-nets and the Sobol' sequence
+Fix a base $b\ge 2$ and a dimension $s$. An **elementary interval** (a $b$-adic box) in $[0,1)^{s}$ is a
+product
+$$
+E=\prod_{i=1}^{s}\Big[\frac{a_i}{b^{d_i}},\frac{a_i+1}{b^{d_i}}\Big),
+\qquad d_i\in\mathbb{Z}_{\ge 0},\quad 0\le a_i<b^{d_i},
+$$
+of volume $b^{-(d_1+\cdots+d_s)}$. A **$(t,m,s)$-net in base $b$** is a set of $N=b^{m}$ points in
+$[0,1)^{s}$ such that every elementary interval of volume $b^{t-m}$ (equivalently with
+$d_1+\cdots+d_s=m-t$) contains exactly $b^{t}$ of the points. The parameter $t$ measures the deviation from
+perfect balance: $t=0$ is ideal, and smaller $t$ is better.
+
+The **Sobol' sequence** is the case $b=2$, built coordinate by coordinate from algebra over the field
+$\mathbb{F}_2=\{0,1\}$. For dimension $i$, fix a primitive polynomial over $\mathbb{F}_2$,
+$$
+p_i(x)=x^{e_i}+a_{i,1}x^{e_i-1}+\cdots+a_{i,e_i-1}x+1,\qquad a_{i,\ell}\in\{0,1\},
+$$
+of degree $e_i$, and a set of odd initial **direction numbers** $v_{i,\ell}=m_{i,\ell}\,2^{-\ell}$ with
+$m_{i,\ell}$ an odd integer below $2^{\ell}$ for $\ell=1,\dots,e_i$. Extend the direction numbers by the
+recurrence read off from the polynomial,
+$$
+m_{i,\ell}=2\,a_{i,1}\,m_{i,\ell-1}\oplus 2^{2}a_{i,2}\,m_{i,\ell-2}\oplus\cdots
+\oplus 2^{e_i}m_{i,\ell-e_i}\oplus m_{i,\ell-e_i},\qquad \ell>e_i,
+$$
+where $\oplus$ is bitwise exclusive-or. The $i$-th coordinate of the $n$-th Sobol' point is the
+exclusive-or of the direction numbers selected by the binary digits of $n=\sum_{\ell\ge 1}b_{\ell}2^{\ell-1}$,
+$$
+u_{n,i}=\bigoplus_{\ell:\,b_\ell=1} v_{i,\ell}.
+$$ {#eq-qmc-sobol-point}
+With suitable direction numbers (Joe and Kuo, 2008), the Sobol' points form a $(t,m,s)$-net in base $2$ for
+$N=2^{m}$ and achieve the low-discrepancy rate $D_N^{*}=O\big((\log N)^{s}/N\big)$ (@sobol1967). $\blacktriangleleft$
+:::
+
+::: {.remark}
+**The first coordinate is the van der Corput sequence.** Taking the trivial direction numbers
+$v_{1,\ell}=2^{-\ell}$ in @eq-qmc-sobol-point gives, in dimension one, $u_{n,1}=\sum_{\ell:b_\ell=1}2^{-\ell}$,
+which is exactly the radical-inverse (van der Corput) sequence in base $2$: it reflects the binary digits
+of $n$ about the radix point. For $n=1,2,3,4,5,6,7$ this produces
+$$
+\tfrac12,\ \tfrac14,\ \tfrac34,\ \tfrac18,\ \tfrac58,\ \tfrac38,\ \tfrac78,
+$$
+which as a set is precisely $\{\tfrac18,\tfrac28,\tfrac38,\tfrac48,\tfrac58,\tfrac68,\tfrac78\}$, the seven
+interior eighths. One checks directly that this seven-point set has star discrepancy $D_7^{*}=\tfrac18$,
+close to $1/N$, whereas a typical set of seven independent uniform points has discrepancy of order
+$1/\sqrt 7\approx 0.38$. The contrast is the QMC advantage in miniature, and we use exactly these points in
+the worked example of @sec-qmc-example. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**What scrambling is, in one paragraph.** We invoke "randomized" or "scrambled" Sobol' nets twice as the
+remedy for integrands of unbounded variation (discrete margins, @exm-qmc-discrete-jump) and for very high
+dimension. Scrambling, due to Owen (1998), applies a random but structure-preserving relabeling of the
+digits of every coordinate of every point: the dyadic-box balance that makes a Sobol' net low-discrepancy is
+kept exactly, but the specific point positions are randomized. The payoff is twofold. First, one now has a
+family of statistically identical nets, so averaging the estimate over a few independent scrambles yields an
+honest, MC-style error bar for the integration error even though each net is deterministic once drawn.
+Second, for smooth integrands the scrambling improves the rate to nearly $N^{-3/2}$, and for the rough
+integrands where plain QMC lost its guarantee it restores near-optimal accuracy in an average-case sense.
+The cost is that the deterministic, worst-case Koksma-Hlawka ceiling is traded for a probabilistic one; for
+the central inference of an HTA this is usually a good trade. A scrambled net is still fixed once per fit,
+so the smoothness in the parameters that Hamiltonian Monte Carlo needs is preserved. $\blacktriangleleft$
+:::
+
+## The probability integral transform {#sec-qmc-pit}
+
+We now turn from the cube to the covariate space, and to the construction of the transport map $T$ of
+@eq-qmc-pullback. Here is where this section is headed, stated before the theorems so the pieces have a
+purpose: to turn a uniform Sobol' input into a covariate value we will invert that covariate's marginal
+distribution function, and the theorem below guarantees that inverting the CDF of a uniform input reproduces
+exactly the intended distribution. Concretely, take age in the running example (@exm-qmc-psoriasis),
+modeled as $\mathcal{N}(45,12^{2})$. Its quantile function $F^{-1}$ turns a uniform number into an age:
+$F^{-1}(0.5)=45$ (the median), $F^{-1}(0.975)=45+1.96\cdot 12\approx 68.5$, $F^{-1}(0.025)\approx 21.5$. Feed
+in uniform inputs spread across $(0,1)$ and the ages that come out are distributed exactly as
+$\mathcal{N}(45,12^{2})$. The same device handles the biomarker: with $P(X=1)=0.3$ the quantile function
+returns $0$ for inputs up to $0.7$ and $1$ above, so $30\%$ of uniform inputs map to biomarker-positive, as
+intended. The atom of the construction is therefore the probability integral transform: the fact that any
+distribution can be generated from a uniform random number by applying the inverse distribution function,
+and conversely that a continuous distribution function maps its own variable back to uniform. We use the
+generalized inverse so that the statements hold for arbitrary, not only strictly increasing, distribution
+functions, which is what lets the biomarker's step function participate.
+
+::: {#lem-quantile-galois}
+## The quantile coupling inequality
+Let $F:\mathbb{R}\to[0,1]$ be a distribution function, that is nondecreasing and right-continuous with
+$F(-\infty)=0$ and $F(+\infty)=1$, and define its **generalized inverse** (the quantile function)
+$$
+F^{-1}(u)=\inf\{x\in\mathbb{R}:F(x)\ge u\},\qquad u\in(0,1).
+$$
+Then for all $x\in\mathbb{R}$ and $u\in(0,1)$,
+$$
+F^{-1}(u)\le x\iff u\le F(x).
+$$ {#eq-qmc-galois}
+:::
+
+::: {.proof}
+Write $A_u=\{x:F(x)\ge u\}$, so $F^{-1}(u)=\inf A_u$. Because $F$ is nondecreasing, $A_u$ is an upper set:
+if $x\in A_u$ and $x'\ge x$ then $x'\in A_u$. Because $F$ is right-continuous, $A_u$ is closed on the left,
+hence contains its infimum: taking $x_m\downarrow F^{-1}(u)$ with $x_m\in A_u$, right-continuity gives
+$F(F^{-1}(u))=\lim_m F(x_m)\ge u$, so $F^{-1}(u)\in A_u$ and $A_u=[F^{-1}(u),\infty)$.
+
+($\Leftarrow$) If $u\le F(x)$ then $x\in A_u$, so $x\ge\inf A_u=F^{-1}(u)$.
+
+($\Rightarrow$) If $F^{-1}(u)\le x$ then, by monotonicity and $F^{-1}(u)\in A_u$,
+$F(x)\ge F(F^{-1}(u))\ge u$. $\square$
+:::
+
+::: {#thm-inverse-cdf}
+## Inverse-CDF transformation
+Let $F$ be a distribution function and $F^{-1}$ its generalized inverse.
+
+1. **(Inverse transform.)** If $U\sim\mathrm{Unif}(0,1)$, then $F^{-1}(U)\sim F$.
+
+2. **(Probability integral transform.)** If, in addition, $F$ is continuous and $X\sim F$, then
+$F(X)\sim\mathrm{Unif}(0,1)$.
+:::
+
+::: {.proof}
+*Part 1.* For any $x\in\mathbb{R}$, the coupling inequality @eq-qmc-galois gives the event identity
+$\{F^{-1}(U)\le x\}=\{U\le F(x)\}$. Since $U$ is uniform and $F(x)\in[0,1]$,
+$$
+P\big(F^{-1}(U)\le x\big)=P\big(U\le F(x)\big)=F(x).
+$$
+Thus $F^{-1}(U)$ has distribution function $F$, that is $F^{-1}(U)\sim F$.
+
+*Part 2.* Fix $u\in(0,1)$ and set $x_u=\sup\{x:F(x)\le u\}$. Continuity of $F$ gives $F(x_u)=u$: indeed
+$F\to 0,1$ at $\mp\infty$ and $F$ is continuous, so by the intermediate value theorem the level $u$ is
+attained, and $x_u$ is the largest point of attainment. We claim the event identity
+$\{F(X)\le u\}=\{X\le x_u\}$. If $X\le x_u$ then $F(X)\le F(x_u)=u$ by monotonicity. Conversely, if
+$X>x_u$ then, $x_u$ being the supremum of $\{F\le u\}$, every $t>x_u$ has $F(t)>u$, so $F(X)>u$; contrapositively
+$F(X)\le u$ forces $X\le x_u$. Therefore
+$$
+P\big(F(X)\le u\big)=P\big(X\le x_u\big)=F(x_u)=u\qquad\text{for every }u\in(0,1),
+$$
+which is the distribution function of $\mathrm{Unif}(0,1)$. Hence $F(X)\sim\mathrm{Unif}(0,1)$. $\square$
+:::
+
+::: {.remark}
+**Continuity is essential for the forward map.** Part 1 needs no continuity: the inverse transform
+generates any distribution, discrete or continuous, from a uniform draw, and this is the workhorse of
+random-variate generation. Part 2 fails for discrete $F$: if $X$ is Bernoulli with success probability
+$\pi$, then $F(X)$ takes only the two values $1-\pi$ (when $X=0$) and $1$ (when $X=1$), so $F(X)$ is not
+uniform. This asymmetry is exactly the source of the discrete-margin caveat in @thm-koksma-hlawka: a
+discrete covariate enters the pipeline through Part 1 only, its inverse distribution function is a step
+function, and the resulting jumps inflate the Hardy-Krause variation of the integrand. $\blacktriangleleft$
+:::
+
+## Sklar's theorem {#sec-qmc-sklar}
+
+The inverse-CDF transform handles one covariate at a time. To build a joint covariate law from the
+marginal summaries that an AgD study reports, we need a principled way to glue marginals together with a
+specified dependence. Here is the concrete gap. The running example's aggregate arm (@exm-qmc-psoriasis)
+reports a mean age and a mean baseline severity, which fix each covariate's own distribution, but says
+nothing about how they are paired within patients: do older patients tend to be more severe, or is there no
+association? Two arms with identical margins but different age-severity pairing have different covariate
+clouds, and, because the response probability bends nonlinearly with the linear predictor, different
+aggregate means. The margins alone do not determine the integral; we must supply the pairing.
+
+One might ask why we do not simply assume the covariates are jointly normal and be done. The answer is that
+real covariates are not all normal: the biomarker is binary, and severity or duration may be skewed or
+bounded. A joint normal would force a normal margin on the biomarker, which is nonsense for a $0/1$ variable.
+What we want is to keep a sensible margin for each covariate (normal age, normal severity, Bernoulli
+biomarker) and glue them with a chosen dependence, without the dependence disturbing the margins. Sklar's
+theorem is exactly that principle: it asserts that every joint distribution factors into its marginals and a
+single object, the copula, that carries all of the dependence and none of the marginal information, so
+margin and dependence can be chosen separately and then combined.
+
+::: {#def-copula}
+## Copula
+A function $C:[0,1]^{d}\to[0,1]$ is a **$d$-dimensional copula** if it is the joint distribution function
+of a random vector $(U_1,\dots,U_d)$ each of whose components is uniform on $[0,1]$. Equivalently, $C$ is
+grounded ($C(\mathbf{u})=0$ if any $u_i=0$), has uniform one-dimensional margins
+($C(1,\dots,1,u_i,1,\dots,1)=u_i$), and is $d$-increasing (the $C$-measure of every box in $[0,1]^d$ is
+nonnegative). $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation: a copula is dependence with the units stripped off.** Push each covariate through its
+own CDF and it becomes uniform on $[0,1]$ (the probability integral transform, @thm-inverse-cdf), the same
+for every covariate regardless of its original scale. What survives that rescaling is only the pattern of
+association, and the copula $C$ is precisely the joint distribution of those rescaled uniforms. So a copula
+answers "which quantiles tend to occur together", for example "do high-age-percentile patients tend to be
+high-severity-percentile patients", with the marginal scales of age and severity deliberately discarded. It
+is dependence in pure form, ready to be reattached to any margins we like. $\blacktriangleleft$
+:::
+
+::: {#lem-copula-lipschitz}
+## Copulas are Lipschitz
+Every $d$-copula $C$ is $1$-Lipschitz in the $\ell^{1}$ sense:
+$|C(\mathbf{u})-C(\mathbf{v})|\le\sum_{i=1}^{d}|u_i-v_i|$ for all $\mathbf{u},\mathbf{v}\in[0,1]^{d}$. In
+particular $C$ is continuous.
+:::
+
+::: {.proof}
+Let $(U_1,\dots,U_d)$ have joint distribution function $C$ with uniform margins, so that
+$C(\mathbf{u})=P(\bigcap_i\{U_i\le u_i\})$. For events $A,B$, $|P(A)-P(B)|\le P(A\triangle B)$, where
+$A\triangle B$ is the symmetric difference. With $A=\bigcap_i\{U_i\le u_i\}$ and
+$B=\bigcap_i\{U_i\le v_i\}$, a point lies in $A\triangle B$ only if for some coordinate $i$ the value
+$U_i$ falls between $u_i$ and $v_i$, so
+$A\triangle B\subseteq\bigcup_{i=1}^{d}\{\min(u_i,v_i)<U_i\le\max(u_i,v_i)\}$. By the union bound and the
+uniform margins, $P(A\triangle B)\le\sum_i P(\min(u_i,v_i)<U_i\le\max(u_i,v_i))=\sum_i|u_i-v_i|$. Hence
+$|C(\mathbf{u})-C(\mathbf{v})|\le\sum_i|u_i-v_i|$, and continuity follows. $\square$
+:::
+
+::: {#thm-sklar}
+## Sklar's theorem
+Let $F$ be a joint distribution function on $\mathbb{R}^{d}$ with one-dimensional margins
+$F_1,\dots,F_d$. Then there exists a copula $C$ such that
+$$
+F(x_1,\dots,x_d)=C\big(F_1(x_1),\dots,F_d(x_d)\big)\qquad\text{for all }\mathbf{x}\in\mathbb{R}^{d}.
+$$ {#eq-qmc-sklar}
+If the margins $F_1,\dots,F_d$ are all continuous, then $C$ is unique and is given on $[0,1]^{d}$ by
+$$
+C(u_1,\dots,u_d)=F\big(F_1^{-1}(u_1),\dots,F_d^{-1}(u_d)\big).
+$$ {#eq-qmc-sklar-explicit}
+:::
+
+::: {.proof}
+We prove the existence direction in the continuous case; this is the case used by ML-NMR, where every
+covariate margin is taken continuous. Let $(X_1,\dots,X_d)\sim F$. Because each $F_i$ is continuous,
+@thm-inverse-cdf(2) gives $U_i:=F_i(X_i)\sim\mathrm{Unif}(0,1)$. Let $C$ be the joint distribution function
+of $(U_1,\dots,U_d)$. Its one-dimensional margins are the laws of the $U_i$, each uniform, so $C$ is a
+copula by @def-copula.
+
+It remains to verify the factorization @eq-qmc-sklar. From the proof of @thm-inverse-cdf(2), for each $i$
+and each $u_i\in(0,1)$ the event identity $\{F_i(X_i)\le u_i\}=\{X_i\le x_{i,u_i}\}$ holds with
+$x_{i,u_i}=\sup\{x:F_i(x)\le u_i\}$ and $F_i(x_{i,u_i})=u_i$. Intersecting over the coordinates,
+$$
+C(u_1,\dots,u_d)=P\Big(\bigcap_{i=1}^{d}\{F_i(X_i)\le u_i\}\Big)
+=P\Big(\bigcap_{i=1}^{d}\{X_i\le x_{i,u_i}\}\Big)=F(x_{1,u_1},\dots,x_{d,u_d}).
+$$ {#eq-qmc-sklar-step}
+Now evaluate @eq-qmc-sklar-step at $u_i=F_i(x_i)$ for a given $\mathbf{x}$. Then
+$x_{i,F_i(x_i)}=\sup\{t:F_i(t)\le F_i(x_i)\}\ge x_i$, and $F_i$ is flat at level $F_i(x_i)$ on the interval
+$[x_i,x_{i,F_i(x_i)}]$, so $F_i(x_{i,F_i(x_i)})=F_i(x_i)$ and the coordinate-$i$ enlargement
+$\{x_i<X_i\le x_{i,F_i(x_i)}\}$ has probability $F_i(x_{i,F_i(x_i)})-F_i(x_i)=0$. Enlarging each coordinate
+adds a null set, and a finite union of null sets is null, so the joint probability is unchanged:
+$F(x_{1,F_1(x_1)},\dots,x_{d,F_d(x_d)})=F(x_1,\dots,x_d)$. Combined with @eq-qmc-sklar-step at
+$u_i=F_i(x_i)$ this gives $C(F_1(x_1),\dots,F_d(x_d))=F(\mathbf{x})$, which is @eq-qmc-sklar.
+
+*Uniqueness and the explicit form.* When the margins are continuous, each $F_i$ has range all of
+$[0,1]$, so as $x_i$ ranges over $\mathbb{R}$ the argument $u_i=F_i(x_i)$ ranges over $(0,1)$; thus
+@eq-qmc-sklar pins down $C$ on a dense subset of $[0,1]^{d}$, and by @lem-copula-lipschitz $C$ is
+continuous, so it is determined on all of $[0,1]^{d}$, proving uniqueness. Finally, putting
+$u_i\in(0,1)$ into @eq-qmc-sklar-step and using $x_{i,u_i}=F_i^{-1}(u_i)$ for continuous $F_i$ (the largest
+and smallest points attaining level $u_i$ differ only across a flat, on which $X_i$ has zero probability)
+gives @eq-qmc-sklar-explicit. $\square$
+:::
+
+::: {#cor-margins-copula-determine}
+## Margins plus copula determine the distribution
+Let $\mathbf{X}$ and $\mathbf{X}'$ be random vectors on $\mathbb{R}^{d}$ with the same continuous
+one-dimensional margins $F_1,\dots,F_d$ and the same copula $C$. Then $\mathbf{X}$ and $\mathbf{X}'$ have
+the same joint distribution. Equivalently, a continuous joint law is completely specified by naming its
+margins and its copula.
+:::
+
+::: {.proof}
+By Sklar's theorem (@thm-sklar), the joint distribution function of $\mathbf{X}$ is
+$F(\mathbf{x})=C(F_1(x_1),\dots,F_d(x_d))$, and that of $\mathbf{X}'$ is the same expression with the same
+$C$ and the same $F_i$; hence the two distribution functions are identical, and a distribution on
+$\mathbb{R}^{d}$ is determined by its distribution function. $\square$
+:::
+
+::: {.remark}
+**Reader translation, and why we isolate it.** This one-line corollary is the license for the whole ML-NMR
+construction: to specify a synthetic covariate distribution it is *enough* to choose each margin and choose
+a copula, and no further information is needed or possible. We pull it out as a named result because the
+integration pipeline (@thm-hypercube-integration) leans on it at its crux, where it must conclude that a
+vector built to have the study's margins and the study's copula is distributed exactly as the study
+covariates $f_j$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why Sklar is the right tool for aggregate data.** Sklar's theorem says exactly what an AgD study does and
+does not constrain. The reported marginal summaries fix the margins $F_1,\dots,F_d$, for instance a normal
+margin for a continuous biomarker calibrated to its reported mean and standard deviation, or a beta margin
+for a proportion. They say nothing about the copula $C$. ML-NMR therefore supplies $C$ from outside the AgD
+study, most often as a Gaussian copula whose correlation matrix is borrowed from the IPD study in the
+network or from external evidence (@sec-qmc-gaussian). The factorization @eq-qmc-sklar guarantees that any
+choice of copula combined with the fixed margins yields a legitimate joint distribution with exactly those
+margins, so the marginal calibration is never disturbed by the dependence assumption. $\blacktriangleleft$
+:::
+
+## The Gaussian copula {#sec-qmc-gaussian}
+
+The default copula for ML-NMR is the Gaussian copula: take a multivariate normal vector with a specified
+correlation matrix, and read off its dependence through the probability integral transform. It is the
+copula of a multivariate normal, stripped of its margins.
+
+::: {#def-gaussian-copula}
+## Gaussian copula
+Let $\boldsymbol{\Omega}\succeq 0$ be a symmetric positive semidefinite matrix with unit diagonal (a
+correlation matrix). The **Gaussian copula** with correlation matrix $\boldsymbol{\Omega}$ is
+$$
+C_{\boldsymbol{\Omega}}(u_1,\dots,u_d)
+=\Phi_{\boldsymbol{\Omega}}\big(\Phi^{-1}(u_1),\dots,\Phi^{-1}(u_d)\big),
+$$ {#eq-qmc-gaussian-copula}
+where $\Phi_{\boldsymbol{\Omega}}$ is the joint distribution function of $\mathcal{N}(\mathbf{0},\boldsymbol{\Omega})$
+and $\Phi^{-1}$ is the standard normal quantile function. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation: borrow the dependence of a normal, keep your own margins.** A multivariate normal has
+a familiar dependence structure, one correlation number per pair of variables. The Gaussian copula is that
+dependence structure with the normal margins peeled away, ready to be glued onto whatever margins the
+covariates actually have. Operationally: to correlate the covariates, first pretend they are standard
+normals with correlation $\boldsymbol{\Omega}$, generate correlated normal draws, then convert each back to
+its true margin. The correlation matrix $\boldsymbol{\Omega}$ is the one free input, and in ML-NMR it is
+borrowed from the IPD study in the network (or from external evidence) because an AgD study never reports
+it. $\blacktriangleleft$
+:::
+
+::: {#prp-gaussian-copula-is-copula}
+## The Gaussian copula is a copula, with an explicit sampler
+The function @eq-qmc-gaussian-copula is a copula. Moreover, if $\mathbf{Z}\sim\mathcal{N}(\mathbf{0},\boldsymbol{\Omega})$
+and $U_i=\Phi(Z_i)$, then $(U_1,\dots,U_d)$ has distribution function $C_{\boldsymbol{\Omega}}$; and if
+$\boldsymbol{\Omega}=LL^{\top}$ is a Cholesky factorization and $\boldsymbol{\zeta}\sim\mathcal{N}(\mathbf{0},I_d)$,
+then $\mathbf{Z}=L\boldsymbol{\zeta}\sim\mathcal{N}(\mathbf{0},\boldsymbol{\Omega})$.
+:::
+
+::: {.proof}
+Let $\mathbf{Z}\sim\mathcal{N}(\mathbf{0},\boldsymbol{\Omega})$. The diagonal of $\boldsymbol{\Omega}$ is
+unity, so each $Z_i\sim\mathcal{N}(0,1)$, and since $\Phi$ is continuous, @thm-inverse-cdf(2) gives
+$U_i=\Phi(Z_i)\sim\mathrm{Unif}(0,1)$. The joint distribution function of $\mathbf{U}=(U_1,\dots,U_d)$ is,
+using that $\Phi$ is continuous and strictly increasing so $\{\Phi(Z_i)\le u_i\}=\{Z_i\le\Phi^{-1}(u_i)\}$,
+$$
+P\Big(\bigcap_{i}\{U_i\le u_i\}\Big)=P\Big(\bigcap_i\{Z_i\le\Phi^{-1}(u_i)\}\Big)
+=\Phi_{\boldsymbol{\Omega}}\big(\Phi^{-1}(u_1),\dots,\Phi^{-1}(u_d)\big)=C_{\boldsymbol{\Omega}}(\mathbf{u}).
+$$
+Thus $C_{\boldsymbol{\Omega}}$ is the joint distribution function of $\mathbf{U}$, whose margins are
+uniform; it is a copula by @def-copula, and $\mathbf{U}=\Phi(\mathbf{Z})$ samples it. For the last claim,
+$\boldsymbol{\Omega}$ is a correlation matrix hence positive semidefinite (the covariance-matrix
+positivity of @thm-cov-psd), so it admits a Cholesky factor $L$; the linear image
+$\mathbf{Z}=L\boldsymbol{\zeta}$ of a standard normal vector is normal with mean $\mathbf{0}$ and
+covariance $L I_d L^{\top}=LL^{\top}=\boldsymbol{\Omega}$. $\square$
+:::
+
+Combining @prp-gaussian-copula-is-copula with Sklar's theorem and the inverse-CDF transform gives the
+construction of a joint covariate law from marginal summaries and a correlation matrix.
+
+::: {.remark}
+**From a Gaussian copula to any margins.** Given target margins $F_1,\dots,F_d$ and a correlation matrix
+$\boldsymbol{\Omega}$, sample $\mathbf{X}$ with those margins and Gaussian-copula dependence by: drawing
+$\mathbf{Z}\sim\mathcal{N}(\mathbf{0},\boldsymbol{\Omega})$; setting $U_i=\Phi(Z_i)$ (uniforms with the
+Gaussian copula, @prp-gaussian-copula-is-copula); and setting $X_i=F_i^{-1}(U_i)$ (the inverse transform,
+@thm-inverse-cdf(1)). By Sklar's theorem (@thm-sklar) the resulting $\mathbf{X}$ has exactly the margins
+$F_i$ and copula $C_{\boldsymbol{\Omega}}$. The correlation $\boldsymbol{\Omega}$ is the correlation of the
+latent normals, not in general of $\mathbf{X}$ itself; the two coincide only when the margins are
+themselves normal, and otherwise are linked through the margins by a monotone transformation that preserves
+rank correlations. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Which correlation is which: a caution against pasting in a trial table.** The single most common misuse of
+this machinery is to read a Pearson correlation off a trial's covariate table and drop it straight into
+$\boldsymbol{\Omega}$. That is wrong unless the covariates are themselves normal, because $\boldsymbol{\Omega}$
+is the correlation of the *latent* normals, not of the covariates. Four distinct quantities are in play, and
+keeping them apart is essential.
+
+| Quantity | What it is | Preserved by the Gaussian copula? |
+|---|---|---|
+| Latent correlation $\boldsymbol{\Omega}$ | Pearson correlation of the underlying normal scores $\mathbf{Z}$ | this is the input you set |
+| Covariate Pearson correlation | linear correlation of the covariates $\mathbf{X}$ themselves | no: equals $\boldsymbol{\Omega}$ only for normal margins, else attenuated |
+| Spearman rank correlation | correlation of the covariate ranks (quantiles) | yes: unchanged by any monotone remargining |
+| Tail dependence | tendency to be jointly extreme in the tails | always zero for a Gaussian copula |
+
+The safe practice is to specify $\boldsymbol{\Omega}$ from the rank correlations of the IPD covariates (which
+survive the transform), or to accept a mild misspecification and use the reported Pearson values as an
+approximation, understanding that the realized covariate correlations after non-normal margins will be
+somewhat attenuated. @exr-qmc-gaussian-copula-cov makes this attenuation quantitative. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Evaluating versus sampling the copula.** The defining formula @eq-qmc-gaussian-copula contains the
+multivariate normal distribution function $\Phi_{\boldsymbol{\Omega}}$, which has no elementary closed form
+for $d\ge 2$; in the bivariate case it reduces to Owen's $T$-function and the tabulated bivariate normal
+integral (@owen1956), and for $d\ge 3$ it is itself computed by numerical integration. Crucially, the
+ML-NMR pipeline never needs to evaluate $\Phi_{\boldsymbol{\Omega}}$. It needs only to sample from the
+copula, and sampling proceeds through the Cholesky route of @prp-gaussian-copula-is-copula, which touches
+only the standard univariate $\Phi$ and the factorization of $\boldsymbol{\Omega}$. This is why a $d$-variate
+dependence can be imposed at the cost of a single $d\times d$ Cholesky factorization. The Gaussian copula
+also has zero tail dependence, so it understates the chance of two covariates being jointly extreme; for
+the central inference of HTA this is usually acceptable, and a $t$-copula or vine copula is the remedy when
+it is not. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**What tail dependence is, and when to worry.** Tail dependence asks: given that one covariate is extreme,
+how likely is another to be extreme too? Formally it is the limiting conditional probability
+$\lim_{q\to 1}P\big(X_2>F_2^{-1}(q)\mid X_1>F_1^{-1}(q)\big)$, the chance of a joint upper extreme. The
+Gaussian copula sends this limit to $0$ for every correlation $\boldsymbol{\Omega}\ne\mathbf{1}$: no matter
+how strongly two covariates are correlated in the bulk, the Gaussian copula treats their simultaneous
+extremes as asymptotically independent. Clinically, this can understate reality when severe risk factors
+cluster: a patient in the worst decile of baseline severity may be far more likely than a Gaussian copula
+predicts to also be in the worst decile of, say, inflammatory burden, and if both are strong effect
+modifiers the aggregate response probability in that jointly severe corner is mis-weighted. When the
+decision hinges on such a corner, a $t$-copula (which has positive, symmetric tail dependence) or a vine
+copula (which lets each pair have its own tail behavior) is the principled replacement; for most central
+HTA estimates, where the bulk of the covariate mass drives the integral, the Gaussian copula's convenience
+outweighs its blindness to the tails. $\blacktriangleleft$
+:::
+
+## The ML-NMR integration pipeline {#sec-qmc-pipeline}
+
+We can now assemble the transport map $T$ and prove the error bound for the aggregation integral. The
+pipeline reads as a chain of the transforms just developed: Sobol' points into the cube, inverse normal to
+get independent normals, Cholesky to correlate them, normal distribution function back to uniforms with the
+Gaussian copula, and target inverse-CDFs to land on the covariate margins.
+
+Before the theorem, the same pipeline as a recipe a practitioner can follow. Given the study's marginal
+distributions $F_{j,1},\dots,F_{j,d}$, its correlation matrix $\boldsymbol{\Omega}_j$ with Cholesky factor
+$L$, and a chosen number of nodes $N$:
+
+1. **Choose points.** Take the first $N$ Sobol' points $\mathbf{u}^{(1)},\dots,\mathbf{u}^{(N)}$ in the unit
+   cube $[0,1]^{d}$ (evenly spread, deterministic, nested).
+2. **To independent normals.** Apply the inverse normal CDF coordinatewise, $\mathbf{z}=\Phi^{-1}(\mathbf{u})$,
+   turning each point into a vector of independent standard normal scores.
+3. **Correlate.** Multiply by the Cholesky factor, $\tilde{\mathbf{z}}=L\mathbf{z}$, giving normal scores
+   with the target correlation $\boldsymbol{\Omega}_j$.
+4. **Back to uniforms.** Apply the normal CDF coordinatewise, $\tilde{\mathbf{u}}=\Phi(\tilde{\mathbf{z}})$,
+   giving uniforms carrying the Gaussian-copula dependence.
+5. **To covariate values.** Apply each covariate's quantile function, $x_i=F_{j,i}^{-1}(\tilde u_i)$,
+   landing on a synthetic covariate profile with the right margins and the right dependence.
+6. **Evaluate the model.** Compute the individual response probability
+   $g^{-1}(\eta_{jk}(\mathbf{x}^{(n)}))$ at each profile.
+7. **Average.** The mean of those $N$ predictions is the estimate $\widehat\theta_{\bullet jk}^{(N)}$ of the
+   aggregate mean.
+
+Steps 1 to 5 build the transport map $T$ and the fixed covariate nodes $\mathbf{x}^{(n)}=T(\mathbf{u}^{(n)})$;
+they use only the study's reported summaries and are done once, before the fit begins. Only steps 6 and 7
+depend on the model parameters and are recomputed as the sampler explores the posterior. The theorem now
+states this precisely and bounds the error of step 7.
+
+::: {#thm-hypercube-integration}
+## Integration over the unit hypercube
+Let study $j$ have covariate density $f_j$ with continuous marginal distribution functions
+$F_{j,1},\dots,F_{j,d}$ and Gaussian-copula correlation matrix $\boldsymbol{\Omega}_j=L L^{\top}$. Define
+the transport map $T:[0,1]^{d}\to\mathcal{X}$ coordinatewise by
+$$
+\mathbf{z}=\Phi^{-1}(\mathbf{u}),\quad
+\tilde{\mathbf{z}}=L\mathbf{z},\quad
+\tilde u_i=\Phi(\tilde z_i),\quad
+x_i=F_{j,i}^{-1}(\tilde u_i),\qquad T(\mathbf{u})=(x_1,\dots,x_d),
+$$ {#eq-qmc-pipeline}
+where $\Phi^{-1}$ and $\Phi$ act componentwise. Then:
+
+1. **(Correctness.)** If $\mathbf{U}\sim\mathrm{Unif}([0,1]^{d})$, then $\mathbf{X}=T(\mathbf{U})\sim f_j$;
+that is, $T$ pushes the uniform law on the cube forward to the covariate law $f_j$. Consequently the
+aggregation integral @eq-qmc-aggregation equals the cube integral of the pullback $\psi=g^{-1}\circ\eta_{jk}\circ T$,
+$$
+\theta_{\bullet jk}=\int_{[0,1]^{d}}\psi(\mathbf{u})\,d\mathbf{u}.
+$$ {#eq-qmc-pipeline-pullback}
+
+2. **(Quasi-Monte Carlo estimate and error.)** For a point set $P_N=\{\mathbf{u}^{(n)}\}_{n=1}^{N}\subset[0,1]^{d}$
+the estimate $\widehat\theta_{\bullet jk}^{(N)}=\frac1N\sum_{n=1}^{N}\psi(\mathbf{u}^{(n)})$ obeys, whenever
+$V_{\mathrm{HK}}(\psi)<\infty$,
+$$
+\big|\widehat\theta_{\bullet jk}^{(N)}-\theta_{\bullet jk}\big|\le V_{\mathrm{HK}}(\psi)\,D_N^{*}(P_N).
+$$ {#eq-qmc-pipeline-error}
+With $P_N$ a Sobol' net (@def-sobol-net), $D_N^{*}(P_N)=O((\log N)^{d}/N)$, so the integration error is
+$O\big(V_{\mathrm{HK}}(\psi)(\log N)^{d}/N\big)$. For continuous margins and a bounded smooth link such as
+the logit, $V_{\mathrm{HK}}(\psi)<\infty$ and the rate holds.
+:::
+
+::: {.proof}
+*Part 1.* Track a uniform input through @eq-qmc-pipeline. Let $\mathbf{U}\sim\mathrm{Unif}([0,1]^{d})$ with
+independent coordinates. By @thm-inverse-cdf(1) applied to $F=\Phi$, each $Z_i=\Phi^{-1}(U_i)\sim\mathcal{N}(0,1)$,
+and independence is preserved coordinatewise, so $\mathbf{Z}\sim\mathcal{N}(\mathbf{0},I_d)$. The linear
+map gives $\tilde{\mathbf{Z}}=L\mathbf{Z}\sim\mathcal{N}(\mathbf{0},LL^{\top})=\mathcal{N}(\mathbf{0},\boldsymbol{\Omega}_j)$
+(@prp-gaussian-copula-is-copula). Setting $\tilde U_i=\Phi(\tilde Z_i)$ then yields, by the same
+proposition, a vector $\tilde{\mathbf{U}}=(\tilde U_1,\dots,\tilde U_d)$ with uniform margins and joint law
+the Gaussian copula $C_{\boldsymbol{\Omega}_j}$. Finally $X_i=F_{j,i}^{-1}(\tilde U_i)$ has, by
+@thm-inverse-cdf(1), marginal distribution function $F_{j,i}$, and by Sklar's theorem (@thm-sklar) the
+vector $\mathbf{X}$ has copula $C_{\boldsymbol{\Omega}_j}$; a distribution is determined by its margins and
+its copula (@cor-margins-copula-determine), so $\mathbf{X}\sim f_j$. Therefore $T$ pushes $\mathrm{Unif}([0,1]^{d})$ forward to $f_j$, and
+the change-of-variables identity for the pushforward measure, applied to $\varphi=g^{-1}\circ\eta_{jk}$,
+gives
+$$
+\theta_{\bullet jk}=\int_{\mathcal{X}}\varphi(\mathbf{x})f_j(\mathbf{x})\,d\mathbf{x}
+=\mathbb{E}_{\mathbf{U}}\big[\varphi(T(\mathbf{U}))\big]
+=\int_{[0,1]^{d}}\varphi(T(\mathbf{u}))\,d\mathbf{u}=\int_{[0,1]^{d}}\psi(\mathbf{u})\,d\mathbf{u},
+$$
+which is @eq-qmc-pipeline-pullback.
+
+*Part 2.* Apply the Koksma-Hlawka inequality (@thm-koksma-hlawka) to the integrand $\psi$ on $[0,1]^{d}$
+with the point set $P_N$: the left-hand side of @eq-qmc-kh is exactly
+$|\widehat\theta_{\bullet jk}^{(N)}-\theta_{\bullet jk}|$ by @eq-qmc-pipeline-pullback, giving
+@eq-qmc-pipeline-error. The Sobol' discrepancy rate is @def-sobol-net. For continuous margins each
+$F_{j,i}^{-1}$ is continuous and the composed map $T$ is continuous; for the logit link $g^{-1}=\mathrm{expit}$
+is smooth and bounded into $(0,1)$ and $\eta_{jk}$ is affine, so $\psi=\mathrm{expit}\circ\eta_{jk}\circ T$
+is smooth and bounded, hence of bounded Hardy-Krause variation, and @eq-qmc-pipeline-error attains the
+stated rate. $\square$
+:::
+
+::: {.remark}
+**Why this matters: the capstone of the chapter.** @thm-hypercube-integration is the whole chapter in one
+statement. It takes the only thing an AgD study gives us, marginal summaries and a borrowed correlation, and
+delivers the one thing ML-NMR needs, the aggregate response probability $\theta_{\bullet jk}$, with a
+deterministic error that shrinks at nearly the $1/N$ rate. Every earlier section is a component: the
+inverse-CDF transform is step 5, the Gaussian copula is steps 2 to 4, Sobol' nets are step 1, and
+Koksma-Hlawka is the error bound @eq-qmc-pipeline-error. The payoff for indirect comparison is direct: this
+$\theta_{\bullet jk}$, contrasted across arms, is the relative effect the network estimates, so a trustworthy
+integral is what makes the odds ratio of one drug versus another, and the HTA recommendation that rests on
+it, trustworthy. The same map $T$ evaluated at a target population's margins (@sec-qmc-pipeline, scope
+remark below) is what lets ML-NMR report that odds ratio in a population matching neither trial.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**The nodes are fixed; the integrand is smooth in the parameters.** The covariate nodes
+$\mathbf{x}^{(n)}=T(\mathbf{u}^{(n)})$ depend only on the study's margins $F_{j,i}$ and correlation
+$\boldsymbol{\Omega}_j$, not on the model parameters $\boldsymbol{\xi}=(\mu_j,\boldsymbol{\beta}_1,\boldsymbol{\beta}_{2,k},\gamma_k,\dots)$.
+They are computed once, before sampling begins. The aggregate mean is then the fixed finite average
+$$
+\widehat\theta_{\bullet jk}^{(N)}(\boldsymbol{\xi})
+=\frac{1}{N}\sum_{n=1}^{N}g^{-1}\!\Big(\mu_j+\mathbf{x}^{(n)\top}\boldsymbol{\beta}_1
++\mathbf{x}^{(n)\top}\boldsymbol{\beta}_{2,k}+\gamma_k\Big),
+$$ {#eq-qmc-fixed-nodes}
+a smooth, deterministic function of $\boldsymbol{\xi}$ with an exact gradient
+$\nabla_{\boldsymbol{\xi}}\widehat\theta_{\bullet jk}^{(N)}$ obtained by differentiating the sum term by
+term. This is precisely what Hamiltonian Monte Carlo requires (@def-hmc, @carpenter2017stan): a
+differentiable log-likelihood. Replacing the fixed Sobol' net by fresh random draws at each step, as plain
+Monte Carlo would, would make @eq-qmc-fixed-nodes a noisy function of $\boldsymbol{\xi}$ and break the
+gradient, which is the deeper reason QMC, not MC, is the integration rule of ML-NMR
+(@thm-mlnmr-generalizes-nma builds on this aggregate likelihood, and @def-integration-error-monitoring of
+Chapter 24 monitors the residual integration error against the Markov chain Monte Carlo error).
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Scope of the pipeline.** The construction integrates against any joint covariate distribution specified
+by continuous margins and a correlation matrix, and so computes the aggregation integral @eq-qmc-aggregation
+for any link, including the logit for which no closed form exists (@thm-logit-no-closed-form). The same
+pipeline computes the target-population estimand integral (@thm-target-population-integral of Chapter 23) by
+substituting the target population's margins and correlation for the study's, which is what lets ML-NMR
+report a contrast in a population represented by neither trial. It carries over verbatim to the unanchored
+extension of Chapter 26. The pipeline is reliable up to $d\approx 20$ covariates with standard Sobol'
+direction tables; beyond that, randomized (scrambled) Sobol' nets or vine copulas are used. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Practical guidance: how to choose $N$ and read the diagnostic.** In an applied analysis the number of
+nodes $N$ is not chosen from the Koksma-Hlawka constant, which is unknown, but by a doubling check.
+Compute the aggregate mean at $N$ and at $N/2$ nodes; because the Sobol' net is nested, the $N/2$ points are
+a subset of the $N$ points and the gap $|\widehat\theta^{(N)}-\widehat\theta^{(N/2)}|$ is a conservative
+proxy for the remaining integration error (if the estimate has stopped moving as points are added, it has
+converged). Double $N$ until this gap falls well below the scale that matters, then stop. What scale
+matters? The integration error should be small *relative to the posterior uncertainty* in the same quantity:
+there is no value in pinning $\theta_{\bullet jk}$ to five decimals when the posterior credible interval for
+the corresponding response rate is $0.1$ wide, and conversely an error of $0.005$ on the probability scale
+can matter if a reimbursement decision turns on a hair's-breadth difference between two treatments near a
+cost-effectiveness threshold. The workable rule is: the integration error should be an order of magnitude
+smaller than both the posterior standard deviation of the estimand and the smallest decision-relevant
+difference in the target contrast. Chapter 24 formalizes this comparison, monitoring the integration error
+against the Markov chain Monte Carlo error so that neither source dominates
+(@def-integration-error-monitoring). Defaults in `multinma` (typically $N$ in the hundreds to low thousands
+per study) are calibrated to clear this bar for smooth links in moderate dimension; a discrete or skewed
+covariate, or a near-threshold decision, warrants raising $N$ and rechecking the gap. $\blacktriangleleft$
+:::
+
+## A worked example: a logit aggregate mean by quasi-Monte Carlo {#sec-qmc-example}
+
+We carry the integration pipeline through a logit aggregate mean from start to finish, choosing the inputs
+so that every node and every running estimate can be reproduced with a calculator and a short table of
+normal quantiles. This is the stripped-down version of the running example (@exm-qmc-psoriasis) promised in
+the introduction: read the single covariate $X$ as a standardized baseline severity in the psoriasis arm,
+$\mu$ as the arm's treatment effect on the log-odds scale, and $\theta_{\bullet}$ as the modeled response
+rate the network will contrast against a comparator. The integral is the binary-outcome aggregate
+probability @eq-qmc-aggregation that ML-NMR forms for an AgD arm, and we take a single covariate so that the
+copula step is trivial and the arithmetic is transparent; a two-covariate trace afterward exhibits the
+copula step explicitly.
+
+::: {#exm-qmc-logit}
+## A one-covariate logit aggregate mean
+A study $j$ has one continuous covariate with a standard normal margin, $X\sim\mathcal{N}(0,1)$, and the
+arm in question has linear predictor $\eta(x)=\mu+x$ on the logit scale, so the aggregate event probability
+is
+$$
+\theta_{\bullet}=\int_{-\infty}^{\infty}\mathrm{expit}(\mu+x)\,\phi(x)\,dx
+=\int_{0}^{1}\mathrm{expit}\big(\mu+\Phi^{-1}(u)\big)\,du,
+$$
+the second equality being the pullback @eq-qmc-pipeline-pullback with $d=1$, where the pipeline
+@eq-qmc-pipeline reduces to $x=F^{-1}(u)=\Phi^{-1}(u)$ (the Cholesky factor is $L=1$ and the two normal
+transforms cancel). We use the seven-point Sobol' (van der Corput) set
+$\{\tfrac18,\tfrac28,\dots,\tfrac78\}$ of @sec-qmc-sobol, whose nodes carry the standard normal quantiles
+$$
+\Phi^{-1}\!\Big(\tfrac{k}{8}\Big):\quad
+-1.1503,\ -0.6745,\ -0.3186,\ 0,\ 0.3186,\ 0.6745,\ 1.1503\quad(k=1,\dots,7).
+$$
+
+**Part A: a symmetric case with a known answer ($\mu=0$).** Here the integrand
+$\psi(u)=\mathrm{expit}(\Phi^{-1}(u))$ satisfies $\psi(1-u)=\mathrm{expit}(-\Phi^{-1}(u))=1-\psi(u)$, using
+$\Phi^{-1}(1-u)=-\Phi^{-1}(u)$ and $\mathrm{expit}(-z)=1-\mathrm{expit}(z)$; integrating, $\theta_{\bullet}=1-\theta_{\bullet}$,
+so the exact value is $\theta_{\bullet}=\tfrac12$. The seven node values are
+
+| $k$ | $x=\Phi^{-1}(k/8)$ | $\mathrm{expit}(x)$ |
+|---|---|---|
+| 1 | $-1.1503$ | $0.2404$ |
+| 2 | $-0.6745$ | $0.3375$ |
+| 3 | $-0.3186$ | $0.4210$ |
+| 4 | $0$ | $0.5000$ |
+| 5 | $0.3186$ | $0.5790$ |
+| 6 | $0.6745$ | $0.6625$ |
+| 7 | $1.1503$ | $0.7596$ |
+
+The values pair as $0.2404+0.7596=0.3375+0.6625=0.4210+0.5790=1$, with the central node contributing
+$0.5$, so the sum is $3.5$ and the QMC estimate is $\widehat\theta_{\bullet}^{(7)}=3.5/7=0.5000$, exact to
+the displayed precision. The symmetry of the Sobol' net about $\tfrac12$ has reproduced the symmetry of the
+integrand and hit the truth on the nose.
+
+**Part B: an asymmetric case ($\mu=0.5$).** Now the integrand is no longer symmetric and the integral
+$\theta_{\bullet}=\int\mathrm{expit}(0.5+x)\phi(x)\,dx$ has no closed form (@thm-logit-no-closed-form); a
+high-accuracy reference value is $\theta_{\bullet}=0.6020$, obtained by a high-order Gauss-Hermite rule (the
+Gaussian-weight analogue of the Gauss-Legendre quadrature of @thm-quadrature-error), which for this smooth
+one-dimensional integrand returns far more correct digits than we display and serves as ground truth against
+which to measure the seven-point QMC estimate. The seven node values shift to
+
+| $k$ | $x=\Phi^{-1}(k/8)$ | $\mathrm{expit}(0.5+x)$ |
+|---|---|---|
+| 1 | $-1.1503$ | $0.3429$ |
+| 2 | $-0.6745$ | $0.4565$ |
+| 3 | $-0.3186$ | $0.5452$ |
+| 4 | $0$ | $0.6225$ |
+| 5 | $0.3186$ | $0.6939$ |
+| 6 | $0.6745$ | $0.7640$ |
+| 7 | $1.1503$ | $0.8389$ |
+
+summing to $4.2639$, so $\widehat\theta_{\bullet}^{(7)}=4.2639/7=0.6091$, an error of $+0.0071$ against the
+truth $0.6020$. Refining the Sobol' net by taking the first $N$ van der Corput points for $N=4,8,16,\dots$
+gives a deterministic, monotone approach to the truth:
+
+| $N$ | $\widehat\theta_{\bullet}^{(N)}$ | error | $\big|\widehat\theta_{\bullet}^{(N)}-\widehat\theta_{\bullet}^{(N/2)}\big|$ |
+|---|---|---|---|
+| 4 | $0.5465$ | $-0.0556$ | |
+| 8 | $0.5658$ | $-0.0363$ | $0.0193$ |
+| 16 | $0.5809$ | $-0.0212$ | $0.0151$ |
+| 32 | $0.5903$ | $-0.0117$ | $0.0095$ |
+| 64 | $0.5958$ | $-0.0062$ | $0.0054$ |
+| 128 | $0.5987$ | $-0.0033$ | $0.0030$ |
+
+The error roughly halves at each doubling of $N$, consistent with the $O((\log N)/N)$ ceiling of
+@thm-hypercube-integration in $d=1$, and the last column, the $N$-versus-$N/2$ gap, is the practical
+convergence diagnostic of @def-integration-error-monitoring: it shrinks below $0.005$ by $N=128$, signaling
+that the integration error is now small relative to typical posterior uncertainty.
+
+**Contrast with plain Monte Carlo.** Estimating the same $\theta_{\bullet}=0.6020$ with $N=64$ independent
+uniform draws in place of the Sobol' net gives, across five seeds, the estimates
+$0.5938,\ 0.6173,\ 0.6095,\ 0.6073,\ 0.6613$, with errors ranging from $-0.008$ to $+0.059$; the spread is
+consistent with the root-mean-square error ceiling $\sigma/\sqrt{64}\le 1/(2\cdot 8)=0.0625$ of
+@thm-mc-rmse and its bounded-integrand refinement. At the same cost the deterministic QMC estimate
+$0.5958$ has error $-0.0062$, and, unlike the Monte Carlo estimates, it is reproducible and a smooth
+function of $\mu$, the two properties that matter inside a Hamiltonian Monte Carlo fit. $\blacktriangleleft$
+:::
+
+The single covariate hid the copula. The next example traces one Sobol' point through the full
+two-covariate pipeline so that the Cholesky and normal-transform steps of @eq-qmc-pipeline are visible.
+
+::: {#exm-qmc-copula-trace}
+## A two-covariate pipeline trace
+Let study $j$ have two covariates with standard normal margins $X_1,X_2\sim\mathcal{N}(0,1)$ and
+Gaussian-copula correlation $\rho=0.5$, so
+$\boldsymbol{\Omega}_j=\left(\begin{smallmatrix}1&0.5\\0.5&1\end{smallmatrix}\right)$ with Cholesky factor
+$L=\left(\begin{smallmatrix}1&0\\0.5&\sqrt{0.75}\end{smallmatrix}\right)=\left(\begin{smallmatrix}1&0\\0.5&0.8660\end{smallmatrix}\right)$.
+Take the Sobol' point $\mathbf{u}=(\tfrac12,\tfrac14)$ and push it through @eq-qmc-pipeline:
+$$
+\mathbf{z}=\Phi^{-1}(\mathbf{u})=\big(\Phi^{-1}(0.5),\Phi^{-1}(0.25)\big)=(0,\,-0.6745);
+$$
+$$
+\tilde{\mathbf{z}}=L\mathbf{z}=\big(1\cdot 0,\;0.5\cdot 0+0.8660\cdot(-0.6745)\big)=(0,\,-0.5841);
+$$
+$$
+\tilde{\mathbf{u}}=\Phi(\tilde{\mathbf{z}})=\big(\Phi(0),\Phi(-0.5841)\big)=(0.5000,\,0.2796);
+$$
+$$
+\mathbf{x}=\big(F_{j,1}^{-1}(0.5000),F_{j,2}^{-1}(0.2796)\big)=\big(\Phi^{-1}(0.5),\Phi^{-1}(0.2796)\big)=(0,\,-0.5841),
+$$
+the last step using that the margins are standard normal, so $F_{j,i}^{-1}=\Phi^{-1}$ and
+$\mathbf{x}=\tilde{\mathbf{z}}$. The correlation has done its work: the second coordinate has been shrunk
+from its uncorrelated value $-0.6745$ toward the first coordinate's value $0$, the imprint of the positive
+dependence $\rho=0.5$. If the arm has linear predictor $\eta(\mathbf{x})=x_1+0.5\,x_2$ on the logit scale,
+this node contributes $\mathrm{expit}(0+0.5\cdot(-0.5841))=\mathrm{expit}(-0.2921)=0.4275$ to the average
+@eq-qmc-fixed-nodes.
+
+To watch the dependence act across several nodes at once, the table below runs the four quarter-points
+$\mathbf{u}\in\{(\tfrac14,\tfrac14),(\tfrac14,\tfrac34),(\tfrac34,\tfrac14),(\tfrac34,\tfrac34)\}$ through the
+same pipeline (standard normal margins, so $\mathbf{x}=\tilde{\mathbf{z}}$), showing side by side the
+uncorrelated second coordinate $z_2=\Phi^{-1}(u_2)$ and the correlated value $x_2=\tilde z_2$ that the
+Cholesky step produces, together with the node's contribution under $\eta(\mathbf{x})=x_1+0.5\,x_2$:
+
+| $\mathbf{u}$ | $\mathbf{z}=\Phi^{-1}(\mathbf{u})$ | $z_2$ before | $x_2$ after | $\mathbf{x}=(x_1,x_2)$ | $\mathrm{expit}(x_1+0.5x_2)$ |
+|---|---|---|---|---|---|
+| $(\tfrac14,\tfrac14)$ | $(-0.6745,-0.6745)$ | $-0.6745$ | $-0.9214$ | $(-0.6745,-0.9214)$ | $0.2432$ |
+| $(\tfrac14,\tfrac34)$ | $(-0.6745,\;0.6745)$ | $0.6745$ | $0.2469$ | $(-0.6745,\;0.2469)$ | $0.3656$ |
+| $(\tfrac34,\tfrac14)$ | $(\;0.6745,-0.6745)$ | $-0.6745$ | $-0.2469$ | $(\;0.6745,-0.2469)$ | $0.6344$ |
+| $(\tfrac34,\tfrac34)$ | $(\;0.6745,\;0.6745)$ | $0.6745$ | $0.9214$ | $(\;0.6745,\;0.9214)$ | $0.7568$ |
+
+Reading the two middle columns exhibits the copula at work. When the two normal scores agree in sign (first
+and last rows) the positive correlation pushes $x_2$ further out, from $\mp0.6745$ to $\mp0.9214$; when they
+disagree (middle two rows) it pulls $x_2$ in toward zero, from $\pm0.6745$ to $\pm0.2469$. The margins are
+untouched throughout, only the pairing of the coordinates changes, which is exactly what a copula does. The
+four contributions average to $0.5000$ here only because this symmetric net mirrors the symmetric integrand,
+as in Part A of @exm-qmc-logit; the lesson of the table is the visible shrinkage in the $x_2$ column, not
+the average. Repeating over a full Sobol' net and averaging gives $\theta_{\bullet jk}$ exactly as in
+@exm-qmc-logit, now with the covariate dependence correctly imposed by the single Cholesky factor $L$;
+@exr-qmc-logit-pipeline asks you to carry this out for a different linear predictor and to compare the
+result against the independent ($\rho=0$) case. $\blacktriangleleft$
+:::
+
+## Notes and references {#sec-qmc-notes}
+
+The numerical-integration program of this chapter is the computational core of multilevel network
+meta-regression as developed by @phillippo2020mlnmr and @phillippo2019thesis, whose Chapter 5 lays out the
+Sobol'-plus-copula pipeline of @thm-hypercube-integration and is implemented in the `multinma` package; the
+unanchored extension of Chapter 26 (@chandler2025mlumr) reuses the same machinery. The general principle
+that the aggregate likelihood is an integral of the response-scale conditional mean, and therefore demands
+numerical integration whenever the link is nonlinear, is the subject of Chapter 20 (@thm-aggregation,
+@thm-aggregation-bias, @thm-logit-no-closed-form); the discrete-outcome aggregate likelihoods of Chapter 21
+rest on the same integral through the success probabilities.
+
+The classical numerical analysis is standard. Gauss-Legendre quadrature and the error formula
+@eq-qmc-gauss-error, with its derivation through Hermite interpolation and the Legendre normalization
+$\int_{-1}^{1}P_k^2=2/(2k+1)$, are in Stoer and Bulirsch, *Introduction to Numerical Analysis* (Section
+3.6); the orthogonality of Legendre polynomials and the Hermite remainder formula are the two classical
+facts the proof invokes. The dimension-free Monte Carlo rate @thm-mc-rmse is the variance of a sample mean
+together with the central limit theorem of Chapter 5; the bounded-integrand variance ceiling is Popoviciu's
+inequality. The Koksma-Hlawka inequality @thm-koksma-hlawka is due to Koksma (1942/43) in one dimension and
+Hlawka (1961) in several; the one-dimensional identity @eq-qmc-koksma-identity and its proof by the
+fundamental theorem of calculus and Fubini are elementary and self-contained here, and the multidimensional
+Hardy-Krause identity, the definitions of Vitali and Hardy-Krause variation, and the low-discrepancy rate
+$D_N^{*}=O((\log N)^{d}/N)$ are developed in Niederreiter, *Random Number Generation and Quasi-Monte Carlo
+Methods* (1992, Chapters 2 and 4). Sobol' sequences and their digital-net structure are from @sobol1967;
+the direction numbers used in modern software are those of Joe and Kuo (2008); randomized (scrambled) nets,
+which recover near-optimal rates for integrands of unbounded variation, are due to Owen (1998). The
+copula apparatus is Sklar's theorem @thm-sklar (@sklar1959), with the textbook development in Nelsen, *An
+Introduction to Copulas* (2006); the Gaussian copula and its zero tail dependence are standard, and the
+bivariate normal probabilities needed to evaluate (though not to sample) the Gaussian copula are Owen's
+tabulated integral (@owen1956). The probability integral transform @thm-inverse-cdf and the quantile
+coupling inequality @lem-quantile-galois are elementary measure theory.
+
+The forward connections are to the rest of Part V. The fixed-node likelihood @eq-qmc-fixed-nodes is what
+makes the aggregate model differentiable in the parameters and hence amenable to the Hamiltonian Monte
+Carlo of Chapter 24 (@def-hmc, @carpenter2017stan, @def-centered-noncentered), where the integration error
+@eq-qmc-pipeline-error is monitored alongside the Markov chain Monte Carlo error
+(@def-integration-error-monitoring, @def-mcmc-ess). The same pipeline computes the target-population
+estimand integral of Chapter 23 (@thm-target-population-integral), which is the device by which ML-NMR
+transports a relative effect to a population represented by neither trial, and underwrites the
+identifiability and generalization results @thm-mlnmr-identifiability-2study and @thm-mlnmr-generalizes-nma.
+
+This chapter corresponds to results H.12 (Gauss-Legendre quadrature error), H.13 (Monte Carlo
+root-mean-square error), H.14 (Koksma-Hlawka), H.15 (Sobol' nets), H.16 (Sklar's theorem), H.17 (the
+Gaussian copula), H.18 (the inverse-CDF transform), and H.19 (the unit-hypercube integration pipeline) of
+the proof catalogue in `proofs/H_ml_nmr.md`, together with the integration-error material of
+`proofs/I_computation.md` (I.4), which Chapter 24 develops. The Coq development in `ITC_Coq/theories/`
+formalizes the population-adjustment and causal core of the book but not the numerical-integration theory;
+the results of this chapter are pen-and-paper, and no machine-checked tags are claimed.
+
+## Exercises {#sec-qmc-exercises}
+
+Exercises marked with a star ($\star$) have a full worked solution in Appendix F. The first two are
+low-barrier warm-ups that need no new proof technique; the later ones build in mathematical demand.
+
+::: {#exr-qmc-diagnostic-read}
+**(Warm-up: reading the convergence diagnostic.)** Look at the refinement table in Part B of
+@exm-qmc-logit, whose last column is the $N$-versus-$N/2$ gap. At which $N$ does that gap first fall below
+$0.005$? Using the practical guidance of @sec-qmc-pipeline, state in one sentence what a researcher should
+conclude about whether $N$ is large enough, and name one situation in which you would insist on a smaller
+gap even though $0.005$ looks small.
+:::
+
+::: {#exr-qmc-correlation-interp}
+**(Interpretation: why dependence matters when margins do not change.)** An aggregate arm reports the same
+marginal means and standard deviations for two effect modifiers, but you must choose their Gaussian-copula
+correlation, either $\rho=0$ or $\rho=0.5$. Without computing anything, argue whether the aggregate event
+probability $\theta_{\bullet}$ can differ between the two choices, and explain why, appealing to the fact
+that the response probability is a nonlinear function of the linear predictor (contrast this with what would
+happen under an identity link). Then state which single additional piece of information, if the study
+reported it, would let you pin down the appropriate $\rho$, and relate your answer to the caution in
+@sec-qmc-gaussian that a reported Pearson correlation is not in general the latent $\boldsymbol{\Omega}$.
+:::
+
+::: {#exr-qmc-gauss-two-node}
+**Two-node Gauss-Legendre by hand.** Find the nodes and weights of the two-node Gauss-Legendre rule on
+$[-1,1]$ by requiring exactness on $1,x,x^2,x^3$; you should obtain $x_{1,2}=\pm 1/\sqrt 3$,
+$w_1=w_2=1$. Verify the degree-of-exactness claim of @thm-quadrature-error(1) by checking that the rule
+integrates $x^3$ exactly but not $x^4$, and confirm the error constant @eq-qmc-gauss-error for $k=2$ by
+evaluating both sides on $f(x)=x^4$.
+:::
+
+::: {#exr-qmc-mc-variance}
+**Monte Carlo sample size.** Using the bounded-integrand variance ceiling of @thm-mc-rmse, find the
+smallest number of independent draws $N$ guaranteeing a Monte Carlo root-mean-square error below $0.001$
+for a logit aggregate probability, and compare with the number of Sobol' points needed for the same error
+under the $O((\log N)/N)$ rate of @thm-hypercube-integration in one dimension (take the implied constant to
+be $1$). Comment on the gap and on why it widens as the target accuracy tightens.
+:::
+
+::: {#exr-qmc-discrepancy}
+**Discrepancy of a grid versus a sequence.** Compute the star discrepancy (@def-star-discrepancy) of the
+equally spaced left-endpoint grid $\{0,\tfrac1N,\dots,\tfrac{N-1}{N}\}$ in one dimension, and of the
+midpoint grid $\{\tfrac{1}{2N},\tfrac{3}{2N},\dots,\tfrac{2N-1}{2N}\}$. Show that both are $O(1/N)$, and
+explain why a low-discrepancy *sequence* such as van der Corput is nonetheless preferred in practice over a
+grid, even though both attain the $1/N$ rate. (Hint: consider what happens to a grid when $N$ is increased
+by one, versus appending one point to a sequence.)
+:::
+
+::: {#exr-qmc-pit-discrete}
+**The transform on a discrete margin.** Let $X$ be Bernoulli with $P(X=1)=0.3$, with distribution function
+$F$. Verify directly that @thm-inverse-cdf(1) holds, that is $F^{-1}(U)\sim\mathrm{Ber}(0.3)$ for
+$U\sim\mathrm{Unif}(0,1)$, by computing $F^{-1}(u)$ for $u\in(0,1)$. Then show that $F(X)$ takes only two
+values and is not uniform, confirming the failure of @thm-inverse-cdf(2) for discrete margins. Explain in
+one sentence how this produces a jump in the pipeline integrand $\psi$ of @thm-hypercube-integration and
+why that threatens the Koksma-Hlawka rate.
+:::
+
+::: {#exr-qmc-gaussian-copula-cov}
+**($\star$) Gaussian copula correlation versus covariate correlation.** Two covariates have standard normal
+margins and a Gaussian copula with latent correlation $\rho$. Show that their Pearson correlation as
+covariates equals $\rho$ exactly. Then replace the first margin by an exponential distribution (still with
+a Gaussian copula at latent correlation $\rho$) and argue, without a full computation, that the covariate
+Pearson correlation is now strictly smaller in magnitude than $\rho$, while the Spearman rank correlation
+is unchanged. Relate your finding to the remark in @sec-qmc-gaussian that $\boldsymbol{\Omega}$ is the
+correlation of the latent normals, not of the covariates.
+:::
+
+::: {#exr-qmc-logit-pipeline}
+**($\star$) A QMC logit integral with two correlated covariates.** Extend @exm-qmc-logit to two covariates with
+standard normal margins, Gaussian-copula correlation $\rho=0.5$, and linear predictor
+$\eta(\mathbf{x})=0.5+x_1+0.5\,x_2$ on the logit scale. Using the four two-dimensional Sobol' points
+$\mathbf{u}\in\{(\tfrac12,\tfrac12),(\tfrac14,\tfrac34),(\tfrac34,\tfrac14),(\tfrac18,\tfrac58)\}$, run the
+pipeline @eq-qmc-pipeline on each (you computed one such trace in @exm-qmc-copula-trace), evaluate
+$\mathrm{expit}(\eta(\mathbf{x}^{(n)}))$, and report the four-point QMC estimate of $\theta_{\bullet}$.
+Then set $\rho=0$ and recompute, and explain why the estimate changes even though the margins are
+unchanged, connecting your answer to the aggregation-bias and ecological-bias discussion of Chapter 20
+(@thm-aggregation-bias, @def-ecological-bias).
+:::

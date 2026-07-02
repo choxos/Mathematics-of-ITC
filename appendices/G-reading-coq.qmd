@@ -1,0 +1,1024 @@
+---
+title: "Reading the Coq Proofs"
+---
+
+Chapter 30 (@sec-coq-intro) tells the story of the companion **ITC_Coq development**: what a proof
+assistant guarantees, the proof-status vocabulary (@def-coq-proof-status), the three active axioms
+(@def-active-axioms), and the map from the book's tagged theorems to the Coq lemmas that machine-check
+them (@sec-coq-map). This appendix is the operational counterpart: a hands-on guide for a reader who
+wants to obtain the development, install the toolchain, compile every file, read the proof scripts, and
+query the kernel for the axioms a theorem uses. Nothing here re-argues the mathematics; the chapters do
+that. What follows is precise enough to be typed at a shell and a Coq prompt. Symbols follow
+[Notation](/notation.qmd); in particular the abstract expectation operator written `E` in the Coq source
+plays the role of $\mathbb{E}$.
+
+The development is fifteen Coq source files in a directory `theories/`, built against the Mathematical
+Components and mathcomp-analysis libraries, compiling with zero project axioms and zero admitted proofs.
+It is released under the GPL-3 license and lives in the repository
+`https://github.com/choxos/ITC_Coq`, whose `theories/AXIOMS.md` is the canonical assumption inventory and
+whose `manuscript/16_coq.md` is the file-by-file walk-through on which Chapter 30 is based.
+
+## Why read the Coq development, and what success looks like {#sec-coqread-why}
+
+If you run meta-analyses in R or Stan, a fair first question is why you would spend an afternoon
+installing a proof assistant to read files you will never execute in an analysis. The payoff is specific
+to indirect comparison. Every method in this book rests on assumptions that are easy to state in prose
+and easy to lose in prose: constancy of relative effects for a Bucher comparison (@def-transitivity),
+positivity and conditional exchangeability for weighting (@def-positivity, @def-ignorability), the
+absence of effect modification on the scale that would otherwise bias an unanchored comparison
+(@def-effect-modifier). In a machine-checked proof these assumptions cannot be smuggled into a sentence:
+each one appears as a named `Hypothesis` that the final theorem carries in its statement, and the proof
+will not close if the algebra leans on an assumption that was never declared. Three concrete guarantees
+follow.
+
+- **Assumptions are auditable.** You can read exactly which premises a result needs, in one place, and
+  you can query the proof mechanically for the foundational axioms it rests on (@sec-coqread-assumptions).
+- **The algebra cannot be fudged.** The subtraction that cancels the common comparator in Bucher
+  (@thm-bucher-unbiased), the exponential tilt defining the MAIC weights (@thm-maic-exponential-weights),
+  and the effective-sample-size bound (@thm-maic-ess-bound) are each checked symbol by symbol by a small
+  trusted program, so a sign error or a dropped term cannot slip through.
+- **The certificate is reproducible.** Anyone can rebuild the development and re-verify every tagged
+  theorem on their own machine; the check is a command you run, not a claim you accept.
+
+What the machine does *not* do matters just as much, and a health researcher should hold onto it: Coq
+verifies that the conclusions follow from the stated premises by valid logic and algebra. It does not
+verify that those premises hold in your trials. Whether relative effects really are constant across the
+$AC$ and $BC$ populations, whether positivity holds in your data, whether you have measured the effect
+modifiers: those are scientific questions the machine leaves to you. Machine-checking moves the argument
+from "trust the author's algebra and the author's assumption bookkeeping" to "trust the author's
+science"; it does not remove the science. For a health technology assessment that shift is worth having,
+because a reviewer can see the exact assumption ledger behind a comparative-effect estimate.
+
+**Reader goal.** You do not need to become a Coq developer, and this appendix does not try to teach you
+to write proofs. A realistic goal is narrower: install the toolchain, rebuild the development so you have
+watched the kernel accept every theorem, open one file, read the statement of a theorem the book tags as
+machine-checked, identify the assumptions written into that statement, and run one command that reports
+the foundational axioms the proof uses. If at the end you can do that for `bucher_unbiased`, you can do
+it for any tagged theorem in the book, and you have gained the ability to audit a machine-checked claim
+rather than take it on trust.
+
+## The minimal path {#sec-coqread-minimal}
+
+Before the step-by-step detail, here is the whole journey in a handful of commands, so you can see its
+shape. The sections that follow expand each step, and @sec-coqread-trouble says what to do when one
+fails. First, at an ordinary shell:
+
+```sh
+git clone https://github.com/choxos/ITC_Coq.git       # 1. get the source
+cd ITC_Coq
+opam install 'coq>=9.1' 'coq-mathcomp-analysis>=1.9'   # 2. install the toolchain (full list below)
+make                                                   # 3. compile and kernel-check every file
+```
+
+Then, at a Coq prompt started with the project's load path (`coqtop -R theories ITC`, explained in
+@sec-coqread-assumptions):
+
+```coq
+Require Import ITC.Bucher.          (* 4. load the compiled Bucher module *)
+Check bucher_unbiased.              (* 5. print the theorem's statement, assumptions included *)
+Print Assumptions bucher_unbiased.  (* 6. report the foundational axioms the proof uses *)
+```
+
+**What success looks like.** Step 3 ends without an error and leaves fifteen `.vo` files in `theories/`,
+one per source file; that clean exit is itself the verification that the kernel accepted every theorem
+(@sec-coqread-build). Step 5 prints the premises and the conclusion, so you can read the theorem's
+assumptions (@sec-coqread-bucher). Step 6 prints exactly three axioms and nothing else
+(@sec-coqread-assumptions). The companion "nothing was left unproved" check is one more shell command,
+`grep -nE "Admitted|^Axiom|admit\." theories/*.v`, which should print nothing at all. If every one of
+these signals appears, you have reproduced the book's central machine-checked claim yourself; the rest of
+this appendix explains what each step means and how to read what it prints.
+
+## Getting the development {#sec-coqread-get}
+
+Clone the repository and enter it:
+
+```sh
+git clone https://github.com/choxos/ITC_Coq.git
+cd ITC_Coq
+```
+
+The pieces relevant to this appendix are the build files `_CoqProject` and `Makefile` at the root, the
+fifteen `.v` source files in `theories/`, and `theories/AXIOMS.md`. The sibling directories `proofs/`
+(the Markdown proof catalogue, Parts A through O) and `manuscript/` (a self-contained pedagogical text)
+are reference prose and are not part of the Coq build.
+
+## Installing the toolchain {#sec-coqread-install}
+
+The development is built and checked by Coq, the proof assistant renamed the **Rocq Prover** in 2025,
+together with three libraries: **Mathematical Components** (`mathcomp`, the SSReflect proof language plus
+the algebra hierarchy), **mathcomp-analysis** (classical real analysis, measure theory, Lebesgue
+integration, probability measures, and transition kernels), and **Hierarchy Builder** (the tool that
+generates `mathcomp`'s structure hierarchy). The required versions, as declared in `_CoqProject` and the
+project `README`, are collected in @tbl-coqread-toolchain.
+
+| Component | opam package | Minimum version |
+|---|---|---|
+| Coq (Rocq Prover) | `coq` | 9.1 |
+| MathComp SSReflect | `coq-mathcomp-ssreflect` | 2.0 |
+| MathComp Algebra | `coq-mathcomp-algebra` | (with ssreflect) |
+| mathcomp-analysis | `coq-mathcomp-analysis` | 1.9 |
+| Hierarchy Builder | `coq-hierarchy-builder` | 1.6 |
+
+: Toolchain for the ITC_Coq development, from `_CoqProject` and the project `README`. The development was
+checked with the Rocq Prover 9.1.0 and mathcomp-analysis 1.9. {#tbl-coqread-toolchain}
+
+These libraries form a stack, each layer resting on the one below. `mathcomp-ssreflect` is the base: the
+SSReflect proof language and the library of finite objects. `mathcomp-algebra` adds the algebraic
+hierarchy on top of it, and `mathcomp-analysis` adds real analysis, measure theory, and probability on
+top of that. **Hierarchy Builder** is not a mathematical layer but the tool that generates the
+*hierarchy* itself, the layered tower of algebraic structures (from monoid up to ring up to field) that
+lets a theorem proved for rings apply automatically to the real numbers. For reading `Bucher.v` you need
+only the base and the algebra layer; the analysis layer matters for the measure-theoretic files.
+
+The supported way to obtain these is **opam**, the OCaml package manager. Install opam from your operating
+system's package manager, then create an isolated switch (an opam **switch** is a self-contained OCaml compiler together with its own installed packages, analogous to a Python virtual environment or a separate R library tree, but covering the whole toolchain rather than one language's add-on packages), add
+the Coq released-packages repository, and install the libraries; opam resolves the prover and the
+remaining `mathcomp` packages as dependencies:
+
+```sh
+opam init --bare                                   # first-time opam setup
+opam switch create itc-coq 4.14.2                  # a fresh switch with an OCaml compiler
+eval $(opam env)                                   # point the shell at the new switch
+
+opam repo add coq-released https://coq.inria.fr/opam/released
+
+opam install 'coq>=9.1' 'coq-mathcomp-ssreflect>=2.0' coq-mathcomp-algebra \
+             'coq-mathcomp-analysis>=1.9' 'coq-hierarchy-builder>=1.6'
+```
+
+opam will select a mutually compatible set of versions satisfying the constraints; installing
+`coq-mathcomp-analysis` alone would pull in `coq-mathcomp-ssreflect`, `coq-mathcomp-algebra`, and
+`coq-hierarchy-builder` transitively, but listing them documents the intent and lets opam report a clear
+error if any constraint cannot be met.
+
+One practical point the commands above hide: `eval $(opam env)` updates only the *current* shell so that
+`coqc`, `make`, and the libraries resolve to the new switch. It is not permanent. Open a fresh terminal,
+or reboot, and you must run `eval $(opam env)` again before building, or the shell will not find the
+switch's tools (@sec-coqread-trouble). Some opam installations add a startup hook that does this for you;
+when in doubt, run it.
+
+::: {.remark}
+**The Coq to Rocq rename.** At version 9.x the prover's opam package may appear as `rocq-prover`, with
+`coq` retained as a transitional alias, and the libraries may also be published under `rocq-mathcomp-*`.
+If the `coq` package is unavailable on your opam repository snapshot, substitute `rocq-prover` for `coq`
+in the install command; the source files and build are unaffected, since they refer to the libraries by
+their logical module names, not their opam package names.
+
+In practice, try the `coq`-named commands first; if your shell reports that `coqc` or `coqtop` is not
+found, the Rocq 9 equivalents are `rocq` (for example `rocq --version` in place of `coqc --version`) and
+`rocqtop` in place of `coqtop`. The two naming families drive the same prover, read the same source
+files, and take the same `-R theories ITC` load-path flag, so anywhere this appendix writes `coqc` or
+`coqtop` you may read `rocq` or `rocqtop` with no other change. $\blacktriangleleft$
+:::
+
+Verify the installation before building:
+
+```sh
+coqc --version                 # or: rocq --version
+opam list | grep mathcomp      # should list ssreflect, algebra, analysis
+```
+
+To read and step through the proofs interactively, any of the standard front ends works: **VsCoq** (the
+Visual Studio Code extension), **Proof General** (the Emacs mode), or the bundled graphical interface
+**CoqIDE**, called **RocqIDE** from version 9. Each lets you place the cursor mid-proof and inspect the
+goal and context after every tactic, which is the natural way to read a Coq proof for the first time.
+
+## The `_CoqProject` file and the build {#sec-coqread-build}
+
+`_CoqProject` is the single source of build configuration. It declares one logical mapping and lists the
+source files in dependency order:
+
+```text
+-R theories ITC
+
+theories/Axioms.v
+theories/BasicTypes.v
+...
+theories/EffectModifiers.v
+```
+
+The line `-R theories ITC` maps the physical directory `theories/` to the logical module prefix `ITC`
+(recursively); a *logical* name here is simply the name Coq uses to locate a compiled module, independent
+of where the file sits on disk, so that the module compiled from `theories/Bucher.v` is addressed as `ITC.Bucher`,
+`theories/MAIC.v` as `ITC.MAIC`, and so on. This is the path you will use in `Require Import` (@sec-coqread-assumptions).
+
+Building is driven by `make` from the repository root:
+
+```sh
+make
+```
+
+The top-level `Makefile` is a thin wrapper: if `Makefile.coq` is missing or out of date it regenerates it
+from `_CoqProject` with `coq_makefile`, namely
+
+```sh
+coq_makefile -f _CoqProject -o Makefile.coq        # rocq makefile -f ... on Rocq 9
+```
+
+and then delegates the actual compilation to that generated makefile. To *compile* a file here means more than to translate it. `coqc` runs the file's proof scripts to build a
+proof term for each theorem and submits every one to the **kernel**, Coq's small trusted checking core
+(the kernel is explained in @sec-coqread-primer). The resulting `theories/X.vo` is the compiled,
+kernel-checked file: an artifact that exists only because the kernel accepted every proof in `X.v`. So a
+run that ends without error, producing fifteen `.vo` files, is not merely a successful build; it is the
+verification that every theorem in the tree is accepted by the kernel. A clean rebuild is
+
+```sh
+make clean && make
+```
+
+which deletes the `.vo` files and the generated `Makefile.coq` and recompiles from scratch.
+
+The inventory claims of Chapter 30 are reproducible at the shell. That the development declares no axioms
+of its own and admits no proof is confirmed by a search that returns nothing across the fifteen files:
+
+```sh
+grep -nE "Admitted|^Axiom|admit\." theories/*.v        # no output
+```
+
+Two flaws would undermine the claim that the tree is fully proved, and this one command looks for both.
+An `Admitted` proof is a hole the kernel is told to accept with no proof term, so the theorem above it is
+not actually checked; an `Axiom` (or an `admit.` inside a proof) is an extra unproved assumption that
+every result downstream silently inherits. Fewer of both means more of the mathematics is genuinely
+verified, which is why "zero admits, zero project axioms" is a guarantee, not a boast. The `grep` prints
+one line per match; finding none, it prints nothing and returns you to the prompt. Had it printed a line,
+that line would name the file and the offending `Admitted` or `Axiom`, and the tree would not be fully
+proved. The search deliberately scans only the project's own `theories/*.v`: the three classical axioms
+the proofs rely on live in the mathcomp-analysis library, not in these files, so they never appear here.
+That is exactly why the complementary per-theorem check below, `Print Assumptions`, exists; it reports
+the inherited library axioms that `grep` cannot see.
+
+Per-theorem axiom closure is queried with `Print Assumptions`, described next.
+
+## Troubleshooting the build {#sec-coqread-trouble}
+
+When the minimal path of @sec-coqread-minimal stops at an error, the cause is almost always one of a
+short list. The fixes are in plain terms.
+
+- **`opam install` cannot find a compatible set of versions.** Refresh opam's index with `opam update`,
+  confirm the released-packages repository is present (`opam repo list` should show `coq-released`), and
+  re-run the install. On an older switch, `opam upgrade` may be needed first.
+- **`coqc --version` reports a version below 9.1, or an old mathcomp.** The shell is using a system-wide
+  Coq rather than the switch you built. Run `eval $(opam env)` in that terminal and check again;
+  `opam switch list` shows which switch is active.
+- **`coqc: command not found`.** Same cause: the switch is not active in this shell. Run `eval $(opam
+  env)`; if you have only just installed opam, open a new terminal so its startup hook runs.
+- **`make` reports `coq_makefile: command not found`.** Coq itself is not on the path, so the switch is
+  not active, or the libraries installed but the prover did not. Activate the switch and confirm
+  `coqc --version` works before running `make`. On Rocq 9 the tool is `rocq makefile`, which `make`
+  invokes automatically once the switch is active.
+- **`Require Import ITC.Bucher` fails with the module not found.** The load path is missing. Interactive
+  sessions and scratch files need the `-R theories ITC` flag (`coqtop -R theories ITC`), the same mapping
+  that turns `theories/Bucher.v` into the name `ITC.Bucher` (@sec-coqread-build). Inside the build,
+  `make` supplies it from `_CoqProject`; outside the build you must pass it yourself.
+- **A scratch file breaks `make`.** If you place a scratch `.v` file inside `theories/` or list it in
+  `_CoqProject`, `make` will try to compile it. Keep scratch files at the repository root and out of
+  `_CoqProject`, and run them directly with `coqc -R theories ITC scratch.v` (@sec-coqread-assumptions).
+- **You are on Windows without a Unix-like shell.** opam and the `sh`/`make` workflow assume a Unix-like
+  environment. The Windows Subsystem for Linux (WSL) provides one: install opam inside WSL and follow the
+  instructions unchanged.
+
+## Dependency order of the theories {#sec-coqread-deporder}
+
+The fifteen files are grouped into five phases in `_CoqProject`, each phase building only on the ones
+before it. The grouping is pedagogical; the binding constraint is the set of `Require Import` lines at the
+top of each file, which the build resolves into a topological order.
+
+- **Phase 1, foundations:** `Axioms.v`, `BasicTypes.v`, `PotentialOutcomes.v`, `CausalAssumptions.v`.
+- **Phase 2, conditional independence and balancing scores:** `ConditionalIndep.v`, `BalancingScore.v`,
+  `PropensityScore.v`.
+- **Phase 3, estimators:** `IPWEstimator.v`, `OutcomeRegression.v`, `DoublyRobust.v`.
+- **Phase 4, indirect-comparison methods:** `MAIC.v`, `STC.v`, `Comparison.v`.
+- **Phase 5, indirect-comparison algebra:** `Bucher.v`, `EffectModifiers.v`.
+
+The actual import edges are tighter than the linear phase order suggests. `Axioms.v` imports only the
+mathcomp libraries; `BasicTypes.v` imports `Axioms`; `PotentialOutcomes` imports `Axioms BasicTypes`;
+`CausalAssumptions` adds `PotentialOutcomes`; `ConditionalIndep` adds `CausalAssumptions`. The balancing
+and estimator layers chain on top: `PropensityScore` imports through `ConditionalIndep` and
+`BalancingScore`; `IPWEstimator`, `OutcomeRegression`, and `DoublyRobust` import `PropensityScore` (and,
+for `DoublyRobust`, the two estimator files); `Comparison` imports all of `MAIC`, `STC`, and the
+estimator layer.
+
+@tbl-coqread-imports gives the literal dependency: the modules named on each file's `Require Import`
+line(s) at its head, read from the source. This is the ground truth the paraphrase above summarizes; a
+reader tracing what a file needs should trust this table, since "imports" and "adds" in the prose are
+shorthand for these exact lines.
+
+| File | Modules named on its `Require Import` line(s) |
+|---|---|
+| `Axioms.v` | (mathcomp and Hierarchy Builder only; no project module) |
+| `BasicTypes.v` | `Axioms` |
+| `PotentialOutcomes.v` | `Axioms BasicTypes` |
+| `CausalAssumptions.v` | `Axioms BasicTypes PotentialOutcomes` |
+| `ConditionalIndep.v` | `Axioms BasicTypes PotentialOutcomes CausalAssumptions` |
+| `BalancingScore.v` | `Axioms BasicTypes PotentialOutcomes CausalAssumptions ConditionalIndep` |
+| `PropensityScore.v` | `Axioms BasicTypes PotentialOutcomes CausalAssumptions ConditionalIndep BalancingScore` |
+| `IPWEstimator.v` | `Axioms BasicTypes PotentialOutcomes CausalAssumptions ConditionalIndep BalancingScore PropensityScore` |
+| `OutcomeRegression.v` | `Axioms BasicTypes PotentialOutcomes CausalAssumptions ConditionalIndep PropensityScore` |
+| `DoublyRobust.v` | `Axioms BasicTypes PotentialOutcomes CausalAssumptions ConditionalIndep PropensityScore IPWEstimator OutcomeRegression` |
+| `MAIC.v` | `Axioms BasicTypes PotentialOutcomes CausalAssumptions PropensityScore IPWEstimator` |
+| `STC.v` | `Axioms BasicTypes PotentialOutcomes CausalAssumptions PropensityScore OutcomeRegression` |
+| `Comparison.v` | `Axioms BasicTypes PotentialOutcomes CausalAssumptions PropensityScore IPWEstimator OutcomeRegression DoublyRobust MAIC STC` |
+| `Bucher.v` | `Axioms BasicTypes` |
+| `EffectModifiers.v` | `Axioms BasicTypes` |
+
+: Literal project dependencies of each source file, from the `Require Import` line(s) at its head. The
+mathcomp and Hierarchy Builder imports that every file also loads are omitted. {#tbl-coqread-imports}
+
+Two files in the last phase are deliberately lightweight: `Bucher.v` and `EffectModifiers.v` import only
+`Axioms` and `BasicTypes`. They sit at the end of `_CoqProject` for narrative reasons (they are the
+headline indirect-comparison results), but they depend on nothing from Phases 2 through 4 and could be
+compiled immediately after `BasicTypes.v`. A reader new to the tree can therefore start at `Bucher.v`
+without having read the kernel-level conditional-independence machinery, which is the technical heart of
+the development but is not needed for the indirect-comparison algebra. This is why the worked example
+below uses `Bucher.v`.
+
+## What a proof assistant is: terms, types, goals, and the kernel {#sec-coqread-primer}
+
+The sections above were about setup; from here on we read Coq. This short primer supplies the ideas that
+make a `.v` file legible. Chapter 30 gives the conceptual account in full (@sec-coq-intro); the point
+here is only to install enough vocabulary that the annotated Bucher example reads smoothly.
+
+**Terms, types, and propositions as types.** Coq is a typed language: every expression, called a *term*,
+has a *type*. Familiar types are `nat` (the natural numbers) and `bool` (the two-element type of the
+values `true` and `false`). The idea that turns this into a proof assistant is that *a proposition is
+also a type*, and *a proof of that proposition is a term of that type*. To prove the proposition $P$ is
+therefore the very same task as to construct a term whose type is $P$. This is why "Coq checks types" and
+"Coq checks proofs" are one sentence: when the system confirms that a term has type $P$, it has confirmed
+that the term is a valid proof of $P$. The type whose members are propositions is called `Prop`; so the
+line `Definition transitivity : Prop := d_AC = d_AB + d_BC` reads "`transitivity` is a proposition,
+namely the equation $d_{AC} = d_{AB} + d_{BC}$."
+
+**The kernel.** Coq splits into a large convenient outer layer (the tactic language, the libraries, the
+user interface) and a small **kernel**: a compact, heavily scrutinized program whose only job is to check
+that a proof term really has the type it claims. Everything outside the kernel is untrusted machinery
+that *produces* candidate proof terms; the kernel is the trusted core that *checks* them.
+"Machine-checked" means checked by this kernel. The practical consequence is reassuring: you need not
+trust the tactics, the libraries, or the author, only the kernel, because whatever route produced a
+proof term, the kernel re-checks the finished term from scratch.
+
+**Proof script versus proof term.** You almost never write a proof term by hand. Instead you write a
+**proof script**: a recipe, between the keywords `Proof.` and `Qed.`, of instructions that build the
+term for you. Each instruction is a **tactic**. When the script finishes, `Qed.` hands the constructed
+term to the kernel; if the kernel accepts it, the theorem is recorded. The distinction matters when
+reading: the *statement* of a theorem is what is proved, the *script* is only how, so a beginner should
+read the statement first and treat the script as secondary.
+
+**Goal and context: the state a tactic transforms.** While a proof script runs, Coq maintains a **proof
+state** with two parts. The **context** is the list of things currently assumed or already established:
+the variables in scope and the named hypotheses, each with a name and a type. The **goal** is the single
+proposition you are trying to prove right now. A front end displays them stacked, context above a line,
+goal below:
+
+```text
+  d_AB, d_AC, d_BC : R          <- context: three real numbers in scope
+  H : d_AC = d_AB + d_BC        <- context: a named hypothesis
+  ============================
+  d_AB = d_AC - d_BC            <- goal: what remains to prove
+```
+
+A **tactic** is an instruction that transforms this state: it may move something from the goal into the
+context, rewrite the goal with an equation, or close the goal outright. Reading a proof interactively
+means placing the cursor after each tactic and watching the context and goal change; this appendix
+reproduces those snapshots in the Bucher example (@sec-coqread-bucher) so you can follow without a
+running Coq.
+
+**Two languages in one file: Gallina and the tactic language.** A `.v` file is written in two languages,
+and telling them apart removes most early confusion. Definitions and statements are written in
+**Gallina**, Coq's term language: `Definition ... := ...`, `Lemma name : <proposition>`, and the
+propositions themselves ($d_{AC} = d_{AB} + d_{BC}$, `forall x, ...`). Proof scripts are written in a
+**tactic language**: Coq's built-in one is called **Ltac**, and this development uses **SSReflect** (short
+for *small-scale reflection*), the tactic dialect that ships with Mathematical Components and favors very
+short, composable steps. So in the Bucher lemma below, the line `transitivity -> d_AB = d_AC - d_BC` is
+Gallina (the claim), while `rewrite /transitivity => H` is SSReflect (a step of the proof). When you find
+yourself trying to read an equation as if it were an instruction, or the reverse, this is usually the
+confusion to check first. @tbl-coqread-vocab collects the vocabulary; the mathcomp-specific notation is in
+@tbl-coqread-notation.
+
+| Word | What it means, in one line |
+|---|---|
+| term | any Coq expression; it always has a type |
+| type | the classification of a term (`nat`, `bool`, a proposition) |
+| `Prop` | the type whose members are propositions (logical statements) |
+| `bool` | the two-element type `true`/`false`; distinct from `Prop`, used for decidable tests |
+| `Type` | the classification one level up, whose members include `nat`, `bool`, and `Prop` |
+| proposition as type | a proposition is a type; a proof of it is a term of that type |
+| proof term | the object a proof constructs; what the kernel actually checks |
+| kernel | Coq's small trusted core that checks proof terms; "machine-checked" means checked here |
+| tactic | one instruction in a proof script that transforms the proof state |
+| goal | the proposition currently to be proved |
+| context | the variables and named hypotheses currently in scope |
+| hypothesis | a named assumption sitting in the context (introduced by `Hypothesis` or `move=>`) |
+| Gallina | Coq's term language; definitions and statements are written in it |
+| Ltac / SSReflect | the tactic languages; scripts are written in them (this project uses SSReflect) |
+| `Definition` | binds a name to a term or a proposition |
+| `Lemma`/`Theorem`/`Corollary` | a named claim followed by a proof; the keyword choice is documentation only |
+| `Proof.` ... `Qed.` | brackets around the proof script; `Qed.` submits the finished term to the kernel |
+| `Admitted.` | closes a proof *without* a term, leaving the claim unproved (none occur in this tree) |
+| `Axiom` | declares a proposition true without proof (none are declared in this tree) |
+| `forall x : T, P` | universal quantifier: "for every `x` of type `T`, `P` holds" |
+| `exists x : T, P` | existential quantifier: "there is some `x` of type `T` with `P`" |
+| `fun x => e` | a *lambda*, the anonymous function mapping `x` to the expression `e` |
+
+: A minimal Coq and type-theory vocabulary for reading the source files. {#tbl-coqread-vocab}
+
+**A hello-world proof.** Before the real material, here is a complete four-line proof over Coq's built-in
+natural numbers, small enough to watch every state change. It uses the same three tactics that carry the
+Bucher proof: `move=>` (move a hypothesis from the goal into the context), `rewrite` (rewrite the goal
+with an equation), and `by []` (finish a goal that now holds by computation).
+
+```coq
+Lemma warmup (n : nat) : n = 2 -> n + 1 = 3.
+Proof.
+  move=> H.
+  rewrite H.
+  by [].
+Qed.
+```
+
+The state evolves as follows. After `Proof.` the context holds the number `n` and the goal is the whole
+implication:
+
+```text
+  n : nat
+  ============================
+  n = 2 -> n + 1 = 3
+```
+
+`move=> H` moves the antecedent `n = 2` out of the goal and into the context under the name `H`, leaving
+the consequent as the goal:
+
+```text
+  n : nat
+  H : n = 2
+  ============================
+  n + 1 = 3
+```
+
+`rewrite H` replaces `n` by `2` in the goal, using `H` left to right:
+
+```text
+  n : nat
+  H : n = 2
+  ============================
+  2 + 1 = 3
+```
+
+`by []` observes that `2 + 1` computes to `3`, so the goal `3 = 3` holds, and closes it; `Qed.` then
+submits the finished term to the kernel. With this picture of state, goal, context, and the three
+tactics, the Bucher example uses nothing new in kind, only the same moves over real numbers instead of
+natural numbers.
+
+## How to read a Coq definition, lemma, and theorem {#sec-coqread-anatomy}
+
+The development is written in the **SSReflect** proof language, the dialect of Coq tactics used by
+Mathematical Components. Three syntactic forms carry the content: `Definition` (an object or a
+proposition), `Lemma`/`Theorem`/`Corollary` (a claim together with a proof), and the `Section` mechanism
+that scopes shared parameters.
+
+A **Section** opens with `Section Name.` and closes with `End Name.`. Inside it, `Variable (x : T)`
+introduces a parameter every later result may use, `Hypothesis H : P` introduces an assumed proposition,
+and `Context` introduces several at once. When the section closes, each parameter and hypothesis that a
+definition or lemma actually used is added to that object's statement as an explicit argument or premise.
+This is precisely the device that makes the development's modeling assumptions visible: a probabilistic
+fact such as linearity of expectation enters as a `Hypothesis` and reappears in the final theorem's
+statement, never as a hidden global axiom (@sec-coq-boundary).
+
+To see the discharge concretely, take the opening section of `Bucher.v` (shown with two of its results).
+Inside the section, `d_AB`, `d_AC`, `d_BC` are section variables:
+
+```coq
+Section RelativeEffects.
+Variable (R : realType).
+Variable (d_AB d_AC d_BC : R).
+
+Definition transitivity : Prop := d_AC = d_AB + d_BC.
+
+Lemma transitivity_subtract :
+  transitivity -> d_AB = d_AC - d_BC.
+Proof. rewrite /transitivity => H. by rewrite H GRing.addrK. Qed.
+
+End RelativeEffects.
+```
+
+Inside the section, `transitivity_subtract` appears to mention no `d`'s in its binders; they are supplied
+by the section. The moment `End RelativeEffects.` closes the section, Coq *discharges* the used variables,
+turning each into an explicit argument of every result that used it. The statement of
+`transitivity_subtract` becomes
+
+```coq
+forall (R : realType) (d_AB d_AC d_BC : R),
+  transitivity d_AB d_AC d_BC -> d_AB = d_AC - d_BC
+```
+
+and `transitivity` itself becomes a function `forall (R : realType), R -> R -> R -> Prop`. The three
+population effects, invisible in the body, are now visible arguments. (With `Set Implicit Arguments`, as
+in the actual file, Coq may hide the arguments it can infer when it prints these; the underlying
+statements are as shown.) This is the mechanism referenced above: any assumption you place in a section
+as a `Variable` or `Hypothesis` cannot vanish, it resurfaces in the discharged statement, which is why
+reading a theorem's final statement tells you its full set of premises (@sec-coq-boundary).
+
+A **Definition** binds a name to a term or a proposition, optionally with arguments:
+
+```coq
+Definition bucher_estimate : R := d_AC_hat - d_BC_hat.
+Definition transitivity : Prop := d_AC = d_AB + d_BC.
+```
+
+A **Lemma** or **Theorem** states a type (the proposition) and is followed by `Proof.`, a sequence of
+tactics, and `Qed.`. The keyword chosen (`Lemma`, `Theorem`, `Corollary`, `Proposition`) carries no
+logical difference; it is documentation. `Qed.` submits the constructed proof term to the kernel and
+records the result; a proof that does not fully close the goal cannot reach `Qed.`.
+
+The tactics that do the work are listed in @tbl-coqread-tactics, and the notation and scopes needed to
+read the statements are in @tbl-coqread-notation. Both are reference cards, not reading assignments. You
+met three of these tactics in action in the warm-up of @sec-coqread-primer, and the Bucher example needs
+only five tactic families in all, flagged in the third column of @tbl-coqread-tactics: on a first pass
+read only those rows (`move=>`, `rewrite`, `have`, `apply:`, `by`) and leave the rest for the larger
+files. Three small notational habits recur and are worth naming once: the `=>` in `move=> H` reads "and
+then introduce the name `H`"; the leading `-` in `rewrite -E` is a *direction flag* meaning "rewrite
+right to left," not a subtraction; and `by t` is a discipline device that runs `t` and fails unless the
+goal is completely closed, so writing `by` asserts "this step finishes the goal." With these habits and
+the two tables, the annotated example of @sec-coqread-bucher can be read line by line.
+
+| Tactic or construct | What it does | First pass? |
+|---|---|---|
+| `move=> H x y` | introduce hypotheses and variables `H`, `x`, `y` from the goal into the context | Bucher |
+| `move: H` | the reverse: generalize `H` from the context back into the goal | later |
+| `rewrite E` | rewrite the goal left to right with equation `E`; `rewrite -E` goes right to left | Bucher |
+| `rewrite /f` | unfold the definition `f` in the goal | Bucher |
+| `rewrite //`, `/=` | discharge trivial side goals (`//`); simplify (`/=`) | later |
+| `by tac`, `by []` | run `tac` (or trivial closers) and fail unless the goal is fully closed | Bucher |
+| `exact: t` | supply term `t`, with argument inference, as the complete proof | later |
+| `apply: t` | apply lemma or term `t`, leaving its premises as new goals | Bucher |
+| `case: x` | case-analyze `x`: split a boolean, disjunction, or existential | later |
+| `have H : P` | assert an intermediate claim `P` named `H` as a subgoal | later |
+| `have -> : a = b` | prove `a = b` and immediately rewrite the goal with it | Bucher |
+| `elim: n` | proof by induction on `n` | later |
+| `exists t`, `split`, `left`, `right` | provide a witness; split a conjunction or iff; choose a disjunct | later |
+| `exfalso` | replace the current goal by `False` | later |
+| `t1; t2` | sequencing: apply `t2` to every goal produced by `t1` | later |
+| `[t1 \| t2]` | dispatch `t1`, `t2` to the respective subgoals | later |
+| `Qed.` | close the proof and submit the proof term to the kernel | Bucher |
+
+: SSReflect tactics and proof constructs used in the development. The last column flags the tactics needed
+for the Bucher example (@sec-coqread-bucher); read those rows first and treat the rest as reference.
+{#tbl-coqread-tactics}
+
+| Notation | Meaning | First pass? |
+|---|---|---|
+| `R : realType` | `R` is a mathcomp *structure* for the real numbers (formally a real-closed field); read it as $\mathbb{R}$. It is a structured type rather than a bare set, so generic ring and field lemmas apply to it automatically | Bucher |
+| `Local Open Scope ring_scope` | read `+ - * / 0 1` as ring operations on `R` | Bucher |
+| `fun omega => e` | Coq's *lambda* notation: the anonymous function mapping `omega` to `e`; here, a random variable as a map on the sample space | Bucher |
+| `GRing.addrK`, `GRing.mul1r`, `GRing.mulN1r` | ring lemmas $x+y-y=x$; $1\cdot x=x$; $(-1)\cdot x=-x$. The names abbreviate *add-right-cancel*, *mul-1-right*, *mul-N1-right*; learning the scheme lets you decode new names | Bucher |
+| `x ^+ n` | the `n`-th power of `x` in a ring; `x ^+ 2` is $x^2$ | later |
+| `x *+ n` | the `n`-fold sum `x + ... + x`; `x *+ 3` is $x+x+x$ (natural-number scaling, not a power) | later |
+| `n%:R` | the coercion of the natural number `n` into the ring `R`; write `2%:R` for the ring element two | later |
+| `\sum_(i < n) F i` | finite sum of `F i` over the ordinal index set `'I_n`; read it as $\sum_{i=0}^{n-1} F_i$ | later |
+| `'I_n` | the finite type of ordinals $\{0,\dots,n-1\}$; mathcomp indexes finite sums by this type rather than a numeric range, making the index set a first-class object | later |
+| `0 < x`, `x <= y` | order relations on `R` | later |
+| `expR x` | the real exponential $e^x$ (from mathcomp's `exp`) | later |
+| `{mfun A >-> B}` | the type of measurable functions from `A` to `B` | later |
+| `R.-pker X ~> Y` | probability kernels from `X` to `Y` valued in `R` | later |
+| `measurableType d`, `probability Omega R` | a measurable space; a probability measure on `Omega` | later |
+
+: Notation and scopes for reading the statements. The last column marks the four entries needed for the
+Bucher example (@sec-coqread-bucher); the rest appear only in the measure-theoretic files.
+{#tbl-coqread-notation}
+
+## A fully annotated example: Bucher's theorem {#sec-coqread-bucher}
+
+We read `theories/Bucher.v` from its definitions to its headline theorem, the unbiasedness of the Bucher
+estimator, which is @thm-bucher-unbiased in Chapter 14. The file imports only `Axioms` and `BasicTypes`
+and opens `ring_scope`, so every symbol below is in @tbl-coqread-tactics or @tbl-coqread-notation.
+
+Before the code, fix the clinical picture, because the Coq symbols name exactly its pieces. Two trials
+share a common comparator $C$: an $AC$ trial compares treatment $A$ against $C$, and a $BC$ trial compares
+$B$ against $C$. No trial compared $A$ against $B$ directly, yet $A$ versus $B$ is the target of the
+health technology assessment. Bucher's indirect comparison estimates that target by subtracting the two
+observed contrasts, which is valid when the relative effects are constant across the two trial
+populations (transitivity). The file's symbols are the pieces of this picture:
+
+| Coq symbol | Meaning in the trial network |
+|---|---|
+| `d_AC` | population relative effect of $A$ versus $C$ (the target of the $AC$ trial) |
+| `d_BC` | population relative effect of $B$ versus $C$ (the target of the $BC$ trial) |
+| `d_AB` | population relative effect of $A$ versus $B$ (the indirect target) |
+| `d_AC_hat`, `d_BC_hat` | the trials' *estimators* of `d_AC` and `d_BC` (random variables) |
+| `E` | expectation; `E d_AC_hat = d_AC` says the $AC$ estimator is unbiased for its target |
+| `transitivity` | the assumption $d_{AC} = d_{AB} + d_{BC}$, equivalently $d_{AB} = d_{AC} - d_{BC}$ |
+
+: The Bucher symbols and their meaning in the two-trial network. {#tbl-coqread-bucher-symbols}
+
+With the picture fixed, we read the file from its definitions to its headline theorem.
+
+::: {#exm-coqread-transitivity}
+## The assumption as a definition
+The constancy-of-relative-effects assumption (@def-constancy-relative-effects) is encoded as a named
+proposition, the formal counterpart of @def-transitivity:
+
+```coq
+Definition transitivity : Prop := d_AC = d_AB + d_BC.
+```
+
+Here `d_AB`, `d_AC`, `d_BC : R` are section variables standing for the three population relative effects.
+The definition names the equation $d_{AC} = d_{AB} + d_{BC}$; nothing is asserted, the name simply
+abbreviates the proposition so later results can take it as a hypothesis. $\blacktriangleleft$
+:::
+
+::: {#exm-coqread-subtract}
+## A lemma and its proof
+The equivalent subtractive form (@prp-transitivity-consistency) is a one-line lemma:
+
+```coq
+Lemma transitivity_subtract :
+  transitivity -> d_AB = d_AC - d_BC.
+Proof.
+  rewrite /transitivity => H.
+  by rewrite H GRing.addrK.
+Qed.
+```
+
+The statement reads: *if `transitivity` holds, then $d_{AB} = d_{AC} - d_{BC}$.* The proof has two steps.
+`rewrite /transitivity` unfolds the definition, so the antecedent to be introduced becomes the explicit
+equation $d_{AC} = d_{AB} + d_{BC}$, and `=> H` introduces it into the context under the name `H`. Then
+`by rewrite H GRing.addrK` rewrites the goal's $d_{AC}$ to $d_{AB} + d_{BC}$ using `H`, after which
+`GRing.addrK` (the cancellation law $x + y - y = x$) collapses $(d_{AB} + d_{BC}) - d_{BC}$ to $d_{AB}$;
+`by` certifies that the goal is now closed.
+
+Watching the state makes this concrete. The proof opens with the implication as the goal:
+
+```text
+  R : realType
+  d_AB, d_AC, d_BC : R
+  ============================
+  transitivity -> d_AB = d_AC - d_BC
+```
+
+`rewrite /transitivity` unfolds the name, and `=> H` moves the (now explicit) antecedent into the context:
+
+```text
+  H : d_AC = d_AB + d_BC
+  ============================
+  d_AB = d_AC - d_BC
+```
+
+`rewrite H` replaces `d_AC` by `d_AB + d_BC` in the goal, and `GRing.addrK` cancels the trailing `- d_BC`,
+reducing the goal to `d_AB = d_AB`, which `by` closes:
+
+```text
+  after rewrite H:      d_AB = d_AB + d_BC - d_BC
+  after GRing.addrK:    d_AB = d_AB            (closed by reflexivity)
+```
+
+$\blacktriangleleft$
+:::
+
+::: {#exm-coqread-expectation}
+## The abstract expectation operator
+Unbiasedness is stated over an abstract expectation. The trial estimators are random variables on a
+common probability space, and the expectation is a section variable whose only assumed property is
+linearity, supplied as a hypothesis:
+
+```coq
+Variable (E : (Omega -> R) -> R).
+
+Hypothesis E_linearity :
+  forall (X Y : Omega -> R) (a b : R),
+  E (fun omega => a * X omega + b * Y omega) = a * E X + b * E Y.
+```
+
+Read the type slowly. A value of type `Omega -> R` is a function from the sample space `Omega` to the
+reals, which is exactly a random variable: it assigns a number to each possible world `omega`. So
+`E : (Omega -> R) -> R` is a function that eats a random variable and returns a real number, the role of
+the expectation $\mathbb{E}$ in the [Notation](/notation.qmd). The hypothesis's opening
+`forall (X Y : Omega -> R) (a b : R), ...` reads "for all random variables `X`, `Y` and all reals `a`,
+`b`," and its body is the linearity identity $\mathbb{E}[aX + bY] = a\,\mathbb{E}[X] + b\,\mathbb{E}[Y]$. `E_linearity` is the formal counterpart of linearity of expectation (A.4 in
+the proof catalogue); making it a `Hypothesis` rather than building a specific integral is the
+"abstract-operator" pattern (@sec-coq-structure) that lets the algebra of estimands be machine-checked
+without committing to an integration theory. This is not merely a convenience for the formalizer: in
+population adjustment we manipulate expectations and conditional expectations constantly without ever
+specifying the underlying measure, and the unbiasedness proofs for Bucher, MAIC, and STC all turn on
+linearity alone. Assuming exactly linearity, and nothing more, is therefore faithful to how these
+arguments actually run on paper. From it the file derives the difference rule:
+
+```coq
+Lemma E_sub (X Y : Omega -> R) :
+  E (fun omega => X omega - Y omega) = E X - E Y.
+Proof.
+  have -> : (fun omega => X omega - Y omega)
+         = (fun omega => 1 * X omega + (-1) * Y omega).
+    apply: fun_ext => omega.
+    by rewrite GRing.mul1r GRing.mulN1r.
+  rewrite E_linearity GRing.mul1r GRing.mulN1r.
+  by [].
+Qed.
+```
+
+This proof introduces two constructs worth slowing down on. `have -> : A = B` does two things at once:
+it opens a *subgoal* to prove the equation `A = B`, and once that subgoal is closed it immediately
+rewrites the main goal with it. Here `A` is the integrand `fun omega => X omega - Y omega` and `B` is
+`fun omega => 1 * X omega + (-1) * Y omega`, so the first task is to prove these two functions equal:
+
+```text
+  ============================
+  (fun omega => X omega - Y omega) = (fun omega => 1 * X omega + (-1) * Y omega)
+```
+
+Two functions are equal when they agree on every input; that principle is **functional extensionality**,
+and in this development it is the lemma `fun_ext` from `Axioms.v`. `apply: fun_ext` reduces the
+function-equality subgoal to a pointwise one, and `=> omega` names the input, leaving an ordinary ring
+equation:
+
+```text
+  omega : Omega
+  ============================
+  X omega - Y omega = 1 * X omega + (-1) * Y omega
+```
+
+The ring rewrites $1\cdot x = x$ (`GRing.mul1r`) and $(-1)\cdot x = -x$ (`GRing.mulN1r`) close it. Back in
+the main goal, the integrand is now the linear combination, so `rewrite E_linearity` applies linearity
+with $a = 1$, $b = -1$; the same two ring rewrites simplify the coefficients, leaving $E\,X - E\,Y$, and
+`by []` closes. The lemma is exactly linearity of expectation specialized to a difference, and it is the
+only fact about `E` that Bucher's theorem will need. $\blacktriangleleft$
+:::
+
+::: {#exm-coqread-bucher-thm}
+## The theorem
+The headline result, the formal @thm-bucher-unbiased, is now three lines:
+
+```coq
+Theorem bucher_unbiased (d_AB d_AC d_BC : R) :
+  E d_AC_hat = d_AC ->
+  E d_BC_hat = d_BC ->
+  d_AB = d_AC - d_BC ->
+  E (fun omega => d_AC_hat omega - d_BC_hat omega) = d_AB.
+Proof.
+  move=> H_AC H_BC H_trans.
+  rewrite E_sub H_AC H_BC.
+  by rewrite H_trans.
+Qed.
+```
+
+Read the statement top to bottom. The three premises are: `E d_AC_hat = d_AC`, that the $AC$ trial
+estimator is unbiased for $d_{AC}$; `E d_BC_hat = d_BC`, likewise for the $BC$ trial (these two are the
+formal content of @prp-trial-unbiased); and `d_AB = d_AC - d_BC`, the constancy assumption in subtractive
+form (@exm-coqread-transitivity). The conclusion is that the expectation of the difference of the two
+estimators equals the target $d_{AB}$, that is, the Bucher estimator is unbiased.
+
+The proof introduces the three premises as `H_AC`, `H_BC`, `H_trans` with `move=>`. Then `rewrite E_sub`
+turns the goal's left side $E[d_{AC}\text{-hat} - d_{BC}\text{-hat}]$ into
+$E\,d_{AC}\text{-hat} - E\,d_{BC}\text{-hat}$, and the same `rewrite` continues with `H_AC` and `H_BC` to
+replace those two expectations by $d_{AC}$ and $d_{BC}$, leaving the goal $d_{AC} - d_{BC} = d_{AB}$.
+Finally `by rewrite H_trans` rewrites $d_{AB}$ to $d_{AC} - d_{BC}$ and closes.
+
+In state snapshots, after `move=> H_AC H_BC H_trans` the three premises sit in the context and the goal
+is the bare conclusion:
+
+```text
+  H_AC : E d_AC_hat = d_AC
+  H_BC : E d_BC_hat = d_BC
+  H_trans : d_AB = d_AC - d_BC
+  ============================
+  E (fun omega => d_AC_hat omega - d_BC_hat omega) = d_AB
+```
+
+The chained `rewrite E_sub H_AC H_BC` applies three equations left to right in turn, and the goal shrinks
+at each step:
+
+```text
+  after E_sub:   E d_AC_hat - E d_BC_hat = d_AB
+  after H_AC:    d_AC - E d_BC_hat = d_AB
+  after H_BC:    d_AC - d_BC = d_AB
+```
+
+One point of rewrite direction is worth naming, since it is a common first-time snag. `rewrite H_trans`
+uses `H_trans : d_AB = d_AC - d_BC` left to right: it looks for the left side `d_AB` in the goal and
+replaces it with the right side `d_AC - d_BC`. The goal is `d_AC - d_BC = d_AB`, whose only `d_AB` is on
+the right, so it becomes `d_AC - d_BC = d_AC - d_BC`, which closes by reflexivity. To rewrite the other
+way, replacing `d_AC - d_BC` by `d_AB`, one would write `rewrite -H_trans` with the leading minus, the
+SSReflect direction flag (not a subtraction).
+
+The only structural property of `E` used anywhere is linearity, through `E_sub`; this is why the abstract
+operator suffices.
+$\blacktriangleleft$
+:::
+
+The same file continues with `bucher_variance`, the additivity of variances under zero covariance
+(@thm-bucher-variance), proved by the identical pattern over abstract `Var` and `Cov` operators with the
+variance-of-a-difference rule supplied as a hypothesis.
+
+## Inspecting the active axioms {#sec-coqread-assumptions}
+
+The decisive question a proof assistant can answer that a paper proof cannot is: *which axioms does this
+finished theorem actually use?* The command is `Print Assumptions`. It traverses the kernel proof term
+and reports every axiom and unproved constant the theorem transitively depends on. To run it, compile the
+tree (@sec-coqread-build), then load the relevant module by its logical name and query the theorem.
+
+::: {.remark}
+**Two kinds of assumption, before you read the output.** A theorem depends on two different things, and
+`Print Assumptions` reports only the second. The first kind is its *ordinary premises*: the modeling
+assumptions written into the statement, such as unbiasedness of an estimator or constancy of relative
+effects. You read those by reading the statement (`Check` prints it). The second kind is the *foundational
+axioms*: logical principles the proof term rests on, below the level of any particular theorem.
+`Print Assumptions` prints the second kind only. So the question "what does this proof rest on" has two
+halves: read the statement for the scientific premises, then run `Print Assumptions` for the logical
+axioms. Keep both in view; neither alone is the full picture (@def-coq-proof-status). $\blacktriangleleft$
+:::
+
+Interactively, start a Coq top level with the project's load path and issue the commands:
+
+```sh
+coqtop -R theories ITC          # or: rocqtop -R theories ITC
+```
+
+```coq
+Require Import ITC.MAIC.
+Print Assumptions ESS_upper_bound.
+```
+
+Equivalently, in batch mode, place a scratch file at the repository root (anywhere outside the
+`_CoqProject` file list, so `make` ignores it) and run it through the compiler with the same load path. The scratch file holds exactly the two commands
+you would otherwise type interactively:
+
+```coq
+(* scratch.v *)
+Require Import ITC.MAIC.
+Print Assumptions ESS_upper_bound.
+```
+
+```sh
+coqc -R theories ITC scratch.v        # prints the assumptions report to the terminal
+```
+
+For the effective-sample-size bound the output is exactly the three classical axioms inherited from
+mathcomp-analysis and nothing else:
+
+```text
+Axioms:
+boolp.propositional_extensionality : forall P Q : Prop, P <-> Q -> P = Q
+boolp.functional_extensionality_dep :
+  forall (A : Type) (B : A -> Type) (f g : forall x : A, B x),
+  (forall x : A, f x = g x) -> f = g
+boolp.constructive_indefinite_description :
+  forall (A : Type) (P : A -> Prop), (exists x : A, P x) -> {x : A | P x}
+```
+
+These are the three active axioms catalogued in @def-active-axioms; for what they mean and why they are
+uncontroversial, see @sec-coq-axioms.
+
+@tbl-coqread-axioms gives a one-line reading of each, so you can interpret the output without leaving the
+page:
+
+| Printed axiom | Plain reading |
+|---|---|
+| `propositional_extensionality` | two propositions that imply each other are *equal*, so logically equivalent statements can be interchanged |
+| `functional_extensionality_dep` | two functions that agree on every input are equal (this is the `fun_ext` used in `E_sub`) |
+| `constructive_indefinite_description` | from a proof that some `x` exists, one may *name* such an `x`; a form of the axiom of choice |
+
+: Plain reading of the three classical axioms mathcomp-analysis supplies, which every tagged theorem in
+the tree inherits, and no others. {#tbl-coqread-axioms}
+
+The same query on `bucher_unbiased`, `cauchy_schwarz_ones`,
+`not_EM_does_not_imply_not_PV`, `propensity_score_is_balancing`, and `double_robustness` returns the
+identical three-line list: no project axiom, no admitted lemma, no hidden assumption. The absence of the
+law of the excluded middle from the list is not an omission; it is a derived theorem (`EM`, via
+Diaconescu's argument from the three axioms above), so a proof that uses classical case analysis adds no
+fourth axiom.
+
+To see the sameness rather than take it on trust, run the same query on the Bucher theorem you read in
+@sec-coqread-bucher:
+
+```coq
+Require Import ITC.Bucher.
+Print Assumptions bucher_unbiased.
+```
+
+```text
+Axioms:
+boolp.propositional_extensionality : forall P Q : Prop, P <-> Q -> P = Q
+boolp.functional_extensionality_dep :
+  forall (A : Type) (B : A -> Type) (f g : forall x : A, B x),
+  (forall x : A, f x = g x) -> f = g
+boolp.constructive_indefinite_description :
+  forall (A : Type) (P : A -> Prop), (exists x : A, P x) -> {x : A | P x}
+```
+
+The list is character for character the one produced for `ESS_upper_bound`: the same three classical
+axioms, and nothing added by the indirect-comparison algebra.
+
+::: {.remark}
+**Reading a theorem's premises versus its axioms.** `Print Assumptions` reports only the foundational
+axioms, not the named section hypotheses. A theorem such as `mu1_IPW_unbiased` carries the tower-property
+premise `Hipw1` as an explicit argument in its *statement* (the boundary policy of @sec-coq-boundary);
+that premise is visible by reading the statement, while `Print Assumptions` confirms that, beyond it, the
+proof rests on nothing but the three classical axioms. The Bucher theorem you just queried makes the same point concretely. Its *statement*, printed by `Check
+bucher_unbiased`, lists three premises: `E d_AC_hat = d_AC`, `E d_BC_hat = d_BC`, and
+`d_AB = d_AC - d_BC`. Those are the scientific assumptions, the unbiasedness of each trial estimator and
+the constancy of relative effects, and they are what a health technology assessment must defend. Its
+`Print Assumptions` output, shown above, lists three classical axioms and nothing more. The first triple
+tells you what the theorem assumes about the world; the second tells you what it assumes about logic; the
+theorem is unconditionally true given the first, resting on nothing but the second.
+
+The two readings together are what @def-coq-proof-status calls the two-level reading. $\blacktriangleleft$
+:::
+
+Four further commands are useful while reading. `Check t` prints the type of a term or the statement of a
+lemma; `About name` prints a lemma's statement together with its arguments and how they are inferred;
+`Print name` prints the body of a definition; `Search pat` finds lemmas whose statement matches a
+pattern, for example `Search _ (_ + _ - _)` to find cancellation lemmas; and `Locate "++"` resolves a
+notation to the constant it denotes. Stepping through a proof in VsCoq, Proof General, or RocqIDE and
+watching the goal change after each tactic is, in practice, the fastest way to understand a script.
+
+As a reading aid, `Check` prints a theorem's statement without opening the file. For `bucher_unbiased`
+its output begins with the section parameters it discharges (the space `Omega`, the estimators, the
+operator `E`, and the linearity hypothesis) and ends with the operative part:
+
+```text
+  ... ->
+  forall d_AB d_AC d_BC : R,
+    E d_AC_hat = d_AC ->
+    E d_BC_hat = d_BC ->
+    d_AB = d_AC - d_BC ->
+    E (fun omega => d_AC_hat omega - d_BC_hat omega) = d_AB
+```
+
+The premises and conclusion appear exactly as in the source, so `Check` alone is often enough to audit
+what a tagged theorem assumes.
+
+## File-by-file reference {#sec-coqread-files}
+
+@tbl-coqread-files lists each source file, its phase, its headline Coq results, and the book theorems and
+definitions it machine-checks, by slug. Every Coq name has been confirmed against the source. The slugs
+in the last column are the results carrying a `[machine-checked: ...]` tag in their home chapters; results
+discussed in prose rather than by a tag (the foundational `Axioms.v`, `BasicTypes.v`) are cross-referenced
+to their chapter instead. The consolidated theorem-to-lemma map, with proof-status tiers, is @sec-coq-map.
+
+| File (phase) | Headline Coq results | Book cross-reference |
+|---|---|---|
+| `Axioms.v` (1) | `excluded_middle`, `proof_by_contradiction`, `prop_extensionality`, `fun_ext` | active axioms, @def-active-axioms |
+| `BasicTypes.v` (1) | `bool_to_R`, `treatment_01`, `treatment_complement`, `measurable_composition` | causal-model setup, Chapter 9 |
+| `PotentialOutcomes.v` (1) | `ITE_unobservable`, `ATE_split`, `ATE_decomposition`, `consistency_equiv`, `selection_bias_decomposition` | @def-potential-outcome, @thm-fundamental-problem, @thm-consistency-identity, @def-ate, @prp-ate-att-atc, @thm-naive-selection-bias |
+| `CausalAssumptions.v` (1) | `SUTVA`, `no_interference_unit_level`, `strong_implies_weak_unconf`, `ATE_identification`, `ATE_IPW_identification` | @def-sutva, @def-positivity, @def-ignorability, @thm-ate-identification |
+| `ConditionalIndep.v` (2) | `cond_exp_linear`, `cond_exp_const`, `cond_indep_equiv`, `cond_indep_weak_union`, `cond_indep_contraction`, `transfer_independence` | @thm-graphoid-axioms, @def-conditional-independence |
+| `BalancingScore.v` (2) | `is_balancing_score`, `balancing_score_sufficiency` (Rosenbaum-Rubin 2), `propensity_is_coarsest` | @def-balancing-score, @thm-rosenbaum-rubin, @thm-ps-sufficiency |
+| `PropensityScore.v` (2) | `propensity_score_range`, `propensity_score_is_balancing` (Rosenbaum-Rubin 1), `propensity_score_sufficiency_discrete` (Rosenbaum-Rubin 3) | @def-propensity-score, @thm-rosenbaum-rubin, @thm-ps-sufficiency |
+| `IPWEstimator.v` (3) | `mu1_IPW_unbiased`, `ATE_IPW_unbiased`, `ESS_variance_bound`, `IPW_bias_formula` | @thm-ipw-unbiased, @prp-ipw-variance |
+| `OutcomeRegression.v` (3) | `ATE_as_averaged_CATE`, `mu1_OR_unbiased`, `ATE_OR_unbiased`, `OR_bias_formula` | @thm-g-computation-unbiased |
+| `DoublyRobust.v` (3) | `AIPW1_pointwise`, `double_robustness`, `ATE_AIPW_double_robust` | @lem-aipw-pointwise, @thm-aipw-double-robust |
+| `MAIC.v` (4) | `maic_weight_fn`, `maic_weight_pos`, `two_mul_le_sqr`, `cauchy_schwarz_ones`, `ESS_upper_bound` | @thm-maic-exponential-weights, @def-maic-ess, @thm-maic-ess-bound |
+| `STC.v` (4) | `STC_marginal`, `STC_collapse_linear`, `STC_consistent` | @thm-marginal-stc-unbiased, @prp-stc-linear-collapse, @def-collapsibility, @def-non-collapsibility |
+| `Comparison.v` (4) | `methods_agree_when_correct`, `MAIC_robust_to_outcome_model`, `STC_robust_to_poor_overlap`, `MAIC_variance_inflation_ge1` | @cor-maic-stc-agree, @thm-maic-variance-inflation |
+| `Bucher.v` (5) | `transitivity`, `transitivity_subtract`, `bucher_identity`, `bucher_unbiased`, `bucher_variance` | @def-transitivity, @prp-transitivity-consistency, @prp-bucher-identity, @thm-bucher-unbiased, @thm-bucher-variance |
+| `EffectModifiers.v` (5) | `not_EM`, `not_PV_for_A`, `anchored_PV_cancellation`, `not_EM_does_not_imply_not_PV`, `anchored_unbiased` | @def-effect-modifier, @def-prognostic-variable, @thm-emcoll-em-pv-distinct, @lem-emcoll-anchored-cancellation, @lem-pat-pv-cancellation, @cor-pat-anchored-algebra |
+
+: The fifteen source files of `theories/`, with headline results and the book slugs they machine-check.
+Phase numbers are from @sec-coqread-deporder. {#tbl-coqread-files}
+
+Read this as a route, not only an index. If your aim is ITC intuition rather than the measure-theoretic
+core, take the files in increasing order of difficulty and centrality, not in `_CoqProject` order. Start
+with `Bucher.v` (the worked example above; it depends only on Phase 1). Then read `EffectModifiers.v`,
+which has the same light dependencies and is closer to the heart of population adjustment, since it is
+where the distinction between effect modifiers and prognostic variables is made precise. Then `MAIC.v`
+and `STC.v`, the two population-adjustment methods, and `Comparison.v`, which contrasts them. Defer
+`ConditionalIndep.v`, `BalancingScore.v`, and `PropensityScore.v` until the causal-inference concepts of
+Chapters 9 and 10 are secure; they are the technical foundation but the steepest reading. The estimator
+files `IPWEstimator.v`, `OutcomeRegression.v`, and `DoublyRobust.v` are most rewarding after Chapter 10.
+A reader who only wants to confirm the headline indirect-comparison results can stop after `Bucher.v`,
+`MAIC.v`, and `EffectModifiers.v`.
+
+## Notes and references {#sec-coqread-notes}
+
+This appendix is the hands-on companion to Chapter 30, which gives the conceptual account of the
+formalization: what a proof assistant does and does not certify (@sec-coq-guarantees), the proof-status
+tiers (@def-coq-proof-status), the active axioms and why they are benign (@def-active-axioms), the
+named-hypothesis boundary and the discrete model (@sec-coq-boundary), and the full book-to-Coq map
+(@sec-coq-map). The worked example of @sec-coq-worked traces the effective-sample-size bound to the
+kernel; the complementary worked example here (@sec-coqread-bucher) reads the Bucher unbiasedness proof
+line by line, since `Bucher.v` is the file that established the abstract-operator pattern and depends only
+on the Phase 1 foundations.
+
+All file names, module paths, build commands, and Coq lemma names were read from the ITC_Coq repository
+(`_CoqProject`, `Makefile`, `theories/AXIOMS.md`, and the fifteen `theories/*.v` files) and from the
+project `README`. The toolchain versions are those declared there: Coq (Rocq Prover) 9.1 or later,
+mathcomp-ssreflect 2.0 or later, mathcomp-analysis 1.9 or later, and Hierarchy Builder 1.6 or later, with
+the development checked under the Rocq Prover 9.1.0. The opam workflow is the standard installation route
+for the Coq ecosystem.
+
+The mathematics formalized in the tree is attributed in its home chapters: the potential-outcomes
+calculus and the g-formula in the tradition surveyed by @hernan2020whatif; the propensity score and the
+balancing theorems to @rosenbaum1983; inverse probability weighting and doubly robust estimation to
+@robins1994 and @bangrobins2005; the indirect comparison to @bucher1997; matching-adjusted indirect
+comparison to @signorovitch2010maic, with the effective-sample-size formula and its bound as Eq. (6.1) of
+@phillippo2019thesis; and simulated treatment comparison to @caro2010stc. The placement of all of this
+within the population-adjustment framework follows @phillippo2019thesis. There is no machine-checked
+counterpart for this appendix itself; it is a guide to running and reading the proofs that machine-check
+the results tagged throughout the book.
+
+**Where to go next.** Once you can read `Bucher.v`, the natural progression stays within the
+light-dependency files before touching the measure-theoretic core: `EffectModifiers.v` next, for the
+effect-modifier versus prognostic-variable algebra that underlies every population-adjustment method,
+then `MAIC.v`, the first file that puts the abstract `E` and an abstract `Var` to work together on the
+effective-sample-size bound. From there the reading route of @sec-coqread-files orders the remaining
+files by difficulty. The conceptual counterpart to all of this remains Chapter 30: this appendix teaches
+you to verify and read the proofs on your own machine, while @sec-coq-map records, theorem by theorem,
+what each of them certifies.

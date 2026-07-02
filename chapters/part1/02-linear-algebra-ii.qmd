@@ -1,0 +1,1544 @@
+---
+title: "Linear Algebra II: Orthogonality and the Projection Theorem"
+---
+
+## Why orthogonality is the engine of indirect comparison {#sec-ortho-intro}
+
+Almost every method in this book ends, at its computational core, in a least-squares problem: fit a
+linear or generalized-linear model to data, read off a contrast of coefficients, and propagate its
+uncertainty. Simulated treatment comparison (STC) fits an outcome regression and predicts into a target
+population; multilevel network meta-regression (ML-NMR) fits a shared regression across studies;
+matching-adjusted indirect comparison (MAIC) reweights one trial so that its covariate moments match
+another, which is again a constrained least-squares idea in disguise. Underneath all of them sits one
+geometric fact: the best approximation of a data vector by the vectors a model can produce is the
+*orthogonal projection* of the data onto the model's column space, and the error of that approximation
+is orthogonal to everything the model can explain.
+
+This chapter develops that fact from the ground up. Chapter 1 gave us vector spaces, linear maps, the
+column space @def-column-space, and the rank-nullity theorem @thm-rank-nullity. Here we add *length* and
+*angle* through an inner product, prove the two inequalities that make geometry work (Cauchy-Schwarz and
+the triangle inequality), and build orthonormal bases with the Gram-Schmidt process. The centerpiece is
+the **projection theorem** @thm-projection-theorem: in a finite-dimensional subspace there is a unique
+closest point to any target vector, and it is characterized by the residual being orthogonal to the
+subspace. From this single theorem we derive the **normal equations** @thm-normal-equations-geometry,
+the algebraic identity that Chapter 6 turns into the ordinary-least-squares estimator, and the **QR
+factorization** @thm-qr, the numerically sound way software actually solves them. Every result that
+later chapters lean on is proved here in full.
+
+### Typeface conventions and symbols recalled from Chapter 1
+
+Throughout, vectors are bold lowercase ($\mathbf{u},\mathbf{v},\mathbf{q}$). For matrices we follow two
+typeface conventions of [Notation](/notation.qmd), and it is worth fixing them now because both kinds
+can appear on the same line later. A matrix that holds data or model structure is **bold uppercase**
+($\mathbf{A},\mathbf{Q},\mathbf{R},\mathbf{X}$). A matrix whose job is to *act on* vectors as an operator
+is set in **light (non-bold) uppercase** ($I_n$ the identity, $P_{\mathcal{M}}$ a projection, $H$ the hat
+matrix). For example, in the hat matrix $H=\mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$ the
+data matrix $\mathbf{X}$ is bold while the operator it builds, $H$, is light. A quick test settles every
+case: if you could fill the entries from a spreadsheet of patients and covariates, the matrix is bold; if
+its entire purpose is to turn one vector into another, it is light.
+
+| Typeface | Symbols | What the matrix is |
+|---|---|---|
+| **Bold** uppercase | $\mathbf{A},\ \mathbf{X},\ \mathbf{Q},\ \mathbf{R}$ | data or factor matrices; entries come from a dataset or a factorization |
+| Light uppercase | $I_n,\ P_{\mathcal{M}},\ H,\ M$ | operator matrices; they map vectors to vectors |
+
+We work over the real field $\mathbb{R}$ throughout. This chapter also reuses five symbols from Chapter 1.
+Here is a one-line reminder of each; if any is unfamiliar, the cross-reference points to its full
+definition, and you do not need anything else from Chapter 1 to read on.
+
+| Symbol | Read as | Meaning (from Chapter 1) |
+|---|---|---|
+| $\operatorname{span}(S)$ | "span of $S$" | all linear combinations of the vectors in $S$ |
+| $\operatorname{rank}(\mathbf{A})$ | "rank of $\mathbf{A}$" | the number of linearly independent columns of $\mathbf{A}$ (@thm-rank-nullity) |
+| $\mathcal{C}(\mathbf{A})$ | "column space of $\mathbf{A}$" | all vectors $\mathbf{A}\mathbf{x}$: everything the columns can build (@def-column-space) |
+| $\mathcal{N}(\mathbf{A})$ | "null space of $\mathbf{A}$" | all $\mathbf{x}$ with $\mathbf{A}\mathbf{x}=\mathbf{0}$ (@thm-rank-nullity) |
+| $\dim\mathcal{M}$ | "dimension of $\mathcal{M}$" | the number of vectors in any basis of the subspace $\mathcal{M}$ |
+
+### A trial we will carry through the chapter
+
+The next three sections build a small vocabulary: length, angle, perpendicularity, and a way to
+manufacture perpendicular reference directions. The single purpose of that vocabulary is to make the
+phrase "the prediction closest to the data" mean something exact. To keep that goal in sight, we open
+with a concrete trial and return to it after every new tool, finishing it once the projection theorem is
+in hand.
+
+::: {#exm-two-arm-running}
+## A two-arm trial we will carry through the chapter
+Four patients enter a trial; the first two receive control and the last two receive the active treatment.
+Their outcomes (say a symptom score, where higher is worse) are
+$$
+\mathbf{y}=(1,\,3,\,6,\,8)^\top .
+$$
+A model that allows a separate mean in each arm has the design matrix of Chapter 1's @exm-design-matrix:
+an intercept column $\mathbf{1}_4=(1,1,1,1)^\top$ and a treatment indicator $\mathbf{t}=(0,0,1,1)^\top$,
+$$
+\mathbf{X}=\begin{pmatrix}1&0\\1&0\\1&1\\1&1\end{pmatrix},
+\qquad
+\boldsymbol\beta=\begin{pmatrix}\beta_0\\\beta_1\end{pmatrix},
+\qquad
+\mathbf{X}\boldsymbol\beta=\begin{pmatrix}\beta_0\\\beta_0\\\beta_0+\beta_1\\\beta_0+\beta_1\end{pmatrix}.
+$$
+Every prediction the model can make is *constant within each arm*: control patients all receive $\beta_0$,
+treated patients all receive $\beta_0+\beta_1$. The set of all such prediction vectors is exactly the
+column space $\mathcal{C}(\mathbf{X})$ of Chapter 1, the "vectors the model can produce."
+
+The data $\mathbf{y}=(1,3,6,8)^\top$ is **not** constant within each arm, so no choice of
+$\boldsymbol\beta$ reproduces it exactly. The question this chapter answers is: among all constant-within-arm
+prediction vectors, which one is *closest* to $\mathbf{y}$, and how would we recognize it? Intuition says
+"use each arm's average," giving control mean $2$ and treated mean $7$, hence the prediction
+$(2,2,7,7)^\top$ and an estimated treatment effect $\hat\beta_1=7-2=5$. We will not assume this. We will
+prove that the arm means are the unique closest prediction, that the leftover errors $(-1,1,-1,1)^\top$
+are perpendicular to everything the model can produce, and that this perpendicularity is the same
+statement as the familiar fact that least-squares residuals sum to zero within each group. Each section
+advances this example one step; @sec-normal-equations finishes it. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**A picture to hold onto (in place of a figure).** Throughout the chapter, keep this mental image. The
+data vector $\mathbf{v}$ is a point in space. The model's reachable predictions $\mathcal{M}$ form a flat
+sheet through the origin: a line, a plane, or a higher-dimensional flat. The best prediction is the point
+of the sheet directly "below" $\mathbf{v}$, reached by dropping a perpendicular from $\mathbf{v}$ to the
+sheet. The perpendicular segment is the residual; the foot of the perpendicular is the fitted value.
+Every theorem in this chapter is a precise statement about that perpendicular drop. The book targets a
+portable PDF engine, so figures are described in words rather than drawn; the numerical examples are
+chosen so you can sketch each picture yourself. $\blacktriangleleft$
+:::
+
+## Inner product spaces and norms {#sec-ip-spaces}
+
+An abstract vector space in the sense of @def-vector-space has addition and scaling but no notion of
+length or perpendicularity. An inner product supplies both. We front-load three definitions and two
+inequalities here; to keep them from feeling weightless, the section ends with a numerical example
+(@exm-weighted-angle) showing that "perpendicular" depends on which inner product you choose, the very
+idea that underlies MAIC's matching geometry.
+
+::: {#def-inner-product}
+## Inner product space
+Let $V$ be a vector space over $\mathbb{R}$. An **inner product** on $V$ is a map
+$\langle\cdot,\cdot\rangle:V\times V\to\mathbb{R}$ such that for all $\mathbf{u},\mathbf{v},\mathbf{w}\in V$
+and all $a,b\in\mathbb{R}$:
+
+1. *(Symmetry)* $\langle\mathbf{u},\mathbf{v}\rangle=\langle\mathbf{v},\mathbf{u}\rangle$;
+2. *(Linearity in the first argument)*
+   $\langle a\mathbf{u}+b\mathbf{v},\mathbf{w}\rangle=a\langle\mathbf{u},\mathbf{w}\rangle+b\langle\mathbf{v},\mathbf{w}\rangle$;
+3. *(Positive definiteness)* $\langle\mathbf{u},\mathbf{u}\rangle\ge 0$, with equality if and only if
+   $\mathbf{u}=\mathbf{0}$.
+
+A real vector space carrying an inner product is an **inner product space**. By symmetry, linearity holds
+in the second argument as well, so $\langle\cdot,\cdot\rangle$ is **bilinear**, meaning linear in each
+slot separately when the other slot is held fixed.
+:::
+
+**Reader translation.** An inner product is a numerical "agreement meter" between two vectors: large and
+positive when they point the same way, zero when they are perpendicular, negative when they oppose. It is
+the single extra ingredient that turns a bare vector space into one with lengths and angles, and therefore
+with a meaningful notion of "closest." For data, $\langle\mathbf{x},\mathbf{y}\rangle$ is the engine behind
+correlations, residual checks, and least squares.
+
+The motivating example, and the default of [Notation](/notation.qmd), is the Euclidean inner product on
+$\mathbb{R}^n$, namely $\langle\mathbf{x},\mathbf{y}\rangle=\mathbf{x}^\top\mathbf{y}=\sum_{i=1}^n x_iy_i$.
+Axioms (1) and (2) are immediate from the algebra of the transpose, and (3) holds because
+$\mathbf{x}^\top\mathbf{x}=\sum_i x_i^2\ge 0$ vanishes only when every $x_i=0$.
+
+::: {.remark}
+**Weighted inner products and the Mahalanobis distance.** This is the most ITC-relevant idea in the
+section, so we develop it slowly. Call a symmetric matrix $A\in\mathbb{R}^{n\times n}$ **positive
+definite**, written $A\succ 0$, when $\mathbf{x}^\top A\,\mathbf{x}>0$ for every $\mathbf{x}\ne\mathbf{0}$;
+the full theory of such matrices is the business of Chapter 3 (@thm-pd-characterization), but that
+one-line definition is all we need here. For such an $A$, the map
+$\langle\mathbf{x},\mathbf{y}\rangle_A:=\mathbf{x}^\top A\,\mathbf{y}$ is an inner product: symmetry uses
+$A^\top=A$, bilinearity is clear, and positive definiteness is exactly $\mathbf{x}^\top A\,\mathbf{x}>0$
+for $\mathbf{x}\ne\mathbf{0}$. Its induced norm is the **quadratic-form norm**
+$\|\mathbf{x}\|_A=\sqrt{\mathbf{x}^\top A\,\mathbf{x}}$ of [Notation](/notation.qmd), so called because
+$\mathbf{x}^\top A\,\mathbf{x}$ is a degree-two polynomial (a quadratic form) in the entries of
+$\mathbf{x}$.
+
+Taking $A=\boldsymbol{\Sigma}^{-1}$, the inverse covariance of a covariate distribution, gives the
+**Mahalanobis distance**. In plain terms, the Mahalanobis distance of a patient's covariate vector from
+the average patient measures how far that patient is from the center *in standard-deviation-like units*,
+after accounting for how spread out and how correlated the covariates are. A direction in which the
+population naturally varies a great deal is down-weighted (a large gap there is unremarkable); a direction
+in which patients barely vary is up-weighted (a small gap there is striking). Concretely, suppose age
+varies widely across a trial but a biomarker barely varies. Two patients who differ by ten years of age
+but share the biomarker are close in Mahalanobis distance, because age scatter is expected; two patients
+of the same age who differ sharply on the biomarker are far, because biomarker scatter is not. This is the
+geometry that MAIC uses to decide which trial population a reweighted sample resembles, developed in
+Part IV, and that the distance-matching methods of Part VI reuse. Everything proved in this chapter for a
+general inner product applies verbatim to these weighted geometries. $\blacktriangleleft$
+:::
+
+A norm records the length of a vector. We define it abstractly, then attach one to every inner product.
+
+::: {#def-norm}
+## Norm and induced norm
+A **norm** on a real vector space $V$ is a function $\|\cdot\|:V\to\mathbb{R}$ satisfying, for all
+$\mathbf{u},\mathbf{v}\in V$ and $a\in\mathbb{R}$:
+
+1. *(Positivity)* $\|\mathbf{u}\|\ge 0$, with equality if and only if $\mathbf{u}=\mathbf{0}$;
+2. *(Absolute homogeneity)* $\|a\mathbf{u}\|=|a|\,\|\mathbf{u}\|$;
+3. *(Triangle inequality)* $\|\mathbf{u}+\mathbf{v}\|\le\|\mathbf{u}\|+\|\mathbf{v}\|$.
+
+The **norm induced** by an inner product is $\|\mathbf{u}\|:=\sqrt{\langle\mathbf{u},\mathbf{u}\rangle}$, which
+is well defined because $\langle\mathbf{u},\mathbf{u}\rangle\ge 0$.
+:::
+
+**Reader translation.** A norm is just "length." The induced norm measures a vector's length as the square
+root of its inner product with itself, so $\|\mathbf{v}-\mathbf{m}\|$ is the straight-line distance from
+the data $\mathbf{v}$ to a candidate prediction $\mathbf{m}$. Minimizing that distance over all candidate
+predictions is precisely least squares.
+
+The induced norm satisfies (1) and (2) at once: positivity is axiom (3) of @def-inner-product, and
+$\|a\mathbf{u}\|=\sqrt{\langle a\mathbf{u},a\mathbf{u}\rangle}=\sqrt{a^2\langle\mathbf{u},\mathbf{u}\rangle}
+=|a|\,\|\mathbf{u}\|$ by bilinearity. The triangle inequality is the only property requiring work, and it
+follows from the single most important inequality in the subject.
+
+::: {#thm-cauchy-schwarz-ip}
+## Cauchy-Schwarz inequality
+For all vectors $\mathbf{u},\mathbf{v}$ in an inner product space,
+$$
+|\langle\mathbf{u},\mathbf{v}\rangle|\le\|\mathbf{u}\|\,\|\mathbf{v}\|,
+$$ {#eq-cauchy-schwarz}
+with equality if and only if $\mathbf{u}$ and $\mathbf{v}$ are linearly dependent.
+:::
+
+The idea of the proof is worth stating before the symbols arrive. The quantity
+$\|\mathbf{u}-t\mathbf{v}\|^2$ can never be negative, so as a quadratic in the real variable $t$ it cannot
+dip below zero; a parabola opening upward that never goes negative has discriminant at most zero, and that
+discriminant turns out to be exactly the Cauchy-Schwarz inequality. The proof below makes that precise by
+plugging in the value of $t$ that minimizes the quadratic.
+
+::: {.proof}
+If $\mathbf{v}=\mathbf{0}$ then both sides equal $0$, and the pair $\{\mathbf{u},\mathbf{0}\}$ is linearly
+dependent, so the statement holds. Assume $\mathbf{v}\ne\mathbf{0}$, so $\|\mathbf{v}\|^2>0$. For every
+$t\in\mathbb{R}$, positive definiteness gives
+$$
+0\le\|\mathbf{u}-t\mathbf{v}\|^2
+=\langle\mathbf{u}-t\mathbf{v},\,\mathbf{u}-t\mathbf{v}\rangle
+=\|\mathbf{u}\|^2-2t\langle\mathbf{u},\mathbf{v}\rangle+t^2\|\mathbf{v}\|^2,
+$$
+where the expansion uses bilinearity and symmetry. The right-hand side is a quadratic in $t$ with
+positive leading coefficient. Differentiating it with respect to $t$ and setting the derivative
+$-2\langle\mathbf{u},\mathbf{v}\rangle+2t\|\mathbf{v}\|^2$ to zero shows it is minimized at
+$t^\star=\langle\mathbf{u},\mathbf{v}\rangle/\|\mathbf{v}\|^2$. Substituting $t^\star$ gives
+$$
+0\le\|\mathbf{u}\|^2-\frac{\langle\mathbf{u},\mathbf{v}\rangle^2}{\|\mathbf{v}\|^2},
+$$
+which rearranges to $\langle\mathbf{u},\mathbf{v}\rangle^2\le\|\mathbf{u}\|^2\|\mathbf{v}\|^2$. Taking
+nonnegative square roots yields @eq-cauchy-schwarz.
+
+For the equality case, the inequality above is an equality exactly when
+$\|\mathbf{u}-t^\star\mathbf{v}\|^2=0$, that is, by positive definiteness, when
+$\mathbf{u}=t^\star\mathbf{v}$; then $\mathbf{u}$ and $\mathbf{v}$ are linearly dependent. Conversely, if
+they are dependent and $\mathbf{v}\ne\mathbf{0}$, then $\mathbf{u}=c\mathbf{v}$ for some scalar $c$, and
+both sides of @eq-cauchy-schwarz equal $|c|\,\|\mathbf{v}\|^2$. $\square$
+:::
+
+**Why this matters.** Cauchy-Schwarz is the guardrail that makes "angle" and "distance" behave. Without
+it the cosine defined in the next section could exceed $1$, and the triangle inequality (hence the very
+word "norm," hence the meaning of "closest point") would fail. Every least-squares, MAIC-balancing, and
+distance-matching argument in this book silently relies on having a genuine norm, which is what this one
+inequality secures.
+
+::: {#cor-triangle-inequality}
+## Triangle inequality
+For all $\mathbf{u},\mathbf{v}$ in an inner product space,
+$\|\mathbf{u}+\mathbf{v}\|\le\|\mathbf{u}\|+\|\mathbf{v}\|$. Consequently the induced norm of @def-norm is a
+genuine norm.
+:::
+
+::: {.proof}
+Expanding and applying @thm-cauchy-schwarz-ip to the cross term,
+$$
+\|\mathbf{u}+\mathbf{v}\|^2
+=\|\mathbf{u}\|^2+2\langle\mathbf{u},\mathbf{v}\rangle+\|\mathbf{v}\|^2
+\le\|\mathbf{u}\|^2+2\|\mathbf{u}\|\,\|\mathbf{v}\|+\|\mathbf{v}\|^2
+=\bigl(\|\mathbf{u}\|+\|\mathbf{v}\|\bigr)^2 .
+$$
+Both sides are nonnegative, so taking square roots gives the triangle inequality. Together with the
+positivity and homogeneity noted after @def-norm, this shows the induced norm satisfies all three norm
+axioms. $\square$
+:::
+
+**Picture in words.** Draw the vector $\mathbf{u}$, then draw $\mathbf{v}$ starting where $\mathbf{u}$
+ends. The single arrow from the start of $\mathbf{u}$ to the tip of $\mathbf{v}$ is $\mathbf{u}+\mathbf{v}$.
+The triangle inequality says the direct route ($\|\mathbf{u}+\mathbf{v}\|$) is never longer than the
+two-leg detour ($\|\mathbf{u}\|+\|\mathbf{v}\|$): a straight line is the shortest path. When the two legs
+are perpendicular the triangle is a right triangle, and the inequality becomes the Pythagorean equality of
+@thm-pythagoras below.
+
+A useful corollary of homogeneity is the *reverse triangle inequality*
+$\bigl|\,\|\mathbf{u}\|-\|\mathbf{v}\|\,\bigr|\le\|\mathbf{u}-\mathbf{v}\|$, obtained by applying
+@cor-triangle-inequality to $\mathbf{u}=(\mathbf{u}-\mathbf{v})+\mathbf{v}$ and symmetrically; we record it
+for later use without separate proof.
+
+We can now make the promise of the section concrete: which vectors count as "perpendicular" depends on the
+inner product, not on the vectors alone.
+
+::: {#exm-weighted-angle}
+## Perpendicular depends on the inner product
+Work in $\mathbb{R}^2$ and compare the Euclidean inner product with the weighted one
+$\langle\mathbf{x},\mathbf{y}\rangle_A=\mathbf{x}^\top A\,\mathbf{y}$ for the positive definite diagonal
+matrix
+$$
+A=\begin{pmatrix}2&0\\0&1\end{pmatrix}.
+$$
+Take $\mathbf{x}=(1,1)^\top$ and $\mathbf{y}=(1,-1)^\top$. Under the Euclidean inner product
+$\langle\mathbf{x},\mathbf{y}\rangle=1\cdot1+1\cdot(-1)=0$, so the two vectors are perpendicular: the
+Euclidean angle is $90^\circ$. Under the weighted inner product,
+$$
+\langle\mathbf{x},\mathbf{y}\rangle_A=\mathbf{x}^\top A\,\mathbf{y}
+=(1,1)\begin{pmatrix}2&0\\0&1\end{pmatrix}\begin{pmatrix}1\\-1\end{pmatrix}
+=(1,1)\begin{pmatrix}2\\-1\end{pmatrix}=2-1=1\ne 0,
+$$
+so they are *not* perpendicular in the weighted geometry. Their weighted lengths are
+$\|\mathbf{x}\|_A=\sqrt{2+1}=\sqrt3$ and $\|\mathbf{y}\|_A=\sqrt{2+1}=\sqrt3$, so the weighted angle
+$\vartheta_A$ satisfies $\cos\vartheta_A=1/(\sqrt3\cdot\sqrt3)=\tfrac13$, about $70.5^\circ$. Reweighting
+the first coordinate (here doubling its importance) literally bends the angles. This is exactly what a
+covariance weighting does in MAIC and in Mahalanobis matching: it changes which patients count as "close"
+and which directions of difference count as "large." $\blacktriangleleft$
+:::
+
+## Orthogonality and orthonormal sets {#sec-orthonormal}
+
+*ITC connection.* The orthonormal directions built in this section and the next are the reference axes in
+which the regression and matching solves of Parts IV and V become numerically stable; the same directions
+make a vector's coordinates trivial to read off.
+
+Cauchy-Schwarz lets us define the angle $\vartheta$ between nonzero vectors by
+$\cos\vartheta=\langle\mathbf{u},\mathbf{v}\rangle/(\|\mathbf{u}\|\,\|\mathbf{v}\|)$. This definition makes
+sense precisely because @thm-cauchy-schwarz-ip guarantees the ratio lies in $[-1,1]$: indeed
+$|\langle\mathbf{u},\mathbf{v}\rangle|\le\|\mathbf{u}\|\,\|\mathbf{v}\|$ is the statement that the ratio is
+between $-1$ and $1$, so its arccosine $\vartheta$ exists. The single most useful angle is the right
+angle.
+
+::: {#def-orthogonality}
+## Orthogonality
+Two vectors are **orthogonal**, written $\mathbf{u}\perp\mathbf{v}$, when
+$\langle\mathbf{u},\mathbf{v}\rangle=0$. A set $S\subseteq V$ is **orthogonal** when its elements are
+pairwise orthogonal, and **orthonormal** when additionally every element has unit norm, that is,
+$\langle\mathbf{q}_i,\mathbf{q}_j\rangle=\delta_{ij}$ for the members $\mathbf{q}_i$ of $S$, where
+$\delta_{ij}=1$ if $i=j$ and $\delta_{ij}=0$ otherwise (the **Kronecker delta**). A vector is orthogonal to
+a subspace $\mathcal{M}$, written $\mathbf{u}\perp\mathcal{M}$, when $\mathbf{u}\perp\mathbf{m}$ for every
+$\mathbf{m}\in\mathcal{M}$.
+:::
+
+**Reader translation.** Orthogonal means perpendicular: a zero inner product. An orthonormal set is a
+collection of perpendicular unit-length directions, the cleanest possible reference frame. For data, a
+residual being orthogonal to the model will mean the error carries no pattern the model could have used,
+which is exactly the optimality condition for least squares.
+
+::: {#thm-pythagoras}
+## Pythagorean theorem
+If $\mathbf{u}\perp\mathbf{v}$ then $\|\mathbf{u}+\mathbf{v}\|^2=\|\mathbf{u}\|^2+\|\mathbf{v}\|^2$. More
+generally, if $\mathbf{u}_1,\dots,\mathbf{u}_k$ are pairwise orthogonal, then
+$$
+\Bigl\|\sum_{i=1}^k\mathbf{u}_i\Bigr\|^2=\sum_{i=1}^k\|\mathbf{u}_i\|^2.
+$$ {#eq-pythagoras}
+:::
+
+::: {.proof}
+By bilinearity, $\bigl\|\sum_i\mathbf{u}_i\bigr\|^2=\sum_{i}\sum_{j}\langle\mathbf{u}_i,\mathbf{u}_j\rangle$.
+Every term with $i\ne j$ vanishes by pairwise orthogonality, leaving
+$\sum_i\langle\mathbf{u}_i,\mathbf{u}_i\rangle=\sum_i\|\mathbf{u}_i\|^2$. $\square$
+:::
+
+**Why this matters.** Squared lengths of mutually perpendicular pieces simply add. This is the engine
+behind "total variation = explained variation + unexplained variation," the decomposition that defines
+$R^2$ in Chapter 6 and that the projection theorem will deliver for free.
+
+Orthonormality is a strong form of independence and makes coordinates trivial to read off.
+
+::: {#lem-orthonormal-independent}
+## Orthonormal sets are linearly independent
+Every orthonormal set $\{\mathbf{q}_1,\dots,\mathbf{q}_k\}$ is linearly independent.
+:::
+
+::: {.proof}
+Suppose $\sum_{i=1}^k c_i\mathbf{q}_i=\mathbf{0}$. Taking the inner product of both sides with
+$\mathbf{q}_j$ and using $\langle\mathbf{q}_i,\mathbf{q}_j\rangle=\delta_{ij}$ gives
+$0=\sum_i c_i\langle\mathbf{q}_i,\mathbf{q}_j\rangle=c_j$. As $j$ was arbitrary, every $c_j=0$. $\square$
+:::
+
+::: {#prp-orthonormal-coordinates}
+## Coordinates in an orthonormal basis
+Let $\{\mathbf{q}_1,\dots,\mathbf{q}_k\}$ be an orthonormal basis of a subspace $\mathcal{M}$. Then every
+$\mathbf{m}\in\mathcal{M}$ satisfies
+$$
+\mathbf{m}=\sum_{i=1}^k\langle\mathbf{m},\mathbf{q}_i\rangle\,\mathbf{q}_i,
+\qquad
+\|\mathbf{m}\|^2=\sum_{i=1}^k\langle\mathbf{m},\mathbf{q}_i\rangle^2 .
+$$ {#eq-parseval}
+:::
+
+::: {.proof}
+Because $\{\mathbf{q}_i\}$ is a basis of $\mathcal{M}$, write $\mathbf{m}=\sum_i c_i\mathbf{q}_i$ for unique
+scalars $c_i$. Taking the inner product with $\mathbf{q}_j$ gives
+$\langle\mathbf{m},\mathbf{q}_j\rangle=\sum_i c_i\langle\mathbf{q}_i,\mathbf{q}_j\rangle=c_j$, which is the
+first identity. The second (Parseval's identity) is the Pythagorean theorem @thm-pythagoras applied to the
+pairwise orthogonal vectors $c_i\mathbf{q}_i$, using $\|c_i\mathbf{q}_i\|^2=c_i^2$. $\square$
+:::
+
+**Reader translation.** In an orthonormal basis the coordinate of $\mathbf{m}$ along direction
+$\mathbf{q}_i$ is nothing more than the inner product $\langle\mathbf{m},\mathbf{q}_i\rangle$: no linear
+system to solve, just one dot product per axis. That is what "orthonormality makes coordinates trivial to
+read off" means, and it is why software prefers orthonormal bases when fitting models.
+
+## The Gram-Schmidt process {#sec-gram-schmidt}
+
+*ITC connection.* MAIC and ML-NMR both fit models by solving normal equations; the orthonormal basis built
+here is what lets software solve those equations stably, through the QR factorization of @sec-qr.
+
+The coordinate formulas above presuppose an orthonormal basis. Gram-Schmidt manufactures one from any
+linearly independent list, one vector at a time, by subtracting off the part already explained. The single
+sentence to keep in mind: at each step we take the next input vector and remove its shadow on the
+directions already built, leaving a piece that points in a genuinely new direction.
+
+::: {#thm-gram-schmidt}
+## Gram-Schmidt orthonormalization
+Let $\mathbf{a}_1,\dots,\mathbf{a}_p$ be linearly independent vectors in an inner product space. Define
+recursively
+$$
+\mathbf{u}_1=\mathbf{a}_1,
+\qquad
+\mathbf{u}_k=\mathbf{a}_k-\sum_{i=1}^{k-1}\frac{\langle\mathbf{a}_k,\mathbf{u}_i\rangle}{\langle\mathbf{u}_i,\mathbf{u}_i\rangle}\,\mathbf{u}_i
+\quad(2\le k\le p),
+\qquad
+\mathbf{q}_k=\frac{\mathbf{u}_k}{\|\mathbf{u}_k\|}.
+$$ {#eq-gram-schmidt}
+Then for every $k\in\{1,\dots,p\}$: $\mathbf{u}_k\ne\mathbf{0}$ (so $\mathbf{q}_k$ is defined),
+$\{\mathbf{q}_1,\dots,\mathbf{q}_k\}$ is orthonormal, and
+$\operatorname{span}\{\mathbf{q}_1,\dots,\mathbf{q}_k\}=\operatorname{span}\{\mathbf{a}_1,\dots,\mathbf{a}_k\}$.
+:::
+
+In words, each term in the sum subtracts the component of $\mathbf{a}_k$ already lying in the directions we
+have built: the fraction
+$\langle\mathbf{a}_k,\mathbf{u}_i\rangle/\langle\mathbf{u}_i,\mathbf{u}_i\rangle$ is exactly the amount of
+$\mathbf{u}_i$ contained in $\mathbf{a}_k$ (the coefficient of the projection of $\mathbf{a}_k$ onto
+$\mathbf{u}_i$). Removing all of those leaves $\mathbf{u}_k$ pointing in a direction orthogonal to
+everything before it; dividing by its length makes it a unit vector. Before the induction, it helps to run
+the recursion once on two vectors.
+
+::: {#exm-gs-two-vectors}
+## Gram-Schmidt on two vectors
+Take $\mathbf{a}_1=(3,0)^\top$ and $\mathbf{a}_2=(1,2)^\top$ in $\mathbb{R}^2$. Then
+$\mathbf{u}_1=\mathbf{a}_1=(3,0)^\top$ and $\mathbf{q}_1=\tfrac13(3,0)^\top=(1,0)^\top$. The amount of
+$\mathbf{u}_1$ inside $\mathbf{a}_2$ is
+$\langle\mathbf{a}_2,\mathbf{u}_1\rangle/\langle\mathbf{u}_1,\mathbf{u}_1\rangle=3/9=\tfrac13$, so
+$$
+\mathbf{u}_2=\mathbf{a}_2-\tfrac13\mathbf{u}_1=(1,2)^\top-\tfrac13(3,0)^\top=(0,2)^\top,
+$$
+and $\mathbf{q}_2=(0,1)^\top$. Geometrically we removed the horizontal shadow of $\mathbf{a}_2$, leaving
+its purely vertical part. One checks $\langle\mathbf{q}_1,\mathbf{q}_2\rangle=0$, as the theorem promises,
+and $\operatorname{span}\{\mathbf{q}_1,\mathbf{q}_2\}=\mathbb{R}^2=\operatorname{span}\{\mathbf{a}_1,\mathbf{a}_2\}$.
+$\blacktriangleleft$
+:::
+
+::: {.proof}
+We argue by strong induction on $k$, proving simultaneously the three claims labeled below:
+$\mathbf{u}_k\ne\mathbf{0}$ (nonzero); $\mathbf{u}_k\perp\mathbf{u}_j$ for all $j<k$ (orthogonal); and the
+span equality (span). The reader can follow one claim at a time; the induction hypothesis supplies all
+three claims for every index below $k$.
+
+*Base case $k=1$.* Linear independence forces $\mathbf{a}_1\ne\mathbf{0}$, so $\mathbf{u}_1=\mathbf{a}_1\ne\mathbf{0}$
+and $\mathbf{q}_1=\mathbf{u}_1/\|\mathbf{u}_1\|$ has unit norm. There are no pairs to check, and
+$\operatorname{span}\{\mathbf{q}_1\}=\operatorname{span}\{\mathbf{a}_1\}$ since the two vectors are nonzero
+scalar multiples of each other.
+
+*Inductive step.* Fix $k\ge 2$ and assume the three claims for all indices $<k$. By the induction
+hypothesis $\mathbf{u}_1,\dots,\mathbf{u}_{k-1}$ are nonzero and pairwise orthogonal, so the coefficients
+in @eq-gram-schmidt are well defined.
+
+**Claim 1 (nonzero): $\mathbf{u}_k\ne\mathbf{0}$.** If instead $\mathbf{u}_k=\mathbf{0}$, then
+@eq-gram-schmidt expresses $\mathbf{a}_k$ as a linear combination of $\mathbf{u}_1,\dots,\mathbf{u}_{k-1}$,
+hence of $\mathbf{a}_1,\dots,\mathbf{a}_{k-1}$ by the induction hypothesis on spans. That contradicts the
+linear independence of $\mathbf{a}_1,\dots,\mathbf{a}_k$. So $\mathbf{u}_k\ne\mathbf{0}$ and $\mathbf{q}_k$
+is defined with unit norm.
+
+**Claim 2 (orthogonal): $\mathbf{u}_k\perp\mathbf{u}_j$ for each $j<k$.** Using bilinearity and the
+orthogonality of $\mathbf{u}_1,\dots,\mathbf{u}_{k-1}$ from the induction hypothesis (so
+$\langle\mathbf{u}_i,\mathbf{u}_j\rangle=0$ whenever $i\ne j$ with $i,j<k$),
+$$
+\langle\mathbf{u}_k,\mathbf{u}_j\rangle
+=\langle\mathbf{a}_k,\mathbf{u}_j\rangle-\sum_{i=1}^{k-1}\frac{\langle\mathbf{a}_k,\mathbf{u}_i\rangle}{\langle\mathbf{u}_i,\mathbf{u}_i\rangle}\langle\mathbf{u}_i,\mathbf{u}_j\rangle
+=\langle\mathbf{a}_k,\mathbf{u}_j\rangle-\frac{\langle\mathbf{a}_k,\mathbf{u}_j\rangle}{\langle\mathbf{u}_j,\mathbf{u}_j\rangle}\langle\mathbf{u}_j,\mathbf{u}_j\rangle
+=0 .
+$$
+The only term of the sum that survives is the one with $i=j$, because every other inner product
+$\langle\mathbf{u}_i,\mathbf{u}_j\rangle$ (with $i\ne j$) is zero by the induction hypothesis; and that
+surviving term cancels $\langle\mathbf{a}_k,\mathbf{u}_j\rangle$ exactly. Dividing by the positive norms
+shows $\langle\mathbf{q}_k,\mathbf{q}_j\rangle=0$; with the unit-norm property this makes
+$\{\mathbf{q}_1,\dots,\mathbf{q}_k\}$ orthonormal.
+
+**Claim 3 (span): $\operatorname{span}\{\mathbf{q}_1,\dots,\mathbf{q}_k\}=\operatorname{span}\{\mathbf{a}_1,\dots,\mathbf{a}_k\}$.**
+From @eq-gram-schmidt, $\mathbf{u}_k$ is $\mathbf{a}_k$ plus a combination of
+$\mathbf{u}_1,\dots,\mathbf{u}_{k-1}$, and each $\mathbf{q}_i$ is a scalar multiple of $\mathbf{u}_i$;
+hence $\mathbf{u}_k\in\operatorname{span}\{\mathbf{a}_1,\dots,\mathbf{a}_k\}$ and
+$\mathbf{q}_k\in\operatorname{span}\{\mathbf{a}_1,\dots,\mathbf{a}_k\}$. Conversely, solving
+@eq-gram-schmidt for $\mathbf{a}_k$ shows $\mathbf{a}_k\in\operatorname{span}\{\mathbf{u}_1,\dots,\mathbf{u}_k\}
+=\operatorname{span}\{\mathbf{q}_1,\dots,\mathbf{q}_k\}$. Combined with the induction hypothesis
+$\operatorname{span}\{\mathbf{q}_1,\dots,\mathbf{q}_{k-1}\}=\operatorname{span}\{\mathbf{a}_1,\dots,\mathbf{a}_{k-1}\}$,
+both spanning sets contain each other's generators, so they are equal. This closes the induction. $\square$
+:::
+
+::: {.remark}
+The list $\mathbf{u}_1,\dots,\mathbf{u}_p$ produced before normalization is an *orthogonal* (not yet
+orthonormal) basis. In floating-point arithmetic the form in @eq-gram-schmidt loses orthogonality when
+the $\mathbf{a}_k$ are nearly dependent; the algebraically identical *modified* Gram-Schmidt, which
+subtracts each projection immediately as it is computed, is markedly more stable, as is the
+Householder approach to the QR factorization in @sec-qr. We prove the classical form because its induction
+is the most transparent, and because modified Gram-Schmidt produces the *same* vectors in exact
+arithmetic, this proof covers it as well. See @strang2016 for both. $\blacktriangleleft$
+:::
+
+::: {#cor-onb-exists}
+## Existence of orthonormal bases
+Every finite-dimensional inner product space, and every finite-dimensional subspace of an inner product
+space, has an orthonormal basis.
+:::
+
+::: {.proof}
+A finite-dimensional space (or subspace) has a basis $\mathbf{a}_1,\dots,\mathbf{a}_p$ by @def-basis.
+Applying @thm-gram-schmidt produces an orthonormal set $\{\mathbf{q}_1,\dots,\mathbf{q}_p\}$ with the same
+span. The set has $p=\dim$ elements and is linearly independent by @lem-orthonormal-independent, so it is
+a basis. $\square$
+:::
+
+## Orthogonal complement and orthogonal decomposition {#sec-orthogonal-complement}
+
+*ITC connection.* The residual of every regression in this book lives in an orthogonal complement; this
+section gives that "leftover space" its structure and ties it back to the four fundamental subspaces of
+Chapter 1.
+
+::: {#def-orthogonal-complement}
+## Orthogonal complement
+For a subset $S$ of an inner product space $V$, the **orthogonal complement** of $S$ is
+$$
+S^\perp=\{\mathbf{v}\in V:\langle\mathbf{v},\mathbf{s}\rangle=0\ \text{for all}\ \mathbf{s}\in S\}.
+$$ {#eq-orth-complement}
+:::
+
+**Reader translation.** $S^\perp$ (read "$S$ perp") is the set of all vectors perpendicular to everything
+in $S$. If $S$ is the set of predictions a model can make, then $S^\perp$ is the space of "directions the
+model cannot see," and the least-squares residual will live there.
+
+::: {#lem-complement-subspace}
+## Elementary properties of the complement
+Let $S,T\subseteq V$ and let $\mathcal{M}$ be a subspace. Then:
+
+1. $S^\perp$ is a subspace of $V$;
+2. $S^\perp=(\operatorname{span} S)^\perp$;
+3. if $S\subseteq T$ then $T^\perp\subseteq S^\perp$;
+4. $\mathcal{M}\cap\mathcal{M}^\perp=\{\mathbf{0}\}$.
+:::
+
+::: {.proof}
+(1) The zero vector lies in $S^\perp$ because $\langle\mathbf{0},\mathbf{s}\rangle=0$. If
+$\mathbf{v},\mathbf{w}\in S^\perp$ and $a,b\in\mathbb{R}$, then for every $\mathbf{s}\in S$,
+$\langle a\mathbf{v}+b\mathbf{w},\mathbf{s}\rangle=a\langle\mathbf{v},\mathbf{s}\rangle+b\langle\mathbf{w},\mathbf{s}\rangle=0$,
+so $a\mathbf{v}+b\mathbf{w}\in S^\perp$.
+
+(2) Since $S\subseteq\operatorname{span}S$, part (3) gives $(\operatorname{span}S)^\perp\subseteq S^\perp$.
+Conversely, if $\mathbf{v}\in S^\perp$ and $\mathbf{s}=\sum_i c_i\mathbf{s}_i$ is a combination of elements
+of $S$, then $\langle\mathbf{v},\mathbf{s}\rangle=\sum_i c_i\langle\mathbf{v},\mathbf{s}_i\rangle=0$, so
+$\mathbf{v}\in(\operatorname{span}S)^\perp$.
+
+(3) If $\mathbf{v}\perp T$ and $S\subseteq T$, then in particular $\mathbf{v}\perp S$.
+
+(4) If $\mathbf{v}\in\mathcal{M}\cap\mathcal{M}^\perp$, then $\mathbf{v}$ is orthogonal to itself, so
+$\|\mathbf{v}\|^2=\langle\mathbf{v},\mathbf{v}\rangle=0$, whence $\mathbf{v}=\mathbf{0}$ by positive
+definiteness. $\square$
+:::
+
+The next theorem is the structural heart of the chapter: a finite-dimensional subspace splits the whole
+space cleanly into itself and its complement.
+
+::: {#thm-orthogonal-decomposition}
+## Orthogonal decomposition
+Let $\mathcal{M}$ be a finite-dimensional subspace of an inner product space $V$. Then every
+$\mathbf{v}\in V$ admits a **unique** decomposition
+$$
+\mathbf{v}=\mathbf{m}+\mathbf{w},\qquad \mathbf{m}\in\mathcal{M},\ \ \mathbf{w}\in\mathcal{M}^\perp .
+$$ {#eq-orth-decomp}
+Equivalently, $V=\mathcal{M}\oplus\mathcal{M}^\perp$ (an internal direct sum).
+:::
+
+**Reader translation.** Every vector splits, in exactly one way, into an "explainable" part lying in
+$\mathcal{M}$ and a "leftover" part lying in $\mathcal{M}^\perp$, with no overlap between the two pieces.
+The symbol $\oplus$ (read "direct sum") records two facts at once: the two subspaces together span the
+whole space, and they meet only at $\mathbf{0}$. The word *internal* simply means the two pieces live
+inside the same space $V$ and add up to it, as opposed to being glued together from separate spaces; you
+do not need the external notion anywhere in this book. For a regression, the explainable part will be the
+fitted values and the leftover part the residual.
+
+::: {.proof}
+*Existence.* By @cor-onb-exists choose an orthonormal basis $\{\mathbf{q}_1,\dots,\mathbf{q}_k\}$ of
+$\mathcal{M}$. Set
+$$
+\mathbf{m}=\sum_{i=1}^k\langle\mathbf{v},\mathbf{q}_i\rangle\,\mathbf{q}_i\in\mathcal{M},
+\qquad
+\mathbf{w}=\mathbf{v}-\mathbf{m}.
+$$
+To see $\mathbf{w}\in\mathcal{M}^\perp$ it suffices, by @lem-complement-subspace(2), to check
+orthogonality against each basis vector $\mathbf{q}_j$:
+$$
+\langle\mathbf{w},\mathbf{q}_j\rangle
+=\langle\mathbf{v},\mathbf{q}_j\rangle-\sum_{i=1}^k\langle\mathbf{v},\mathbf{q}_i\rangle\langle\mathbf{q}_i,\mathbf{q}_j\rangle
+=\langle\mathbf{v},\mathbf{q}_j\rangle-\langle\mathbf{v},\mathbf{q}_j\rangle=0 .
+$$
+Thus $\mathbf{v}=\mathbf{m}+\mathbf{w}$ with $\mathbf{m}\in\mathcal{M}$ and $\mathbf{w}\in\mathcal{M}^\perp$.
+
+*Uniqueness.* Suppose $\mathbf{v}=\mathbf{m}+\mathbf{w}=\mathbf{m}'+\mathbf{w}'$ with
+$\mathbf{m},\mathbf{m}'\in\mathcal{M}$ and $\mathbf{w},\mathbf{w}'\in\mathcal{M}^\perp$. Then
+$\mathbf{m}-\mathbf{m}'=\mathbf{w}'-\mathbf{w}$. The left side lies in $\mathcal{M}$ and the right side in
+$\mathcal{M}^\perp$, so this common vector lies in $\mathcal{M}\cap\mathcal{M}^\perp=\{\mathbf{0}\}$ by
+@lem-complement-subspace(4). Hence $\mathbf{m}=\mathbf{m}'$ and $\mathbf{w}=\mathbf{w}'$. The two
+properties, $\mathcal{M}+\mathcal{M}^\perp=V$ and $\mathcal{M}\cap\mathcal{M}^\perp=\{\mathbf{0}\}$, are
+exactly the definition of the internal direct sum $V=\mathcal{M}\oplus\mathcal{M}^\perp$. $\square$
+:::
+
+**Why this matters.** This unique split is the abstract form of "data = fit + residual." Once we know the
+split exists and is unique, the projection theorem just identifies the fit as the closest point, and every
+later decomposition (explained versus unexplained variation, anchored versus unanchored contrasts) is a
+special case.
+
+::: {#exm-complement-r3}
+## A subspace and its complement, with numbers
+In $\mathbb{R}^3$ let $\mathcal{M}=\operatorname{span}\{\mathbf{e}_1,\mathbf{e}_2\}$ be the $xy$-plane.
+A vector is orthogonal to both $\mathbf{e}_1=(1,0,0)^\top$ and $\mathbf{e}_2=(0,1,0)^\top$ exactly when its
+first two entries vanish, so $\mathcal{M}^\perp=\operatorname{span}\{\mathbf{e}_3\}$ is the $z$-axis.
+Decompose $\mathbf{v}=(3,4,5)^\top$: its $\mathcal{M}$-part is $\mathbf{m}=(3,4,0)^\top$ and its
+$\mathcal{M}^\perp$-part is $\mathbf{w}=(0,0,5)^\top$. They are perpendicular, and the squared-length split
+of @thm-projection-theorem is visible already, $\|\mathbf{v}\|^2=9+16+25=50=25+25=\|\mathbf{m}\|^2+\|\mathbf{w}\|^2$.
+Here $\dim\mathcal{M}+\dim\mathcal{M}^\perp=2+1=3=\dim\mathbb{R}^3$, the dimension identity of the next
+corollary. $\blacktriangleleft$
+:::
+
+::: {#cor-complement-dimension}
+## Dimension and the double complement
+Let $\mathcal{M}$ be a subspace of a finite-dimensional inner product space $V$. Then
+$$
+\dim\mathcal{M}+\dim\mathcal{M}^\perp=\dim V,
+\qquad
+(\mathcal{M}^\perp)^\perp=\mathcal{M}.
+$$ {#eq-double-complement}
+:::
+
+::: {.proof}
+The direct sum $V=\mathcal{M}\oplus\mathcal{M}^\perp$ from @thm-orthogonal-decomposition gives the
+dimension identity once we check that a basis $\{\mathbf{m}_1,\dots,\mathbf{m}_a\}$ of $\mathcal{M}$
+together with a basis $\{\mathbf{w}_1,\dots,\mathbf{w}_b\}$ of $\mathcal{M}^\perp$ forms a basis of $V$.
+*Independence:* suppose $\sum_i \alpha_i\mathbf{m}_i+\sum_j\beta_j\mathbf{w}_j=\mathbf{0}$. Then
+$\sum_i\alpha_i\mathbf{m}_i=-\sum_j\beta_j\mathbf{w}_j$, and the left side lies in $\mathcal{M}$ while the
+right side lies in $\mathcal{M}^\perp$; by @lem-complement-subspace(4) both equal $\mathbf{0}$.
+Independence of each individual basis then forces every $\alpha_i=0$ and every $\beta_j=0$. *Spanning:*
+every $\mathbf{v}\in V$ decomposes as $\mathbf{m}+\mathbf{w}$ by @thm-orthogonal-decomposition, and each
+piece is a combination of its own basis, so the union spans. Hence the union is a basis and
+$\dim V=a+b=\dim\mathcal{M}+\dim\mathcal{M}^\perp$.
+
+For the double complement, every $\mathbf{m}\in\mathcal{M}$ is orthogonal to all of $\mathcal{M}^\perp$,
+so $\mathcal{M}\subseteq(\mathcal{M}^\perp)^\perp$. Applying the dimension identity twice,
+$\dim(\mathcal{M}^\perp)^\perp=\dim V-\dim\mathcal{M}^\perp=\dim\mathcal{M}$. A subspace contained in
+another of equal finite dimension must equal it, so $(\mathcal{M}^\perp)^\perp=\mathcal{M}$. $\square$
+:::
+
+Specializing to $V=\mathbb{R}^n$ with the Euclidean inner product ties the complement to the four
+fundamental subspaces of Chapter 1 (@thm-four-subspaces).
+
+::: {#prp-fundamental-orthogonality}
+## Orthogonality of the fundamental subspaces
+For $\mathbf{A}\in\mathbb{R}^{m\times n}$, with the Euclidean inner product,
+$$
+\mathcal{C}(\mathbf{A})^\perp=\mathcal{N}(\mathbf{A}^\top)\ \ \text{in }\mathbb{R}^m,
+\qquad
+\mathcal{N}(\mathbf{A})^\perp=\mathcal{C}(\mathbf{A}^\top)\ \ \text{in }\mathbb{R}^n .
+$$ {#eq-fundamental-orth}
+:::
+
+::: {.proof}
+Write the columns of $\mathbf{A}$ as $\mathbf{a}_1,\dots,\mathbf{a}_n$, so
+$\mathcal{C}(\mathbf{A})=\operatorname{span}\{\mathbf{a}_1,\dots,\mathbf{a}_n\}$ by @def-column-space. By
+@lem-complement-subspace(2), $\mathbf{w}\in\mathcal{C}(\mathbf{A})^\perp$ if and only if
+$\mathbf{w}^\top\mathbf{a}_j=0$ for every $j$, that is, if and only if $\mathbf{A}^\top\mathbf{w}=\mathbf{0}$,
+which says $\mathbf{w}\in\mathcal{N}(\mathbf{A}^\top)$. This proves the first identity. Applying it to
+$\mathbf{A}^\top$ in place of $\mathbf{A}$ gives $\mathcal{C}(\mathbf{A}^\top)^\perp=\mathcal{N}(\mathbf{A})$.
+Now apply $(\cdot)^\perp$ to both sides and invoke the double-complement identity
+$(\mathcal{M}^\perp)^\perp=\mathcal{M}$ from @eq-double-complement, here with $\mathcal{M}=\mathcal{C}(\mathbf{A}^\top)$:
+the left side becomes $\bigl(\mathcal{C}(\mathbf{A}^\top)^\perp\bigr)^\perp=\mathcal{C}(\mathbf{A}^\top)$ and
+the right side becomes $\mathcal{N}(\mathbf{A})^\perp$, yielding
+$\mathcal{C}(\mathbf{A}^\top)=\mathcal{N}(\mathbf{A})^\perp$. $\square$
+:::
+
+The proposition says the four fundamental subspaces of a matrix come in two orthogonal-complement pairs.
+With $r=\operatorname{rank}(\mathbf{A})$, the bookkeeping is worth tabulating once.
+
+| Subspace | Symbol | Lives in | Dimension | Its orthogonal complement |
+|---|---|---|---|---|
+| Column space | $\mathcal{C}(\mathbf{A})$ | $\mathbb{R}^m$ | $r$ | $\mathcal{N}(\mathbf{A}^\top)$ |
+| Left null space | $\mathcal{N}(\mathbf{A}^\top)$ | $\mathbb{R}^m$ | $m-r$ | $\mathcal{C}(\mathbf{A})$ |
+| Row space | $\mathcal{C}(\mathbf{A}^\top)$ | $\mathbb{R}^n$ | $r$ | $\mathcal{N}(\mathbf{A})$ |
+| Null space | $\mathcal{N}(\mathbf{A})$ | $\mathbb{R}^n$ | $n-r$ | $\mathcal{C}(\mathbf{A}^\top)$ |
+
+**Why this matters.** The top row is the workhorse: a least-squares residual is orthogonal to the column
+space, so it lands in the left null space $\mathcal{N}(\mathbf{A}^\top)$. In the two-arm trial of
+@exm-two-arm-running this left null space is the set of within-group mean-zero contrasts (computed in
+Chapter 1's @exm-design-matrix), which is precisely why the residuals $(-1,1,-1,1)^\top$ there sum to zero
+inside each arm.
+
+## The projection theorem {#sec-projection-theorem}
+
+We now answer the question that drives every least-squares method: given a target $\mathbf{v}$ and a
+subspace $\mathcal{M}$ of vectors a model can produce, which $\mathbf{m}\in\mathcal{M}$ is closest to
+$\mathbf{v}$, and how do we recognize it? Picture a plane $\mathcal{M}$ floating in space and a point
+$\mathbf{v}$ off the plane: the closest point is the foot of the perpendicular dropped from $\mathbf{v}$ to
+the plane, and the residual is that perpendicular segment. The closest point is important enough to name in
+advance: we call it the **orthogonal projection of $\mathbf{v}$ onto $\mathcal{M}$**, written
+$P_{\mathcal{M}}\mathbf{v}$, and we call the leftover $\mathbf{v}-P_{\mathcal{M}}\mathbf{v}$ the
+**residual**. The theorem makes "closest" and "perpendicular" precise and shows they are the same
+condition. The answer is geometric and exact.
+
+::: {#thm-projection-theorem}
+## Projection theorem (best approximation)
+Let $\mathcal{M}$ be a finite-dimensional subspace of an inner product space $V$, and let $\mathbf{v}\in V$.
+
+1. *(Existence and uniqueness)* There is a unique $\mathbf{m}^\star\in\mathcal{M}$ minimizing
+   $\|\mathbf{v}-\mathbf{m}\|$ over $\mathbf{m}\in\mathcal{M}$.
+2. *(Orthogonality characterization)* A point $\mathbf{m}_0\in\mathcal{M}$ is the minimizer if and only if
+   the residual is orthogonal to the subspace:
+   $$
+   \mathbf{v}-\mathbf{m}_0\in\mathcal{M}^\perp,\quad\text{equivalently}\quad
+   \langle\mathbf{v}-\mathbf{m}_0,\mathbf{m}\rangle=0\ \text{ for all }\mathbf{m}\in\mathcal{M}.
+   $$ {#eq-orthogonality-condition}
+3. The minimizer is the $\mathcal{M}$-component of the orthogonal decomposition @eq-orth-decomp of
+   $\mathbf{v}$, and it obeys the decomposition of squared length
+   $\|\mathbf{v}\|^2=\|\mathbf{m}^\star\|^2+\|\mathbf{v}-\mathbf{m}^\star\|^2$.
+:::
+
+This is the most important proof in the chapter, and it juggles several near-identical symbols. The two
+tables below are scaffolding for the read: the first fixes the role of each symbol, the second is a
+roadmap of the proof's logical flow.
+
+| Symbol in the proof | Plain-language role |
+|---|---|
+| $\mathbf{v}$ | the target (the data vector we want to approximate) |
+| $\mathcal{M}$ | the model subspace (every prediction the model can produce) |
+| $\mathbf{m}$ | an arbitrary candidate prediction in $\mathcal{M}$ |
+| $\mathbf{m}_0$ | one specific candidate being tested against the orthogonality condition |
+| $\mathbf{m}^\star$ | the winner: the unique closest point, later written $P_{\mathcal{M}}\mathbf{v}$ |
+| $\mathbf{w}=\mathbf{v}-\mathbf{m}^\star$ | the residual; it lies in $\mathcal{M}^\perp$ |
+
+| Part of the proof | What it establishes | Main tool |
+|---|---|---|
+| Any point with orthogonal residual is the minimizer | the orthogonality condition is *sufficient* for being closest, and such a point is unique | Pythagoras @thm-pythagoras |
+| Every minimizer has orthogonal residual | the condition is *necessary*; the minimizer exists, namely $\mathbf{m}^\star$ | reuse the previous part with $\mathbf{m}_0=\mathbf{m}^\star$ |
+| Statement (3) | the minimizer is the $\mathcal{M}$-part of @eq-orth-decomp; squared lengths split | @thm-orthogonal-decomposition with Pythagoras |
+
+::: {.proof}
+By @thm-orthogonal-decomposition write $\mathbf{v}=\mathbf{m}^\star+\mathbf{w}$ with
+$\mathbf{m}^\star\in\mathcal{M}$ and $\mathbf{w}=\mathbf{v}-\mathbf{m}^\star\in\mathcal{M}^\perp$. We show
+this $\mathbf{m}^\star$ is the unique minimizer and that the minimizers are exactly the points satisfying
+@eq-orthogonality-condition.
+
+*Any point with orthogonal residual is the minimizer.* Suppose $\mathbf{m}_0\in\mathcal{M}$ satisfies
+$\mathbf{v}-\mathbf{m}_0\in\mathcal{M}^\perp$. For an arbitrary $\mathbf{m}\in\mathcal{M}$, decompose
+$$
+\mathbf{v}-\mathbf{m}=(\mathbf{v}-\mathbf{m}_0)+(\mathbf{m}_0-\mathbf{m}),
+$$
+where $\mathbf{v}-\mathbf{m}_0\in\mathcal{M}^\perp$ and $\mathbf{m}_0-\mathbf{m}\in\mathcal{M}$ are
+orthogonal. By the Pythagorean theorem @thm-pythagoras,
+$$
+\|\mathbf{v}-\mathbf{m}\|^2=\|\mathbf{v}-\mathbf{m}_0\|^2+\|\mathbf{m}_0-\mathbf{m}\|^2\ge\|\mathbf{v}-\mathbf{m}_0\|^2,
+$$ {#eq-best-approx-pythag}
+with equality if and only if $\|\mathbf{m}_0-\mathbf{m}\|=0$, that is, $\mathbf{m}=\mathbf{m}_0$. So
+$\mathbf{m}_0$ is a minimizer, and it is the *only* minimizer among points of $\mathcal{M}$. In
+particular $\mathbf{m}^\star$ (which has orthogonal residual $\mathbf{w}$) is a minimizer, proving
+existence in (1).
+
+*Every minimizer has orthogonal residual, and minimizers are unique.* Let $\mathbf{m}_1\in\mathcal{M}$ be
+any minimizer. The point $\mathbf{m}^\star$ found above is also a minimizer, so
+$\|\mathbf{v}-\mathbf{m}_1\|=\|\mathbf{v}-\mathbf{m}^\star\|$. Taking $\mathbf{m}_0=\mathbf{m}^\star$ and
+$\mathbf{m}=\mathbf{m}_1$ in @eq-best-approx-pythag gives
+$\|\mathbf{v}-\mathbf{m}_1\|^2=\|\mathbf{v}-\mathbf{m}^\star\|^2+\|\mathbf{m}^\star-\mathbf{m}_1\|^2$, hence
+$\|\mathbf{m}^\star-\mathbf{m}_1\|=0$ and $\mathbf{m}_1=\mathbf{m}^\star$. This proves uniqueness in (1),
+and shows the minimizer equals $\mathbf{m}^\star$, whose residual lies in $\mathcal{M}^\perp$; so the
+minimizer satisfies @eq-orthogonality-condition. Together with the previous paragraph, a point of
+$\mathcal{M}$ is the minimizer if and only if @eq-orthogonality-condition holds, which is (2).
+
+*Statement (3).* The minimizer is $\mathbf{m}^\star$, the $\mathcal{M}$-component of the orthogonal
+decomposition, by construction. The length identity is @thm-pythagoras applied to the orthogonal pair
+$\mathbf{m}^\star\in\mathcal{M}$ and $\mathbf{v}-\mathbf{m}^\star\in\mathcal{M}^\perp$ summing to
+$\mathbf{v}$. $\square$
+:::
+
+**Why this matters.** In words: the best prediction is the foot of the perpendicular, and "best" is
+equivalent to "the residual is perpendicular to everything the model can produce." That single sentence is
+ordinary least squares. Part (3) is the squared-length bookkeeping $R^2$ rests on. In the two-arm trial of
+@exm-two-arm-running, $\mathcal{M}$ is the set of constant-within-arm vectors, the perpendicular drop of
+$\mathbf{y}=(1,3,6,8)^\top$ onto it is the arm-means vector $(2,2,7,7)^\top$, and the residual
+$(-1,1,-1,1)^\top$ is perpendicular to both $\mathbf{1}_4$ and $\mathbf{t}$; we verify this arithmetic in
+@sec-normal-equations.
+
+The minimizer is so central that it earns a name and a symbol, anticipated above and recorded here for
+reference.
+
+::: {.remark}
+We call $\mathbf{m}^\star$ the **orthogonal projection of $\mathbf{v}$ onto $\mathcal{M}$** and write it
+$P_{\mathcal{M}}\mathbf{v}$. The vector $\mathbf{v}-P_{\mathcal{M}}\mathbf{v}$ is the **residual**. Because the
+orthogonal decomposition @eq-orth-decomp is unique, $P_{\mathcal{M}}\mathbf{v}$ does not depend on which
+orthonormal basis was used to build it; it is an intrinsic feature of $\mathbf{v}$ and $\mathcal{M}$.
+Finite-dimensionality of $\mathcal{M}$ is the only hypothesis used, by way of @cor-onb-exists; the
+infinite-dimensional statement requires $\mathcal{M}$ to be a closed subspace of a complete inner product
+space, a refinement we do not need since every subspace of $\mathbb{R}^n$ is both. $\blacktriangleleft$
+:::
+
+## Orthogonal projection matrices {#sec-projection-matrices}
+
+*ITC connection.* The hat matrix of Chapter 6 is exactly a matrix of the kind characterized in this
+section; its diagonal entries are the leverages that flag influential trial arms in a network
+meta-analysis.
+
+Restrict now to $V=\mathbb{R}^n$ with the Euclidean inner product. The map
+$\mathbf{v}\mapsto P_{\mathcal{M}}\mathbf{v}$ is linear, hence given by a matrix, and that matrix has a
+clean intrinsic signature.
+
+::: {#def-projection-matrix}
+## Orthogonal projection matrix
+Let $\mathcal{M}\subseteq\mathbb{R}^n$ be a subspace. The **orthogonal projection onto $\mathcal{M}$** is
+the map $P_{\mathcal{M}}:\mathbb{R}^n\to\mathbb{R}^n$ sending each $\mathbf{v}$ to its best approximation
+$\mathbf{m}^\star\in\mathcal{M}$ of @thm-projection-theorem. The matrix that represents this map in the
+standard basis is the **orthogonal projection matrix** onto $\mathcal{M}$, written $P_{\mathcal{M}}$ as
+well. Its companion $P_{\mathcal{M}}^\perp:=I_n-P_{\mathcal{M}}$ is the orthogonal projection onto
+$\mathcal{M}^\perp$.
+:::
+
+**Reader translation.** We deliberately use one symbol $P_{\mathcal{M}}$ for two things: the *operation*
+"send a vector to its closest point in $\mathcal{M}$" and the *matrix* that carries out that operation when
+you multiply. They are the same object viewed two ways (a linear map and its matrix), so no new content
+appears when the symbol shifts from "apply the projection" to "multiply by the matrix." Applying
+$P_{\mathcal{M}}$ keeps the explainable part of a vector and discards the leftover.
+
+That $P_{\mathcal{M}}$ is genuinely linear (so that a matrix exists) needs a one-line argument.
+
+::: {#lem-projection-linear}
+## Linearity of orthogonal projection
+The map $P_{\mathcal{M}}$ is linear, and $I_n-P_{\mathcal{M}}=P_{\mathcal{M}^\perp}$.
+:::
+
+::: {.proof}
+Take $\mathbf{v},\mathbf{v}'\in\mathbb{R}^n$ and scalars $a,a'$. Write the orthogonal decompositions
+$\mathbf{v}=\mathbf{m}+\mathbf{w}$ and $\mathbf{v}'=\mathbf{m}'+\mathbf{w}'$ with
+$\mathbf{m},\mathbf{m}'\in\mathcal{M}$, $\mathbf{w},\mathbf{w}'\in\mathcal{M}^\perp$. Then
+$a\mathbf{v}+a'\mathbf{v}'=(a\mathbf{m}+a'\mathbf{m}')+(a\mathbf{w}+a'\mathbf{w}')$ is a decomposition with
+$\mathcal{M}$-part $a\mathbf{m}+a'\mathbf{m}'$ and $\mathcal{M}^\perp$-part $a\mathbf{w}+a'\mathbf{w}'$,
+because both $\mathcal{M}$ and $\mathcal{M}^\perp$ are subspaces. By the uniqueness in
+@thm-orthogonal-decomposition this is *the* decomposition, so
+$P_{\mathcal{M}}(a\mathbf{v}+a'\mathbf{v}')=a\mathbf{m}+a'\mathbf{m}'=aP_{\mathcal{M}}\mathbf{v}+a'P_{\mathcal{M}}\mathbf{v}'$.
+The same uniqueness identifies the $\mathcal{M}^\perp$-part $\mathbf{w}=\mathbf{v}-P_{\mathcal{M}}\mathbf{v}$
+as $P_{\mathcal{M}^\perp}\mathbf{v}$, so $I_n-P_{\mathcal{M}}=P_{\mathcal{M}^\perp}$. $\square$
+:::
+
+An orthonormal basis turns the projection into a short matrix product.
+
+::: {#prp-projection-from-onb}
+## Projection through an orthonormal basis
+If the columns of $\mathbf{Q}\in\mathbb{R}^{n\times k}$ form an orthonormal basis of $\mathcal{M}$, so that
+$\mathbf{Q}^\top\mathbf{Q}=I_k$, then
+$$
+P_{\mathcal{M}}=\mathbf{Q}\mathbf{Q}^\top .
+$$ {#eq-projection-onb}
+:::
+
+::: {.proof}
+Let $\mathbf{q}_1,\dots,\mathbf{q}_k$ be the columns. For any $\mathbf{v}$,
+$\mathbf{Q}\mathbf{Q}^\top\mathbf{v}=\sum_{i=1}^k\mathbf{q}_i(\mathbf{q}_i^\top\mathbf{v})
+=\sum_{i=1}^k\langle\mathbf{v},\mathbf{q}_i\rangle\mathbf{q}_i$, which is precisely the
+$\mathcal{M}$-component constructed in the proof of @thm-orthogonal-decomposition, namely
+$P_{\mathcal{M}}\mathbf{v}$. As $\mathbf{v}$ was arbitrary, $\mathbf{Q}\mathbf{Q}^\top=P_{\mathcal{M}}$. $\square$
+:::
+
+The following intrinsic characterization is the result Chapter 6 invokes when it calls the hat matrix a
+projection. It says that "symmetric and idempotent" is exactly the same information as "orthogonal
+projection onto its own column space." Two things to watch for before the proof. *Idempotent* means
+$P^2=P$: projecting a vector, then projecting again, changes nothing, because after the first projection
+the vector already lies in $\mathcal{M}$ and is its own closest point. *Symmetric* means $P^\top=P$: this
+is the algebraic fingerprint of the residual being genuinely perpendicular to $\mathcal{M}$, not merely
+some other direction.
+
+::: {#thm-projection-matrix-characterization}
+## Characterization of orthogonal projection matrices
+A matrix $P\in\mathbb{R}^{n\times n}$ is the orthogonal projection onto some subspace of $\mathbb{R}^n$ if
+and only if it is symmetric and idempotent,
+$$
+P^\top=P\qquad\text{and}\qquad P^2=P.
+$$ {#eq-proj-sym-idem}
+When these hold, the subspace is $\mathcal{C}(P)$, and $I_n-P$ is the orthogonal projection onto
+$\mathcal{C}(P)^\perp=\mathcal{N}(P)$.
+:::
+
+::: {.proof}
+*(Necessity.)* Suppose $P=P_{\mathcal{M}}$ for a subspace $\mathcal{M}$. Pick an orthonormal basis with
+matrix $\mathbf{Q}$ ($\mathbf{Q}^\top\mathbf{Q}=I_k$) by @cor-onb-exists, so $P=\mathbf{Q}\mathbf{Q}^\top$
+by @prp-projection-from-onb. Then
+$P^\top=(\mathbf{Q}\mathbf{Q}^\top)^\top=\mathbf{Q}\mathbf{Q}^\top=P$ and
+$P^2=\mathbf{Q}(\mathbf{Q}^\top\mathbf{Q})\mathbf{Q}^\top=\mathbf{Q}I_k\mathbf{Q}^\top=\mathbf{Q}\mathbf{Q}^\top=P$.
+
+*(Sufficiency.)* Suppose $P^\top=P$ and $P^2=P$, and set $\mathcal{M}=\mathcal{C}(P)$. We verify the two
+defining features of an orthogonal projection from @thm-projection-theorem, for every $\mathbf{v}$.
+
+First, $P\mathbf{v}\in\mathcal{C}(P)=\mathcal{M}$ by definition of the column space.
+
+Second, the residual $\mathbf{v}-P\mathbf{v}$ is orthogonal to $\mathcal{M}$. A general element of
+$\mathcal{M}=\mathcal{C}(P)$ has the form $P\mathbf{u}$ for some $\mathbf{u}$, since that is exactly what
+the column space is: the set of all outputs $P\mathbf{u}$. Then
+$$
+\langle\mathbf{v}-P\mathbf{v},\,P\mathbf{u}\rangle
+=(\mathbf{v}-P\mathbf{v})^\top P\mathbf{u}
+=\mathbf{v}^\top P\mathbf{u}-\mathbf{v}^\top P^\top P\mathbf{u}
+=\mathbf{v}^\top P\mathbf{u}-\mathbf{v}^\top P^2\mathbf{u}
+=\mathbf{v}^\top P\mathbf{u}-\mathbf{v}^\top P\mathbf{u}=0,
+$$
+using $P^\top=P$ in the third step and $P^2=P$ in the fourth. By the orthogonality characterization
+@eq-orthogonality-condition, $P\mathbf{v}$ is the orthogonal projection of $\mathbf{v}$ onto $\mathcal{M}$.
+As $\mathbf{v}$ was arbitrary, $P=P_{\mathcal{M}}$.
+
+Finally, by @prp-fundamental-orthogonality and symmetry,
+$\mathcal{C}(P)^\perp=\mathcal{N}(P^\top)=\mathcal{N}(P)$. The matrix $I_n-P$ is symmetric, and
+$(I_n-P)^2=I_n-2P+P^2=I_n-P$, so it too is an orthogonal projection, onto $\mathcal{C}(I_n-P)$. The
+identity $P(I_n-P)=P-P^2=0$ shows $\mathcal{C}(I_n-P)\subseteq\mathcal{N}(P)$, and if $P\mathbf{x}=\mathbf{0}$
+then $\mathbf{x}=(I_n-P)\mathbf{x}\in\mathcal{C}(I_n-P)$, giving the reverse inclusion. Hence
+$\mathcal{C}(I_n-P)=\mathcal{N}(P)=\mathcal{C}(P)^\perp$, so $I_n-P=P_{\mathcal{M}^\perp}$, consistent with
+@lem-projection-linear. $\square$
+:::
+
+**Why this matters.** This is the bridge to statistics. In Chapter 6 the hat matrix
+$H=\mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$ is shown to be symmetric and idempotent;
+this theorem then certifies, with no further work, that $H$ is the orthogonal projection onto the column
+space of the design matrix, so fitted values are projections and residuals are perpendicular. The numbers
+become tangible in the next example.
+
+::: {#exm-projection-line}
+## A small projection matrix
+Project onto the line $\mathcal{M}=\operatorname{span}\{(1,1)^\top\}$ in $\mathbb{R}^2$. With
+$\mathbf{u}=(1,1)^\top$ and $\mathbf{u}^\top\mathbf{u}=2$,
+$$
+P=\frac{\mathbf{u}\mathbf{u}^\top}{\mathbf{u}^\top\mathbf{u}}
+=\frac12\begin{pmatrix}1&1\\1&1\end{pmatrix}.
+$$
+It is symmetric by inspection, and
+$P^2=\tfrac14\begin{pmatrix}1&1\\1&1\end{pmatrix}\begin{pmatrix}1&1\\1&1\end{pmatrix}
+=\tfrac14\begin{pmatrix}2&2\\2&2\end{pmatrix}=P$, so it is idempotent; @thm-projection-matrix-characterization
+then guarantees it is the orthogonal projection onto its column space, the line. Its trace is $1=\dim\mathcal{M}$.
+Acting on $\mathbf{v}=(2,0)^\top$ gives $P\mathbf{v}=(1,1)^\top$ with residual $\mathbf{v}-P\mathbf{v}=(1,-1)^\top$,
+and indeed $\langle(1,-1)^\top,(1,1)^\top\rangle=0$. This $P$ replaces a vector by its average entry repeated,
+which previews the two-arm projection: projecting onto a constant direction returns the mean.
+$\blacktriangleleft$
+:::
+
+::: {#cor-projection-trace-rank}
+## Rank, trace, and eigenvalues of a projection
+Let $P$ be the orthogonal projection onto a subspace $\mathcal{M}\subseteq\mathbb{R}^n$ of dimension $d$.
+Then the eigenvalues of $P$ are $1$ with multiplicity $d$ and $0$ with multiplicity $n-d$, and
+$$
+\operatorname{rank}(P)=\operatorname{tr}(P)=\dim\mathcal{M}=d.
+$$ {#eq-proj-trace-rank}
+:::
+
+::: {.proof}
+For $\mathbf{m}\in\mathcal{M}$ we have $P\mathbf{m}=\mathbf{m}$, so every nonzero vector of $\mathcal{M}$ is
+an eigenvector with eigenvalue $1$; for $\mathbf{w}\in\mathcal{M}^\perp$ we have $P\mathbf{w}=\mathbf{0}$,
+eigenvalue $0$. Since $\mathbb{R}^n=\mathcal{M}\oplus\mathcal{M}^\perp$ by @thm-orthogonal-decomposition, a
+basis of $\mathcal{M}$ together with a basis of $\mathcal{M}^\perp$ is an eigenbasis of $P$, exhibiting
+eigenvalue $1$ with multiplicity $d=\dim\mathcal{M}$ and eigenvalue $0$ with multiplicity $n-d$. The trace
+equals the sum of eigenvalues, $\operatorname{tr}(P)=d$. The rank equals the dimension of the image
+$\mathcal{C}(P)=\mathcal{M}$, which is $d$; alternatively, with $P=\mathbf{Q}\mathbf{Q}^\top$,
+$\operatorname{tr}(P)=\operatorname{tr}(\mathbf{Q}\mathbf{Q}^\top)=\operatorname{tr}(\mathbf{Q}^\top\mathbf{Q})=\operatorname{tr}(I_d)=d$,
+using the cyclic property of the trace. $\square$
+:::
+
+## The normal equations {#sec-normal-equations}
+
+*ITC connection, and the central distinction.* Fitting a model means picking coefficients $\mathbf{x}$, but
+what we ultimately care about is the fitted vector $\mathbf{A}\mathbf{x}$ those coefficients produce. These
+are not the same object, and keeping them separate resolves most confusion about least squares: the
+projection theorem hands us the best *fitted vector* directly and uniquely; the normal equations then look
+for *coefficients* that reproduce it, and those coefficients may or may not be unique.
+
+We can now read least squares purely as projection. Given a matrix $\mathbf{A}$ whose columns are the
+vectors a model can combine, and a data vector $\mathbf{b}$, fitting the model means finding coefficients
+$\mathbf{x}$ so that $\mathbf{A}\mathbf{x}$ is as close to $\mathbf{b}$ as possible. The set of attainable
+$\mathbf{A}\mathbf{x}$ is exactly $\mathcal{C}(\mathbf{A})$, the "vectors the model can produce," so the
+projection theorem applies. We first record a fact about the Gram matrix $\mathbf{A}^\top\mathbf{A}$ that
+the argument needs and that Chapter 6 reuses.
+
+::: {#lem-gram-nullspace}
+## Null space and column space of the Gram matrix
+For $\mathbf{A}\in\mathbb{R}^{n\times p}$,
+$$
+\mathcal{N}(\mathbf{A}^\top\mathbf{A})=\mathcal{N}(\mathbf{A}),
+\qquad
+\mathcal{C}(\mathbf{A}^\top\mathbf{A})=\mathcal{C}(\mathbf{A}^\top).
+$$ {#eq-gram-spaces}
+In particular the $p\times p$ matrix $\mathbf{A}^\top\mathbf{A}$ is invertible if and only if $\mathbf{A}$
+has full column rank.
+:::
+
+::: {.proof}
+If $\mathbf{A}\mathbf{x}=\mathbf{0}$ then $\mathbf{A}^\top\mathbf{A}\mathbf{x}=\mathbf{0}$, giving
+$\mathcal{N}(\mathbf{A})\subseteq\mathcal{N}(\mathbf{A}^\top\mathbf{A})$. Conversely, if
+$\mathbf{A}^\top\mathbf{A}\mathbf{x}=\mathbf{0}$, then
+$0=\mathbf{x}^\top\mathbf{A}^\top\mathbf{A}\mathbf{x}=\|\mathbf{A}\mathbf{x}\|^2$, so
+$\mathbf{A}\mathbf{x}=\mathbf{0}$; hence $\mathcal{N}(\mathbf{A}^\top\mathbf{A})\subseteq\mathcal{N}(\mathbf{A})$,
+and the two null spaces coincide.
+
+Each column of $\mathbf{A}^\top\mathbf{A}$ is $\mathbf{A}^\top$ times a column of $\mathbf{A}$, so
+$\mathcal{C}(\mathbf{A}^\top\mathbf{A})\subseteq\mathcal{C}(\mathbf{A}^\top)$. By the rank-nullity theorem
+@thm-rank-nullity applied to the $p$-column matrices $\mathbf{A}$ and $\mathbf{A}^\top\mathbf{A}$, the
+equality of null spaces forces equal ranks:
+$\operatorname{rank}(\mathbf{A}^\top\mathbf{A})=p-\dim\mathcal{N}(\mathbf{A}^\top\mathbf{A})
+=p-\dim\mathcal{N}(\mathbf{A})=\operatorname{rank}(\mathbf{A})=\operatorname{rank}(\mathbf{A}^\top)$, the last
+equality being row rank equals column rank from Chapter 1 (@thm-four-subspaces). A subspace contained in
+another of equal dimension equals it, so
+$\mathcal{C}(\mathbf{A}^\top\mathbf{A})=\mathcal{C}(\mathbf{A}^\top)$.
+
+Finally, $\mathbf{A}^\top\mathbf{A}$ is invertible if and only if $\mathcal{N}(\mathbf{A}^\top\mathbf{A})=\{\mathbf{0}\}$,
+i.e. $\mathcal{N}(\mathbf{A})=\{\mathbf{0}\}$, i.e. (by @thm-rank-nullity) $\operatorname{rank}(\mathbf{A})=p$,
+full column rank. $\square$
+:::
+
+::: {#thm-normal-equations-geometry}
+## Normal equations from the projection viewpoint
+Let $\mathbf{A}\in\mathbb{R}^{n\times p}$ and $\mathbf{b}\in\mathbb{R}^n$. A vector
+$\hat{\mathbf{x}}\in\mathbb{R}^p$ minimizes $\|\mathbf{b}-\mathbf{A}\mathbf{x}\|$ over
+$\mathbf{x}\in\mathbb{R}^p$ if and only if it satisfies the **normal equations**
+$$
+\mathbf{A}^\top\mathbf{A}\,\hat{\mathbf{x}}=\mathbf{A}^\top\mathbf{b}.
+$$ {#eq-normal-equations}
+The normal equations are always consistent. For every minimizer the fitted vector
+$\mathbf{A}\hat{\mathbf{x}}=P_{\mathcal{C}(\mathbf{A})}\mathbf{b}$ is the same, namely the orthogonal
+projection of $\mathbf{b}$ onto $\mathcal{C}(\mathbf{A})$. If $\mathbf{A}$ has full column rank, the
+minimizer is unique,
+$$
+\hat{\mathbf{x}}=(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top\mathbf{b},
+\qquad
+P_{\mathcal{C}(\mathbf{A})}=\mathbf{A}(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top.
+$$ {#eq-hat-matrix}
+:::
+
+::: {.proof}
+Set $\mathcal{M}=\mathcal{C}(\mathbf{A})$, so that $\{\mathbf{A}\mathbf{x}:\mathbf{x}\in\mathbb{R}^p\}=\mathcal{M}$
+by @def-column-space. Minimizing $\|\mathbf{b}-\mathbf{A}\mathbf{x}\|$ over $\mathbf{x}$ is therefore the
+same as minimizing $\|\mathbf{b}-\mathbf{m}\|$ over $\mathbf{m}\in\mathcal{M}$. By @thm-projection-theorem,
+$\mathbf{m}_0=\mathbf{A}\hat{\mathbf{x}}$ is the (unique) minimizing element of $\mathcal{M}$ if and only if
+the residual is orthogonal to $\mathcal{M}$:
+$$
+\mathbf{b}-\mathbf{A}\hat{\mathbf{x}}\in\mathcal{C}(\mathbf{A})^\perp .
+$$
+By @prp-fundamental-orthogonality, $\mathcal{C}(\mathbf{A})^\perp=\mathcal{N}(\mathbf{A}^\top)$, so this
+orthogonality says $\mathbf{A}^\top(\mathbf{b}-\mathbf{A}\hat{\mathbf{x}})=\mathbf{0}$, which rearranges to
+the normal equations @eq-normal-equations. Thus $\hat{\mathbf{x}}$ minimizes the distance if and only if
+it solves @eq-normal-equations.
+
+*Consistency.* The projection $P_{\mathcal{M}}\mathbf{b}$ exists and lies in $\mathcal{M}=\mathcal{C}(\mathbf{A})$,
+so there is at least one $\hat{\mathbf{x}}$ with $\mathbf{A}\hat{\mathbf{x}}=P_{\mathcal{M}}\mathbf{b}$, and
+by the previous paragraph it solves @eq-normal-equations. Equivalently, in purely algebraic terms,
+$\mathbf{A}^\top\mathbf{b}\in\mathcal{C}(\mathbf{A}^\top)=\mathcal{C}(\mathbf{A}^\top\mathbf{A})$ by
+@lem-gram-nullspace, so the system @eq-normal-equations has a solution.
+
+*Uniqueness of the fitted vector.* For any two minimizers $\hat{\mathbf{x}}_1,\hat{\mathbf{x}}_2$, both
+$\mathbf{A}\hat{\mathbf{x}}_1$ and $\mathbf{A}\hat{\mathbf{x}}_2$ equal the orthogonal projection
+$P_{\mathcal{M}}\mathbf{b}$, which is unique by @thm-projection-theorem.
+
+*Full column rank.* If $\operatorname{rank}(\mathbf{A})=p$, then $\mathbf{A}^\top\mathbf{A}$ is invertible by
+@lem-gram-nullspace, so @eq-normal-equations has the unique solution
+$\hat{\mathbf{x}}=(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top\mathbf{b}$. Then
+$P_{\mathcal{M}}\mathbf{b}=\mathbf{A}\hat{\mathbf{x}}=\mathbf{A}(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top\mathbf{b}$
+for every $\mathbf{b}$, so the projection matrix is
+$P_{\mathcal{C}(\mathbf{A})}=\mathbf{A}(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top$. $\square$
+:::
+
+**Why this matters, and a warning about the word "consistent."** The theorem says the normal equations
+*always have a solution* (that is the technical meaning of "consistent" here: a solution exists). It does
+**not** say the solution is unique. Uniqueness needs full column rank. When the columns of $\mathbf{A}$ are
+redundant, infinitely many coefficient vectors $\hat{\mathbf{x}}$ all solve the equations, yet they all
+produce the *same* fitted vector $\mathbf{A}\hat{\mathbf{x}}=P_{\mathcal{C}(\mathbf{A})}\mathbf{b}$. Fitted
+values are always pinned down; coefficients are pinned down only under full rank. The next example shows a
+case where this distinction is the difference between a meaningful and a meaningless number.
+
+::: {#exm-rank-deficient}
+## When coefficients are not unique but the fit still is
+Four patients, two female and two male, with the over-specified design that includes an intercept and
+*both* sex indicators:
+$$
+\mathbf{A}=\begin{pmatrix}1&1&0\\1&1&0\\1&0&1\\1&0&1\end{pmatrix},
+\qquad
+\boldsymbol\beta=\begin{pmatrix}\beta_0\\\beta_{\mathrm{F}}\\\beta_{\mathrm{M}}\end{pmatrix}.
+$$
+The intercept column is the sum of the two sex columns, $\mathbf{1}_4=\mathbf{f}+\mathbf{m}$, so the three
+columns are linearly dependent and $\operatorname{rank}(\mathbf{A})=2<3$. By @lem-gram-nullspace the
+$3\times3$ Gram matrix $\mathbf{A}^\top\mathbf{A}$ is singular, so the normal equations have *infinitely
+many* coefficient solutions: if $(\beta_0,\beta_{\mathrm{F}},\beta_{\mathrm{M}})$ works, so does
+$(\beta_0+c,\ \beta_{\mathrm{F}}-c,\ \beta_{\mathrm{M}}-c)$ for any $c$, because the change adds
+$c(\mathbf{1}_4-\mathbf{f}-\mathbf{m})=\mathbf{0}$ to every prediction. The individual coefficients are
+therefore not estimable; "the effect of being female, $\beta_{\mathrm{F}}$" is not a well-defined number.
+Yet the fitted vector, the pair of group means, is identical for every solution, and so is the estimable
+contrast $\beta_{\mathrm{F}}-\beta_{\mathrm{M}}$. This is the exact mechanism behind the dummy-variable
+trap and behind why software drops one indicator: it restores full column rank so the remaining
+coefficients become unique without changing the fit. $\blacktriangleleft$
+:::
+
+We can now finish the running two-arm trial, which is the promised concrete normal-equations solve.
+
+::: {#exm-two-arm-fit}
+## Finishing the two-arm trial by normal equations
+Return to @exm-two-arm-running, with $\mathbf{X}=\begin{pmatrix}1&0\\1&0\\1&1\\1&1\end{pmatrix}$ and
+$\mathbf{y}=(1,3,6,8)^\top$. The columns are independent, so $\mathbf{X}$ has full column rank and the fit
+is unique. From Chapter 1's @exm-design-matrix,
+$$
+\mathbf{X}^\top\mathbf{X}=\begin{pmatrix}4&2\\2&2\end{pmatrix},
+\qquad
+(\mathbf{X}^\top\mathbf{X})^{-1}=\begin{pmatrix}\tfrac12&-\tfrac12\\[2pt]-\tfrac12&1\end{pmatrix},
+\qquad
+\mathbf{X}^\top\mathbf{y}=\begin{pmatrix}1+3+6+8\\ 6+8\end{pmatrix}=\begin{pmatrix}18\\14\end{pmatrix}.
+$$
+Hence the unique least-squares coefficients are
+$$
+\hat{\boldsymbol\beta}=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{y}
+=\begin{pmatrix}\tfrac12&-\tfrac12\\-\tfrac12&1\end{pmatrix}\begin{pmatrix}18\\14\end{pmatrix}
+=\begin{pmatrix}9-7\\-9+14\end{pmatrix}=\begin{pmatrix}2\\5\end{pmatrix},
+$$
+so $\hat\beta_0=2$ is the control-arm mean and $\hat\beta_1=5$ is the estimated treatment effect, the
+difference of arm means $7-2$. The fitted vector is
+$\hat{\mathbf{y}}=\mathbf{X}\hat{\boldsymbol\beta}=(2,2,7,7)^\top$, exactly the arm means predicted in
+@exm-two-arm-running, and the residual is $\mathbf{r}=\mathbf{y}-\hat{\mathbf{y}}=(-1,1,-1,1)^\top$. The
+orthogonality promised by @thm-projection-theorem is
+$$
+\langle\mathbf{r},\mathbf{1}_4\rangle=-1+1-1+1=0,
+\qquad
+\langle\mathbf{r},\mathbf{t}\rangle=(-1)(0)+(1)(0)+(-1)(1)+(1)(1)=0 .
+$$
+In words: $\langle\mathbf{r},\mathbf{1}_4\rangle=0$ says the residuals sum to zero overall, and
+$\langle\mathbf{r},\mathbf{t}\rangle=0$ says they sum to zero within the treated arm; these are the
+familiar regression diagnostics, here read straight off the geometry. With $\mathrm{RSS}=\|\mathbf{r}\|^2=4$,
+$\bar y=\tfrac{18}{4}=4.5$, and $\mathrm{TSS}=\sum_i(y_i-\bar y)^2=12.25+2.25+2.25+12.25=29$, the fit
+explains $R^2=1-4/29=25/29\approx0.862$ of the outcome variation: the treatment arm accounts for most of
+the spread. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**This is the geometric foundation of Chapter 6.** With $\mathbf{A}=\mathbf{X}$ the design matrix, the
+matrix in @eq-hat-matrix is exactly the hat matrix $H=\mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$
+of [Notation](/notation.qmd), and $M=I_n-H=P^\perp_{\mathcal{C}(\mathbf{X})}$ is the **residual maker**: in
+plain terms, $H$ maps any outcome vector to its fitted values (the projection onto what the model can
+produce), while $M$ maps it to its residuals (the leftover the model cannot produce). Chapter 6 reads
+$\hat{\boldsymbol\beta}=(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{y}$ off
+@eq-normal-equations (its own @thm-ols-normal-equations and @def-hat-matrix), and the orthogonality
+$\mathbf{r}\perp\mathcal{C}(\mathbf{X})$ proved here is precisely what makes the least-squares fit the best
+linear unbiased estimator there (@thm-ols-blue). It is worth emphasizing that @thm-normal-equations-geometry
+uses no probability whatsoever: it is a statement about distances in $\mathbb{R}^n$. This separation is not
+a technicality. It tells a health researcher that the fitted-equals-projection and residual-perpendicular
+facts hold for *any* dataset regardless of the noise model, the sample size, or whether modeling
+assumptions are correct; probability enters only later, in Chapter 6, to say how the estimate would vary
+across repeated trials. $\blacktriangleleft$
+:::
+
+Two symmetric and idempotent matrices verify @thm-projection-matrix-characterization directly: one checks
+$H^\top=H$ and $H^2=\mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}(\mathbf{X}^\top\mathbf{X})(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top=H$,
+confirming $H$ is the orthogonal projection onto $\mathcal{C}(\mathbf{X})$, with
+$\operatorname{tr}(H)=\operatorname{rank}(\mathbf{X})=p$ by @cor-projection-trace-rank.
+
+## QR factorization and least squares by QR {#sec-qr}
+
+*ITC connection.* When you run `lm(y ~ x)` in R, `regress` in Stata, or fit a linear model inside Stan, the
+software does not form $\mathbf{A}^\top\mathbf{A}$ and invert it; it solves the least-squares problem
+through the QR factorization developed here (or the related singular value decomposition of Chapter 3).
+Learning QR is learning what those commands actually do. The uniqueness proof below is the most technical
+passage in the chapter and may be skipped on a first reading; the message to retain is the practical one in
+the closing remark.
+
+Solving @eq-normal-equations by forming $\mathbf{A}^\top\mathbf{A}$ and inverting it squares the
+conditioning of the problem and is numerically fragile. The QR factorization, a direct repackaging of
+Gram-Schmidt, avoids $\mathbf{A}^\top\mathbf{A}$ entirely and is how least squares is solved in practice.
+
+::: {#thm-qr}
+## QR factorization
+Let $\mathbf{A}\in\mathbb{R}^{n\times p}$ have full column rank, so its columns are linearly independent
+and $p\le n$. Then there exist a matrix $\mathbf{Q}\in\mathbb{R}^{n\times p}$ with orthonormal columns
+($\mathbf{Q}^\top\mathbf{Q}=I_p$) and an upper-triangular matrix $\mathbf{R}\in\mathbb{R}^{p\times p}$ with
+strictly positive diagonal entries such that
+$$
+\mathbf{A}=\mathbf{Q}\mathbf{R}.
+$$ {#eq-qr}
+This **reduced QR factorization** is unique.
+:::
+
+::: {.proof}
+*Existence.* Let $\mathbf{a}_1,\dots,\mathbf{a}_p$ be the columns of $\mathbf{A}$; they are linearly
+independent. Apply Gram-Schmidt @thm-gram-schmidt to obtain orthonormal $\mathbf{q}_1,\dots,\mathbf{q}_p$
+with $\operatorname{span}\{\mathbf{q}_1,\dots,\mathbf{q}_k\}=\operatorname{span}\{\mathbf{a}_1,\dots,\mathbf{a}_k\}$
+for each $k$. In particular $\mathbf{a}_k\in\operatorname{span}\{\mathbf{q}_1,\dots,\mathbf{q}_k\}$, so by the
+coordinate formula @prp-orthonormal-coordinates,
+$$
+\mathbf{a}_k=\sum_{i=1}^{k}r_{ik}\,\mathbf{q}_i,\qquad r_{ik}=\langle\mathbf{a}_k,\mathbf{q}_i\rangle .
+$$
+Define $\mathbf{R}=(r_{ik})$ by these entries for $i\le k$ and $r_{ik}=0$ for $i>k$; then $\mathbf{R}$ is
+upper triangular and $\mathbf{A}=\mathbf{Q}\mathbf{R}$ with $\mathbf{Q}=[\mathbf{q}_1\ \cdots\ \mathbf{q}_p]$,
+whose columns are orthonormal so $\mathbf{Q}^\top\mathbf{Q}=I_p$. For the diagonal, recall from
+@eq-gram-schmidt that $\mathbf{a}_k=\mathbf{u}_k+\sum_{i<k}c_i\mathbf{u}_i$ with $\mathbf{u}_k\perp\mathbf{u}_i$
+for $i<k$ and $\mathbf{q}_k=\mathbf{u}_k/\|\mathbf{u}_k\|$; hence
+$$
+r_{kk}=\langle\mathbf{a}_k,\mathbf{q}_k\rangle
+=\frac{\langle\mathbf{a}_k,\mathbf{u}_k\rangle}{\|\mathbf{u}_k\|}
+=\frac{\langle\mathbf{u}_k,\mathbf{u}_k\rangle}{\|\mathbf{u}_k\|}=\|\mathbf{u}_k\|>0,
+$$
+the cross terms vanishing by orthogonality and the positivity holding because $\mathbf{u}_k\ne\mathbf{0}$.
+
+*Uniqueness.* Suppose $\mathbf{A}=\mathbf{Q}_1\mathbf{R}_1=\mathbf{Q}_2\mathbf{R}_2$ with each
+$\mathbf{Q}_j$ having orthonormal columns and each $\mathbf{R}_j$ upper triangular with positive diagonal.
+Each $\mathbf{R}_j$ is invertible (triangular with nonzero diagonal), so
+$\mathbf{Q}_1=\mathbf{Q}_2\mathbf{S}$ with $\mathbf{S}:=\mathbf{R}_2\mathbf{R}_1^{-1}$. The set of upper-triangular
+matrices with positive diagonal is closed under inverse and product, so $\mathbf{S}$ is upper triangular with
+positive diagonal. Now
+$$
+I_p=\mathbf{Q}_1^\top\mathbf{Q}_1=\mathbf{S}^\top\mathbf{Q}_2^\top\mathbf{Q}_2\mathbf{S}=\mathbf{S}^\top\mathbf{S},
+$$
+so $\mathbf{S}$ has orthonormal columns. We claim an upper-triangular matrix with positive diagonal and
+orthonormal columns is the identity. Write $\mathbf{S}=(s_{ij})$ with $s_{ij}=0$ for $i>j$. Column $1$ is
+$(s_{11},0,\dots,0)^\top$; unit norm and $s_{11}>0$ force $s_{11}=1$. Inductively, suppose columns
+$1,\dots,j-1$ equal the standard basis vectors $\mathbf{e}_1,\dots,\mathbf{e}_{j-1}$. We pin down column $j$
+in two steps. First, orthogonality of column $j$ to each earlier column, which by the induction hypothesis
+equals $\mathbf{e}_i$ for $i<j$, gives $0=\mathbf{e}_i^\top\mathbf{s}_j=s_{ij}$ for every $i<j$; this kills
+all entries of column $j$ *above* the diagonal. Second, upper-triangularity of $\mathbf{S}$ kills all
+entries *below* the diagonal, since $s_{ij}=0$ for $i>j$ by definition. The only entry that can survive is
+$s_{jj}$, and unit norm together with $s_{jj}>0$ forces $s_{jj}=1$, so column $j$ is $\mathbf{e}_j$. Hence
+$\mathbf{S}=I_p$, whence $\mathbf{R}_2=\mathbf{R}_1$ and $\mathbf{Q}_1=\mathbf{Q}_2$. $\square$
+:::
+
+::: {.remark}
+Padding $\mathbf{Q}$ with an orthonormal basis of $\mathcal{C}(\mathbf{A})^\perp$ and $\mathbf{R}$ with
+zero rows yields the **full QR factorization** $\mathbf{A}=\widetilde{\mathbf{Q}}\widetilde{\mathbf{R}}$ with
+$\widetilde{\mathbf{Q}}\in\mathbb{R}^{n\times n}$ orthogonal. When $\mathbf{A}$ is rank deficient, a QR
+factorization still exists if one drops the positive-diagonal requirement and permits column pivoting; see
+@strang2016. We use the unique reduced form above. $\blacktriangleleft$
+:::
+
+::: {#prp-ls-by-qr}
+## Least squares and projection by QR
+Let $\mathbf{A}=\mathbf{Q}\mathbf{R}$ be the reduced QR factorization of a full-column-rank
+$\mathbf{A}\in\mathbb{R}^{n\times p}$, and let $\mathbf{b}\in\mathbb{R}^n$. Then the orthogonal projection
+onto $\mathcal{C}(\mathbf{A})$ is
+$$
+P_{\mathcal{C}(\mathbf{A})}=\mathbf{Q}\mathbf{Q}^\top,
+$$ {#eq-qr-projection}
+and the unique least-squares solution of @eq-normal-equations is the solution of the triangular system
+$$
+\mathbf{R}\,\hat{\mathbf{x}}=\mathbf{Q}^\top\mathbf{b},\qquad
+\text{equivalently}\qquad \hat{\mathbf{x}}=\mathbf{R}^{-1}\mathbf{Q}^\top\mathbf{b},
+$$ {#eq-qr-solve}
+obtained by back-substitution.
+:::
+
+::: {.proof}
+Since $\mathbf{R}$ is invertible, $\mathcal{C}(\mathbf{A})=\mathcal{C}(\mathbf{Q}\mathbf{R})=\mathcal{C}(\mathbf{Q})$,
+and the columns of $\mathbf{Q}$ form an orthonormal basis of this space; @prp-projection-from-onb gives
+@eq-qr-projection. For the solution, substitute $\mathbf{A}=\mathbf{Q}\mathbf{R}$ into the normal equations
+@eq-normal-equations:
+$$
+\mathbf{A}^\top\mathbf{A}\hat{\mathbf{x}}=\mathbf{R}^\top\mathbf{Q}^\top\mathbf{Q}\mathbf{R}\hat{\mathbf{x}}
+=\mathbf{R}^\top\mathbf{R}\hat{\mathbf{x}},\qquad
+\mathbf{A}^\top\mathbf{b}=\mathbf{R}^\top\mathbf{Q}^\top\mathbf{b}.
+$$
+Because $\mathbf{R}^\top$ is invertible we may cancel it from
+$\mathbf{R}^\top\mathbf{R}\hat{\mathbf{x}}=\mathbf{R}^\top\mathbf{Q}^\top\mathbf{b}$, leaving
+$\mathbf{R}\hat{\mathbf{x}}=\mathbf{Q}^\top\mathbf{b}$. As $\mathbf{R}$ is upper triangular with nonzero
+diagonal, this is solved by back-substitution, and $\hat{\mathbf{x}}=\mathbf{R}^{-1}\mathbf{Q}^\top\mathbf{b}$. $\square$
+:::
+
+::: {.remark}
+The QR route never forms $\mathbf{A}^\top\mathbf{A}$. The **condition number** $\kappa(\mathbf{B})$ of a
+matrix measures how much a relative error in the input to a linear solve can be amplified in the output; a
+large $\kappa$ means "numerically fragile," and the precise definition through singular values is given in
+Chapter 3 (@thm-svd). The relevant fact here is $\kappa(\mathbf{A}^\top\mathbf{A})=\kappa(\mathbf{A})^2$:
+forming the Gram matrix squares the fragility. Working with $\mathbf{R}$ directly therefore preserves about
+twice as many correct digits as solving the normal equations naively, which is the standard reason
+statistical software fits linear models by QR (or by the singular value decomposition of Chapter 3,
+@thm-svd) rather than by inverting the Gram matrix. See @strang2016. $\blacktriangleleft$
+:::
+
+## A fully worked example {#sec-ch02-example}
+
+We carry one small problem through every construction of the chapter: Gram-Schmidt, the QR factorization,
+the normal equations, the projection, and the orthogonality of the residual. All numbers are exact and can
+be checked by hand. To keep the applied thread visible, read the two columns of $\mathbf{A}$ as an intercept
+and a single covariate that takes the ordered values $1,2,3,4$ across four patient groups (think of a dose
+level, a visit number, or an age band), and read $\mathbf{b}$ as the observed mean outcome in each group.
+The two-arm running example of @exm-two-arm-running had the same shape with a treatment indicator in place
+of the continuous covariate; together they cover the two designs behind essentially every regression in
+Part II.
+
+Take the line-fitting design and data
+$$
+\mathbf{A}=\begin{bmatrix}1&1\\1&2\\1&3\\1&4\end{bmatrix},
+\qquad
+\mathbf{b}=\begin{bmatrix}1\\3\\4\\4\end{bmatrix},
+$$
+so the columns are $\mathbf{a}_1=(1,1,1,1)^\top$ (the intercept) and $\mathbf{a}_2=(1,2,3,4)^\top$ (the
+regressor). The columns are linearly independent, so $\mathbf{A}$ has full column rank $p=2$. The column
+space $\mathcal{C}(\mathbf{A})$ is the set of all vectors of the form $\beta_0\mathbf{a}_1+\beta_1\mathbf{a}_2$,
+that is, every "straight-line" pattern of predicted outcomes; least squares finds the straight line closest
+to the data.
+
+**Step 1: Gram-Schmidt.** Set $\mathbf{u}_1=\mathbf{a}_1=(1,1,1,1)^\top$, with $\|\mathbf{u}_1\|^2=4$, so
+$\|\mathbf{u}_1\|=2$ and $\mathbf{q}_1=\tfrac12(1,1,1,1)^\top$. For the second column,
+$\langle\mathbf{a}_2,\mathbf{u}_1\rangle=1+2+3+4=10$ and $\langle\mathbf{u}_1,\mathbf{u}_1\rangle=4$, so
+$$
+\mathbf{u}_2=\mathbf{a}_2-\frac{10}{4}\mathbf{u}_1=(1,2,3,4)^\top-\tfrac52(1,1,1,1)^\top
+=\bigl(-\tfrac32,-\tfrac12,\tfrac12,\tfrac32\bigr)^\top .
+$$
+Then $\|\mathbf{u}_2\|^2=\tfrac94+\tfrac14+\tfrac14+\tfrac94=5$, so $\|\mathbf{u}_2\|=\sqrt5$ and
+$\mathbf{q}_2=\tfrac1{\sqrt5}\bigl(-\tfrac32,-\tfrac12,\tfrac12,\tfrac32\bigr)^\top$. One checks
+$\langle\mathbf{q}_1,\mathbf{q}_2\rangle=\tfrac1{2\sqrt5}(-\tfrac32-\tfrac12+\tfrac12+\tfrac32)=0$, as the
+theorem promises. Subtracting the multiple of $\mathbf{u}_1$ has *centered* the regressor: $\mathbf{u}_2$ is
+the covariate with its mean removed.
+
+**Step 2: QR factorization.** The factor entries are $r_{11}=\|\mathbf{u}_1\|=2$,
+$r_{12}=\langle\mathbf{a}_2,\mathbf{q}_1\rangle=\tfrac12(1+2+3+4)=5$, and $r_{22}=\|\mathbf{u}_2\|=\sqrt5$.
+Thus
+$$
+\mathbf{Q}=\begin{bmatrix}
+\tfrac12 & -\tfrac{3}{2\sqrt5}\\[2pt]
+\tfrac12 & -\tfrac{1}{2\sqrt5}\\[2pt]
+\tfrac12 & \tfrac{1}{2\sqrt5}\\[2pt]
+\tfrac12 & \tfrac{3}{2\sqrt5}
+\end{bmatrix},
+\qquad
+\mathbf{R}=\begin{bmatrix}2 & 5\\ 0 & \sqrt5\end{bmatrix}.
+$$
+The diagonal of $\mathbf{R}$ is positive, so this is the unique reduced QR factorization of
+@thm-qr. To verify, $\mathbf{Q}\mathbf{R}$ has first column $2\mathbf{q}_1=(1,1,1,1)^\top=\mathbf{a}_1$ and
+second column $5\mathbf{q}_1+\sqrt5\,\mathbf{q}_2=(\tfrac52,\tfrac52,\tfrac52,\tfrac52)^\top
++(-\tfrac32,-\tfrac12,\tfrac12,\tfrac32)^\top=(1,2,3,4)^\top=\mathbf{a}_2$.
+
+**Step 3: Normal equations.** Compute the Gram matrix and right-hand side,
+$$
+\mathbf{A}^\top\mathbf{A}=\begin{bmatrix}4&10\\10&30\end{bmatrix},
+\qquad
+\mathbf{A}^\top\mathbf{b}=\begin{bmatrix}1+3+4+4\\ 1+6+12+16\end{bmatrix}=\begin{bmatrix}12\\35\end{bmatrix}.
+$$
+Here $\det(\mathbf{A}^\top\mathbf{A})=4\cdot30-10\cdot10=20\ne0$, confirming invertibility (full column
+rank), and
+$$
+(\mathbf{A}^\top\mathbf{A})^{-1}=\frac{1}{20}\begin{bmatrix}30&-10\\-10&4\end{bmatrix},
+\qquad
+\hat{\mathbf{x}}=(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top\mathbf{b}
+=\frac{1}{20}\begin{bmatrix}30\cdot12-10\cdot35\\ -10\cdot12+4\cdot35\end{bmatrix}
+=\frac{1}{20}\begin{bmatrix}10\\20\end{bmatrix}=\begin{bmatrix}\tfrac12\\1\end{bmatrix}.
+$$
+So the best-fitting line has intercept $\tfrac12$ and slope $1$: each one-unit increase in the covariate is
+associated with a one-unit increase in predicted outcome.
+
+**Step 4: the same answer by QR.** With $\mathbf{Q}^\top\mathbf{b}=(\mathbf{q}_1^\top\mathbf{b},\mathbf{q}_2^\top\mathbf{b})^\top$:
+$\mathbf{q}_1^\top\mathbf{b}=\tfrac12(1+3+4+4)=6$ and
+$\mathbf{q}_2^\top\mathbf{b}=\tfrac1{\sqrt5}\bigl(-\tfrac32\cdot1-\tfrac12\cdot3+\tfrac12\cdot4+\tfrac32\cdot4\bigr)
+=\tfrac1{\sqrt5}(-\tfrac32-\tfrac32+2+6)=\tfrac{5}{\sqrt5}=\sqrt5$. Back-substitution in
+$\mathbf{R}\hat{\mathbf{x}}=\mathbf{Q}^\top\mathbf{b}$, that is
+$\begin{bmatrix}2&5\\0&\sqrt5\end{bmatrix}\hat{\mathbf{x}}=\begin{bmatrix}6\\\sqrt5\end{bmatrix}$, gives
+$\sqrt5\,\hat x_2=\sqrt5\Rightarrow\hat x_2=1$ and then $2\hat x_1+5=6\Rightarrow\hat x_1=\tfrac12$,
+matching Step 3 exactly. Two routes, one fitted line.
+
+**Step 5: projection, residual, and orthogonality.** The fitted vector is
+$$
+\hat{\mathbf{y}}=\mathbf{A}\hat{\mathbf{x}}=\tfrac12\mathbf{a}_1+1\cdot\mathbf{a}_2
+=\bigl(\tfrac32,\tfrac52,\tfrac72,\tfrac92\bigr)^\top=P_{\mathcal{C}(\mathbf{A})}\mathbf{b},
+$$
+the model-predicted outcomes, and the residual is
+$\mathbf{r}=\mathbf{b}-\hat{\mathbf{y}}=\bigl(-\tfrac12,\tfrac12,\tfrac12,-\tfrac12\bigr)^\top$, the part of
+each outcome the line cannot explain. The orthogonality guaranteed by @thm-projection-theorem is visible:
+$$
+\langle\mathbf{r},\mathbf{a}_1\rangle=-\tfrac12+\tfrac12+\tfrac12-\tfrac12=0,
+\qquad
+\langle\mathbf{r},\mathbf{a}_2\rangle=-\tfrac12+1+\tfrac32-2=0,
+$$
+so $\mathbf{r}\in\mathcal{C}(\mathbf{A})^\perp=\mathcal{N}(\mathbf{A}^\top)$. In applied language, the first
+identity says the residuals sum to zero, and the second says the residuals are uncorrelated with the
+covariate: the two diagnostics any analyst checks after a regression. The residual sum of squares is
+$\mathrm{RSS}=\|\mathbf{r}\|^2=4\cdot\tfrac14=1$. Since $\bar b=\tfrac{12}{4}=3$, the total sum of squares is
+$\mathrm{TSS}=\|\mathbf{b}-\bar b\,\mathbf{1}_4\|^2=(-2)^2+0^2+1^2+1^2=6$, giving the coefficient of
+determination $R^2=1-\mathrm{RSS}/\mathrm{TSS}=1-\tfrac16=\tfrac56\approx0.833$: the line explains about
+$83\%$ of the variation in the group-mean outcomes.
+
+**Step 6: a check on the projection matrix.** The hat matrix is
+$H=\mathbf{A}(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{A}^\top$. Its $i$-th diagonal entry, with row
+$\mathbf{a}^{(i)}=(1,i)$, is
+$H_{ii}=\mathbf{a}^{(i)}(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{a}^{(i)\top}=\tfrac1{20}(30-20i+4i^2)$,
+giving $H_{11}=\tfrac{14}{20}=0.7$, $H_{22}=\tfrac{6}{20}=0.3$, $H_{33}=0.3$, $H_{44}=0.7$. Their sum is
+$\operatorname{tr}(H)=2=p$, confirming @cor-projection-trace-rank. These diagonal entries are the
+**leverages**: the end groups (covariate values $1$ and $4$) sit farther from the covariate mean and so pull
+harder on the fitted line, exactly the influence diagnostic referenced for trial arms in later chapters.
+One also checks $H^2=H$ and $H^\top=H$ on this $4\times4$ matrix, so $H$ is indeed the orthogonal projection
+onto $\mathcal{C}(\mathbf{A})$, as @thm-projection-matrix-characterization requires.
+
+The whole calculation can be read as a dictionary between geometry and statistics.
+
+| Object | Symbol | Value here | What it means for the data |
+|---|---|---|---|
+| Design columns | $\mathbf{a}_1,\mathbf{a}_2$ | $(1,1,1,1),\ (1,2,3,4)$ | intercept and the covariate (dose level $1$ to $4$) |
+| Column space | $\mathcal{C}(\mathbf{A})$ | all straight-line vectors | every fitted pattern a line can produce |
+| Coefficients | $\hat{\mathbf{x}}$ | $(\tfrac12,\,1)$ | intercept $\tfrac12$, slope $1$ |
+| Fitted values | $\hat{\mathbf{y}}$ | $(\tfrac32,\tfrac52,\tfrac72,\tfrac92)$ | model-predicted outcomes |
+| Residual | $\mathbf{r}$ | $(-\tfrac12,\tfrac12,\tfrac12,-\tfrac12)$ | unexplained part of each outcome |
+| Orthogonality | $\langle\mathbf{r},\mathbf{a}_1\rangle,\langle\mathbf{r},\mathbf{a}_2\rangle$ | $0,\ 0$ | residuals sum to zero and are uncorrelated with the covariate |
+| Fit quality | $R^2$ | $\tfrac56\approx0.833$ | fraction of outcome variation the line explains |
+
+## Notes and references {#sec-ch02-notes}
+
+The development follows the classical treatment of orthogonality, projections, least squares, and the QR
+factorization in @strang2016, recast in the theorem-proof style of this book and specialized to the needs
+of indirect comparison. The Cauchy-Schwarz inequality @thm-cauchy-schwarz-ip, the Gram-Schmidt process
+@thm-gram-schmidt, the orthogonal decomposition @thm-orthogonal-decomposition, and the projection theorem
+@thm-projection-theorem are standard, but we have given complete elementary proofs rather than citing them,
+because the entire least-squares machinery of Part I and the geometric arguments of Parts IV through VI
+rest on them. The intrinsic characterization of projection matrices as the symmetric idempotents
+@thm-projection-matrix-characterization, the Gram-matrix lemma @lem-gram-nullspace, and the normal
+equations @thm-normal-equations-geometry are the precise results Chapter 6 reuses to construct the
+ordinary-least-squares estimator (@thm-ols-normal-equations, @def-hat-matrix) and to prove it best linear
+unbiased (@thm-ols-blue); we deliberately proved them with no probabilistic input so that the geometry and
+the statistics stay cleanly separated.
+
+The weighted inner product $\langle\mathbf{x},\mathbf{y}\rangle_A=\mathbf{x}^\top A\mathbf{y}$ for
+$A\succ0$ previewed after @def-inner-product, and computed on numbers in @exm-weighted-angle, is the bridge
+to the Mahalanobis geometry of matching: the balancing problem solved by MAIC in Part IV and the
+distance-matching estimators of Part VI are projections and minimizations in such weighted spaces, so every
+theorem here transfers to them by replacing the Euclidean inner product with $\langle\cdot,\cdot\rangle_A$.
+The positive-definiteness facts used there are proved in Chapter 3 (@thm-pd-characterization), and the
+numerically preferred singular value decomposition mentioned at the end of @sec-qr is the subject of
+@thm-svd. Figures are described in words throughout, and the numerical examples (@exm-two-arm-running,
+@exm-weighted-angle, @exm-gs-two-vectors, @exm-complement-r3, @exm-projection-line, @exm-rank-deficient,
+@exm-two-arm-fit) are chosen so the reader can draw each picture and recompute each step by hand.
+
+No result in this chapter has a counterpart in the `ITC_Coq` Coq development, whose `theories/` formalize
+the causal and population-adjustment layers rather than the underlying linear algebra; accordingly no
+`[machine-checked: ...]` tag is attached here. The projection theorem and the normal equations are the
+load-bearing prerequisites for the formalized results that begin in Part II.
+
+## Exercises {#sec-ch02-exercises}
+
+Exercises marked with a star ($\star$) have a full solution in Appendix F. The first few are short warm-ups
+and interpretation prompts; the computational exercises and proofs follow.
+
+::: {#exr-warmup-column-space}
+## Warm-up: the column space in words
+For the two-arm design $\mathbf{X}$ of @exm-two-arm-running, describe the column space $\mathcal{C}(\mathbf{X})$
+in one English sentence (no formulas), and state which single vector in $\mathcal{C}(\mathbf{X})$ is closest
+to the data $\mathbf{y}=(1,3,6,8)^\top$. You should not need any calculation beyond reading the example.
+:::
+
+::: {#exr-warmup-fitted-coef}
+## Warm-up: fitted values versus coefficients
+In @exm-rank-deficient the coefficients $(\beta_0,\beta_{\mathrm{F}},\beta_{\mathrm{M}})$ are not unique, yet
+the fitted values are. In one or two sentences, explain to a colleague why dropping one of the two sex
+indicators makes the remaining coefficients unique without changing any predicted outcome.
+:::
+
+::: {#exr-project-twice}
+## Warm-up: why projecting twice changes nothing
+Explain in words why an orthogonal projection $P$ satisfies $P^2=P$ (the idempotent property), by appealing
+to the projection theorem @thm-projection-theorem rather than to matrix algebra. (Hint: where does
+$P\mathbf{v}$ already live, and what is the closest point in $\mathcal{M}$ to a vector that is already in
+$\mathcal{M}$?)
+:::
+
+::: {#exr-two-arm-trial}
+## A two-arm trial by hand
+A trial has two control patients with outcomes $1$ and $3$ and two treated patients with outcomes $5$ and
+$7$. Using an intercept and a treatment indicator, write down the design matrix $\mathbf{X}$ and outcome
+vector $\mathbf{y}$, solve the normal equations @eq-normal-equations for $\hat{\boldsymbol\beta}=(\hat\beta_0,\hat\beta_1)^\top$,
+and interpret $\hat\beta_1$ as the estimated treatment effect. Then report the fitted values and residual,
+verify that the residual is orthogonal to both columns of $\mathbf{X}$, and compute $R^2$. (You should find
+$\hat\beta_1$ equal to the difference of arm means and $R^2=0.8$.)
+:::
+
+::: {#exr-weighted-angle-compute}
+## A weighted angle
+With the weighted inner product of @exm-weighted-angle, $A=\operatorname{diag}(2,1)$, compute
+$\langle\mathbf{x},\mathbf{y}\rangle_A$, $\|\mathbf{x}\|_A$, $\|\mathbf{y}\|_A$, and the weighted angle for
+$\mathbf{x}=(1,0)^\top$ and $\mathbf{y}=(1,1)^\top$. Compare with the Euclidean angle between the same two
+vectors and state in one sentence what the weighting did.
+:::
+
+::: {#exr-gram-schmidt-r3}
+## Gram-Schmidt by hand
+Apply the Gram-Schmidt process @thm-gram-schmidt to the vectors
+$\mathbf{a}_1=(1,1,0)^\top$, $\mathbf{a}_2=(1,0,1)^\top$, $\mathbf{a}_3=(0,1,1)^\top$ in $\mathbb{R}^3$ with
+the Euclidean inner product. Report the orthonormal vectors $\mathbf{q}_1,\mathbf{q}_2,\mathbf{q}_3$ and
+verify that $\langle\mathbf{q}_i,\mathbf{q}_j\rangle=\delta_{ij}$.
+:::
+
+::: {#exr-projection-plane}
+## A projection matrix onto a plane
+Let $\mathcal{M}=\operatorname{span}\{(1,1,1)^\top,(1,0,-1)^\top\}\subseteq\mathbb{R}^3$. Compute the
+orthogonal projection matrix $P_{\mathcal{M}}$ using @eq-hat-matrix, verify directly that $P_{\mathcal{M}}^\top=P_{\mathcal{M}}$
+and $P_{\mathcal{M}}^2=P_{\mathcal{M}}$, and confirm $\operatorname{tr}(P_{\mathcal{M}})=2$. Then find
+$P_{\mathcal{M}}\mathbf{v}$ and the residual for $\mathbf{v}=(3,0,0)^\top$, and check the residual is
+orthogonal to both spanning vectors.
+:::
+
+::: {#exr-line-fit}
+## Least squares and $R^2$
+Fit a straight line by least squares to the points $(x_i,y_i)\in\{(0,1),(1,1),(2,2),(3,2)\}$ by solving the
+normal equations @eq-normal-equations. Report $\hat{\mathbf{x}}=(\hat\beta_0,\hat\beta_1)^\top$, the fitted
+values, the residual vector, $\mathrm{RSS}$, $\mathrm{TSS}$, and $R^2$, and verify the residual is orthogonal
+to both columns of the design matrix.
+:::
+
+::: {#exr-qr-backsub}
+## Least squares by QR
+For the design matrix and data of @exr-line-fit, compute the reduced QR factorization $\mathbf{A}=\mathbf{Q}\mathbf{R}$
+with positive diagonal, then solve $\mathbf{R}\hat{\mathbf{x}}=\mathbf{Q}^\top\mathbf{b}$ by back-substitution
+and confirm you recover the same $\hat{\mathbf{x}}$.
+:::
+
+::: {#exr-double-complement}
+## The double complement
+Let $\mathcal{M}$ be a subspace of a finite-dimensional inner product space $V$. Prove
+$(\mathcal{M}^\perp)^\perp=\mathcal{M}$ directly from @thm-orthogonal-decomposition, without invoking the
+dimension count of @cor-complement-dimension. (Hint: take $\mathbf{v}\in(\mathcal{M}^\perp)^\perp$, write its
+orthogonal decomposition relative to $\mathcal{M}$, and show the $\mathcal{M}^\perp$-part is $\mathbf{0}$.)
+:::
+
+::: {#exr-bessel}
+## Bessel's inequality
+Let $\{\mathbf{q}_1,\dots,\mathbf{q}_k\}$ be an orthonormal set (not necessarily a basis) in an inner product
+space, and let $\mathbf{v}$ be any vector. Prove Bessel's inequality
+$\sum_{i=1}^k\langle\mathbf{v},\mathbf{q}_i\rangle^2\le\|\mathbf{v}\|^2$, with equality if and only if
+$\mathbf{v}\in\operatorname{span}\{\mathbf{q}_1,\dots,\mathbf{q}_k\}$. (Hint: project onto the span and apply
+@thm-pythagoras.)
+:::
+
+::: {#exr-trace-idempotent}
+## Trace of a general idempotent
+Let $P\in\mathbb{R}^{n\times n}$ be idempotent, $P^2=P$, but not necessarily symmetric (an *oblique*
+projection). Prove that $\operatorname{rank}(P)=\operatorname{tr}(P)$ and that the eigenvalues of $P$ lie in
+$\{0,1\}$. Show by a $2\times2$ example that such a $P$ need not be an orthogonal projection, and that for it
+$\|P\mathbf{v}\|>\|\mathbf{v}\|$ is possible.
+:::
+
+::: {#exr-parallelogram}
+## Parallelogram law and polarization (starred)
+$\star$ Let $\|\cdot\|$ be the norm induced by an inner product. Prove the **parallelogram law**
+$$
+\|\mathbf{u}+\mathbf{v}\|^2+\|\mathbf{u}-\mathbf{v}\|^2=2\|\mathbf{u}\|^2+2\|\mathbf{v}\|^2,
+$$
+and the **polarization identity**
+$\langle\mathbf{u},\mathbf{v}\rangle=\tfrac14\bigl(\|\mathbf{u}+\mathbf{v}\|^2-\|\mathbf{u}-\mathbf{v}\|^2\bigr)$.
+Deduce that the inner product is uniquely determined by its norm, and explain why the $\ell^1$ norm
+$\|\mathbf{x}\|_1=\sum_i|x_i|$ on $\mathbb{R}^2$ cannot arise from any inner product. (Solution in Appendix F.)
+:::
+
+::: {#exr-oblique-vs-orthogonal}
+## When is an idempotent an orthogonal projection? (starred)
+$\star$ Let $P\in\mathbb{R}^{n\times n}$ be idempotent ($P^2=P$). Prove that the following are equivalent:
+(i) $P$ is symmetric; (ii) $P$ is the orthogonal projection onto $\mathcal{C}(P)$; (iii)
+$\|P\mathbf{v}\|\le\|\mathbf{v}\|$ for every $\mathbf{v}\in\mathbb{R}^n$; (iv) $\mathcal{C}(P)\perp\mathcal{N}(P)$.
+(Hint: for (iii) $\Rightarrow$ (i), decompose an arbitrary $\mathbf{v}$ using $\mathbb{R}^n=\mathcal{C}(P)\oplus\mathcal{N}(P)$,
+which holds for any idempotent, and test the contraction inequality on $\mathbf{v}=\mathbf{m}+t\mathbf{w}$ as
+$t\to\infty$.) (Solution in Appendix F.)
+:::

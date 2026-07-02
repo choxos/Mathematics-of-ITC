@@ -1,0 +1,1790 @@
+---
+title: "Adjustment Methods"
+---
+
+## From identification to estimation {#sec-adj-intro}
+
+The previous chapter settled a question of *principle*: under consistency
+(@thm-consistency-identity), ignorability (@def-ignorability), and positivity
+(@def-positivity), the average treatment effect (@def-ate) is a functional of the
+observable law of $(X,T,Y)$. The identification formula (@thm-ate-identification),
+$$
+\mathbb{E}[Y(t)] \;=\; \mathbb{E}_X\bigl[\,\mathbb{E}[Y \mid T=t,\,X]\,\bigr],
+\qquad t\in\{0,1\},
+$$
+tells us *what to compute* but not *how to compute it well*. Two practical
+obstacles remain. First, the covariate vector $X\in\mathcal{X}$ is usually
+high-dimensional, so stratifying on $X$ and averaging within strata is
+infeasible: most strata contain a single unit, or none. Second, an estimator
+that plugs an estimated regression or an estimated treatment model into the
+identification formula inherits the error of that model, and different plug-ins
+fail in different ways. This chapter is about turning the identification formula
+into estimators that are both feasible and robust.
+
+At bottom there are only two things one can model, and every method in this
+chapter is built from one or both of them. A *surface* here means a function
+defined over the covariate space $\mathcal{X}$: hand it a patient's covariate
+value $x$ and it returns a number. The first surface is the *treatment
+mechanism* $e(x)=P(T=1\mid X=x)$, the propensity score, the probability that a
+patient with covariates $x$ received the active treatment; modeling it and
+reweighting the sample so that treated and control groups look alike is inverse
+probability weighting (IPW). The second surface is the *outcome surface*
+$m_t(x)=\mathbb{E}[Y\mid T=t,X=x]$, the average outcome among patients with
+covariates $x$ who received treatment $t$; modeling it and averaging its
+predictions over the covariate distribution is standardization, also called
+outcome regression or the parametric g-formula. Matching, stratification, and
+machine-learning adjustments are not a third kind of object: each of them
+ultimately estimates the treatment mechanism, the outcome surface, or both. The
+augmented IPW (AIPW) estimator combines the two surfaces and enjoys a remarkable
+*insurance property*, made precise in @sec-adj-aipw: it returns the right answer
+if *either* the treatment model or the outcome model is correct, so getting one
+of the two models wrong does not by itself wreck the estimate. Finally, among
+all estimators that use no information beyond the identifying assumptions, there
+is a sharp lower bound on the asymptotic variance, encoded in a single function
+called the efficient influence function (EIF); AIPW attains it.
+
+These four objects, the propensity score, IPW, standardization, and AIPW, are
+the within-study engine of every population-adjusted indirect comparison studied
+later in this book. Matching-adjusted indirect comparison (MAIC) is a weighting
+method in the IPW family; simulated treatment comparison (STC) is a
+standardization method in the outcome-regression family; and multilevel network
+meta-regression (ML-NMR) plays the role of the combined, doubly robust estimator.
+Mastering the four estimators here is therefore mastering the mathematical core
+of population adjustment. The development follows @rosenbaum1983 for the
+propensity score and @hernan2020whatif for the estimators, and corresponds to
+results B.6 through B.12 in the proof catalogue.
+
+One point of vocabulary bridges this chapter to the rest of the book. In an
+ordinary observational study the covariate distribution we average over is the
+study's own. In an indirect treatment comparison the target covariate
+distribution is usually *someone else's*: the covariate profile of another
+trial, or of the decision population that a health-technology-assessment (HTA)
+agency cares about. The very same reweighting and standardization machinery then
+does double duty. Within one study it removes confounding; across studies it
+*transports* a treatment effect from the population where it was measured to the
+population where it is needed. That is why the four estimators below are the
+engine of MAIC, STC, and ML-NMR, and why the recurring question of *which*
+covariate distribution to average over is not a technicality but the whole point
+of population adjustment. We flag that choice at the end of every section.
+
+Three things this chapter deliberately does *not* do, so that its scope is
+honest. It does not handle unmeasured confounding: every result below assumes
+ignorability, and if some variable that affects both treatment and outcome is
+missing from $X$, all four estimators are biased and no amount of weighting
+repairs it. That failure mode is the subject of the quantitative bias analysis
+of Chapter 28. It does not address the *scale* on which effects fail to be
+collapsible: the whole chapter works on the difference (linear) scale, where the
+marginal and conditional contrasts coincide, and the odds-ratio and hazard-ratio
+complications are deferred to Chapter 11 (@def-non-collapsibility). And it does
+not yet use network structure: here there is a single study with two arms, and
+the step to a network of trials is Chapter 15.
+
+### A running clinical example {#sec-adj-running}
+
+Before any theorem, here is a deliberately tiny clinical scenario that we return
+to at every step and compute in full in @sec-adj-example. It is small enough to
+check by hand and rich enough to show why adjustment is needed at all.
+
+::: {#exm-adj-running}
+## Two diabetes drugs
+A hospital compares two treatments for type 2 diabetes: standard care, the
+control $T=0$, and a new drug, the active treatment $T=1$. The outcome $Y$ is
+the reduction in a symptom score after six months, larger being better. The one
+baseline covariate that matters is disease severity $X\in\{0,1\}$, with $x=0$
+"mild" and $x=1$ "severe"; half the patients are severe. Two facts about the
+data generate the entire lesson of the chapter.
+
+- Clinicians tend to give the new drug to the *sicker* patients: a mild patient
+  receives it with probability $e(0)=0.2$, a severe patient with probability
+  $e(1)=0.6$. This is the treatment mechanism.
+- Severe patients improve more no matter which drug they take. The average
+  outcomes are as follows.
+
+| Severity $X$ | Share of patients | Chance of new drug $e(x)$ | Mean $Y$ on new drug $m_1(x)$ | Mean $Y$ on standard care $m_0(x)$ |
+|:---|:---:|:---:|:---:|:---:|
+| mild ($x=0$)   | $50\%$ | $0.2$ | $1$ | $0$ |
+| severe ($x=1$) | $50\%$ | $0.6$ | $3$ | $2$ |
+
+Within each severity group the new drug adds exactly $1$ point,
+$m_1(x)-m_0(x)=1$ for both $x$, so the true average benefit is $\tau=1$.
+$\blacktriangleleft$
+:::
+
+*Why this example is the whole chapter in miniature.* Severity is a
+**confounder**: it pushes patients toward the new drug and it independently
+raises the outcome. If we simply compare the average outcome of everyone who got
+the new drug against everyone who got standard care, the new-drug group is
+crowded with severe, high-outcome patients, and the comparison flatters the new
+drug. The short calculation repeated in @sec-adj-example gives a naive contrast
+of $1.83$ against the true $\tau=1$: an overstatement of $0.83$ that is pure
+confounding. Every method in this chapter is a disciplined way to undo that
+crowding, either by *reweighting* the groups so their severity mix matches
+(inverse probability weighting, @sec-adj-ipw), by *predicting* each patient's
+outcome under each drug and averaging (standardization, @sec-adj-gcomp), or by
+combining the two (augmented IPW, @sec-adj-aipw). Keep the two numbers
+$e(0)=0.2$ and $e(1)=0.6$ in view; the small $0.2$ is where all the later
+trouble with variance and overlap comes from.
+
+### Standing assumptions and notation {#sec-adj-standing}
+
+Throughout we follow the [Notation](/notation.qmd). We observe
+$(X,T,Y)$ with $X\in\mathcal{X}$ a baseline covariate vector, $T\in\{0,1\}$ a
+binary treatment, and $Y\in\mathbb{R}$ the outcome. The potential outcomes
+$Y(0),Y(1)$ (@def-potential-outcome) satisfy SUTVA (@def-sutva), so that the
+observed outcome is $Y=TY(1)+(1-T)Y(0)$ (@thm-consistency-identity). We maintain
+the three identifying assumptions of the previous chapter as a standing
+hypothesis for the whole chapter.
+
+::: {.remark}
+**Standing assumptions (A).** Unless stated otherwise:
+
+- **(Consistency)** $Y=TY(1)+(1-T)Y(0)$ (@thm-consistency-identity).
+- **(Strong ignorability)** $(Y(0),Y(1))\perp T \mid X$ (@def-ignorability).
+- **(Strict positivity)** there is $\varepsilon\in(0,\tfrac12)$ with
+  $\varepsilon \le e(X) \le 1-\varepsilon$ almost surely (@def-positivity), where
+  $e(x)=P(T=1\mid X=x)$.
+- **(Integrability)** $\mathbb{E}[Y(t)^2]<\infty$ for $t\in\{0,1\}$.
+
+The conditional-independence symbol $\perp$, the conditional-expectation tower
+property, and the graphoid axioms are those of Chapter 4
+(@def-conditional-independence, @thm-tower-property, @thm-graphoid-axioms).
+:::
+
+::: {.remark}
+**Plain-English translation of the assumptions.** In the language of a trial:
+
+- *Consistency* says the outcome we recorded for a patient really is that
+  patient's outcome under the treatment they actually received, with no
+  interference between patients (@def-sutva): no hidden versions of the
+  treatment.
+- *Ignorability* says that once we condition on the measured covariates $X$, the
+  treatment a patient received carries no further information about how they
+  would fare under either treatment. In one phrase: **no unmeasured confounding
+  given $X$**. This is the one assumption that cannot be checked from data, and
+  the one Chapter 28 revisits.
+- *Strict positivity* says every patient had a genuine chance, bounded away from
+  $0$ and $1$, of receiving either treatment: **no patient was a foregone
+  conclusion**. In @exm-adj-running the smallest chance is $e(0)=0.2$, safely
+  positive.
+- *Integrability* says outcomes have finite variance, so the averages and
+  variances below all exist. Every bounded outcome, and every realistic clinical
+  score, satisfies it.
+:::
+
+::: {.remark}
+**A few symbols and terms, gathered in one place.** A novice can read the
+estimator sections knowing only the plain-language meanings; the precise
+measure-theoretic versions are collected here for reference and are used mainly
+inside proofs.
+
+- $P_X$ is the **marginal law of $X$**, the distribution of covariates in the
+  population. "$P_X$-almost every $x$" means "for every covariate value except
+  possibly a set of probability zero."
+- $\sigma(W)$ is the information carried by a random object $W$ (formally the
+  $\sigma$-algebra it generates), and $\sigma(W)\vee\mathcal{G}$ is the **join**,
+  the smallest information set containing both $\sigma(W)$ and $\mathcal{G}$;
+  conditioning on it means conditioning on $W$ and on $\mathcal{G}$ at once.
+- $\operatorname*{ess\,inf} e(X)$ is the **essential infimum**, the largest
+  number below which $e(X)$ almost never falls; it ignores probability-zero
+  exceptions, which is exactly the care the positivity margin needs.
+- The **graphoid axioms** (@thm-graphoid-axioms) are bookkeeping rules for the
+  symbol $\perp$. Two are used repeatedly: **decomposition (G2)**, if
+  $A\perp(B,C)\mid D$ then $A\perp B\mid D$, so dropping part of the right block
+  is legal; and **contraction (G4)**, if $A\perp B\mid D$ and $A\perp C\mid(B,D)$
+  then $A\perp(B,C)\mid D$, so two conditional independences combine.
+- A **nuisance function** is a part of an estimator we must estimate but do not
+  ultimately care about, here the propensity score $\hat e$ and the outcome
+  regression $\hat m_t$. The word does not mean "confounder."
+- The symbol $\blacktriangleleft$ marks the end of a definition, example, or
+  remark.
+:::
+
+For orientation, the four estimators and their optimal-variance summand are
+collected in @tbl-adj-estimators. You do not need the symbols yet; use the table
+as a map of where each object is defined.
+
+| Symbol | Name | What it targets | Defined in |
+|:---|:---|:---|:---:|
+| $\hat\psi_1^{\mathrm{IPW}}$ | IPW estimator of the treated mean | $\psi_1=\mathbb{E}[Y(1)]$, by reweighting | @sec-adj-ipw |
+| $\hat\tau^{\mathrm{IPW}}$ | IPW estimator of the ATE | $\tau=\psi_1-\psi_0$ | @sec-adj-ipw |
+| $\hat\tau^{\mathrm{OR}}$ | g-computation (outcome-regression) estimator | $\tau$, by standardizing predictions | @sec-adj-gcomp |
+| $\hat\psi_1^{\mathrm{AIPW}},\ \hat\tau^{\mathrm{AIPW}}$ | augmented IPW (doubly robust) | $\psi_1,\ \tau$, combining both surfaces | @sec-adj-aipw |
+| $\varphi$ | efficient influence function | the variance-optimal estimating summand | @sec-adj-eif |
+
+: Estimators and functionals used in this chapter. {#tbl-adj-estimators}
+
+It is convenient to name two regression surfaces and to keep the counterfactual
+and observable versions notationally distinct, because the equality between them
+*is* the identification step and we do not want to assume it silently. Recall
+from the [Notation](/notation.qmd) that
+$\mu_t(x)=\mathbb{E}[Y(t)\mid X=x]$ is the *counterfactual* conditional mean. We
+write
+$$
+m_t(x) \;:=\; \mathbb{E}[Y \mid T=t,\,X=x]
+\qquad (t\in\{0,1\})
+$$ {#eq-adj-mt}
+for the *observable* outcome regression. The next lemma records that, under the
+standing assumptions, the two coincide; this is the engine that lets every
+estimator below target a counterfactual mean while only ever touching observable
+quantities.
+
+::: {#lem-adj-regression-identity}
+## Regression identity
+Under the standing assumptions (A), for $P_X$-almost every $x$ and each
+$t\in\{0,1\}$,
+$$
+m_t(x) \;=\; \mu_t(x) \;=\; \mathbb{E}[Y(t)\mid X=x].
+$$
+:::
+
+::: {.proof}
+Fix $t$. Strict positivity guarantees $P(T=t\mid X=x)>0$ for $P_X$-almost every
+$x$, so the conditioning event $\{T=t, X=x\}$ has positive probability and
+$m_t(x)$ is well defined. On the event $\{T=t\}$ consistency gives $Y=Y(t)$
+pointwise, hence
+$$
+m_t(x)=\mathbb{E}[Y\mid T=t,X=x]=\mathbb{E}[Y(t)\mid T=t,X=x].
+$$
+Strong ignorability $(Y(0),Y(1))\perp T\mid X$ implies the weak form
+$Y(t)\perp T\mid X$ by decomposition (G2 of @thm-graphoid-axioms), and weak
+ignorability means precisely that conditioning further on $\{T=t\}$ does not
+change the conditional mean:
+$\mathbb{E}[Y(t)\mid T=t,X=x]=\mathbb{E}[Y(t)\mid X=x]=\mu_t(x)$. Combining the
+two displays gives $m_t(x)=\mu_t(x)$. $\square$
+:::
+
+*Why this matters.* @lem-adj-regression-identity is the hinge on which the whole
+chapter turns. Every estimator below is built to recover a *counterfactual* mean
+$\mu_t(x)=\mathbb{E}[Y(t)\mid X=x]$, a quantity about the outcome a patient would
+have had under a treatment they may not have received; yet every formula we can
+actually compute touches only the *observable* regression
+$m_t(x)=\mathbb{E}[Y\mid T=t,X=x]$, a plain conditional average in the data. The
+lemma says the two are equal under the standing assumptions, so from here on we
+may write $m_t$ and $\mu_t$ interchangeably and read any observable regression as
+if it were the counterfactual one. If ignorability failed, this equality would
+break, and with it every identification result in the chapter; that is precisely
+why unmeasured confounding is fatal and why Chapter 28 exists. For the first few
+theorems we occasionally write "$m_t=\mu_t$ under (A)" as a reminder that the
+coincidence is earned, not assumed.
+
+With $m_t=\mu_t$ in hand, the estimands of interest are the mean potential
+outcomes $\psi_t:=\mathbb{E}[Y(t)]$ and their contrast, the average treatment
+effect
+$$
+\tau \;=\; \psi_1-\psi_0 \;=\; \mathbb{E}[Y(1)-Y(0)]
+\;=\; \mathbb{E}_X[\tau(X)],
+\qquad \tau(x)=\mu_1(x)-\mu_0(x).
+$$ {#eq-adj-ate-target}
+Every theorem below is stated for the treated mean $\psi_1$; the control mean
+$\psi_0$ follows by the symmetric argument $T\mapsto 1-T$, $e\mapsto 1-e$, and the
+contrast $\tau$ follows by linearity of expectation (@thm-expectation-linearity).
+
+## Balancing scores {#sec-adj-balancing}
+
+The identification formula @thm-ate-identification tells us to average
+treatment-specific outcomes within each covariate value $x$. With a
+high-dimensional $X$, say thirty baseline variables, this is hopeless in
+practice: split patients into cells defined by all thirty variables and almost
+every cell holds a single patient, or none, so there is nothing to average
+within it. Matching patients on the full $X$ fails for the same reason, the
+so-called curse of dimensionality. So we look for a *low-dimensional summary*
+$b(X)$, ideally a single number, that we *can* match or stratify on while still
+killing confounding. The precise requirement on such a summary is that, given its
+value, the covariates carry no further information about treatment assignment:
+conditional independence of covariates and treatment given the summary.
+
+::: {#def-balancing-score}
+## Balancing score
+A measurable function $b:\mathcal{X}\to\mathcal{B}$ is a **balancing score** if
+$$
+X \perp T \mid b(X),
+$$
+that is, within each level set $\{x:b(x)=c\}$ the conditional law of $X$ is the
+same for treated and control units.
+
+[machine-checked: `theories/BalancingScore.v`, `Definition is_balancing_score`]
+:::
+
+*Reader translation.* A balancing score is any summary of the covariates with
+this property: **among patients who share the same score value, the treated and
+the untreated have the same distribution of measured baseline characteristics.**
+Picture two overlaid histograms of severity within one score level, one for
+treated patients and one for untreated; balance means the two histograms coincide.
+Before conditioning on the score the treated are sicker on average; after
+conditioning on it, severity lines up, so a difference in outcomes within a score
+level can no longer be blamed on severity. This is the formal version of the
+familiar applied habit of "checking covariate balance after matching."
+
+Two trivial balancing scores bracket the interesting ones. The identity $b(X)=X$
+is always balancing, since $X\perp T\mid X$ holds vacuously; it achieves no
+dimension reduction. At the other extreme, a constant $b(X)\equiv c$ is balancing
+if and only if $T\perp X$ outright, that is, in a completely randomized
+experiment. The propensity score, defined in the next section, is the optimal
+point between these extremes.
+
+::: {.remark}
+**Reader guide: a short technical interlude.** The next two lemmas are *proof
+tools*, not new causal ideas, and a reader may skim them now and return when they
+are first used, in the proof of @thm-rosenbaum-rubin and in Step 3 of
+@thm-ipw-unbiased. Their entire job is bookkeeping for the symbol $\perp$ when the
+treatment is binary. The one causal idea underneath is simple: a binary treatment
+is completely described by a single number, its conditional probability of being
+$1$, so any statement about "the conditional law of $T$" reduces to a statement
+about that one regression function.
+:::
+
+Because everything that follows manipulates conditional independence with a
+*binary* treatment, we isolate two elementary measure-theoretic facts. The first
+turns a statement about the conditional law of $T$ into a statement about a
+single regression function. The second is the factorization of a product under
+conditional independence, and it is stated for *integrable* rather than merely
+bounded factors because the product we later feed into it, $\mathbf{1}_{\{T=1\}}
+Y(1)$, involves the outcome $Y(1)$, which is square-integrable under assumption
+(A) but need not be bounded; the extra work in its proof, the truncation
+argument, is there only to cover that unbounded case, and if every outcome in your
+problem is bounded you may ignore it. Both facts rest only on the definition
+@eq-cond-indep and the tower property.
+
+::: {#lem-ci-binary-criterion}
+## Conditional-independence criterion for a binary variable
+Let $T\in\{0,1\}$, let $W$ be a random element, and let $\mathcal{G}$ be a
+sub-$\sigma$-algebra. Then $W \perp T \mid \mathcal{G}$ if and only if
+$$
+\mathbb{E}\bigl[\mathbf{1}_{\{T=1\}}\,\big|\,\sigma(W)\vee\mathcal{G}\bigr]
+\;=\;
+\mathbb{E}\bigl[\mathbf{1}_{\{T=1\}}\,\big|\,\mathcal{G}\bigr]
+\qquad\text{almost surely.}
+$$
+:::
+
+::: {.proof}
+Write $\pi:=\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid\mathcal{G}]$ and
+$\pi_W:=\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid\sigma(W)\vee\mathcal{G}]$.
+
+($\Rightarrow$) Conditional independence (@def-conditional-independence) applied
+with the bounded test function $f(T)=\mathbf{1}_{\{T=1\}}$ and $g\equiv 1$ gives
+$\pi_W=\pi$ immediately, since @eq-cond-indep with $g\equiv1$ states
+$\mathbb{E}[f(T)\mid\sigma(W)\vee\mathcal{G}]=\mathbb{E}[f(T)\mid\mathcal{G}]$.
+
+($\Leftarrow$) Suppose $\pi_W=\pi$. Any function of the binary variable $T$ is
+affine in $\mathbf{1}_{\{T=1\}}$: for $h:\{0,1\}\to\mathbb{R}$,
+$h(T)=h(0)+\bigl(h(1)-h(0)\bigr)\mathbf{1}_{\{T=1\}}$. Taking conditional
+expectations and using $\pi_W=\pi$ shows
+$$
+\mathbb{E}[h(T)\mid\sigma(W)\vee\mathcal{G}]
+=\mathbb{E}[h(T)\mid\mathcal{G}]
+\qquad\text{for every }h.
+\tag{$\ast$}
+$$
+Now let $f$ be any bounded function of $W$ and $h$ any function of $T$. By the
+tower property (@thm-tower-property), since $f(W)$ is
+$\sigma(W)\vee\mathcal{G}$-measurable,
+$$
+\mathbb{E}[f(W)\,h(T)\mid\mathcal{G}]
+=\mathbb{E}\bigl[f(W)\,\mathbb{E}[h(T)\mid\sigma(W)\vee\mathcal{G}]\bigm|\mathcal{G}\bigr]
+\overset{(\ast)}{=}
+\mathbb{E}\bigl[f(W)\,\mathbb{E}[h(T)\mid\mathcal{G}]\bigm|\mathcal{G}\bigr]
+=\mathbb{E}[h(T)\mid\mathcal{G}]\,\mathbb{E}[f(W)\mid\mathcal{G}],
+$$
+where the last step pulls out the $\mathcal{G}$-measurable factor
+$\mathbb{E}[h(T)\mid\mathcal{G}]$. This is exactly the factorization @eq-cond-indep
+defining $W\perp T\mid\mathcal{G}$. $\square$
+:::
+
+*Reader translation, and a warning.* The lemma says: to check that covariates and a
+*binary* treatment are conditionally independent, it is enough to check that
+adding $W$ to what we condition on does not change the one regression
+$\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid\cdot]$. What makes this work is that *every*
+function of a binary $T$ is affine in $\mathbf{1}_{\{T=1\}}$, so pinning down that
+single function pins down all of them. This is the only place we use that $T$ is
+binary, and it is essential: for a treatment with three or more levels the lemma
+is false, and the whole shortcut of summarizing treatment by one propensity number
+collapses. That is why this chapter, and anchored two-arm indirect comparison
+generally, lives in the binary-treatment world.
+
+::: {#lem-ci-factorization}
+## Factorization of an integrable product
+Let $T\in\{0,1\}$ and let $V$ be integrable with $T\perp V\mid\mathcal{G}$ for a
+sub-$\sigma$-algebra $\mathcal{G}$. Then
+$$
+\mathbb{E}[\mathbf{1}_{\{T=1\}}\,V \mid \mathcal{G}]
+\;=\;
+\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid\mathcal{G}]\;\mathbb{E}[V\mid\mathcal{G}]
+\qquad\text{almost surely.}
+$$
+:::
+
+::: {.proof}
+For bounded $V$ this is the definition @eq-cond-indep with $f(T)=\mathbf{1}_{\{T=1\}}$
+and $g=V$. For general integrable $V$, apply the bounded case to the truncations
+$V_n:=(V\wedge n)\vee(-n)$, which satisfy $T\perp V_n\mid\mathcal{G}$ because $V_n$
+is a measurable function of $V$ (conditional independence is preserved under
+measurable maps of either argument, a special case of decomposition). As
+$n\to\infty$, $V_n\to V$ with $|V_n|\le|V|$, so conditional dominated convergence
+(@thm-dominated-convergence) gives
+$\mathbb{E}[\mathbf{1}_{\{T=1\}}V_n\mid\mathcal{G}]\to\mathbb{E}[\mathbf{1}_{\{T=1\}}V\mid\mathcal{G}]$
+and $\mathbb{E}[V_n\mid\mathcal{G}]\to\mathbb{E}[V\mid\mathcal{G}]$ almost surely.
+Passing to the limit in the bounded identity yields the claim. $\square$
+:::
+
+*Reader translation.* For bounded $V$ the identity is immediate from the
+definition of conditional independence. The truncations $V_n=(V\wedge n)\vee(-n)$
+simply chop $V$ down to the range $[-n,n]$ so the bounded case applies; then
+"conditional dominated convergence" is the conditional-expectation version of the
+familiar fact that if $V_n\to V$ and all of them are dominated by the integrable
+$|V|$, their (conditional) means converge too. Nothing causal happens here; the
+truncation is the price of allowing an unbounded outcome.
+
+## The propensity score and the Rosenbaum-Rubin theorem {#sec-adj-rr}
+
+::: {#def-propensity-score}
+## Propensity score
+The **propensity score** is the conditional probability of treatment given
+covariates,
+$$
+e(x) \;=\; P(T=1\mid X=x) \;=\; \mathbb{E}[\mathbf{1}_{\{T=1\}}\mid X=x],
+$$
+a measurable map $e:\mathcal{X}\to[0,1]$. As a random variable we write $e(X)$.
+$\blacktriangleleft$
+:::
+
+*Reader translation.* The propensity score of a patient is one number in $[0,1]$:
+the probability, given everything we measured about them, that they received the
+active treatment. In @exm-adj-running it takes just two values, $e(0)=0.2$ for
+mild patients and $e(1)=0.6$ for severe patients. In practice we do not know $e$
+and must estimate it, almost always by a logistic regression of the treatment
+indicator on the covariates (@def-link-function, @thm-irls); the fitted value
+$\hat e(X_i)$ is patient $i$'s estimated chance of treatment. Keep the true $e$
+and the fitted $\hat e$ mentally separate: the theorems in this section are about
+the true $e$, and plugging in $\hat e$ is a further step, handled when we reach the
+estimators.
+
+The propensity score collapses the entire covariate vector to a single number in
+$[0,1]$, regardless of the dimension of $X$. The central theorem of @rosenbaum1983
+is that this drastic compression loses nothing relevant to confounding: $e(X)$ is
+a balancing score, and it is the *coarsest* one, so no balancing score can
+compress further.
+
+Before the proof, a word on "coarsest," which points the opposite way from
+everyday usage. Think of a balancing score as a rule for grouping patients: a
+*fine* rule makes many small groups (in the extreme, $b(X)=X$ puts every distinct
+covariate profile in its own group), while a *coarse* rule makes a few large
+groups (in the extreme, a constant puts everyone together). The theorem says the
+propensity score is the coarsest balancing score, the one making the *fewest,
+largest* groups you can get away with while still removing confounding. It uses
+the least covariate information of any balancing score, which is exactly what we
+wanted, because fewer, larger groups are what make matching and stratification
+feasible at all.
+
+::: {#exm-adj-coarsest}
+## Two covariates collapsing to one number
+Suppose $X=(X_1,X_2)$ with $X_1,X_2\in\{0,1\}$, so there are four covariate
+profiles, and suppose the treatment probability happens to depend on them only
+through their sum: $e(x)=0.2$ if $x_1+x_2=0$, $e(x)=0.5$ if $x_1+x_2=1$ (the two
+profiles $(1,0)$ and $(0,1)$), and $e(x)=0.8$ if $x_1+x_2=2$. Then the four
+profiles collapse to *three* propensity values $\{0.2,0.5,0.8\}$: the profiles
+$(1,0)$ and $(0,1)$ share the score $0.5$ and are pooled. The finer score
+$b(X)=X$ keeps all four groups; the propensity score $e(X)$ keeps only three, yet
+by @thm-rosenbaum-rubin both remove confounding equally well. Stratifying on the
+scalar $e(X)$ does the same job with fewer groups, which is the whole practical
+payoff of the "coarsest" property. $\blacktriangleleft$
+:::
+
+::: {#thm-rosenbaum-rubin}
+## Rosenbaum-Rubin theorem
+Let $e$ be the propensity score of @def-propensity-score.
+
+1. **(Balancing.)** $e(X)$ is a balancing score: $X\perp T\mid e(X)$.
+2. **(Coarsest.)** If $b$ is any balancing score, then $e(X)$ is a measurable
+   function of $b(X)$; equivalently $\sigma(e(X))\subseteq\sigma(b(X))$ up to
+   $P$-null sets, so every balancing score refines $e(X)$.
+
+[machine-checked: `theories/PropensityScore.v`, `Theorem propensity_score_is_balancing`; `theories/BalancingScore.v`, `Lemma propensity_is_coarsest`]
+:::
+
+::: {.proof}
+**(1)** Apply the criterion @lem-ci-binary-criterion with $W=X$ and
+$\mathcal{G}=\sigma(e(X))$. Because $e(X)$ is a function of $X$, we have
+$\sigma(X)\vee\sigma(e(X))=\sigma(X)$, so the left-hand regression is
+$$
+\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid X,\,e(X)]
+=\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid X]
+=e(X).
+$$
+For the right-hand regression, the tower property (@thm-tower-property) with
+$\sigma(e(X))\subseteq\sigma(X)$ gives
+$$
+\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid e(X)]
+=\mathbb{E}\bigl[\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid X]\bigm| e(X)\bigr]
+=\mathbb{E}[e(X)\mid e(X)]
+=e(X),
+$$
+the last equality because $e(X)$ is $\sigma(e(X))$-measurable. The two
+regressions agree, so by @lem-ci-binary-criterion, $X\perp T\mid e(X)$.
+
+**(2)** Let $b$ be a balancing score, $X\perp T\mid b(X)$. Apply
+@lem-ci-binary-criterion with $W=X$ and $\mathcal{G}=\sigma(b(X))$. As in part
+(1) the left regression equals $\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid X]=e(X)$, so
+the criterion yields
+$$
+e(X)
+=\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid b(X)]
+\qquad\text{almost surely.}
+$$ {#eq-rr-coarsest}
+The right-hand side is, by construction of conditional expectation, a
+$\sigma(b(X))$-measurable random variable (here we use the standard
+measure-theoretic fact that a conditional expectation given a $\sigma$-algebra is
+always measurable with respect to that $\sigma$-algebra), hence almost surely
+equal to a measurable function of $b(X)$ (a $\sigma(b(X))$-measurable random
+variable is, almost surely, some function of $b(X)$ itself). Therefore $e(X)$ is a
+measurable function of $b(X)$ up to a null set, which is the claim. $\square$
+:::
+
+::: {.remark}
+Identity @eq-rr-coarsest is worth isolating: *for any balancing score $b$, the
+propensity score is the treatment regression on $b(X)$,*
+$e(X)=P(T=1\mid b(X))$. We use it again in the sufficiency theorem. Part (2) is
+the precise sense of "coarsest": among all balancing scores, $e(X)$ generates the
+smallest $\sigma$-algebra, so stratifying or matching on $e(X)$ uses the least
+possible covariate information while still removing confounding.
+:::
+
+*Why this matters.* @thm-rosenbaum-rubin is the license for every weighting and
+matching method in the book. It says you may replace a thirty-variable balancing
+problem with a one-variable one, matching or weighting on the single number
+$e(X)$ instead of on all of $X$, without giving up the removal of measured
+confounding. MAIC rests on exactly this idea: it never balances covariates one at
+a time; it builds weights from a single score and balances the summary. Part (2),
+"coarsest," is what guarantees this scalar is enough rather than a lossy shortcut.
+
+The balancing property concerns only $(X,T)$. The result that powers adjustment
+is that balancing transfers ignorability from $X$ to the score: if treatment is
+unconfounded given the full $X$, it remains unconfounded given the summary
+$b(X)$, in particular given the scalar $e(X)$.
+
+::: {#thm-ps-sufficiency}
+## Propensity-score sufficiency
+Assume strong ignorability $(Y(0),Y(1))\perp T\mid X$. Then for every balancing
+score $b$,
+$$
+(Y(0),Y(1)) \perp T \mid b(X).
+$$
+In particular, taking $b=e$,
+$$
+(Y(0),Y(1)) \perp T \mid e(X).
+$$
+
+[machine-checked: `theories/PropensityScore.v`, `Theorem propensity_score_sufficiency_discrete`; `theories/BalancingScore.v`, `Theorem balancing_score_sufficiency`]
+:::
+
+::: {.proof}
+Write $W=(Y(0),Y(1))$. We verify the criterion @lem-ci-binary-criterion for
+$W\perp T\mid b(X)$, that is,
+$\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid W, b(X)]
+=\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid b(X)]$ almost surely.
+
+For the left side, note $\sigma(W)\vee\sigma(b(X))\subseteq\sigma(W)\vee\sigma(X)$
+(because $b(X)$ is a function of $X$, it carries no more information than $X$, so
+$\sigma(b(X))\subseteq\sigma(X)$), so by the tower property (@thm-tower-property),
+$$
+\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid W, b(X)]
+=\mathbb{E}\bigl[\,\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid W, X]\bigm| W, b(X)\bigr].
+$$
+Strong ignorability gives $W\perp T\mid X$, so by @lem-ci-binary-criterion (with
+the roles $W$, $\mathcal{G}=\sigma(X)$) the inner regression is
+$\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid W, X]=\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid X]=e(X)$.
+Hence
+$$
+\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid W, b(X)]
+=\mathbb{E}[e(X)\mid W, b(X)]
+=e(X),
+$$
+where the last equality holds because, by the coarsest property @eq-rr-coarsest,
+$e(X)$ is $\sigma(b(X))$-measurable, hence $\sigma(W)\vee\sigma(b(X))$-measurable.
+For the right side, @eq-rr-coarsest gives directly
+$\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid b(X)]=e(X)$. The two sides agree, so
+@lem-ci-binary-criterion yields $W\perp T\mid b(X)$. The case $b=e$ is immediate,
+since $e(X)$ is trivially a function of itself and
+$\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid e(X)]=e(X)$ by
+@thm-rosenbaum-rubin. $\square$
+:::
+
+*Why this matters.* This is the theorem that makes propensity-score adjustment
+*legitimate*, not merely convenient. @thm-rosenbaum-rubin balanced the covariates;
+this theorem shows the balance is enough for causal inference: **if all
+confounding is captured by the measured covariates $X$, then removing confounding
+on the single score $e(X)$ removes it entirely.** So a health researcher may
+summarize a high-dimensional patient by one propensity number, match or weight on
+that number, and still estimate the treatment effect without bias, provided
+ignorability holds. Every population-adjustment method downstream leans on exactly
+this reduction; when it fails, it fails because ignorability fails, never because
+the scalar summary was too crude.
+
+::: {.remark}
+@thm-ps-sufficiency can also be read off the graphoid algebra of
+@thm-graphoid-axioms: contraction (G4) combines $X\perp T\mid b(X)$ with
+$W\perp T\mid X$ (noting that conditioning $W\perp T\mid X$ already includes
+$b(X)$, which is redundant given $X$) to give $(X,W)\perp T\mid b(X)$, and
+decomposition (G2) drops $X$. The direct proof above is preferred here because it
+is self-contained and makes explicit the role of the coarsest identity
+@eq-rr-coarsest. The practical payoff is decisive: confounding adjustment, which
+seemed to require the high-dimensional $X$, can be carried out with the scalar
+$e(X)$. The three estimators of the next sections are the three ways to cash this
+in, namely weighting, standardization, and their combination.
+:::
+
+## Inverse probability weighting {#sec-adj-ipw}
+
+The idea of inverse probability weighting goes back to the survey-sampling
+estimator of Horvitz and Thompson: if a unit enters the sample with known
+probability $\pi$, weighting its contribution by $1/\pi$ recovers a
+population-level total in expectation. In the causal version the "sampling
+probability" into the treated arm is the propensity score $e(X)$, and weighting
+treated units by $1/e(X)$ reconstructs the mean of $Y(1)$ as if everyone had been
+treated.
+
+*A first look on numbers.* Return to @exm-adj-running. Among mild patients only a
+fraction $e(0)=0.2$ received the new drug, so each treated mild patient must stand
+in for $1/0.2=5$ mild patients; among severe patients the fraction is $e(1)=0.6$,
+so each treated severe patient stands in for $1/0.6\approx1.67$. Weighting the
+observed treated outcomes by these factors rebuilds the population as if everyone
+had taken the new drug: the arithmetic, carried out in full in @sec-adj-example,
+gives a reweighted treated mean of exactly $\psi_1=2$, undoing the confounding
+that had inflated the naive figure to $2.5$. The theorem next states this
+cancellation in general; the reader can track its four steps against these
+numbers.
+
+::: {#thm-ipw-unbiased}
+## Horvitz-Thompson identification
+Under the standing assumptions (A),
+$$
+\mathbb{E}\!\left[\frac{T\,Y}{e(X)}\right] \;=\; \mathbb{E}[Y(1)],
+\qquad
+\mathbb{E}\!\left[\frac{(1-T)\,Y}{1-e(X)}\right] \;=\; \mathbb{E}[Y(0)].
+$$ {#eq-ipw-id}
+
+[machine-checked: `theories/IPWEstimator.v`, `Theorem mu1_IPW_unbiased`, `Corollary ATE_IPW_unbiased`]
+:::
+
+::: {.proof}
+We prove the first identity; the second is the image under $T\mapsto 1-T$,
+$e\mapsto 1-e$. Strict positivity makes the weight $1/e(X)\le 1/\varepsilon$
+bounded, and since $\mathbb{E}[Y(1)^2]<\infty$ the integrand is integrable, so all
+expectations below are finite.
+
+*Step 1 (consistency).* The factor $T$ vanishes off $\{T=1\}$, and on $\{T=1\}$
+consistency gives $Y=Y(1)$; therefore $T\,Y=T\,Y(1)$ pointwise, and
+$$
+\mathbb{E}\!\left[\frac{T\,Y}{e(X)}\right]
+=\mathbb{E}\!\left[\frac{T\,Y(1)}{e(X)}\right].
+$$
+
+*Step 2 (tower and pull-out).* Conditioning on $X$ (@thm-tower-property) and
+pulling the $\sigma(X)$-measurable factor $1/e(X)$ outside the inner
+expectation,
+$$
+\mathbb{E}\!\left[\frac{T\,Y(1)}{e(X)}\right]
+=\mathbb{E}\!\left[\frac{1}{e(X)}\,\mathbb{E}\bigl[T\,Y(1)\mid X\bigr]\right].
+$$
+
+*Step 3 (ignorability factorizes).* Strong ignorability implies
+$Y(1)\perp T\mid X$ (G2 of @thm-graphoid-axioms). Since $Y(1)$ is integrable,
+@lem-ci-factorization gives
+$$
+\mathbb{E}[T\,Y(1)\mid X]
+=\mathbb{E}[\mathbf{1}_{\{T=1\}}\,Y(1)\mid X]
+=\mathbb{E}[\mathbf{1}_{\{T=1\}}\mid X]\,\mathbb{E}[Y(1)\mid X]
+=e(X)\,\mu_1(X).
+$$
+
+*Step 4 (cancel and average).* Substituting,
+$$
+\mathbb{E}\!\left[\frac{1}{e(X)}\,e(X)\,\mu_1(X)\right]
+=\mathbb{E}[\mu_1(X)]
+=\mathbb{E}\bigl[\mathbb{E}[Y(1)\mid X]\bigr]
+=\mathbb{E}[Y(1)],
+$$
+using the tower property once more. $\square$
+:::
+
+The sample analogue is the **IPW estimator**
+$$
+\hat\psi_1^{\mathrm{IPW}}
+=\frac1n\sum_{i=1}^n \frac{T_i Y_i}{\hat e(X_i)},
+\qquad
+\hat\tau^{\mathrm{IPW}}
+=\frac1n\sum_{i=1}^n\!\left[\frac{T_i Y_i}{\hat e(X_i)}
+-\frac{(1-T_i)Y_i}{1-\hat e(X_i)}\right],
+$$
+where $\hat e$ is an estimated propensity score, in practice a logistic
+regression fit (@def-link-function, @thm-irls). By @thm-ipw-unbiased the
+population functional equals the estimand, so $\hat\tau^{\mathrm{IPW}}$ is
+consistent whenever $\hat e\to e$ uniformly and the law of large numbers applies.
+
+*Why this matters.* @thm-ipw-unbiased is the mathematical heart of MAIC and of
+every weighting-based indirect comparison. It says that if you know each patient's
+chance of treatment, you can rebuild the population mean under a treatment from the
+patients who actually received it, by up-weighting the under-represented ones. The
+catch lives in the word "know." The theorem is exact for the *true* $e$; the
+estimator plugs in a *fitted* $\hat e$, so its consistency needs $\hat e\to e$, and
+*uniformly* rather than merely pointwise. The reason is the weight $1/\hat e(X_i)$:
+a single patient whose $\hat e(X_i)$ is badly underestimated produces an enormous
+weight that can dominate the whole average, and pointwise closeness would let such
+a spike survive, while uniform closeness rules it out. This sensitivity to small
+$\hat e$ is the same phenomenon the overlap discussion below quantifies.
+
+::: {.remark}
+**Recipe: the IPW estimator in practice.**
+
+1. Fit a model for treatment, usually a logistic regression of $T$ on the
+   covariates $X$, and read off each patient's fitted propensity $\hat e(X_i)$.
+2. Form the weights: $1/\hat e(X_i)$ for treated patients and
+   $1/(1-\hat e(X_i))$ for control patients.
+3. Check overlap before trusting anything: look for very small $\hat e(X_i)$ or
+   very large weights, and compute the effective sample size
+   $\mathrm{ESS}=(\sum_i w_i)^2/\sum_i w_i^2$ (@prp-ipw-variance). A small ESS is a
+   red flag.
+4. Compute the weighted mean outcome in each arm and take the difference; in
+   practice use the normalized (Hájek) form of @sec-adj-stabilized.
+:::
+
+### Stabilized weights {#sec-adj-stabilized}
+
+The raw Horvitz-Thompson estimator divides by $\hat e(X_i)$, which can be tiny,
+producing a few enormous weights and a large variance. A first repair multiplies
+the weights by a constant, the marginal treatment probability, which leaves the
+estimand unchanged but rescales the weights to average one.
+
+::: {#lem-stabilized-weights}
+## Stabilized and normalized weights
+Under the standing assumptions (A):
+
+1. The treated inverse-probability weight has unit mean,
+   $\displaystyle \mathbb{E}\!\left[\frac{T}{e(X)}\right]=1$.
+2. Consequently the **Hájek (normalized) estimand** equals the treated mean,
+   $$
+   \frac{\mathbb{E}[T\,Y/e(X)]}{\mathbb{E}[T/e(X)]}
+   =\mathbb{E}[Y(1)].
+   $$
+3. The **stabilized weight** $sw=T\,p_1/e(X)+(1-T)\,p_0/(1-e(X))$, with
+   $p_1=P(T=1)$ and $p_0=P(T=0)$, also has unit mean, $\mathbb{E}[sw]=1$.
+:::
+
+::: {.proof}
+**(1)** By the tower property and the definition of $e$,
+$\mathbb{E}[T/e(X)]
+=\mathbb{E}\bigl[\mathbb{E}[T\mid X]/e(X)\bigr]
+=\mathbb{E}[e(X)/e(X)]=\mathbb{E}[1]=1$.
+**(2)** Divide the first identity of @eq-ipw-id, which equals $\mathbb{E}[Y(1)]$,
+by the unit constant of part (1). **(3)** Linearity (@thm-expectation-linearity)
+and the conditional computation
+$\mathbb{E}[T\,p_1/e(X)]=p_1\,\mathbb{E}[T/e(X)]=p_1$ and likewise
+$\mathbb{E}[(1-T)p_0/(1-e(X))]=p_0$ give
+$\mathbb{E}[sw]=p_1+p_0=1$. $\square$
+:::
+
+The Hájek estimator $\sum_i T_iY_i/\hat e(X_i)\big/\sum_i T_i/\hat e(X_i)$ replaces
+the population denominator $\mathbb{E}[T/e(X)]=1$ by its sample version, which
+self-corrects when weights happen to be large by chance; it is the form used in
+practice and is the population analogue of the matching weights in MAIC. The
+estimand is unchanged by part (2), only the finite-sample variance improves.
+
+The three weight schemes are easy to conflate, so @tbl-adj-weights lays them side
+by side.
+
+| Scheme | Treated weight | Mean weight | Finite-sample variance | Used in practice? |
+|:---|:---|:---:|:---|:---:|
+| Raw (Horvitz-Thompson) | $T/\hat e(X)$ | $1$ at truth | largest; a few tiny $\hat e$ dominate | rarely alone |
+| Stabilized | $T\,\hat p_1/\hat e(X)$ | $1$ | smaller; rescaled by $\hat p_1=\widehat{P(T=1)}$ | in marginal structural models |
+| Hájek (normalized) | $T/\hat e(X)$, then divide the estimator by $\sum_i T_i/\hat e(X_i)$ | $1$ by construction | smallest; self-correcting denominator | yes, the default and the MAIC form |
+
+: Raw, stabilized, and Hájek (normalized) weights. All three leave the IPW estimand unchanged; they differ only in finite-sample variance. {#tbl-adj-weights}
+
+*Reader translation.* All three rows estimate the *same* quantity, the treated
+mean $\psi_1$; they differ only in how noisy the estimate is in a finite sample.
+Raw weights can be dominated by one patient with a tiny $\hat e$. Stabilized
+weights multiply by the marginal treatment probability, shrinking the spread
+without touching the target. The Hájek estimator divides by the sample sum of the
+weights, so if the weights happen to come out large by chance the denominator
+grows to match and cancels the accident. That self-correction is why the Hájek
+form is the practical default.
+
+*From IPW to MAIC.* This is the exact point where the abstract machinery becomes
+the method a health researcher runs. MAIC is IPW with two specializations: the
+propensity model is reparametrized as
+$w(x)=\exp(\alpha+\boldsymbol{\beta}^\top x)$, an unnormalized weight rather than a
+fitted logistic probability, and the weights are normalized to the Hájek form so
+they average one. Everything proved here, unbiasedness of the reweighted mean and
+the overlap penalty below, transfers verbatim to MAIC; the MAIC chapter only adds
+a recipe for choosing $\alpha$ and $\boldsymbol{\beta}$ by matching covariate
+moments to the target population.
+
+### Variance and the cost of poor overlap {#sec-adj-overlap}
+
+Identification @eq-ipw-id holds for any positivity margin $\varepsilon>0$, but
+the *variance* of the IPW integrand is governed by how small $e(X)$ can be. The
+following proposition makes the dependence explicit and connects it to the
+effective sample size of [Notation](/notation.qmd).
+
+::: {#prp-ipw-variance}
+## Variance inflation under poor overlap
+Let $W=T/e(X)$ be the treated weight and let
+$Z=T\,Y/e(X)$ be the treated IPW integrand. Under the standing assumptions (A):
+
+1. $\displaystyle \mathrm{Var}(Z)
+   =\mathbb{E}\!\left[\frac{\mathbb{E}[Y^2\mid T=1,X]}{e(X)}\right]-\psi_1^2$,
+   which increases without bound as $\operatorname*{ess\,inf} e(X)\to 0$ whenever
+   $\mathbb{E}[Y^2\mid T=1,X]$ is bounded away from zero.
+2. The population effective-sample-size fraction of the treated weights is
+   $$
+   \frac{\bigl(\mathbb{E}[W]\bigr)^2}{\mathbb{E}[W^2]}
+   =\frac{1}{\mathbb{E}[1/e(X)]}\;\le\; \mathbb{E}[e(X)] \;=\; P(T=1)\;\le\;1,
+   $$
+   with the first inequality strict unless $e(X)$ is almost surely constant.
+
+[machine-checked: `theories/IPWEstimator.v`, `Lemma var_mu1_IPW_ge0`, `Lemma ESS_variance_bound`]
+:::
+
+::: {.proof}
+**(1)** Since $T\in\{0,1\}$ we have $T^2=T$, so
+$Z^2=T\,Y^2/e(X)^2$. Conditioning on $X$ and using consistency
+($T\,Y^2=T\,Y(1)^2$, and on $\{T=1\}$, $\mathbb{E}[Y^2\mid T=1,X]$ is the second
+moment),
+$$
+\mathbb{E}[Z^2\mid X]
+=\frac{1}{e(X)^2}\,\mathbb{E}[T\,Y^2\mid X]
+=\frac{1}{e(X)^2}\,e(X)\,\mathbb{E}[Y^2\mid T=1,X]
+=\frac{\mathbb{E}[Y^2\mid T=1,X]}{e(X)},
+$$
+where $\mathbb{E}[T\,Y^2\mid X]=e(X)\,\mathbb{E}[Y^2\mid T=1,X]$ follows by the
+same conditioning on $(T,X)$ used in @lem-adj-regression-identity. Taking
+expectations gives $\mathbb{E}[Z^2]=\mathbb{E}[\mathbb{E}[Y^2\mid T=1,X]/e(X)]$, and
+subtracting $(\mathbb{E}Z)^2=\psi_1^2$ from @thm-ipw-unbiased yields the formula.
+If $\mathbb{E}[Y^2\mid T=1,X]\ge c>0$, the integrand is at least $c/e(X)$, which
+$\to\infty$ on the set where $e(X)\to0$, so the variance diverges as the
+positivity margin vanishes.
+
+**(2)** From part (1)'s computation with $Y\equiv1$,
+$\mathbb{E}[W^2]=\mathbb{E}[1/e(X)]$, and $\mathbb{E}[W]=1$ by
+@lem-stabilized-weights. Hence the ratio is $1/\mathbb{E}[1/e(X)]$. The map
+$u\mapsto 1/u$ is strictly convex on $(0,\infty)$, so Jensen's inequality
+(@thm-jensen) gives $\mathbb{E}[1/e(X)]\ge 1/\mathbb{E}[e(X)]$, with equality iff
+$e(X)$ is almost surely constant; inverting, $1/\mathbb{E}[1/e(X)]\le
+\mathbb{E}[e(X)]=P(T=1)\le1$. $\square$
+:::
+
+Part (2) is the population shadow of the finite-sample bound
+$\mathrm{ESS}=(\sum_i w_i)^2/\sum_i w_i^2\le n$: extreme propensities drive the
+effective sample size far below the nominal one, which is exactly the failure
+mode that population-adjustment methods must monitor. The diagnostic recurs in
+the MAIC chapter as the headline warning sign of an unreliable comparison.
+
+To make the cost of poor overlap concrete rather than symbolic, @tbl-adj-overlap
+tracks it through the two-stratum world of @exm-adj-running as the smaller
+propensity $e(0)=\varepsilon$ shrinks, holding $e(1)=0.6$ and
+$\mathrm{Var}(Y\mid T=1,X)=4$. As $\varepsilon$ falls, the largest weight grows,
+the effective sample size collapses, and the efficiency bound $V^\ast$ of
+@eq-eif-var (computed later) climbs.
+
+| Smallest propensity $e(0)=\varepsilon$ | Largest treated weight $1/\varepsilon$ | Treated ESS fraction $1/\mathbb{E}[1/e(X)]$ | Efficiency bound $V^\ast$ |
+|:---:|:---:|:---:|:---:|
+| $0.40$ | $2.5$  | $0.48$ | $9.33$  |
+| $0.20$ | $5.0$  | $0.30$ | $14.33$ |
+| $0.10$ | $10.0$ | $0.17$ | $24.33$ |
+| $0.05$ | $20.0$ | $0.09$ | $44.33$ |
+
+: The cost of poor overlap in @exm-adj-running, with $e(1)=0.6$ and conditional outcome variance $4$ held fixed. Halving the smallest propensity roughly doubles the variance floor. {#tbl-adj-overlap}
+
+*Positivity, overlap, and extrapolation, in health-research terms.* Strict
+positivity is a yes-or-no mathematical condition (formally, the essential infimum
+$\operatorname*{ess\,inf} e(X)$ stays above $0$, meaning $e(X)$ almost never
+touches zero). Its practical, graded cousin is **overlap**. Poor overlap means
+some kind of patient in the target population almost never receives one of the
+treatments, so the corresponding propensity sits near $0$ or $1$. Concretely: an
+eligibility criterion that all but excludes a subgroup from one arm, a prescribing
+habit that reserves the new drug for the sickest patients, or a sparsely populated
+covariate cell all produce near-zero propensities. When they do, IPW must lean on
+a handful of enormous weights (the table above), and an outcome-regression method
+must *extrapolate*, predicting outcomes for patient types it has barely seen under
+that treatment. Neither is a software bug; both are the data telling you the
+comparison you want is only weakly supported. This is why applied guidance insists
+on an overlap check, an effective-sample-size report, and honesty about which
+subgroups drive the result.
+
+*Why this matters.* @prp-ipw-variance is the theorem behind the single most-quoted
+diagnostic in population adjustment. When a MAIC reports an effective sample size
+of, say, thirty percent of the nominal one, that number is the finite-sample face
+of part (2): the weights have concentrated, and the comparison rests on far fewer
+patients than it appears to. A reviewer who understands this reads a small ESS not
+as a nuisance statistic but as a quantitative statement that the two trial
+populations barely overlap, and therefore that no method, MAIC included, can
+deliver a precise answer from these data.
+
+## Standardization and the g-formula {#sec-adj-gcomp}
+
+The complementary estimator models the outcome rather than the treatment. Having
+fitted $m_1(x)=\mathbb{E}[Y\mid T=1,X=x]$, one predicts the treated outcome for
+*every* unit, treated or not, and averages. This is standardization, also called
+the parametric g-formula or outcome regression.
+
+::: {#thm-g-computation-unbiased}
+## G-computation identification
+Under the standing assumptions (A),
+$$
+\mathbb{E}\bigl[m_1(X)\bigr]=\mathbb{E}[Y(1)],
+\qquad
+\mathbb{E}\bigl[m_0(X)\bigr]=\mathbb{E}[Y(0)],
+$$ {#eq-gformula}
+and therefore the standardized contrast equals the average treatment effect,
+$\mathbb{E}[m_1(X)-m_0(X)]=\tau$.
+
+[machine-checked: `theories/OutcomeRegression.v`, `Theorem mu1_OR_unbiased`, `Corollary ATE_OR_unbiased`]
+:::
+
+::: {.proof}
+By @lem-adj-regression-identity, $m_1(x)=\mu_1(x)=\mathbb{E}[Y(1)\mid X=x]$ for
+$P_X$-almost every $x$. Taking the expectation over $X$ and applying the tower
+property (@thm-tower-property),
+$$
+\mathbb{E}[m_1(X)]
+=\mathbb{E}[\mu_1(X)]
+=\mathbb{E}\bigl[\mathbb{E}[Y(1)\mid X]\bigr]
+=\mathbb{E}[Y(1)].
+$$
+The control identity is symmetric, and the contrast follows by linearity of
+expectation (@thm-expectation-linearity). This is exactly the $t=1$ and $t=0$
+instances of the identification formula @thm-ate-identification, now read as a
+statement about the regression surface $m_t$. $\square$
+:::
+
+The sample analogue is the **g-computation estimator**
+$$
+\hat\tau^{\mathrm{OR}}
+=\frac1n\sum_{i=1}^n\bigl[\hat m_1(X_i)-\hat m_0(X_i)\bigr],
+$$
+where $\hat m_t$ is a fitted regression. By @thm-g-computation-unbiased it is
+consistent whenever $\hat m_t\to m_t$ uniformly, by the strong law of large
+numbers applied to the empirical average over $X_i$.
+
+*Why this matters.* Standardization is the logic of STC. Instead of reweighting
+patients, it fits the outcome surface once and then asks it a counterfactual
+question for every patient, "what would this patient's outcome be under the other
+treatment?", and averages the answers. For an indirect comparison the crucial
+freedom is *which* patients you average over: fit the regression where you have
+individual data, then average its predictions over the covariate distribution of
+the target trial, and you have transported the effect to that trial's population.
+
+::: {.remark}
+**Recipe: the g-computation (standardization) estimator in practice.**
+
+1. Fit an outcome model $\hat m_t(x)$, a regression of $Y$ on covariates $X$
+   within each treatment arm (or one model with a treatment term).
+2. For every patient $i$, predict both $\hat m_1(X_i)$ and $\hat m_0(X_i)$, the
+   outcome under each treatment, whether or not they received it.
+3. Average each prediction over the *target* covariate distribution (the study
+   sample for an ATE, or another trial's covariates for a transported effect) and
+   take the difference.
+4. There is no weight and no effective sample size to check; the analogous danger
+   is extrapolation, so confirm that the target covariates lie inside the range
+   where the model was fit.
+:::
+
+::: {.remark}
+**No positivity needed for the estimand, but extrapolation creeps in.** Unlike
+IPW, the identity @eq-gformula does not divide by $e(X)$, so it does not require
+strict positivity for the *population* statement; only @lem-adj-regression-identity
+needed positivity to define $m_t$ on the support of $X$. The price is that the
+estimator $\hat m_t(X_i)$ is evaluated at covariate values $X_i$ that may be far
+from where treatment-$t$ data exist, so the fitted model silently extrapolates.
+IPW refuses to extrapolate but pays in variance; standardization extrapolates
+freely but pays in bias if the model is wrong. This is the complementarity that
+the next section exploits.
+:::
+
+::: {.remark}
+**Matching as nonparametric standardization.** Covariate or propensity-score
+matching is a third implementation of the same identification formula. Exact
+matching on $X$ estimates $m_t(x)$ nonparametrically by the within-cell treated
+and control averages, then averages over the empirical covariate distribution,
+which is @eq-gformula with a histogram regression. Matching on the scalar $e(X)$
+is licensed by @thm-ps-sufficiency: pairs with equal propensity scores are
+exchangeable in treatment, so their outcome difference is an unbiased CATE
+estimate at that score. One-to-one propensity matching of treated to control
+units targets the treatment effect on the treated rather than the ATE, because it
+reweights toward the treated covariate distribution; this distinction returns in
+the anchored-versus-unanchored discussion of population adjustment.
+:::
+
+### The estimand depends on whom you average over: ATE versus ATT {#sec-adj-att}
+
+The matching remark quietly raised the most consequential subtlety in the whole
+chapter, and it deserves to be stated plainly rather than in passing. Every
+identification result above computes the average treatment effect (ATE) by
+averaging $\tau(x)=\mu_1(x)-\mu_0(x)$ over the *whole* covariate distribution
+$P_X$. But nothing forces that choice. If instead we average over the covariate
+distribution *of the treated patients*, $P(X\mid T=1)$, we obtain a different
+estimand, the average treatment effect on the treated (ATT),
+$$
+\tau_{\mathrm{ATT}}
+=\mathbb{E}\bigl[\tau(X)\mid T=1\bigr]
+=\int \tau(x)\,dP(x\mid T=1).
+$$ {#eq-adj-att}
+When the effect $\tau(x)$ varies with $x$, that is, under effect modification, the
+ATE and the ATT genuinely differ, because they weight the same per-patient effects
+by different covariate mixes. One-to-one propensity matching of each treated
+patient to a control targets $\tau_{\mathrm{ATT}}$, not the ATE, precisely because
+it reweights everything toward the treated covariate distribution.
+
+*Reader translation.* "The treatment effect" is not one number until you say *in
+which population*. Averaging the same conditional effects over a sicker population
+gives a different answer than averaging over a healthier one. In @exm-adj-running
+the per-stratum effect is a constant $1$, so the ATE and the ATT both equal $1$ and
+the distinction is invisible; make the effect differ by severity and they part
+company.
+
+*Why this matters, and where it returns.* This is the mathematical pivot of the
+indirect-comparison literature. Choosing between @eq-adj-att and
+@eq-adj-ate-target, that is, choosing which distribution $dP(x)$ sits inside the
+average, is a choice of target population dressed in estimand language. When later
+chapters debate which population a MAIC or an STC estimates, and split anchored
+from unanchored comparisons, they are debating exactly this choice.
+
+*From standardization to STC.* STC is this estimator with the outcome regression
+fit on the trial that has individual patient data and its predictions averaged
+over the aggregate covariate summary of the comparator trial; the ATE-versus-ATT
+choice above is what becomes the anchored-versus-unanchored choice there.
+
+## Augmented IPW and double robustness {#sec-adj-aipw}
+
+We now combine the two estimators. The augmented IPW estimator starts from the
+IPW integrand and subtracts a regression-based correction that has mean zero when
+the propensity model is correct. The resulting functional has a startling
+property: it returns the right answer if *either* the propensity model or the
+outcome model is correct, a property called double robustness.
+
+For a candidate propensity model $e^\ast$ and a candidate outcome model
+$m_1^\ast$, define the treated AIPW functional
+$$
+\psi_1^{\mathrm{AIPW}}(e^\ast,m_1^\ast)
+:=\mathbb{E}\!\left[\frac{T\bigl(Y-m_1^\ast(X)\bigr)}{e^\ast(X)}
++m_1^\ast(X)\right].
+$$ {#eq-aipw-def}
+The sample analogue replaces $\mathbb{E}$ by the empirical average and
+$(e^\ast,m_1^\ast)$ by fitted nuisances $(\hat e,\hat m_1)$. The key is an exact
+algebraic rewriting of the integrand, valid pointwise, that isolates a single
+"weighted residual" whose mean we can kill in two different ways.
+
+Before the algebra, one reassurance. The identity below and its proof are written
+in terms of the *unobserved* potential outcome $Y(1)$, which can look alarming for
+an estimator meant to run on real data. But $Y(1)$ appears only inside the
+*proof*, as a device for showing the bias cancels; the estimator you actually
+compute, the sample version of @eq-aipw-def, uses only the observed $X$, $T$, $Y$
+and the fitted $\hat e,\hat m_1$. No potential outcome is ever evaluated.
+
+::: {#lem-aipw-pointwise}
+## AIPW cancellation identity
+Assume consistency $Y=TY(1)+(1-T)Y(0)$. For any functions $e^\ast,m_1^\ast$ with
+$e^\ast(X)\neq 0$,
+$$
+\frac{T\bigl(Y-m_1^\ast(X)\bigr)}{e^\ast(X)}+m_1^\ast(X)
+\;=\;
+\underbrace{\left(\frac{T}{e^\ast(X)}-1\right)\bigl(Y(1)-m_1^\ast(X)\bigr)}_{
+=:\,R(e^\ast,m_1^\ast)}
+\;+\;Y(1)
+\qquad\text{pointwise.}
+$$ {#eq-aipw-pointwise}
+
+[machine-checked: `theories/DoublyRobust.v`, `Lemma AIPW1_pointwise`]
+:::
+
+::: {.proof}
+Since $T\in\{0,1\}$ we have $T(1-T)=0$, so consistency gives $T\,Y=T\,Y(1)$.
+Hence the left-hand side equals
+$\dfrac{T\,Y(1)-T\,m_1^\ast(X)}{e^\ast(X)}+m_1^\ast(X)
+=\dfrac{T\bigl(Y(1)-m_1^\ast(X)\bigr)}{e^\ast(X)}+m_1^\ast(X)$.
+Expanding the right-hand side,
+$$
+\left(\frac{T}{e^\ast(X)}-1\right)\bigl(Y(1)-m_1^\ast(X)\bigr)+Y(1)
+=\frac{T\bigl(Y(1)-m_1^\ast(X)\bigr)}{e^\ast(X)}
+-\bigl(Y(1)-m_1^\ast(X)\bigr)+Y(1),
+$$
+and the last two terms collapse to $m_1^\ast(X)$. The two sides agree. $\square$
+:::
+
+Taking expectations in @eq-aipw-pointwise and using $\mathbb{E}[Y(1)]=\psi_1$,
+$$
+\psi_1^{\mathrm{AIPW}}(e^\ast,m_1^\ast)
+=\psi_1+\mathbb{E}\bigl[R(e^\ast,m_1^\ast)\bigr],
+\qquad
+R(e^\ast,m_1^\ast)=\left(\frac{T}{e^\ast(X)}-1\right)\bigl(Y(1)-m_1^\ast(X)\bigr).
+$$ {#eq-aipw-error}
+The *population functional* @eq-aipw-def equals the target $\psi_1$ exactly when
+the error term $\mathbb{E}[R(e^\ast,m_1^\ast)]$ vanishes. (Two statements are worth
+keeping apart. That the functional is unbiased is one thing; that the finite-sample
+*estimator* is consistent is another, and it needs this *and* that the fitted
+$\hat e,\hat m_1$ converge to their targets. We are checking the functional here,
+the population version, so "the error term vanishes" is the exact condition; the
+estimator-level story is @sec-adj-neyman.) Double robustness is the statement that
+this error term vanishes under either of two single-model conditions.
+
+::: {#thm-aipw-double-robust}
+## Double robustness of AIPW
+Maintain the standing assumptions (A) (so that ignorability and consistency
+hold). Let $(e^\ast,m_1^\ast)$ be candidate nuisance functions with
+$e^\ast(X)\ge\varepsilon$ almost surely. If **either**
+
+1. the propensity model is correct, $e^\ast=e$, **or**
+2. the outcome model is correct, $m_1^\ast=m_1$,
+
+then the error term in @eq-aipw-error vanishes and
+$$
+\psi_1^{\mathrm{AIPW}}(e^\ast,m_1^\ast)=\mathbb{E}[Y(1)].
+$$
+The same holds for $\psi_0^{\mathrm{AIPW}}$ under $T\mapsto1-T$, and hence for the
+AIPW contrast $\tau^{\mathrm{AIPW}}$.
+
+[machine-checked: `theories/DoublyRobust.v`, `Theorem double_robustness`, `Corollary ATE_AIPW_double_robust`]
+:::
+
+::: {.proof}
+By @eq-aipw-error it suffices to show $\mathbb{E}[R(e^\ast,m_1^\ast)]=0$ in each
+case. Recall $R=\bigl(T/e^\ast(X)-1\bigr)\bigl(Y(1)-m_1^\ast(X)\bigr)$.
+
+*Case 1: $e^\ast=e$ (propensity correct).* Condition on the pair
+$(Y(1),X)$. The factor $Y(1)-m_1^\ast(X)$ is $\sigma(Y(1),X)$-measurable, so it
+pulls out of the conditional expectation, leaving the conditional mean of the
+weight residual:
+$$
+\mathbb{E}[R\mid Y(1),X]
+=\bigl(Y(1)-m_1^\ast(X)\bigr)\,
+\mathbb{E}\!\left[\frac{T}{e(X)}-1\,\Big|\,Y(1),X\right].
+$$
+Strong ignorability gives $T\perp Y(1)\mid X$, so
+$\mathbb{E}[T\mid Y(1),X]=\mathbb{E}[T\mid X]=e(X)$, whence
+$\mathbb{E}[T/e(X)-1\mid Y(1),X]=e(X)/e(X)-1=0$. Therefore
+$\mathbb{E}[R\mid Y(1),X]=0$ and, taking expectations,
+$\mathbb{E}[R]=0$. Note the outcome model $m_1^\ast$ was arbitrary.
+
+*Case 2: $m_1^\ast=m_1$ (outcome correct).* Condition instead on $(T,X)$. Now the
+weight factor $T/e^\ast(X)-1$ is $\sigma(T,X)$-measurable and pulls out:
+$$
+\mathbb{E}[R\mid T,X]
+=\left(\frac{T}{e^\ast(X)}-1\right)\,
+\mathbb{E}\bigl[Y(1)-m_1(X)\mid T,X\bigr].
+$$
+Strong ignorability gives the mean form $\mathbb{E}[Y(1)\mid T,X]=\mathbb{E}[Y(1)\mid
+X]=\mu_1(X)$, and $\mu_1(X)=m_1(X)$ by @lem-adj-regression-identity, so
+$\mathbb{E}[Y(1)-m_1(X)\mid T,X]=\mu_1(X)-m_1(X)=0$. Therefore
+$\mathbb{E}[R\mid T,X]=0$ and $\mathbb{E}[R]=0$. Note the propensity model
+$e^\ast$ was arbitrary (subject to $e^\ast\ge\varepsilon$).
+
+In either case $\mathbb{E}[R]=0$, so @eq-aipw-error gives
+$\psi_1^{\mathrm{AIPW}}=\psi_1=\mathbb{E}[Y(1)]$. The control and contrast
+statements follow by symmetry and linearity. $\square$
+:::
+
+*Why this matters.* @thm-aipw-double-robust is the reason AIPW, and its network
+descendant ML-NMR, are the estimators of choice when one is unsure which model to
+trust. In an indirect comparison you rarely know whether the treatment-selection
+model or the outcome model is the better specified; double robustness says you do
+not have to choose, because being right about *either* one suffices. That is the
+precise content of the "insurance property" promised in the introduction: one
+premium, two ways to collect.
+
+::: {.remark}
+The two cases are perfectly symmetric in structure: each conditions on the
+"other" variable so that one factor of $R$ becomes a residual with conditional
+mean zero. In Case 1 it is the *weight* residual $T/e-1$ that is centered, killing
+$R$ whatever the outcome model; in Case 2 it is the *outcome* residual $Y(1)-m_1$
+that is centered, killing $R$ whatever the propensity model. Two independent
+chances to be right, from one estimator. The standing assumptions (consistency,
+ignorability, positivity) are *not* what is being protected here; they are
+maintained throughout, and double robustness concerns only misspecification of
+the fitted nuisances $\hat e,\hat m_1$.
+:::
+
+::: {.remark}
+**Recipe: the AIPW (doubly robust) estimator in practice.**
+
+1. Fit *both* nuisance models: a propensity model $\hat e(X)$ and an outcome model
+   $\hat m_t(X)$.
+2. For each patient form the augmented summand
+   $\hat m_1(X_i)+T_i\bigl(Y_i-\hat m_1(X_i)\bigr)/\hat e(X_i)$: the outcome
+   prediction, corrected by an inverse-probability-weighted residual.
+3. Average over patients for $\hat\psi_1^{\mathrm{AIPW}}$; do the mirror-image
+   control calculation and subtract for $\hat\tau^{\mathrm{AIPW}}$.
+4. Read double robustness carefully: it buys *two chances* at the nuisance models,
+   not immunity. If *both* $\hat e$ and $\hat m_t$ are wrong, the estimate is
+   biased, as the worked example shows explicitly.
+:::
+
+### Neyman orthogonality and why machine learning can be plugged in {#sec-adj-neyman}
+
+Double robustness is a statement about getting a nuisance model exactly right. The
+reason AIPW dominates modern practice is a subtler, quantitative cousin, and it is
+worth its own subsection because it is the single idea that lets a health
+researcher use flexible machine-learning fits for $\hat e$ and $\hat m_t$.
+
+::: {.remark}
+**Neyman orthogonality, a preview.** A stronger statement underlies the
+finite-sample behavior of AIPW: the functional @eq-aipw-def is *insensitive to
+small errors in the nuisances around the truth*. Concretely, the directional
+derivative of $\psi_1^{\mathrm{AIPW}}$ with respect to $e^\ast$ at the true
+$(e,m_1)$ is zero, and likewise with respect to $m_1^\ast$, so first-order
+nuisance error does not propagate to first-order error in the estimate. This
+"rate double robustness" lets one plug in slowly converging machine-learning fits
+for $\hat e,\hat m_1$ and still obtain a $\sqrt n$-consistent, asymptotically
+normal $\hat\tau^{\mathrm{AIPW}}$. Exercise @exr-neyman-orthogonality asks for the
+derivative computation.
+:::
+
+Here is the idea in slower motion, because it carries a large practical payoff.
+Think of the estimation error as having two layers. A *first-order* error is one
+proportional to how far a nuisance estimate sits from the truth, say
+$\hat e-e$. A *second-order* error is proportional to a *product* of two such
+gaps, for example $(\hat e-e)(\hat m_1-m_1)$, and is therefore far smaller when
+both gaps are small. For a plain IPW estimator the nuisance error enters at first
+order: a one-percent error in $\hat e$ moves the estimate by about one percent. For
+AIPW the first-order term *cancels*, and only the second-order product survives.
+The picture to keep is: *first-order error killed, second-order error survives.*
+Its consequence is decisive: because only the product of the two nuisance errors
+matters, each nuisance may be estimated by a slow, flexible method (a random
+forest, a boosted tree, a Super Learner) that would be far too crude for a
+first-order-sensitive estimator, and the AIPW estimate is still $\sqrt n$-consistent
+and asymptotically normal as long as the *product* of the two convergence rates
+beats $1/\sqrt n$.
+
+*A practitioner's question, answered.* Do MAIC, STC, and ML-NMR need cross-fitting
+(sample splitting) in practice? For the classical implementations, no: MAIC and
+STC fit low-dimensional parametric nuisances (a logistic weight model, a linear or
+generalized linear outcome model), for which the technical Donsker-type conditions
+hold and orthogonality already delivers valid inference without splitting.
+Cross-fitting becomes relevant only if one deliberately swaps in high-complexity
+machine-learning nuisances, the regime the orthogonality theory was built for;
+ML-NMR's Bayesian fit sidesteps the issue by propagating nuisance uncertainty
+through the posterior.
+
+*From AIPW to ML-NMR (a preview).* Read forward, AIPW is the template for ML-NMR.
+ML-NMR fits an outcome regression surface across a network of studies and
+integrates it over each target population's covariate distribution; the sense in
+which it inherits AIPW's doubly robust "insurance" is made precise only in the
+ML-NMR chapters, so take the analogy here as a signpost, not a finished theorem.
+The efficiency ceiling of the next section, however, is shared by all of them:
+MAIC, STC, and ML-NMR each face the same variance floor set by overlap.
+
+## The efficient influence function and the variance bound {#sec-adj-eif}
+
+::: {.remark}
+**Advanced material; the one-paragraph takeaway.** This is the most technical
+section of the chapter, and a reader may absorb its conclusion without its proof.
+The conclusion: there is a *best possible* variance for estimating $\psi_1$ from
+data satisfying only assumption (A), no estimator can beat it, and AIPW achieves
+it. That best variance, @eq-eif-var, grows *larger* exactly when overlap is poor,
+so a wide confidence interval under poor overlap is not a defect of your method
+but a law of the problem. If you retain only that, you have the part that matters
+for practice.
+:::
+
+*What kind of object to expect (the Cramér-Rao analogy, up front).* In the
+parametric world of Chapter 5, the Cramér-Rao bound (@thm-cramer-rao) sets a floor
+on the variance of any unbiased estimator, and the maximum likelihood estimator
+attains it. This section tells the same story one rung more abstract, for a model
+too rich to be indexed by finitely many parameters: there is again a variance
+floor, again a single object that encodes it, and again a specific estimator (now
+AIPW, not the MLE) that attains it. Read "efficient influence function" as "the
+semiparametric analogue of the Cramér-Rao information," and much of the mystery
+lifts.
+
+*Three ideas, kept separate.* Beginners conflate three things the section keeps
+distinct.
+
+- An **influence function** $\phi$ is a per-patient contribution describing how an
+  estimator wiggles when the data wiggle: an estimator is *asymptotically linear*
+  if it equals its target plus the average of such contributions plus negligible
+  error (the display below). Many estimators have one.
+- The **efficient** influence function is the *particular* influence function with
+  the smallest variance among all of them. It belongs to the *parameter and
+  model*, not to any one estimator.
+- The **semiparametric efficiency bound** is that smallest variance, the number
+  $V^\ast=\mathbb{E}[\varphi^2]$.
+- A **regular** estimator is one whose limiting behavior does not jump under
+  vanishingly small changes to the data-generating law; the qualifier rules out
+  pathological "super-efficient" estimators that beat the bound at one law and
+  misbehave next to it. The bound applies to all regular estimators, which is
+  every estimator used in practice.
+
+Double robustness is about bias. The second virtue of AIPW is about variance: when
+both nuisances are correct, its asymptotic variance is the smallest achievable by
+*any* regular estimator that assumes no more than the identifying assumptions.
+The object that encodes this optimum is the efficient influence function.
+
+An estimator $\hat\psi_1$ is **asymptotically linear** with influence function
+$\phi$ if
+$$
+\sqrt n\,(\hat\psi_1-\psi_1)=\frac1{\sqrt n}\sum_{i=1}^n\phi(X_i,T_i,Y_i)+o_P(1),
+\qquad \mathbb{E}[\phi]=0,\ \mathbb{E}[\phi^2]<\infty,
+$$
+so that $\sqrt n(\hat\psi_1-\psi_1)\xrightarrow{d}\mathcal{N}(0,\mathbb{E}[\phi^2])$
+by the central limit theorem. The influence function determines the asymptotic
+variance; the question is how small $\mathbb{E}[\phi^2]$ can be.
+
+::: {#lem-eif-mean-zero}
+## The AIPW influence function is centered
+Define
+$$
+\varphi(X,T,Y):=\frac{T\bigl(Y-m_1(X)\bigr)}{e(X)}+m_1(X)-\psi_1.
+$$ {#eq-eif}
+Under the standing assumptions (A), $\mathbb{E}[\varphi]=0$, and the
+sample-average AIPW estimator with the true nuisances satisfies
+$\hat\psi_1^{\mathrm{AIPW}}-\psi_1=\frac1n\sum_i\varphi(X_i,T_i,Y_i)$ exactly.
+:::
+
+::: {.proof}
+Taking $e^\ast=e$, $m_1^\ast=m_1$ in @eq-aipw-def shows
+$\psi_1^{\mathrm{AIPW}}(e,m_1)=\mathbb{E}\bigl[T(Y-m_1(X))/e(X)+m_1(X)\bigr]$, which
+equals $\psi_1$ by @thm-aipw-double-robust (either case applies). Hence
+$\mathbb{E}[\varphi]=\psi_1^{\mathrm{AIPW}}(e,m_1)-\psi_1=0$. The exact linearity
+is immediate because $\varphi$ is, by construction, the centered AIPW summand:
+averaging @eq-eif over the sample gives $\hat\psi_1^{\mathrm{AIPW}}-\psi_1$. $\square$
+:::
+
+::: {#thm-eif-bound}
+## Efficient influence function and the semiparametric variance bound
+Consider the nonparametric model for the law of $(X,T,Y)$ generated by the
+standing assumptions (A) with no further restriction on $e$, on the regressions
+$m_t$, or on the conditional outcome laws. The function $\varphi$ of @eq-eif is
+the **efficient influence function** for the parameter $\psi_1=\mathbb{E}[Y(1)]$,
+and the **semiparametric efficiency bound** is its variance,
+$$
+V^\ast:=\mathbb{E}[\varphi^2]
+=\mathbb{E}\!\left[\frac{\mathrm{Var}(Y\mid T=1,X)}{e(X)}\right]
++\mathrm{Var}\bigl(\mu_1(X)\bigr).
+$$ {#eq-eif-var}
+Every regular asymptotically linear estimator $\hat\psi_1$ has asymptotic
+variance at least $V^\ast$, and the AIPW estimator with consistent nuisances
+attains it.
+:::
+
+::: {.proof}
+We prove the variance decomposition @eq-eif-var in full and the attainment by
+AIPW; we then state precisely which step is imported as an external theorem.
+
+*Variance computation.* Write $\varphi=A+B$ with
+$$
+A=\frac{T\bigl(Y-m_1(X)\bigr)}{e(X)},
+\qquad
+B=m_1(X)-\psi_1,
+$$
+so $V^\ast=\mathbb{E}[A^2]+2\,\mathbb{E}[AB]+\mathbb{E}[B^2]$ by
+@lem-eif-mean-zero ($\mathbb{E}[\varphi]=0$).
+
+For $\mathbb{E}[A^2]$, use $T^2=T$ and condition on $X$. On $\{T=1\}$,
+$\mathbb{E}\bigl[(Y-m_1(X))^2\mid T=1,X\bigr]=\mathrm{Var}(Y\mid T=1,X)$ by
+definition of $m_1$, so, as in @prp-ipw-variance,
+$$
+\mathbb{E}[A^2\mid X]
+=\frac{1}{e(X)^2}\,\mathbb{E}\bigl[T\,(Y-m_1(X))^2\mid X\bigr]
+=\frac{e(X)\,\mathrm{Var}(Y\mid T=1,X)}{e(X)^2}
+=\frac{\mathrm{Var}(Y\mid T=1,X)}{e(X)},
+$$
+and therefore $\mathbb{E}[A^2]=\mathbb{E}\bigl[\mathrm{Var}(Y\mid T=1,X)/e(X)\bigr]$.
+
+For the cross term, condition on $X$ and pull out the $\sigma(X)$-measurable
+factor $B=m_1(X)-\psi_1$:
+$$
+\mathbb{E}[AB\mid X]
+=\frac{m_1(X)-\psi_1}{e(X)}\,\mathbb{E}\bigl[T\,(Y-m_1(X))\mid X\bigr]
+=\frac{m_1(X)-\psi_1}{e(X)}\,e(X)\,\mathbb{E}\bigl[Y-m_1(X)\mid T=1,X\bigr]=0,
+$$
+because $\mathbb{E}[Y\mid T=1,X]=m_1(X)$. Hence $\mathbb{E}[AB]=0$.
+
+For $\mathbb{E}[B^2]$, note $\mathbb{E}[m_1(X)]=\mathbb{E}[\mu_1(X)]=\psi_1$ by
+@thm-g-computation-unbiased, so $B=m_1(X)-\mathbb{E}[m_1(X)]$ is centered and
+$\mathbb{E}[B^2]=\mathrm{Var}(m_1(X))=\mathrm{Var}(\mu_1(X))$, using $m_1=\mu_1$
+(@lem-adj-regression-identity). Summing the three pieces gives @eq-eif-var.
+
+*Attainment.* By @lem-eif-mean-zero the AIPW estimator with true nuisances is
+exactly the empirical average of $\varphi$, so its influence function is
+$\varphi$ and its asymptotic variance is $\mathbb{E}[\varphi^2]=V^\ast$. With
+consistent estimated nuisances the same limit holds, by the Neyman-orthogonality
+remark of the previous section (the nuisance-estimation error enters at second
+order); a rigorous statement requires sample splitting or a Donsker condition,
+for which we refer to @hahn1998 and @tsiatis2006.
+
+*The lower bound.* That no regular asymptotically linear estimator can have
+asymptotic variance below $V^\ast=\mathbb{E}[\varphi^2]$ is the semiparametric
+efficiency theorem. Its proof characterizes the tangent space of the model as the
+closed linear span of scores of regular parametric submodels, shows that the
+influence function of any regular estimator differs from $\varphi$ by an element
+orthogonal to $\varphi$, and concludes by the Pythagorean identity
+$\mathbb{E}[\phi^2]=\mathbb{E}[\varphi^2]+\mathbb{E}[(\phi-\varphi)^2]\ge
+\mathbb{E}[\varphi^2]$. We take this characterization as a cited external result
+(@hahn1998 for the ATE specifically; @vandervaart1998, Chapter 25, and
+@tsiatis2006 for the general theory), since the tangent-space machinery is beyond
+the scope of this chapter. Everything else above is proved here. $\square$
+:::
+
+::: {.remark}
+The decomposition @eq-eif-var is interpretable term by term. The first term,
+$\mathbb{E}[\mathrm{Var}(Y\mid T=1,X)/e(X)]$, is the irreducible outcome noise in
+the treated arm, *inflated by the inverse propensity*: where treatment is rare,
+each treated observation must stand in for many untreated units, so its noise
+counts more. This is the same overlap penalty seen in @prp-ipw-variance. The
+second term, $\mathrm{Var}(\mu_1(X))$, is the genuine spread of the conditional
+mean surface across the covariate distribution, present even with noiseless
+outcomes. The bound is the analogue, for this semiparametric problem, of the
+Cramér-Rao bound (@thm-cramer-rao) for parametric ones: a floor on variance set
+by the information in the model, here achieved by AIPW rather than by a maximum
+likelihood estimator.
+:::
+
+*Why this matters, for a health researcher.* The bound $V^\ast$ answers the
+question an HTA reviewer actually asks: is my MAIC variance trustworthy, and how
+small could it possibly be? @eq-eif-var says the achievable variance contains the
+inverse-propensity inflation term $\mathbb{E}[\mathrm{Var}(Y\mid T=1,X)/e(X)]$,
+which blows up as overlap worsens (the $\varepsilon$ column of @tbl-adj-overlap).
+So when two trial populations barely overlap, *every* estimator, MAIC included,
+must have large variance; a wide confidence interval is then a faithful report of
+a hard problem, not a failure of the method. Conversely, a suspiciously narrow
+interval under poor overlap is a warning that some model is extrapolating and
+buying precision it has not earned.
+
+::: {.remark}
+There is no machine-checked counterpart to @thm-eif-bound in the companion Coq
+development; the files `theories/IPWEstimator.v` and `theories/DoublyRobust.v`
+formalize unbiasedness and double robustness but, as their comments note, do not
+formalize efficiency bounds. The bias-level results @thm-rosenbaum-rubin,
+@thm-ps-sufficiency, @thm-ipw-unbiased, @thm-g-computation-unbiased, and
+@thm-aipw-double-robust are tagged above with their verified counterparts.
+:::
+
+## A worked example {#sec-adj-example}
+
+We now carry a single small population through all four estimators with concrete
+numbers, so the reader can check every claim by hand.
+
+::: {#exm-adjustment-worked}
+## Two-stratum population
+Let $X\in\{0,1\}$ be a binary covariate with $P(X=0)=P(X=1)=\tfrac12$. Let the
+propensity score and the (true, hence observable) conditional means be
+$$
+e(0)=0.2,\quad e(1)=0.6;\qquad
+\begin{array}{c|cc}
+ & x=0 & x=1\\\hline
+m_1(x)=\mu_1(x) & 1 & 3\\
+m_0(x)=\mu_0(x) & 0 & 2
+\end{array}
+$$
+with conditional outcome variance $\mathrm{Var}(Y\mid T=1,X=x)=4$ in each
+stratum. Treatment is more likely in stratum $x=1$, which also has higher
+outcomes, so $X$ is a confounder. The conditional treatment effect is
+$\tau(x)=\mu_1(x)-\mu_0(x)=1$ in both strata.
+:::
+
+**True estimands.** Averaging the conditional means over $P(X=x)=\tfrac12$,
+$$
+\psi_1=\mathbb{E}[Y(1)]=\tfrac12(1)+\tfrac12(3)=2,\qquad
+\psi_0=\mathbb{E}[Y(0)]=\tfrac12(0)+\tfrac12(2)=1,\qquad
+\tau=\psi_1-\psi_0=1.
+$$
+
+**Marginal treatment probabilities.**
+$P(T=1)=\tfrac12 e(0)+\tfrac12 e(1)=\tfrac12(0.2)+\tfrac12(0.6)=0.4$, so
+$P(T=0)=0.6$.
+
+**The naive (unadjusted) contrast is biased.** Using Bayes' rule for the
+covariate mix within each arm,
+$$
+P(X=1\mid T=1)=\frac{\tfrac12 e(1)}{P(T=1)}=\frac{0.3}{0.4}=0.75,
+\qquad
+P(X=1\mid T=0)=\frac{\tfrac12(1-e(1))}{P(T=0)}=\frac{0.2}{0.6}=\tfrac13.
+$$
+Hence
+$$
+\mathbb{E}[Y\mid T=1]=0.25(1)+0.75(3)=2.5,\qquad
+\mathbb{E}[Y\mid T=0]=\tfrac23(0)+\tfrac13(2)=\tfrac23\approx0.667,
+$$
+and the unadjusted contrast is $2.5-0.667=1.833$, overstating the true $\tau=1$
+by $0.833$. The overstatement is pure confounding: the treated arm is
+overweighted toward the high-outcome stratum.
+
+**IPW (exact, population level).** By the conditional calculation in
+@thm-ipw-unbiased, $\mathbb{E}[TY/e(X)\mid X=x]=m_1(x)$ exactly, since the
+weight cancels $e(x)$. Numerically, stratum $x=0$ contributes
+$\tfrac{1}{0.2}\cdot e(0)\cdot m_1(0)=\tfrac{1}{0.2}(0.2)(1)=1$ and stratum $x=1$
+contributes $\tfrac{1}{0.6}(0.6)(3)=3$, so
+$\mathbb{E}[TY/e(X)]=\tfrac12(1)+\tfrac12(3)=2=\psi_1$. Likewise the control
+identity gives $\psi_0=1$, and $\hat\tau^{\mathrm{IPW}}=1$. The unit-mean check of
+@lem-stabilized-weights holds: $\mathbb{E}[T/e(X)]=\tfrac12\frac{0.2}{0.2}
++\tfrac12\frac{0.6}{0.6}=1$.
+
+**Overlap diagnostic.** The treated weights have second moment
+$\mathbb{E}[1/e(X)]=\tfrac12\frac1{0.2}+\tfrac12\frac1{0.6}
+=\tfrac12(5)+\tfrac12(1.667)=3.333$, so by @prp-ipw-variance the population
+effective-sample-size fraction is $1/3.333=0.30$. Only thirty percent of the
+nominal sample size is effectively used in the treated weighting, a direct
+consequence of the small $e(0)=0.2$.
+
+**G-computation (exact).** Standardizing the regression,
+$\mathbb{E}[m_1(X)]=\tfrac12(1)+\tfrac12(3)=2=\psi_1$ and
+$\mathbb{E}[m_0(X)]=\tfrac12(0)+\tfrac12(2)=1=\psi_0$, so $\hat\tau^{\mathrm{OR}}=1$,
+matching IPW.
+
+**AIPW and double robustness.** We test the treated functional @eq-aipw-def under
+three misspecification scenarios, using
+$\mathbb{E}[TY]=\sum_x \tfrac12 e(x)m_1(x)=\tfrac12(0.2)(1)+\tfrac12(0.6)(3)=1.0$
+and $\mathbb{E}[T/e(X)]=1$ throughout.
+
+- *Correct propensity, wrong outcome* ($e^\ast=e$, $m_1^\ast\equiv5$):
+  $$
+  \mathbb{E}\!\left[\frac{T(Y-5)}{e(X)}+5\right]
+  =\mathbb{E}\!\left[\frac{TY}{e(X)}\right]-5\,\mathbb{E}\!\left[\frac{T}{e(X)}\right]+5
+  =2-5(1)+5=2=\psi_1.\ \checkmark
+  $$
+- *Wrong propensity, correct outcome* ($e^\ast\equiv0.5$, $m_1^\ast=m_1$):
+  conditioning on $X$, $\mathbb{E}\bigl[T(Y-m_1(x))/0.5\mid X=x\bigr]
+  =2\,e(x)\,\mathbb{E}[Y-m_1(x)\mid T=1,X=x]=0$, so the functional reduces to
+  $\mathbb{E}[m_1(X)]=2=\psi_1.\ \checkmark$
+- *Both wrong* ($e^\ast\equiv0.5$, $m_1^\ast\equiv5$):
+  $$
+  \mathbb{E}\!\left[\frac{T(Y-5)}{0.5}+5\right]
+  =2\bigl(\mathbb{E}[TY]-5\,\mathbb{E}[T]\bigr)+5
+  =2\bigl(1-5(0.4)\bigr)+5=2(-1)+5=3\neq\psi_1.
+  $$
+  With both models wrong the estimate is biased to $3$. Double robustness is two
+  chances, not unconditional immunity.
+
+**The variance bound.** With $\mathrm{Var}(Y\mid T=1,X=x)=4$,
+$$
+\mathbb{E}\!\left[\frac{\mathrm{Var}(Y\mid T=1,X)}{e(X)}\right]
+=\tfrac12\frac{4}{0.2}+\tfrac12\frac{4}{0.6}
+=\tfrac12(20)+\tfrac12(6.667)=13.333,
+$$
+and $\mu_1(X)\in\{1,3\}$ each with probability $\tfrac12$ has
+$\mathrm{Var}(\mu_1(X))=\tfrac12(1-2)^2+\tfrac12(3-2)^2=1$, so by @eq-eif-var
+$$
+V^\ast=13.333+1=14.333=\tfrac{43}{3}.
+$$
+An efficient estimator of $\psi_1$ therefore obeys
+$\sqrt n(\hat\psi_1-\psi_1)\xrightarrow{d}\mathcal{N}(0,\,14.333)$. Had the design
+been balanced with $e\equiv0.4$, the first term would be $4/0.4=10$ and the bound
+$V^\ast=11$; the realized poor overlap at $e(0)=0.2$ inflates the efficiency bound
+from $11$ to $14.33$, a quantitative statement of the cost of imbalance.
+
+### An observed-data version: ten patients {#sec-adj-observed}
+
+The calculation above is at the level of the *population*, where expectations are
+exact. In real life we hold a finite dataset. @exm-adj-observed shows the same
+two-stratum world as a table of ten patients, with the columns an analyst would
+actually compute: a fitted propensity, a weight, and model predictions. It is the
+concrete observed-data anchor promised in the introduction.
+
+::: {#exm-adj-observed}
+## A ten-patient sample
+Five mild ($x=0$) and five severe ($x=1$) patients are observed. A logistic
+regression of $T$ on severity returns fitted propensities $\hat e(0)=0.2$ and
+$\hat e(1)=0.6$, matching the design of @exm-adj-running. The raw IPW weight is
+$w_i=1/\hat e(X_i)$ for treated patients and $w_i=1/(1-\hat e(X_i))$ for controls.
+The fitted outcome regression returns the stratum means as predictions,
+$\hat m_1(0)=1,\ \hat m_1(1)=3,\ \hat m_0(0)=0,\ \hat m_0(1)=2$.
+
+| $i$ | severity $X_i$ | $T_i$ | $Y_i$ | $\hat e(X_i)$ | weight $w_i$ | $\hat m_1(X_i)$ | $\hat m_0(X_i)$ |
+|:---:|:---:|:---:|:---:|:---:|:---:|:---:|:---:|
+| 1  | mild   | 0 | $0$  | $0.2$ | $1.25$ | $1$ | $0$ |
+| 2  | mild   | 0 | $1$  | $0.2$ | $1.25$ | $1$ | $0$ |
+| 3  | mild   | 0 | $-1$ | $0.2$ | $1.25$ | $1$ | $0$ |
+| 4  | mild   | 0 | $0$  | $0.2$ | $1.25$ | $1$ | $0$ |
+| 5  | mild   | 1 | $1$  | $0.2$ | $5.00$ | $1$ | $0$ |
+| 6  | severe | 0 | $1$  | $0.6$ | $2.50$ | $3$ | $2$ |
+| 7  | severe | 0 | $3$  | $0.6$ | $2.50$ | $3$ | $2$ |
+| 8  | severe | 1 | $3$  | $0.6$ | $1.67$ | $3$ | $2$ |
+| 9  | severe | 1 | $2$  | $0.6$ | $1.67$ | $3$ | $2$ |
+| 10 | severe | 1 | $4$  | $0.6$ | $1.67$ | $3$ | $2$ |
+
+$\blacktriangleleft$
+:::
+
+Run the four calculations on this table.
+
+- **Naive contrast.** Treated mean $=(1+3+2+4)/4=2.5$; control mean
+  $=(0+1-1+0+1+3)/6=0.667$; difference $1.833$, the same confounded overstatement
+  as in the population.
+- **IPW, Hájek form.** The treated numerator is $\sum_{T_i=1}w_iY_i
+  =5(1)+1.67(3+2+4)=20$ and the treated denominator is $\sum_{T_i=1}w_i
+  =5+1.67(3)=10$, giving treated mean $20/10=2.0$. The control side gives
+  $10/10=1.0$. Hence $\hat\tau^{\mathrm{IPW}}=2.0-1.0=1.0$, recovering $\tau$. The
+  single mild treated patient, raw weight $5$, does the heavy lifting: normalized
+  to mean one its weight is $2.0$, while each severe treated patient's is $0.67$.
+- **G-computation.** For every patient $\hat m_1(X_i)-\hat m_0(X_i)=1$, so the
+  average is $\hat\tau^{\mathrm{OR}}=1.0$.
+- **Effective sample size.** The treated weights are $\{5,1.67,1.67,1.67\}$, so
+  $(\sum w)^2/\sum w^2=10^2/(25+3\cdot 1.67^2)\approx 100/33.3=3.0$: three
+  patients' worth of information out of the ten, a $30\%$ effective fraction that
+  matches the population $1/\mathbb{E}[1/e(X)]=0.30$ computed earlier. The lone
+  tiny propensity $\hat e(0)=0.2$ is what shrinks it.
+
+A caution the finite table makes vivid: these numbers landed on $\tau=1$ exactly
+because the sample stratum means happened to equal the population ones. With real
+noise the three estimators would scatter around $1$, and, despite AIPW's
+asymptotic efficiency, at $n=10$ its variance need not be the smallest of the
+three. Efficiency is a large-sample statement; @exr-recompute pushes the reader to
+feel the finite-sample behavior on harder numbers.
+
+## Notes and references {#sec-adj-notes}
+
+The propensity score and the two theorems of @sec-adj-rr are due to
+@rosenbaum1983; their Theorem 1 is the balancing property and their Theorem 2 is
+sufficiency, here @thm-rosenbaum-rubin and @thm-ps-sufficiency. The estimators
+follow @hernan2020whatif, Part II: inverse probability weighting traces to the
+Horvitz-Thompson survey estimator (@horvitzthompson1952), standardization and the
+g-formula to @robins1986, and the augmented, doubly robust estimator to
+@robins1994 with the influence-function form popularized by @bangrobins2005. The
+semiparametric efficiency bound for the ATE is @hahn1998; the tangent-space
+theory underlying @thm-eif-bound is developed in @vandervaart1998, Chapter 25, and
+@tsiatis2006. The non-collapsibility caveat that governs which *scale* these
+marginal estimands live on is taken up in the next chapter
+(@def-non-collapsibility and its consequences); for the ATE on the difference
+scale, collapsibility makes the marginal and conditional contrasts agree, which is
+why @eq-adj-ate-target and @eq-gformula need no scale correction.
+
+This chapter corresponds to results B.6 through B.12 of the proof catalogue
+(`proofs/B_causal_foundations.md`): B.6 (balancing-score theorem) and B.7
+(Rosenbaum-Rubin) give @def-balancing-score and @thm-rosenbaum-rubin; B.8 gives
+@thm-ps-sufficiency; B.9 (Horvitz-Thompson) gives @thm-ipw-unbiased; B.10
+(g-computation) gives @thm-g-computation-unbiased; B.11 (AIPW double robustness)
+gives @lem-aipw-pointwise and @thm-aipw-double-robust; and B.12 (efficient
+influence function) gives @thm-eif-bound.
+
+**Machine-checked counterparts.** The bias-level results are formalized in the
+companion Coq development under `theories/`. The tags in the theorem statements
+record the exact names: `propensity_score_is_balancing` and `propensity_is_coarsest`
+for @thm-rosenbaum-rubin; `propensity_score_sufficiency_discrete` and
+`balancing_score_sufficiency` for @thm-ps-sufficiency; `mu1_IPW_unbiased` and
+`ATE_IPW_unbiased` for @thm-ipw-unbiased; `mu1_OR_unbiased` and `ATE_OR_unbiased`
+for @thm-g-computation-unbiased; `AIPW1_pointwise`, `double_robustness`, and
+`ATE_AIPW_double_robust` for @lem-aipw-pointwise and @thm-aipw-double-robust; and
+`var_mu1_IPW_ge0`, `ESS_variance_bound` for @prp-ipw-variance. The Coq proofs are
+carried out in a discrete probability-mass model, with the probabilistic content
+of ignorability entering as named hypotheses; the pen-and-paper proofs here supply
+the measure-theoretic versions. The efficiency bound @thm-eif-bound has no Coq
+counterpart.
+
+## Exercises {#sec-adj-exercises}
+
+A starred exercise, marked $\star$, has a full worked solution in Appendix F. The
+first three exercises are accessible warm-ups and interpretation questions; the
+computation and proof exercises follow.
+
+### Warm-ups and interpretation
+
+::: {#exr-adj-warmup-naive}
+**(Warm-up) The confounded naive contrast.** In @exm-adj-running, use the
+covariate mix within each arm to confirm that the average outcome among treated
+patients is $2.5$ and among controls is $0.667$, so the naive contrast is $1.833$.
+Explain in one sentence, in terms of severity, why this overstates the true effect
+$\tau=1$.
+:::
+
+::: {#exr-adj-ipw-byhand}
+**(Warm-up) IPW and g-computation by hand.** Using the ten-patient table of
+@exm-adj-observed: (a) recompute the Hájek IPW treated and control means and their
+contrast; (b) recompute the g-computation contrast from the prediction columns;
+(c) recompute the treated effective sample size and say what it implies about how
+many patients really drive the treated mean.
+:::
+
+::: {#exr-adj-interpret-overlap}
+**(Interpretation) Overlap and the target population.** A MAIC comparing two
+oncology drugs reports an effective sample size of $18\%$ of the nominal one.
+(a) In a sentence or two, say what this implies about how similar the two trial
+populations are and about the width of the resulting confidence interval.
+(b) A colleague proposes to fix the small effective sample size by discarding
+patients with extreme weights. Explain, referring to @sec-adj-att, why discarding
+patients changes the population the estimate refers to rather than merely reducing
+variance.
+:::
+
+### Computation and proof
+
+::: {#exr-ipw-control}
+## Control-arm Horvitz-Thompson
+Prove the second identity of @eq-ipw-id,
+$\mathbb{E}[(1-T)Y/(1-e(X))]=\mathbb{E}[Y(0)]$, by repeating the four steps of the
+proof of @thm-ipw-unbiased with $T$ replaced by $1-T$ and $e$ by $1-e$. State
+explicitly where strict positivity of $1-e(X)$ is used.
+:::
+
+::: {#exr-stabilized}
+## Stabilized weights have unit mean ($\star$)
+Let $sw=T\,p_1/e(X)+(1-T)\,p_0/(1-e(X))$ with $p_1=P(T=1)$, $p_0=P(T=0)$. (a)
+Show $\mathbb{E}[sw\mid X]=p_1+p_0=1$ pointwise in $X$, hence $\mathbb{E}[sw]=1$.
+(b) In the population of @exm-adjustment-worked, compute the four stabilized
+weight values (one per $(T,x)$ cell) and verify directly that their
+$P$-weighted average is $1$. (c) Explain in one sentence why stabilized weights
+have smaller variance than the raw weights $T/e(X)$ while leaving the IPW estimand
+unchanged.
+:::
+
+::: {#exr-balancing-functions}
+## Functions of a balancing score
+Let $b$ be a balancing score and let $h$ be a measurable injection on the range of
+$b$. (a) Show $h\circ b$ is a balancing score. (b) Show that a constant function
+is a balancing score if and only if $T\perp X$, i.e. the experiment is completely
+randomized. (c) Using @thm-rosenbaum-rubin, show that if $b$ takes finitely many
+values then $e(X)$ takes at most that many values; interpret this as a limit on
+how much a coarse stratification can balance.
+:::
+
+::: {#exr-randomized}
+## Randomized experiments
+Suppose $e(X)\equiv \bar e$ is constant (a completely randomized trial). (a) Show
+that the IPW, g-computation, and naive difference-in-means estimands all equal
+$\tau$. (b) Show that the treated IPW integrand reduces to $TY/\bar e$ and that
+its population effective-sample-size fraction from @prp-ipw-variance equals $1$,
+so there is no overlap penalty. (c) Conclude that adjustment is unnecessary for
+*identification* under randomization, and say what it is still useful for.
+:::
+
+::: {#exr-aipw-control}
+## Control-arm double robustness
+State and prove the control-arm analogue of @thm-aipw-double-robust for
+$\psi_0^{\mathrm{AIPW}}(e^\ast,m_0^\ast)
+=\mathbb{E}[(1-T)(Y-m_0^\ast(X))/(1-e^\ast(X))+m_0^\ast(X)]$, using the
+control-arm cancellation identity obtained from @lem-aipw-pointwise under
+$T\mapsto1-T$. Deduce double robustness of the AIPW contrast
+$\tau^{\mathrm{AIPW}}=\psi_1^{\mathrm{AIPW}}-\psi_0^{\mathrm{AIPW}}$.
+:::
+
+::: {#exr-eif-control}
+## Variance bound for the control mean ($\star$)
+Write down the efficient influence function and the bound $V_0^\ast$ for
+$\psi_0=\mathbb{E}[Y(0)]$ by symmetry with @thm-eif-bound. Then, in the population
+of @exm-adjustment-worked with $\mathrm{Var}(Y\mid T=0,X=x)=4$, compute $V_0^\ast$
+numerically and compare it with $V^\ast=14.333$ for the treated mean. Explain,
+using the inverse-propensity inflation term, why the control bound is the smaller
+of the two.
+:::
+
+::: {#exr-neyman-orthogonality}
+## Neyman orthogonality of AIPW
+For a fixed direction $\Delta_e$ with $\|\Delta_e\|_\infty<\infty$, consider the
+path $e_s^\ast=e+s\,\Delta_e$ and let
+$g(s):=\psi_1^{\mathrm{AIPW}}(e_s^\ast,m_1)$ with the *correct* outcome model.
+(a) Differentiate under the expectation to show $g'(0)=0$, i.e. the AIPW
+functional is insensitive to first-order propensity error when the outcome model
+is correct. (b) Symmetrically, fix the correct $e$ and perturb
+$m_1^\ast=m_1+s\Delta_m$; show the derivative in $s$ at $0$ is also zero. (c)
+Explain how (a) and (b) together justify plugging in slowly converging nuisance
+estimators, referencing the remark following @thm-aipw-double-robust.
+:::
+
+::: {#exr-recompute}
+## Recomputation with new numbers
+Repeat the worked example @exm-adjustment-worked with $e(0)=0.1$, $e(1)=0.5$,
+$\mu_1(0)=2,\ \mu_1(1)=4,\ \mu_0(0)=1,\ \mu_0(1)=1$, and
+$\mathrm{Var}(Y\mid T=1,X=x)=9$. (a) Compute $\psi_1,\psi_0,\tau$ and the naive
+contrast, and report the confounding bias. (b) Verify the IPW and g-computation
+identities. (c) Compute the overlap fraction $1/\mathbb{E}[1/e(X)]$ and the
+efficiency bound $V^\ast$, and comment on how the worse overlap at $e(0)=0.1$
+changes both relative to the original example.
+:::

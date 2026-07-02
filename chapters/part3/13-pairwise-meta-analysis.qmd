@@ -1,0 +1,1460 @@
+---
+title: "Pairwise Meta-Analysis"
+---
+
+Meta-analysis is the arithmetic of evidence synthesis. Several studies have each estimated the same
+treatment effect, and we wish to combine their estimates into one summary that is more precise than any
+single trial and that lays bare whether the studies agree. This chapter develops that arithmetic from
+first principles. It is the foundation of every later chapter: the indirect comparison of Chapter 14 is
+a meta-analysis of contrasts, the network meta-analysis of Chapter 15 is a multivariate meta-analysis,
+and the population-adjusted methods of Parts IV and V are meta-analyses in which the within-study
+estimates are first recalibrated to a common population. Master the pairwise case and the rest is
+structure built on top of it.
+
+We work throughout with the two-stage view. In the first stage, each study $i$ has been analyzed on its
+own and has produced a point estimate $\hat\theta_i$ of an effect (a log odds ratio, a log hazard ratio,
+a mean difference, whatever the outcome scale demands) together with an estimate $s_i^2$ of the variance
+of that point estimate. In the second stage, which is the subject of this chapter, we treat the pairs
+$(\hat\theta_i, s_i^2)$, $i = 1, \dots, k$, as the data and combine them. The within-study variances
+$s_i^2$ are treated as known constants. This is an idealization: in reality $s_i^2$ is itself estimated
+from the $n_i$ patients of study $i$. The idealization is excellent when the $n_i$ are large, because
+then $s_i^2$ is estimated with negligible relative error, and it is the standard convention in the
+meta-analysis and network meta-analysis literature (@dias2018nma). We adopt it and flag, where it
+matters, what changes when it is relaxed.
+
+::: {.remark}
+**Indexing convention for this chapter.** The unit of analysis here is the study, and we follow the
+universal meta-analysis convention of letting $i = 1, \dots, k$ index the $k$ studies. This differs from
+the book-wide convention of [Notation](/notation.qmd), where $j$ indexes studies and $i$ indexes
+individuals within a study; that convention returns in Chapter 15, where studies again contain many
+individuals. Within the present chapter each study contributes exactly one summary estimate, so a single
+index suffices and we use $i$ for it. Mnemonic: in this chapter a study *is* a single
+data point, so the lone index does double duty; wherever you see $i = 1, \dots, k$, read it as "study
+$i$ of $k$." The symbols $\tau^2$ (between-study variance), $w_i = 1/s_i^2$
+(inverse-variance weight), and $\tilde w_i = 1/(s_i^2 + \tau^2)$ (random-effects weight) are used in the
+standard meta-analytic sense. $\blacktriangleleft$
+:::
+
+Two orientations before the mathematics begins, both aimed at a reader who runs meta-analyses in
+software but has not seen one built from the ground up.
+
+**Reader translation of the two-stage view.** Stage 1 happens *inside* each trial: a statistician fits a
+model (a logistic regression for a binary outcome, a Cox model for time to event, a linear model for a
+continuous outcome) and reports two numbers, a point estimate $\hat\theta_i$ and its standard error.
+Squaring the standard error gives $s_i^2$. Stage 2, the whole of this chapter, never revisits the
+patients; it works only with the pairs $(\hat\theta_i, s_i^2)$. So $s_i^2$ is "the square of the
+standard error you read off the trial report," and treating it as known is the statement that we trust
+each trial's own reported precision. The one place this idealization bites is the Hartung-Knapp interval
+of Section @sec-ma-hk, which exists precisely because pretending we know more than we do makes intervals
+too narrow when the trials are few.
+
+**Why we pool on the link (log) scale.** The estimate $\hat\theta_i$ is almost never an odds ratio or a
+hazard ratio itself; it is the *logarithm* of one, or a raw mean difference. There are two reasons, one
+statistical and one mathematical. Statistically, a log odds ratio is far closer to normally distributed,
+and its confidence interval far more symmetric, than the odds ratio itself, so the Gaussian machinery
+below is trustworthy on the log scale and not on the ratio scale. Mathematically, the odds ratio and
+hazard ratio are *non-collapsible*: the population-average ratio is not the average of subgroup ratios,
+so averaging ratios directly does not even estimate a well-defined effect (@def-collapsibility,
+@thm-noncollapsibility-or-hr). Throughout the chapter $\theta$ is a *contrast* on the linear-predictor
+scale (the "link scale"); the word contrast simply means a difference of two effects, here two linear
+predictors. Keep in mind that the pooled $\theta$ inherits whatever scale the inputs were on, and that
+this choice of scale is exactly what the later ITC chapters must respect.
+
+::: {#exm-ma-running}
+## A running example: five trials of $B$ versus $A$
+A health technology assessment must summarize the effect of treatment $B$ relative to treatment $A$ for
+one indication. Five randomized trials have compared $B$ with $A$; each reports a log odds ratio
+$\hat\theta_i$ (a positive value favors $B$) and a within-study variance $s_i^2$.
+
+| Study $i$ | $\hat\theta_i$ (log OR) | $s_i^2$ | SE $= s_i$ | $w_i = 1/s_i^2$ |
+|---|---|---|---|---|
+| A | $0.20$ | $0.02$ | $0.141$ | $50.0$ |
+| B | $0.45$ | $0.05$ | $0.224$ | $20.0$ |
+| C | $0.15$ | $0.01$ | $0.100$ | $100.0$ |
+| D | $0.60$ | $0.04$ | $0.200$ | $25.0$ |
+| E | $0.50$ | $0.08$ | $0.283$ | $12.5$ |
+
+The analyst must decide whether the five trials estimate *one common effect* or whether the effect
+genuinely varies from trial to trial, and then report a pooled estimate with an honest interval. Every
+section below advances this decision one step. To keep the arithmetic light while the theory is built,
+we thread the three studies $C$, $D$, $E$ (the most discordant trio) through each result as a "running
+trio," and return to all five studies for the full pipeline in Section @sec-ma-example.
+$\blacktriangleleft$
+:::
+
+A *forest plot* draws each estimate as a point with its $95\%$ confidence interval
+$\hat\theta_i \pm 1.96\, s_i$, stacking the trials with the pooled estimate at the foot; it is the
+picture every health researcher already reads. For the five trials:
+
+```
+        log OR scale   |=null(OR=1)   o=estimate   [---]=95% CI
+  A  0.20         [--|-------o----------]
+  B  0.45            |----------------o-----------------]
+  C  0.15          [-|-----o------]
+  D  0.60            |       [--------------o---------------]
+  E  0.50          [-|------------------o---------------------]
+ FE  0.27            |         #
+ RE  0.30            |           #
+            +       +       +       +      +       +       +
+          -0.2     0.0     0.2     0.4    0.6     0.8     1.0
+```
+
+The vertical bar marks no effect (log OR $= 0$, odds ratio $1$). Study $C$ has the shortest interval, so
+it is the most precise ($s_C^2 = 0.01$), and it sits lowest; studies $D$ and $E$ are higher and wider.
+The two pooled markers, fixed-effect (FE) and random-effects (RE), are what the chapter will compute and
+compare.
+
+**Terms you will meet.** A little vocabulary recurs. Each term is also defined in line where it is first
+used; the table is only for quick reference.
+
+| Term | Plain meaning in this chapter |
+|---|---|
+| contrast | a difference of two effects on the link scale, for example a log odds ratio |
+| heterogeneity | genuine trial-to-trial variation in the true effect, beyond sampling error |
+| homogeneity | its absence: all trials share one true effect |
+| whiten | rescale each study's equation by $1/s_i$ so every error has variance $1$ |
+| positive definite ($\succ 0$) | a covariance matrix that is invertible with all variances positive |
+| idempotent matrix | a matrix $P$ with $P^2 = P$; geometrically an orthogonal projection |
+| projector | such a $P$: it keeps the part of a vector lying in a subspace and discards the rest |
+| error contrasts | combinations of the data that do not depend on the mean $\theta$ (used by REML) |
+| working model | a convenient model assumed only to derive an interval, not believed literally |
+| type-II maximum likelihood | estimating a variance by maximizing the likelihood after integrating out the mean |
+| funnel plot | a scatter of each estimate against its precision, used to detect small-study effects |
+
+**Roadmap.** The chapter runs in a straight line. Section @sec-ma-fixed pools under the assumption of a
+single common effect and proves the inverse-variance weights optimal. Section @sec-ma-cochran asks
+whether that assumption holds, through Cochran's $Q$. Sections @sec-ma-isquared through @sec-ma-reml
+quantify and then estimate the heterogeneity ($I^2$, then the variance $\tau^2$ by two methods). Section
+@sec-ma-hk fixes the interval when trials are few, Section @sec-ma-bayes gives the Bayesian version that
+later networks generalize, and Section @sec-ma-egger checks the evidence base for small-study bias.
+Everything feeds the indirect comparison of Chapter 14 and the network of Chapter 15.
+
+## The fixed-effect model and inverse-variance weighting {#sec-ma-fixed}
+
+The simplest assumption is that every study estimates one and the same effect $\theta$, and that the
+studies differ only through sampling error.
+
+::: {#def-fixed-effect-ma}
+## Fixed-effect meta-analysis model
+The *fixed-effect model* for $k$ study estimates is
+$$
+\hat\theta_i = \theta + \varepsilon_i, \qquad \mathbb{E}[\varepsilon_i] = 0, \qquad
+\mathrm{Var}(\varepsilon_i) = s_i^2, \qquad \mathrm{Cov}(\varepsilon_i, \varepsilon_j) = 0 \ (i \ne j),
+$$ {#eq-fe-model}
+where $\theta \in \mathbb{R}$ is the common effect and the within-study variances $s_i^2 > 0$ are known.
+When distributional results are needed we add the Gaussian assumption $\varepsilon_i \sim
+\mathcal{N}(0, s_i^2)$, independently across $i$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** The fixed-effect model makes a strong claim: there is *one* number $\theta$ (say,
+one true log odds ratio for $B$ versus $A$), and the five trials differ only because each saw a finite
+sample. A fair question is "the same effect for whom, and on what scale?" The answer is: the same effect
+*on the chosen link scale, in whatever common population the trials are taken to share*. If that claim is
+false, the model is misspecified, and the rest of the chapter (Cochran's $Q$, then random effects) is the
+diagnosis and the repair. $\blacktriangleleft$
+:::
+
+Write $\mathbf{w} = (w_1, \dots, w_k)$ for the *inverse-variance weights*
+$$
+w_i = \frac{1}{s_i^2}, \qquad W = \sum_{i=1}^k w_i ,
+$$
+and define the *inverse-variance-weighted* (IVW) estimator
+$$
+\hat\theta_{\mathrm{FE}} = \frac{\sum_{i=1}^k w_i \hat\theta_i}{\sum_{i=1}^k w_i}
+= \frac{1}{W}\sum_{i=1}^k w_i \hat\theta_i .
+$$ {#eq-ivw}
+
+::: {.remark}
+**Why these weights? (intuition before the theorem.)** Inverse-variance weighting says: trust each trial
+in proportion to $1/s_i^2$, its precision. Why the reciprocal *variance*, rather than the reciprocal
+standard error, the sample size, or a quality score? Because variance is the currency in which
+independent estimates combine. If you average with weights $a_i$ summing to one, the variance of the
+average is $\sum_i a_i^2 s_i^2$, and minimizing that forces $a_i \propto 1/s_i^2$. Concretely, in the
+running trio study $C$ has $s_C^2 = 0.01$ and study $D$ has $s_D^2 = 0.04$: $D$'s estimate is four times
+as variable, so $C$ earns four times the weight ($w_C = 100$ versus $w_D = 25$). In standard-error units
+$C$ fluctuates half as much as $D$ ($0.10$ versus $0.20$), and squaring that halving is exactly the
+factor of four; reciprocal *standard error* would give $C$ only twice $D$'s weight, which does not
+minimize the variance. On the running trio $C, D, E$ the total weight is $W = 137.5$ and
+$$
+\hat\theta_{\mathrm{FE}} = \frac{100(0.15) + 25(0.60) + 12.5(0.50)}{137.5} = \frac{36.25}{137.5} = 0.264,
+$$
+with standard error $1/\sqrt{137.5} = 0.085$: the precise study $C$ alone carries $100/137.5 = 73\%$ of
+the weight and pulls the summary down toward its own $0.15$. The next theorem makes "minimizes the
+variance" precise and proves these weights optimal. $\blacktriangleleft$
+:::
+
+The next theorem is the meta-analytic incarnation of the Gauss-Markov theorem (@thm-ols-blue): among all
+unbiased estimators that are linear in the data, the IVW estimator has the smallest variance.
+
+::: {#thm-fixed-effect-blue}
+## Inverse-variance weighting is best linear unbiased
+Under the fixed-effect model @eq-fe-model, consider the class of linear estimators
+$\hat\theta = \sum_{i=1}^k a_i \hat\theta_i$ with fixed coefficients $a_i$. Such an estimator is unbiased
+for $\theta$ for every value of $\theta$ if and only if $\sum_i a_i = 1$. Among all linear unbiased
+estimators, the IVW estimator @eq-ivw is the unique minimizer of the variance, and
+$$
+\mathrm{Var}(\hat\theta_{\mathrm{FE}}) = \frac{1}{\sum_{i=1}^k w_i} = \frac{1}{W} .
+$$ {#eq-ivw-var}
+(Corresponds to C.1 in the proof catalogue.)
+:::
+
+::: {.remark}
+**Why this matters, and how to read the proof.** "Best linear unbiased" (BLUE) is the principled answer
+to "why *these* weights and not others": among all ways of averaging the trials without introducing bias,
+inverse-variance weighting is the uniquely most precise. This is why the inverse-variance default in
+standard meta-analysis software is not arbitrary, and it is the very same optimality that will justify
+the contrast weights of the Bucher indirect comparison in Chapter 14 and the network estimator of Chapter
+15. Two proofs follow. The second, by Cauchy-Schwarz, is the short transparent one, and a reader meeting
+this material for the first time may prefer to read it first. The first connects the result to the
+regression theory of Part I, and uses three pieces of vocabulary worth pinning down in advance:
+$\mathbf{1}_k$ is the $k$-vector of all ones (the design matrix of a single common mean); "$\mathbf{S}
+\succ 0$" means the covariance matrix $\mathbf{S}$ is *positive definite*, which here just says every
+$s_i^2 > 0$; and to *whiten* is to rescale each study's equation by $1/s_i$ so every error has variance
+$1$, converting the unequal-variance (heteroscedastic) problem into the equal-variance one that
+Gauss-Markov handles. The step calling $\mathbf{a} \mapsto \mathbf{S}^{1/2}\mathbf{a}$ a "bijection" is
+only saying the rescaling is invertible, so every estimator before whitening corresponds to exactly one
+after and nothing is gained or lost by working in the whitened data. $\blacktriangleleft$
+:::
+
+::: {.proof}
+Unbiasedness holds iff $\mathbb{E}[\hat\theta] = \sum_i a_i \theta = \theta$ for all $\theta$, that is iff
+$\sum_i a_i = 1$. We prove optimality by reducing the problem to ordinary least squares and applying
+@thm-ols-blue, the route that exhibits the result as a genuine Gauss-Markov statement.
+
+Collect the data into $\mathbf{y} = (\hat\theta_1, \dots, \hat\theta_k)^\top$. Model @eq-fe-model reads
+$\mathbf{y} = \mathbf{1}_k \theta + \boldsymbol{\varepsilon}$ with $\mathbb{E}[\boldsymbol{\varepsilon}]
+= \mathbf{0}$ and $\mathrm{Cov}(\boldsymbol{\varepsilon}) = \mathbf{S} := \mathrm{diag}(s_1^2, \dots,
+s_k^2) \succ 0$. This is a linear model with design matrix $\mathbf{1}_k$, but with heteroscedastic
+errors, so @thm-ols-blue does not apply directly. We *whiten* the errors. Let $\mathbf{S}^{-1/2} =
+\mathrm{diag}(s_1^{-1}, \dots, s_k^{-1})$ and set
+$$
+\tilde{\mathbf{y}} = \mathbf{S}^{-1/2}\mathbf{y}, \qquad \tilde{\mathbf{X}} = \mathbf{S}^{-1/2}\mathbf{1}_k
+= (s_1^{-1}, \dots, s_k^{-1})^\top, \qquad \tilde{\boldsymbol{\varepsilon}} = \mathbf{S}^{-1/2}\boldsymbol{\varepsilon}.
+$$
+Then $\tilde{\mathbf{y}} = \tilde{\mathbf{X}}\theta + \tilde{\boldsymbol{\varepsilon}}$ with
+$\mathrm{Cov}(\tilde{\boldsymbol{\varepsilon}}) = \mathbf{S}^{-1/2}\mathbf{S}\,\mathbf{S}^{-1/2} = I_k$,
+so the whitened model satisfies the Gauss-Markov hypotheses G1 and G2 of @def-linear-model with error
+covariance $\sigma^2 I_k$, $\sigma^2 = 1$, and full column rank $\mathrm{rank}(\tilde{\mathbf{X}}) = 1$.
+
+The whitening is an invertible linear change of data: $\mathbf{y} = \mathbf{S}^{1/2}\tilde{\mathbf{y}}$,
+and a linear estimator $\sum_i a_i \hat\theta_i = \mathbf{a}^\top\mathbf{y} = (\mathbf{S}^{1/2}\mathbf{a})^\top
+\tilde{\mathbf{y}}$ is a linear function of $\mathbf{y}$ if and only if it is a linear function of
+$\tilde{\mathbf{y}}$, the map $\mathbf{a} \mapsto \mathbf{S}^{1/2}\mathbf{a}$ being a bijection of
+$\mathbb{R}^k$. Likewise it is unbiased in one parameterization iff in the other. Hence the class of
+linear unbiased estimators of $\theta$ is identical whether expressed in $\mathbf{y}$ or in
+$\tilde{\mathbf{y}}$, and minimizing variance over the class is the same problem either way. By
+@thm-ols-blue the unique minimum-variance linear unbiased estimator in the whitened model is the OLS
+estimator
+$$
+\hat\theta_{\mathrm{FE}} = (\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1}\tilde{\mathbf{X}}^\top
+\tilde{\mathbf{y}} = \frac{\mathbf{1}_k^\top \mathbf{S}^{-1}\mathbf{y}}{\mathbf{1}_k^\top\mathbf{S}^{-1}
+\mathbf{1}_k} = \frac{\sum_i \hat\theta_i / s_i^2}{\sum_i 1/s_i^2} = \frac{\sum_i w_i \hat\theta_i}{\sum_i w_i},
+$$
+which is @eq-ivw. Its variance is, by @thm-ols-moments specialized here or by direct computation,
+$\mathrm{Var}(\hat\theta_{\mathrm{FE}}) = (\tilde{\mathbf{X}}^\top\tilde{\mathbf{X}})^{-1} =
+(\mathbf{1}_k^\top\mathbf{S}^{-1}\mathbf{1}_k)^{-1} = 1/\sum_i w_i$, which is @eq-ivw-var. Uniqueness in
+@thm-ols-blue transfers through the bijection. $\square$
+:::
+
+The same conclusion has a one-line elementary proof by the Cauchy-Schwarz inequality, which also pins
+down the equality case; we record it because it is so transparent.
+
+::: {.remark}
+**Cauchy-Schwarz proof and the equality case.** For any unbiased weights, $\sum_i a_i = 1$. The variance
+is $\mathrm{Var}(\hat\theta) = \sum_i a_i^2 s_i^2$. By Cauchy-Schwarz applied to the vectors
+$(a_i s_i)_i$ and $(1/s_i)_i$,
+$$
+1 = \Big(\sum_i a_i\Big)^2 = \Big(\sum_i (a_i s_i)\cdot \tfrac{1}{s_i}\Big)^2
+\le \Big(\sum_i a_i^2 s_i^2\Big)\Big(\sum_i \tfrac{1}{s_i^2}\Big)
+= \mathrm{Var}(\hat\theta)\cdot W ,
+$$
+so $\mathrm{Var}(\hat\theta) \ge 1/W$, with equality iff $(a_i s_i)_i \propto (1/s_i)_i$, that is iff
+$a_i \propto 1/s_i^2 = w_i$. The normalization $\sum_i a_i = 1$ then forces $a_i = w_i/W$, the IVW
+weights. $\blacktriangleleft$
+:::
+
+Under the Gaussian version of @eq-fe-model the IVW estimator is more than best *linear* unbiased: it is
+fully efficient, coinciding with the maximum likelihood estimator and attaining the Cramer-Rao bound.
+
+::: {#prp-ivw-mle-efficient}
+## IVW is the Gaussian MLE and attains the Cramer-Rao bound
+Under @eq-fe-model with $\varepsilon_i \sim \mathcal{N}(0, s_i^2)$ independent, the maximum likelihood
+estimator of $\theta$ is $\hat\theta_{\mathrm{FE}}$, the Fisher information for $\theta$ is
+$\mathcal{I}(\theta) = \sum_i w_i = W$, and $\mathrm{Var}(\hat\theta_{\mathrm{FE}}) = 1/W$ equals the
+Cramer-Rao lower bound, so $\hat\theta_{\mathrm{FE}}$ is the minimum-variance unbiased estimator among
+*all* (not merely linear) unbiased estimators.
+:::
+
+::: {.proof}
+The log-likelihood is $\ell(\theta) = -\tfrac12 \sum_i \log(2\pi s_i^2) - \tfrac12 \sum_i (\hat\theta_i -
+\theta)^2/s_i^2$. The score is $\ell'(\theta) = \sum_i (\hat\theta_i - \theta)/s_i^2 = \sum_i w_i
+(\hat\theta_i - \theta)$, which vanishes exactly at $\theta = \sum_i w_i \hat\theta_i/\sum_i w_i =
+\hat\theta_{\mathrm{FE}}$; since $\ell''(\theta) = -\sum_i w_i < 0$, this is the maximizer. The Fisher
+information (@def-fisher-information) is $\mathcal{I}(\theta) = -\mathbb{E}[\ell''(\theta)] = \sum_i w_i =
+W$. The Cramer-Rao bound (@thm-cramer-rao) for an unbiased estimator of $\theta$ is therefore
+$1/\mathcal{I}(\theta) = 1/W$, which @eq-ivw-var shows $\hat\theta_{\mathrm{FE}}$ attains. An unbiased
+estimator attaining the Cramer-Rao bound is minimum-variance unbiased. $\square$
+:::
+
+::: {.remark}
+**Why this matters.** Under the Gaussian model, inverse-variance weighting is not merely best among
+*linear* estimators; it is best among *all* unbiased estimators and coincides with maximum likelihood.
+So there is nothing cleverer to be attempted: the standard pooled estimate is already fully efficient.
+The two Part I ingredients are @def-fisher-information, the Fisher information (the curvature of the
+log-likelihood, a measure of how sharply the data pin down $\theta$), and @thm-cramer-rao, the
+Cramer-Rao bound (no unbiased estimator can have variance below $1/\mathcal{I}(\theta)$). All of this
+still rests on the fixed-effect premise of a single $\theta$; the next section puts that premise on
+trial. $\blacktriangleleft$
+:::
+
+## Cochran's $Q$ and the test for heterogeneity {#sec-ma-cochran}
+
+If the fixed-effect model holds, the studies should agree up to their sampling errors, and the weighted
+spread of the $\hat\theta_i$ about $\hat\theta_{\mathrm{FE}}$ should be no larger than sampling noise
+predicts. Cochran's $Q$ measures that spread.
+
+::: {#def-cochran-q-stat .unnumbered}
+Cochran's $Q$ statistic is
+$$
+Q = \sum_{i=1}^k w_i (\hat\theta_i - \hat\theta_{\mathrm{FE}})^2, \qquad w_i = \frac{1}{s_i^2}.
+$$ {#eq-cochran-q}
+:::
+
+::: {.remark}
+**Reader translation, and where this is going.** Once we commit to a single common effect and estimate
+it by $\hat\theta_{\mathrm{FE}}$, we look at what is left over: how far does each trial sit from the
+pooled value? Cochran's $Q$ adds up those gaps, each squared and weighted by the trial's precision. It is
+exactly a *weighted residual sum of squares* after fitting one mean, the meta-analytic twin of the
+residual sum of squares in regression, so it should behave like one: on $k$ studies, one degree of
+freedom is spent locating the common effect and $k - 1$ independent disagreements remain. Knowing its
+distribution is what turns "do the trials agree?" into a heterogeneity $p$-value. On the running trio,
+$$
+Q = 100(0.15 - 0.264)^2 + 25(0.60 - 0.264)^2 + 12.5(0.50 - 0.264)^2 = 4.82,
+$$
+against an expected $k - 1 = 2$: the trio disagrees by more than sampling error alone would predict.
+$\blacktriangleleft$
+:::
+
+We first isolate the linear-algebra fact that drives its distribution: a quadratic form in independent
+standard normals, with an orthogonal projector in the middle, is chi-squared with degrees of freedom
+equal to the rank of the projector. This is the same mechanism behind the residual sum of squares in
+regression (@thm-rss-chisq); we state it once, cleanly, for reuse.
+
+Two reminders make the lemma readable. A matrix $P$ is *idempotent* if $P^2 = P$; such a $P$ is a
+projection, and its rank equals its trace (if $P^2 = P$, then each eigenvalue $\lambda$ satisfies
+$\lambda^2 = \lambda$, forcing $\lambda \in \{0, 1\}$, so the number of nonzero eigenvalues, the rank,
+is their sum, the trace). The *spectral theorem* (@thm-spectral-theorem) writes a symmetric matrix as
+$Q\Lambda Q^\top$ with $Q$ orthogonal and $\Lambda$ the diagonal matrix of eigenvalues, and
+@lem-mvn-affine-closure says a linear image $A\mathbf{Z}$ of a Gaussian vector is again Gaussian with
+covariance $A A^\top$ (an orthogonal $Q^\top$ leaves the standard covariance $I_k$ unchanged).
+
+::: {#lem-projector-chisq}
+## Chi-squared law of a projected Gaussian
+Let $\mathbf{Z} \sim \mathcal{N}_k(\mathbf{0}, I_k)$ and let $P \in \mathbb{R}^{k\times k}$ be symmetric
+and idempotent, $P = P^\top = P^2$, with $\mathrm{rank}(P) = r$. Then $\mathbf{Z}^\top P \mathbf{Z} \sim
+\chi^2_r$.
+:::
+
+::: {.proof}
+By the spectral theorem (@thm-spectral-theorem) write $P = Q\Lambda Q^\top$ with $Q$ orthogonal and
+$\Lambda = \mathrm{diag}(\lambda_1, \dots, \lambda_k)$. Idempotence forces $\lambda_i^2 = \lambda_i$,
+hence $\lambda_i \in \{0, 1\}$; the number of unit eigenvalues equals $\mathrm{rank}(P) = r$ (equivalently
+$\mathrm{tr}(P) = r$, the rank of an idempotent matrix equaling its trace). Reorder so that
+$\Lambda = \mathrm{diag}(I_r, \mathbf{0})$. Put $\mathbf{U} = Q^\top\mathbf{Z}$. By @lem-mvn-affine-closure,
+$\mathbf{U} \sim \mathcal{N}_k(\mathbf{0}, Q^\top I_k Q) = \mathcal{N}_k(\mathbf{0}, I_k)$, so its
+coordinates are independent standard normals. Then
+$$
+\mathbf{Z}^\top P \mathbf{Z} = \mathbf{Z}^\top Q\Lambda Q^\top \mathbf{Z} = \mathbf{U}^\top\Lambda\mathbf{U}
+= \sum_{i=1}^r U_i^2 ,
+$$
+a sum of $r$ independent squared standard normal variables, which by definition has the $\chi^2_r$
+distribution. $\square$
+:::
+
+::: {.remark}
+**Reader translation.** The lemma is the engine of the whole section: pass a standard Gaussian vector
+through a projection and take its squared length, and the result is chi-squared with degrees of freedom
+equal to the dimension the projection keeps. Cochran's $Q$ is precisely of this form, with the projection
+removing the one dimension used up by estimating the common effect. $\blacktriangleleft$
+:::
+
+::: {#thm-cochran-q}
+## Distribution of Cochran's $Q$ under homogeneity
+Under the fixed-effect model @eq-fe-model with Gaussian errors $\varepsilon_i \sim \mathcal{N}(0, s_i^2)$,
+$$
+Q \sim \chi^2_{k-1}.
+$$
+(Corresponds to C.2 in the proof catalogue.)
+:::
+
+::: {.proof}
+Standardize each study: $Z_i := \sqrt{w_i}\,(\hat\theta_i - \theta) = (\hat\theta_i - \theta)/s_i$. Under
+the Gaussian fixed-effect model the $Z_i$ are independent $\mathcal{N}(0, 1)$, so $\mathbf{Z} = (Z_1,
+\dots, Z_k)^\top \sim \mathcal{N}_k(\mathbf{0}, I_k)$, and $\hat\theta_i - \theta = Z_i/\sqrt{w_i}$.
+Subtracting the common $\theta$ from numerator and denominator leaves the IVW deviation unchanged,
+$$
+\hat\theta_{\mathrm{FE}} - \theta = \sum_i \frac{w_i}{W}(\hat\theta_i - \theta) = \frac{1}{W}\sum_i w_i
+\cdot \frac{Z_i}{\sqrt{w_i}} = \frac{1}{W}\sum_i \sqrt{w_i}\,Z_i .
+$$
+Introduce the unit vector $\mathbf{u}$ with components $u_i = \sqrt{w_i/W}$; then $\sum_i u_i^2 = \sum_i
+w_i/W = 1$, and $\hat\theta_{\mathrm{FE}} - \theta = \frac{1}{\sqrt{W}}\sum_i u_i Z_i =
+\frac{1}{\sqrt{W}}\,\mathbf{u}^\top\mathbf{Z}$. Therefore
+$$
+\sqrt{w_i}\,(\hat\theta_i - \hat\theta_{\mathrm{FE}}) = \sqrt{w_i}\,(\hat\theta_i - \theta) -
+\sqrt{w_i}\,(\hat\theta_{\mathrm{FE}} - \theta) = Z_i - \frac{\sqrt{w_i}}{\sqrt{W}}\,\mathbf{u}^\top
+\mathbf{Z} = Z_i - u_i\,\mathbf{u}^\top\mathbf{Z} = \big[(I_k - \mathbf{u}\mathbf{u}^\top)\mathbf{Z}\big]_i .
+$$
+Squaring and summing,
+$$
+Q = \sum_i w_i(\hat\theta_i - \hat\theta_{\mathrm{FE}})^2 = \sum_i \big[(I_k - \mathbf{u}\mathbf{u}^\top)
+\mathbf{Z}\big]_i^2 = \big\|(I_k - \mathbf{u}\mathbf{u}^\top)\mathbf{Z}\big\|_2^2 = \mathbf{Z}^\top
+(I_k - \mathbf{u}\mathbf{u}^\top)\mathbf{Z},
+$$
+the last step using that $P := I_k - \mathbf{u}\mathbf{u}^\top$ is symmetric and idempotent ($P^2 = I_k -
+2\mathbf{u}\mathbf{u}^\top + \mathbf{u}(\mathbf{u}^\top\mathbf{u})\mathbf{u}^\top = I_k -
+\mathbf{u}\mathbf{u}^\top$ because $\mathbf{u}^\top\mathbf{u} = 1$). Its rank is $\mathrm{tr}(P) = k -
+\|\mathbf{u}\|_2^2 = k - 1$. By @lem-projector-chisq, $Q \sim \chi^2_{k-1}$. $\square$
+:::
+
+::: {.remark}
+**Why this matters.** This distribution is what makes $Q$ usable. Under homogeneity $Q \sim \chi^2_{k-1}$,
+so a value in the upper tail is evidence that the trials disagree by more than chance, and the tail
+probability $P(\chi^2_{k-1} > Q_{\mathrm{obs}})$ is the classical *heterogeneity $p$-value*. The $k - 1$
+has the plain reading promised above: of the $k$ standardized deviations, one linear combination is spent
+locating the common effect $\hat\theta_{\mathrm{FE}}$, leaving $k - 1$ free to disagree. For the running
+trio, $Q = 4.82$ on $k - 1 = 2$ degrees of freedom gives $P(\chi^2_2 > 4.82) = 0.09$: suggestive but not
+decisive with only three trials, which is typical. For indirect comparison this test is the first alarm
+bell, because heterogeneity in a direct $A$-versus-$C$ or $B$-versus-$C$ comparison is exactly what
+threatens the transitivity that Chapter 14 relies on. $\blacktriangleleft$
+:::
+
+The mean of the $\chi^2_{k-1}$ law is $k - 1$, so under homogeneity we expect $Q \approx k - 1$. A value
+of $Q$ far above $k - 1$ is evidence that the studies disagree by more than sampling error allows, that
+is, evidence of *heterogeneity*. To quantify "far above," we need the behavior of $Q$ when the effects
+genuinely differ. The following second-moment computation requires no Gaussianity and is the engine
+behind both the $I^2$ statistic and the DerSimonian-Laird estimator.
+
+::: {#prp-expected-q}
+## Expected value of $Q$ under heterogeneity
+Suppose the study-specific effects vary: $\hat\theta_i = \theta + b_i + \varepsilon_i$ where the $b_i$
+have mean $0$ and variance $\tau^2$, the $\varepsilon_i$ have mean $0$ and variance $s_i^2$, and all
+$2k$ variables $b_1, \dots, b_k, \varepsilon_1, \dots, \varepsilon_k$ are uncorrelated. With the
+fixed-effect weights $w_i = 1/s_i^2$ used in $Q$,
+$$
+\mathbb{E}[Q] = (k - 1) + \tau^2 c, \qquad c := \sum_i w_i - \frac{\sum_i w_i^2}{\sum_i w_i} = W -
+\frac{\sum_i w_i^2}{W} .
+$$ {#eq-expected-q}
+Moreover $c > 0$ whenever $k \ge 2$.
+:::
+
+::: {.proof}
+Let $\delta_i = \hat\theta_i - \theta = b_i + \varepsilon_i$, so $\mathbb{E}[\delta_i] = 0$ and
+$\mathrm{Var}(\delta_i) = \tau^2 + s_i^2$. The common $\theta$ cancels in the deviations, $\hat\theta_i -
+\hat\theta_{\mathrm{FE}} = \delta_i - \bar\delta_w$ with $\bar\delta_w = \frac{1}{W}\sum_j w_j \delta_j$.
+The weighted sum-of-squares identity gives
+$$
+Q = \sum_i w_i(\delta_i - \bar\delta_w)^2 = \sum_i w_i \delta_i^2 - W \bar\delta_w^2 ,
+$$
+which is the weighted version of the familiar identity. Expanding the square and using $\sum_i w_i
+\delta_i = W\bar\delta_w$ (the definition of $\bar\delta_w$) together with $\sum_i w_i = W$,
+$$
+\sum_i w_i(\delta_i - \bar\delta_w)^2 = \sum_i w_i \delta_i^2 - 2\bar\delta_w \sum_i w_i \delta_i +
+\bar\delta_w^2 \sum_i w_i = \sum_i w_i \delta_i^2 - 2\bar\delta_w(W\bar\delta_w) + W\bar\delta_w^2 =
+\sum_i w_i \delta_i^2 - W\bar\delta_w^2 .
+$$
+
+Take expectations term by term. First, using $w_i s_i^2 = 1$,
+$$
+\mathbb{E}\Big[\sum_i w_i \delta_i^2\Big] = \sum_i w_i(\tau^2 + s_i^2) = \tau^2 W + \sum_i w_i s_i^2 =
+\tau^2 W + k .
+$$
+Second, $\mathbb{E}[\bar\delta_w] = 0$, so $\mathbb{E}[W\bar\delta_w^2] = W\,\mathrm{Var}(\bar\delta_w)$,
+and by uncorrelatedness, using $w_j^2 s_j^2 = w_j$,
+$$
+\mathrm{Var}(\bar\delta_w) = \frac{1}{W^2}\sum_j w_j^2 \mathrm{Var}(\delta_j) = \frac{1}{W^2}\sum_j w_j^2
+(\tau^2 + s_j^2) = \frac{\tau^2 \sum_j w_j^2 + \sum_j w_j}{W^2} = \frac{\tau^2\sum_j w_j^2 + W}{W^2}.
+$$
+Hence $\mathbb{E}[W\bar\delta_w^2] = \tau^2 \frac{\sum_j w_j^2}{W} + 1$. Subtracting,
+$$
+\mathbb{E}[Q] = \big(\tau^2 W + k\big) - \Big(\tau^2 \tfrac{\sum_j w_j^2}{W} + 1\Big) = (k - 1) + \tau^2
+\Big(W - \tfrac{\sum_j w_j^2}{W}\Big),
+$$
+which is @eq-expected-q. Finally $c = (W^2 - \sum_i w_i^2)/W$, and since $W^2 = (\sum_i w_i)^2 = \sum_i
+w_i^2 + \sum_{i \ne j} w_i w_j$ with all $w_i > 0$, the cross sum is strictly positive once $k \ge 2$, so
+$c > 0$. $\square$
+:::
+
+::: {.remark}
+**Reader translation.** This is the first point in the chapter where trials are *allowed to genuinely
+differ*: the term $b_i$, with variance $\tau^2$, is the real effect difference of trial $i$ (its
+population, protocol, or setting), as opposed to the sampling noise $\varepsilon_i$. The formula
+$\mathbb{E}[Q] = (k - 1) + \tau^2 c$ says $Q$ carries a signal ($\tau^2 c$) sitting on a baseline
+($k - 1$): with no heterogeneity $Q$ averages $k - 1$, and each unit of heterogeneity variance $\tau^2$
+inflates it by the known constant $c$. Solving that relation for $\tau^2$ is exactly how the
+DerSimonian-Laird estimator of Section @sec-ma-dl will work. $\blacktriangleleft$
+:::
+
+Setting $\tau^2 = 0$ recovers $\mathbb{E}[Q] = k - 1$, consistent with @thm-cochran-q. The coefficient
+$c$ depends only on the known weights, a fact we exploit repeatedly below.
+
+## The $I^2$ statistic {#sec-ma-isquared}
+
+Cochran's $Q$ has a defect as a description of heterogeneity: its size grows with the number of studies,
+so a large $Q$ may reflect many studies rather than severe heterogeneity. Higgins and Thompson proposed
+a scale-free and dimension-free summary.
+
+**From detection to description to estimation.** The next three sections form one arc, and it helps to
+name the three roles up front. $Q$ answers yes or no; $I^2$ puts the answer on a $0$ to $100\%$ scale
+that does not grow with the number of studies; and $\tau^2$ is the quantity the random-effects model
+actually needs.
+
+| Statistic | Section | What it does |
+|---|---|---|
+| Cochran's $Q$ | @sec-ma-cochran | *detects* excess disagreement (is there heterogeneity?) |
+| $I^2$ | @sec-ma-isquared | *describes* its share (what fraction of variability is heterogeneity?) |
+| $\hat\tau^2_{\mathrm{DL}}$, $\hat\tau^2_{\mathrm{REML}}$ | @sec-ma-dl, @sec-ma-reml | *estimate* the between-study variance $\tau^2$ |
+
+::: {#def-i-squared}
+## The $I^2$ and $H^2$ heterogeneity statistics
+Given Cochran's $Q$ on $k$ studies, define
+$$
+H^2 = \frac{Q}{k - 1}, \qquad I^2 = \max\!\left\{0,\; \frac{Q - (k - 1)}{Q}\right\} = \max\!\left\{0,\;
+1 - \frac{1}{H^2}\right\}.
+$$ {#eq-isquared}
+The statistic $I^2$, usually reported as a percentage, lies in $[0, 1]$ and is interpreted as the
+proportion of the total variability in the effect estimates that is due to between-study heterogeneity
+rather than to within-study sampling error. (Corresponds to C.3 in the proof catalogue.)
+:::
+
+::: {.remark}
+**Reader translation, and a notation warning.** $I^2$ rescales $Q$ so that it no longer grows merely
+because there are more studies: it reports the share of the *observed* variability that exceeds what
+sampling error alone would produce. Note a symbol clash: the $H^2$ here is the Higgins-Thompson
+heterogeneity ratio, unrelated to the hat matrix $H$ of Chapter 6. The letters collide but the meanings
+do not. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**What $I^2$ is not.** $I^2$ is *not* the probability that heterogeneity exists, *not* the percentage of
+trials that are biased or discordant, *not* the amount by which the pooled effect is wrong, and *not* a
+decision rule on its own. An $I^2$ of $30\%$ does not mean "$30\%$ of the studies disagree"; it means
+that, of the spread seen among the estimates, roughly $30\%$ is in excess of sampling error. With few
+studies $I^2$ is itself estimated very imprecisely, so the conventional $25/50/75\%$ labels are rough
+descriptions, not test thresholds. $\blacktriangleleft$
+:::
+
+The interpretation is made precise by replacing the random quantity $Q$ with its expectation and reading
+off a variance-ratio.
+
+::: {#prp-i2-interpretation}
+## $I^2$ as a variance ratio
+Under the heterogeneity model of @prp-expected-q with $\tau^2 \ge 0$ and $k \ge 2$, define the
+*typical within-study variance* $\sigma^2_{\mathrm{typ}} = (k - 1)/c$, with $c$ as in @eq-expected-q.
+Replacing $Q$ by $\mathbb{E}[Q]$ in @eq-isquared gives the population analogue
+$$
+I^2_{\ast} := \frac{\mathbb{E}[Q] - (k - 1)}{\mathbb{E}[Q]} = \frac{\tau^2 c}{(k - 1) + \tau^2 c}
+= \frac{\tau^2}{\tau^2 + \sigma^2_{\mathrm{typ}}} .
+$$ {#eq-i2-ratio}
+Thus $I^2_\ast$ is the fraction of total variance $\tau^2 + \sigma^2_{\mathrm{typ}}$ attributable to the
+between-study component $\tau^2$. It equals $0$ when $\tau^2 = 0$, increases monotonically in $\tau^2$,
+and tends to $1$ as $\tau^2 \to \infty$.
+:::
+
+::: {.proof}
+By @eq-expected-q, $\mathbb{E}[Q] - (k - 1) = \tau^2 c$, so $I^2_\ast = \tau^2 c/((k-1) + \tau^2 c)$.
+Dividing numerator and denominator by $c$ and writing $\sigma^2_{\mathrm{typ}} = (k - 1)/c$ gives the
+middle and right expressions of @eq-i2-ratio. The map $t \mapsto t/(t + \sigma^2_{\mathrm{typ}})$ is
+strictly increasing on $[0, \infty)$ with value $0$ at $t = 0$ and limit $1$ at infinity, applied at
+$t = \tau^2$. $\square$
+:::
+
+::: {.remark}
+The quantity $\sigma^2_{\mathrm{typ}} = (k-1)/c$ is a weighted-harmonic-type average of the $s_i^2$, and
+in the special case of equal within-study variances $s_i^2 \equiv s^2$ one computes $c = (k - 1)/s^2$,
+whence $\sigma^2_{\mathrm{typ}} = s^2$ exactly: $I^2_\ast = \tau^2/(\tau^2 + s^2)$ is then literally the
+intraclass correlation of the random-effects model. The conventional benchmarks are $I^2 \approx 25\%$
+low, $50\%$ moderate, $75\%$ high; they are descriptive rules of thumb, not test thresholds, and $I^2$
+itself is estimated with considerable uncertainty when $k$ is small. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** Read @eq-i2-ratio as $I^2_\ast = \tau^2 / (\tau^2 + \sigma^2_{\mathrm{typ}})$,
+the between-study variance divided by the total. The denominator's second piece,
+$\sigma^2_{\mathrm{typ}} = (k-1)/c$, is just a single "typical" within-study variance standing in for the
+whole collection of $s_i^2$: when the $s_i^2$ are all equal to $s^2$ it *is* $s^2$, and in general it is
+a precision-weighted average of them (the subscript "typ" is only a label for that stand-in, nothing
+deeper). On the running trio, $Q = 4.82$ gives
+$$
+I^2 = \frac{Q - (k-1)}{Q} = \frac{4.82 - 2}{4.82} = 0.585,
+$$
+about $59\%$: a moderate-to-high share, consistent with the visibly scattered forest plot.
+$\blacktriangleleft$
+:::
+
+## The random-effects model {#sec-ma-random}
+
+When $Q$ signals heterogeneity, the fixed-effect premise that all studies estimate one $\theta$ is
+untenable. The random-effects model lets each study have its own effect, drawn from a common
+distribution.
+
+**Fixed effect versus random effects: the contrast that matters most.** Before the definition, it is
+worth stating plainly what changes, because this is the distinction a health researcher most needs and
+the one on which the later ITC methods hinge.
+
+| Aspect | Fixed-effect model | Random-effects model |
+|---|---|---|
+| Assumption | one common true effect $\theta$ for all trials | each trial has its own effect $\theta_i$, drawn from a distribution |
+| What is pooled | that single $\theta$ | the *mean* $\theta$ of the distribution of trial effects |
+| Weight for trial $i$ | $w_i = 1/s_i^2$ | $\tilde w_i = 1/(s_i^2 + \tau^2)$ |
+| Meaning of the summary | the effect, estimated more precisely | the average effect across the population of trial settings |
+| When heterogeneity is large | untenable; interval too narrow | weights flatten, interval widens honestly |
+| Why it matters for ITC | licenses transitivity: one effect transports | forces the question *which population's* effect (Chapters 12, 15) |
+
+The mathematical content of the right-hand column is one sentence: adding $\tau^2$ to every $s_i^2$
+shrinks the weights toward equality, so a single dominant precise trial no longer controls the pooled
+estimate, the summary widens to admit real between-trial variation, and the target of inference changes
+from "the common effect" to "the mean of the trial-specific effects." That last change is not cosmetic:
+a mean of effects is an average over *some* population of trials, and pinning down which population is the
+whole subject of Part IV.
+
+::: {#def-random-effects-ma}
+## Random-effects meta-analysis model
+The *random-effects model* for $k$ study estimates is the two-level Gaussian hierarchy
+$$
+\hat\theta_i \mid \theta_i \sim \mathcal{N}(\theta_i, s_i^2), \qquad \theta_i \sim \mathcal{N}(\theta,
+\tau^2), \qquad i = 1, \dots, k,
+$$ {#eq-re-model}
+with the $\theta_i$ independent of one another and of the sampling errors, and the $s_i^2 > 0$ known.
+Here $\theta$ is the *mean effect* across the population of studies and $\tau^2 \ge 0$ is the
+*between-study variance* (heterogeneity variance). Marginalizing over the study effects,
+$$
+\hat\theta_i \sim \mathcal{N}(\theta, s_i^2 + \tau^2) \quad \text{independently across } i.
+$$ {#eq-re-marginal}
+This is the meta-analytic instance of the general random-effects construction of @def-random-effects;
+the fixed-effect model @eq-fe-model is the boundary case $\tau^2 = 0$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation.** The two lines of @eq-re-model read: within trial $i$, the estimate scatters
+around that trial's own true effect $\theta_i$ with variance $s_i^2$; and the trial's own effect scatters
+around a grand mean $\theta$ with variance $\tau^2$. Marginally, each estimate then has variance
+$s_i^2 + \tau^2$, its own sampling error *plus* the heterogeneity. So random-effects weighting is just
+inverse-variance weighting again, with the enlarged variance $s_i^2 + \tau^2$ in place of $s_i^2$.
+Setting $\tau^2 = 0$ collapses everything back to the fixed-effect model, and the target $\theta$ is now
+the *mean* of the trial effects, an average over some population of trial settings, not a single shared
+value. Which population that is becomes a central question for the transportability of Chapter 12 and the
+networks of Chapter 15. $\blacktriangleleft$
+:::
+
+Writing $\tilde w_i = 1/(s_i^2 + \tau^2)$ for the *random-effects weights*, the marginal log-likelihood
+of $(\theta, \tau^2)$ from @eq-re-marginal is
+$$
+\ell(\theta, \tau^2) = -\frac12 \sum_{i=1}^k \log\!\big(2\pi(s_i^2 + \tau^2)\big) - \frac12 \sum_{i=1}^k
+\frac{(\hat\theta_i - \theta)^2}{s_i^2 + \tau^2} .
+$$ {#eq-re-loglik}
+Before estimating the parameters we must check they are identifiable, that is, that distinct parameter
+values give distinct data distributions. Otherwise no amount of data could distinguish them.
+
+::: {#prp-ma-identifiability}
+## Identifiability of the random-effects parameters
+Fix known $s_1^2, \dots, s_k^2 > 0$ with $k \ge 1$. The map
+$$
+\Psi: (\theta, \tau^2) \in \mathbb{R}\times[0, \infty) \longmapsto \bigotimes_{i=1}^k \mathcal{N}(\theta,
+s_i^2 + \tau^2)
+$$
+is injective. Hence $(\theta, \tau^2)$ is identifiable from the joint law of $(\hat\theta_1, \dots,
+\hat\theta_k)$. (Corresponds to C.4 in the proof catalogue.)
+:::
+
+::: {.proof}
+Suppose $\Psi(\theta, \tau^2) = \Psi(\theta', \tau'^2)$. Equality of the joint laws implies equality of
+every marginal. The first marginal is $\mathcal{N}(\theta, s_1^2 + \tau^2) = \mathcal{N}(\theta', s_1^2 +
+\tau'^2)$; equating means gives $\theta = \theta'$, and equating variances gives $s_1^2 + \tau^2 = s_1^2
++ \tau'^2$, hence $\tau^2 = \tau'^2$. Thus $(\theta, \tau^2) = (\theta', \tau'^2)$, and $\Psi$ is
+injective. $\square$
+:::
+
+::: {.remark}
+**Identifiability is not estimability, and the role of known $s_i^2$.** The proposition says the
+parameters are determined by the data distribution; it does *not* say they can be estimated well from a
+single realization. With $k = 1$, $\tau^2 = \mathrm{Var}(\hat\theta_1) - s_1^2$ is identified, yet one
+draw of $\hat\theta_1$ carries essentially no information about its own variance, so no consistent
+estimator of $\tau^2$ exists. Consistency of the moment and likelihood estimators below requires
+$k \to \infty$; in practice $\tau^2$ is estimated stably only with $k \gtrsim 5$ studies, and the
+catalogue's working condition "$k \ge 2$ with the $s_i^2$ not all equal" is the practical requirement for
+$\hat\tau^2$ to draw on more than a single contrast and to behave well. The hypothesis that the $s_i^2$
+are *known* is essential to the proof: if the within-study variances were free parameters, only the sums
+$s_i^2 + \tau^2$ would be identified from @eq-re-marginal and $\tau^2$ would be confounded with the
+$s_i^2$. Meta-analysis breaks the confounding by estimating each $s_i^2$ within study $i$ from its $n_i$
+patients, where it is consistent as $n_i \to \infty$, and then treating it as fixed. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation, concretely.** "Identifiable but not estimable" is less mysterious than it sounds.
+With a single trial you could write down $\hat\tau^2 = \hat\theta_1^2 - s_1^2$ as a formal solution, but
+one number cannot estimate a variance: you need several trials to *see* the spread that $\tau^2$
+describes. This is why heterogeneity is genuinely hard to estimate in the small meta-analyses typical of
+health technology assessment, and why the rules of thumb (roughly $k \gtrsim 5$ trials for a stable
+$\hat\tau^2$, and at least $k \ge 2$ with unequal $s_i^2$ for the estimator to draw on more than a single
+comparison) are practical guidance rather than theorems; the "$5$" is an empirical convention from
+simulation studies, not a derived constant. $\blacktriangleleft$
+:::
+
+We now turn to estimating $\tau^2$. Two estimators dominate practice: the closed-form method-of-moments
+estimator of DerSimonian and Laird, and the restricted maximum likelihood estimator.
+
+## Estimating the heterogeneity variance: DerSimonian-Laird {#sec-ma-dl}
+
+The method of moments equates the observed $Q$ to its expected value @eq-expected-q and solves for
+$\tau^2$.
+
+The idea in one line: *the DerSimonian-Laird estimator converts the excess of $Q$ over its null mean
+into an estimate of $\tau^2$.* Since @eq-expected-q says $\mathbb{E}[Q] = (k-1) + \tau^2 c$, the excess
+$Q - (k-1)$ is on average $\tau^2 c$, so dividing the observed excess by the known constant $c$ inverts
+the relation. Here $c$ is the *conversion factor* between excess $Q$ and heterogeneity variance; it
+depends only on the weights, so the same excess $Q$ implies more or less $\tau^2$ according to how precise
+the trials are.
+
+::: {#thm-dersimonian-laird}
+## The DerSimonian-Laird estimator
+Under the random-effects model @eq-re-model, the method-of-moments estimator obtained by equating $Q$ to
+$\mathbb{E}[Q] = (k - 1) + \tau^2 c$ is
+$$
+\hat\tau^2_{\mathrm{DL}} = \max\!\left\{0,\; \frac{Q - (k - 1)}{c}\right\}, \qquad c = \sum_i w_i -
+\frac{\sum_i w_i^2}{\sum_i w_i}, \quad w_i = \frac{1}{s_i^2}.
+$$ {#eq-dl}
+The untruncated version $\tilde\tau^2_{\mathrm{DL}} = (Q - (k-1))/c$ is exactly unbiased for $\tau^2$,
+and the truncated estimator @eq-dl is biased upward. (Corresponds to C.5 in the proof catalogue.)
+:::
+
+::: {.proof}
+Solving $Q = (k - 1) + \tau^2 c$ for $\tau^2$ gives $\tilde\tau^2_{\mathrm{DL}} = (Q - (k - 1))/c$; the
+truncation $\max\{0, \cdot\}$ enforces the constraint $\tau^2 \ge 0$. Since $c$ depends only on the
+known weights and is therefore a constant, @eq-expected-q gives
+$$
+\mathbb{E}[\tilde\tau^2_{\mathrm{DL}}] = \frac{\mathbb{E}[Q] - (k - 1)}{c} = \frac{\big((k - 1) + \tau^2
+c\big) - (k - 1)}{c} = \tau^2 ,
+$$
+so the untruncated estimator is exactly unbiased; note this uses only the second-moment assumptions of
+@prp-expected-q, not Gaussianity. The truncated estimator satisfies $\hat\tau^2_{\mathrm{DL}} =
+\max\{0, \tilde\tau^2_{\mathrm{DL}}\} \ge \tilde\tau^2_{\mathrm{DL}}$ pointwise, with strict inequality on
+the event $\{\tilde\tau^2_{\mathrm{DL}} < 0\}$, which has positive probability whenever $\tau^2$ is small.
+Taking expectations, $\mathbb{E}[\hat\tau^2_{\mathrm{DL}}] \ge \mathbb{E}[\tilde\tau^2_{\mathrm{DL}}] =
+\tau^2$, with strict inequality there, so truncation introduces upward bias. $\square$
+:::
+
+::: {.remark}
+The DerSimonian-Laird estimator is the historical default and remains ubiquitous because it is
+non-iterative. Its exact unbiasedness before truncation is a genuine finite-sample property, not merely
+asymptotic. Consistency as $k \to \infty$ holds under mild conditions on the weights (for example
+$w_i$ bounded above and below by positive constants), since then $\mathrm{Var}(\tilde\tau^2_{\mathrm{DL}})
+\to 0$; we cite @dersimonian1986 for the original argument and @dias2018nma for the meta-analytic
+context. The price of the closed form is statistical: in small samples DL can be inefficient relative to
+likelihood-based estimators, which motivates REML. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reader translation, and the running trio.** DerSimonian-Laird is the non-iterative default: compute
+$Q$, subtract its null mean $k - 1$, divide by $c$, and floor at zero. For the running trio,
+$c = W - \sum_i w_i^2/W = 137.5 - 10781.25/137.5 = 59.1$, so
+$$
+\hat\tau^2_{\mathrm{DL}} = \frac{Q - (k-1)}{c} = \frac{4.82 - 2}{59.1} = 0.048 .
+$$
+Feeding this back as $\tilde w_i = 1/(s_i^2 + 0.048)$ shrinks the weights toward one another: study $C$'s
+share of the total weight falls from $73\%$ (fixed-effect) to $47\%$ (random-effects), and the pooled
+estimate moves from $\hat\theta_{\mathrm{FE}} = 0.264$ up to $\hat\theta_R = 0.365$, no longer dragged so
+hard toward the one precise trial. This down-weighting of the dominant trial is the entire practical
+meaning of "random effects gives smaller trials more say." $\blacktriangleleft$
+:::
+
+## Estimating the heterogeneity variance: REML {#sec-ma-reml}
+
+Maximizing the marginal likelihood @eq-re-loglik jointly in $(\theta, \tau^2)$ gives the maximum
+likelihood estimator of $\tau^2$, which is biased downward because it ignores the degree of freedom spent
+estimating $\theta$, exactly the $n$-versus-$(n-1)$ phenomenon of the ordinary sample variance.
+Restricted maximum likelihood (REML, @def-reml) removes the bias by basing inference for the variance on
+error contrasts, linear combinations of the data orthogonal to the mean, whose distribution is free of
+$\theta$.
+
+**What REML is trying to fix (read this before the derivation).** Plain maximum likelihood maximizes
+@eq-re-loglik in $\theta$ and $\tau^2$ at once. The trouble is that it estimates $\theta$ from the same
+data and then acts as if $\theta$ were known, spending a degree of freedom it does not pay for; the
+result is a $\tau^2$ biased *downward*, exactly as the naive sample variance
+$\frac1n \sum_i (x_i - \bar x)^2$ underestimates the truth and must be corrected to the $\frac{1}{n-1}$
+version. A downward-biased $\tau^2$ is dangerous for a decision-maker because it makes the pooled
+interval too narrow, overstating confidence. REML fixes this by estimating $\tau^2$ from *error
+contrasts*, combinations of the data that carry no information about $\theta$ because they are orthogonal
+to the mean, so no degree of freedom is silently spent. The payoff is visible in the sanity check right
+after the theorem: when all trials have equal variance, REML reproduces the honest $\frac{1}{k-1}$
+divisor exactly. The derivation below is the densest in the chapter, but the single fact that makes it
+work is that the random-effects-weighted residuals sum to zero, which annihilates the awkward chain-rule
+term. Read the equal-variance remark first if the general algebra feels like a wall.
+
+::: {#thm-reml-tau2}
+## REML estimator of the heterogeneity variance
+Consider the random-effects model @eq-re-model, written as $\mathbf{y} \sim \mathcal{N}_k(\mathbf{1}_k
+\theta, \mathbf{V})$ with $\mathbf{y} = (\hat\theta_1, \dots, \hat\theta_k)^\top$ and $\mathbf{V} =
+\mathrm{diag}(s_i^2 + \tau^2)$. Writing $\tilde w_i = 1/(s_i^2 + \tau^2)$ and $\hat\theta_R(\tau^2) =
+\sum_i \tilde w_i \hat\theta_i / \sum_i \tilde w_i$, the restricted log-likelihood of $\tau^2$ is, up to
+an additive constant,
+$$
+\ell_R(\tau^2) = -\frac12 \sum_{i=1}^k \log(s_i^2 + \tau^2) - \frac12 \log\!\Big(\sum_{i=1}^k \tilde w_i
+\Big) - \frac12 \sum_{i=1}^k \tilde w_i \big(\hat\theta_i - \hat\theta_R(\tau^2)\big)^2 .
+$$ {#eq-reml-loglik}
+Its maximizer $\hat\tau^2_{\mathrm{REML}}$ (truncated at $0$) solves the estimating equation
+$$
+\sum_{i=1}^k \tilde w_i^2 \big(\hat\theta_i - \hat\theta_R\big)^2 = \sum_{i=1}^k \tilde w_i -
+\frac{\sum_{i=1}^k \tilde w_i^2}{\sum_{i=1}^k \tilde w_i},
+$$ {#eq-reml-eqn}
+equivalently the fixed point
+$$
+\tau^2 = \frac{\sum_{i=1}^k \tilde w_i^2 \big[(\hat\theta_i - \hat\theta_R)^2 - s_i^2\big]}{\sum_{i=1}^k
+\tilde w_i^2} + \frac{1}{\sum_{i=1}^k \tilde w_i} .
+$$ {#eq-reml-fp}
+(Corresponds to C.6 in the proof catalogue.)
+:::
+
+::: {.proof}
+For the Gaussian linear model $\mathbf{y} \sim \mathcal{N}_k(\mathbf{X}\theta, \mathbf{V})$ with
+$\mathbf{X} = \mathbf{1}_k$, the general restricted log-likelihood established for @def-reml is, up to an
+additive constant,
+$$
+\ell_R = -\frac12 \log\det\mathbf{V} - \frac12 \log\det(\mathbf{X}^\top\mathbf{V}^{-1}\mathbf{X}) -
+\frac12 (\mathbf{y} - \mathbf{X}\hat\theta_R)^\top \mathbf{V}^{-1}(\mathbf{y} - \mathbf{X}\hat\theta_R),
+$$
+with $\hat\theta_R = (\mathbf{X}^\top\mathbf{V}^{-1}\mathbf{X})^{-1}\mathbf{X}^\top\mathbf{V}^{-1}\mathbf{y}$
+the generalized least squares estimator. Specialize to $\mathbf{V} = \mathrm{diag}(s_i^2 + \tau^2)$,
+$\mathbf{V}^{-1} = \mathrm{diag}(\tilde w_i)$, and $\mathbf{X} = \mathbf{1}_k$. Then $\log\det\mathbf{V} =
+\sum_i \log(s_i^2 + \tau^2)$; $\mathbf{X}^\top\mathbf{V}^{-1}\mathbf{X} = \mathbf{1}_k^\top
+\mathrm{diag}(\tilde w_i)\mathbf{1}_k = \sum_i \tilde w_i$, so $\log\det(\mathbf{X}^\top\mathbf{V}^{-1}
+\mathbf{X}) = \log(\sum_i \tilde w_i)$; the GLS estimator is $\hat\theta_R = \sum_i \tilde w_i \hat\theta_i
+/\sum_i \tilde w_i$; and the quadratic form is $\sum_i \tilde w_i(\hat\theta_i - \hat\theta_R)^2$.
+Substituting yields @eq-reml-loglik.
+
+Now differentiate @eq-reml-loglik in $\tau^2$. Abbreviate $v_i = s_i^2 + \tau^2$, so $\tilde w_i =
+v_i^{-1}$ and $\mathrm{d}\tilde w_i/\mathrm{d}\tau^2 = -\tilde w_i^2$, and write $r_i = \hat\theta_i -
+\hat\theta_R$ and $S_1 = \sum_i \tilde w_i$, $S_2 = \sum_i \tilde w_i^2$. The three terms differentiate
+as follows.
+
+*First term.* Since $\mathrm{d}\log v_i/\mathrm{d}\tau^2 = \tilde w_i$,
+$$
+\frac{\mathrm{d}}{\mathrm{d}\tau^2}\Big(-\tfrac12 \sum_i \log v_i\Big) = -\tfrac12 \sum_i \tilde w_i =
+-\tfrac12 S_1 .
+$$
+
+*Second term.* Since $\mathrm{d}S_1/\mathrm{d}\tau^2 = \sum_i (-\tilde w_i^2) = -S_2$,
+$$
+\frac{\mathrm{d}}{\mathrm{d}\tau^2}\Big(-\tfrac12 \log S_1\Big) = -\tfrac12 \frac{-S_2}{S_1} = \tfrac12
+\frac{S_2}{S_1} .
+$$
+
+*Third term.* Here $r_i = \hat\theta_i - \hat\theta_R(\tau^2)$ depends on $\tau^2$ through
+$\hat\theta_R$. Differentiating,
+$$
+\frac{\mathrm{d}}{\mathrm{d}\tau^2}\Big(-\tfrac12 \sum_i \tilde w_i r_i^2\Big) = -\tfrac12 \sum_i\Big[
+\frac{\mathrm{d}\tilde w_i}{\mathrm{d}\tau^2} r_i^2 + \tilde w_i \cdot 2 r_i \frac{\mathrm{d}r_i}
+{\mathrm{d}\tau^2}\Big] = -\tfrac12\Big[ -\sum_i \tilde w_i^2 r_i^2 - 2\frac{\mathrm{d}\hat\theta_R}
+{\mathrm{d}\tau^2}\sum_i \tilde w_i r_i\Big].
+$$
+The crucial simplification is that the chain-rule term through $\hat\theta_R$ vanishes: by the very
+definition of the GLS estimator, the random-effects-weighted residuals sum to zero,
+$$
+\sum_i \tilde w_i r_i = \sum_i \tilde w_i(\hat\theta_i - \hat\theta_R) = \sum_i \tilde w_i \hat\theta_i -
+\hat\theta_R \sum_i \tilde w_i = 0 ,
+$$
+so regardless of $\mathrm{d}\hat\theta_R/\mathrm{d}\tau^2$ the second summand is $0$. Hence the third
+term contributes $+\tfrac12 \sum_i \tilde w_i^2 r_i^2 = \tfrac12 \sum_i \tilde w_i^2 r_i^2$.
+
+Adding the three contributions, the REML score is
+$$
+\ell_R'(\tau^2) = -\tfrac12 S_1 + \tfrac12 \frac{S_2}{S_1} + \tfrac12 \sum_i \tilde w_i^2 r_i^2 .
+$$
+Setting $\ell_R'(\tau^2) = 0$ gives $\sum_i \tilde w_i^2 r_i^2 = S_1 - S_2/S_1$, which is @eq-reml-eqn.
+To reach the fixed-point form, multiply the target identity $\tau^2 = \frac{1}{S_2}\sum_i \tilde w_i^2
+(r_i^2 - s_i^2) + 1/S_1$ by $S_2$ and use $s_i^2 + \tau^2 = 1/\tilde w_i$:
+$$
+\tau^2 S_2 + \sum_i \tilde w_i^2 s_i^2 - \frac{S_2}{S_1} = \sum_i \tilde w_i^2(\tau^2 + s_i^2) -
+\frac{S_2}{S_1} = \sum_i \tilde w_i^2 \cdot \frac{1}{\tilde w_i} - \frac{S_2}{S_1} = S_1 - \frac{S_2}{S_1},
+$$
+so $\sum_i \tilde w_i^2 r_i^2 = S_1 - S_2/S_1$ is equivalent to @eq-reml-fp. The estimating equation
+@eq-reml-eqn is solved by iterating @eq-reml-fp, recomputing $\tilde w_i$ and $\hat\theta_R$ at each
+step from the current $\tau^2$, starting from a nonnegative value such as $\hat\tau^2_{\mathrm{DL}}$, and
+truncating any negative iterate at $0$. $\square$
+:::
+
+::: {.remark}
+**Equal-variance check.** When the within-study variances are equal, $s_i^2 \equiv s^2$, all
+random-effects weights coincide, $\tilde w_i \equiv \tilde w = 1/(s^2 + \tau^2)$, and $\hat\theta_R =
+\bar{\hat\theta} = \frac1k\sum_i \hat\theta_i$. Then @eq-reml-eqn reads $\tilde w^2 \sum_i (\hat\theta_i -
+\bar{\hat\theta})^2 = k\tilde w - (k\tilde w^2)/(k\tilde w) = (k - 1)\tilde w$, that is
+$$
+s^2 + \tau^2 = \frac{1}{\tilde w} = \frac{1}{k - 1}\sum_{i=1}^k (\hat\theta_i - \bar{\hat\theta})^2 ,
+\qquad \text{so} \qquad \hat\tau^2_{\mathrm{REML}} = \frac{1}{k - 1}\sum_{i=1}^k (\hat\theta_i -
+\bar{\hat\theta})^2 - s^2 .
+$$
+The divisor is $k - 1$, not $k$: REML reproduces the unbiased sample-variance correction, exactly the
+one-sample phenomenon of @thm-reml-one-sample with $n - 1 = k - 1$ degrees of freedom. This is the
+sanity check that REML has done its job. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**REML by iteration, on the running trio.** The fixed point @eq-reml-fp is solved by starting from a
+nonnegative guess and recomputing. Take the trio $C, D, E$ and start at the DerSimonian-Laird value
+$\tau^2_{(0)} = 0.048$. Each step recomputes the weights $\tilde w_i = 1/(s_i^2 + \tau^2)$, then
+$\hat\theta_R = \sum_i \tilde w_i \hat\theta_i / \sum_i \tilde w_i$, then the right-hand side of
+@eq-reml-fp. Iterating gives approximately
+$$
+\tau^2_{(0)} = 0.048 \;\to\; 0.046 \;\to\; 0.0454 \;\to\; 0.0452 \;\to\; \hat\tau^2_{\mathrm{REML}}
+\approx 0.045,
+$$
+converging in a handful of steps. Here REML settles just below DerSimonian-Laird, and the two agree to
+the second decimal; the point is only that "solve the estimating equation" is a short loop, not a
+mystery. $\blacktriangleleft$
+:::
+
+## The Hartung-Knapp adjustment {#sec-ma-hk}
+
+Once $\tau^2$ has been estimated, the random-effects summary is the IVW estimator with random-effects
+weights,
+$$
+\hat\theta_R = \frac{\sum_i \tilde w_i \hat\theta_i}{\sum_i \tilde w_i}, \qquad \tilde w_i = \frac{1}
+{s_i^2 + \hat\tau^2}, \qquad \widehat{\mathrm{Var}}(\hat\theta_R) = \frac{1}{\sum_i \tilde w_i}.
+$$
+The conventional Wald interval $\hat\theta_R \pm z_{1-\alpha/2}\sqrt{\widehat{\mathrm{Var}}(\hat\theta_R)}$
+treats the weights as known and the Gaussian quantile as exact; both approximations fail when $k$ is
+small, and the interval is then too narrow. The Hartung-Knapp-Sidik-Jonkman adjustment fixes the
+calibration by estimating an overall scale and switching to a $t$ reference distribution.
+
+**The idea first (why the usual interval is too narrow).** When only a few trials are available, two
+things the Wald interval pretends to know are actually uncertain: the heterogeneity $\tau^2$ baked into
+the weights, and the assumption that a normal quantile is exact. Pretending we know them makes the
+interval too short, so its true coverage falls below the advertised $95\%$; and few trials is the
+*typical* case in health technology assessment. Hartung-Knapp repairs the calibration with a device from
+ordinary regression. It treats the random-effects fit as a one-parameter *working model*
+$\hat\theta_i = \theta + e_i$ with $\mathrm{Var}(e_i) = \sigma^2/\tilde w_i$, in which the trials share
+one unknown overall scale $\sigma^2$; the real random-effects model is the special case $\sigma^2 = 1$.
+Instead of imposing $\sigma^2 = 1$ (the Wald choice), it *estimates* $\sigma^2$ from the weighted
+residuals, exactly as a regression estimates its error variance, and pays for that estimate by widening
+the quantile from the normal $z$ to a Student $t_{k-1}$. That is the whole idea; the theorem shows the
+resulting interval is *exact* under the working model.
+
+::: {#thm-hartung-knapp}
+## Exactness of the Hartung-Knapp $t$ interval under a working model
+Suppose $\hat\theta_i = \theta + e_i$ with $e_i \sim \mathcal{N}(0, \sigma^2/\tilde w_i)$ independent,
+$i = 1, \dots, k \ge 2$, where the weights $\tilde w_i > 0$ are known and $\sigma^2 > 0$ is an unknown
+common scale. Then, with
+$$
+\hat\theta_R = \frac{\sum_i \tilde w_i \hat\theta_i}{\sum_i \tilde w_i}, \qquad
+\widehat{\mathrm{Var}}_{\mathrm{HK}}(\hat\theta_R) = \frac{1}{k - 1}\,\frac{\sum_i \tilde w_i(\hat\theta_i
+- \hat\theta_R)^2}{\sum_j \tilde w_j},
+$$ {#eq-hk-var}
+the Hartung-Knapp statistic has an exact Student distribution,
+$$
+T_{\mathrm{HK}} = \frac{\hat\theta_R - \theta}{\sqrt{\widehat{\mathrm{Var}}_{\mathrm{HK}}(\hat\theta_R)}}
+\sim t_{k-1},
+$$
+so $\hat\theta_R \pm t_{k-1,\,1-\alpha/2}\sqrt{\widehat{\mathrm{Var}}_{\mathrm{HK}}(\hat\theta_R)}$ is an
+exact $1 - \alpha$ confidence interval for $\theta$. (Corresponds to C.7 in the proof catalogue.)
+:::
+
+::: {.proof}
+Whiten the working model. Put $\tilde y_i = \sqrt{\tilde w_i}\,\hat\theta_i$ and $x_i = \sqrt{\tilde w_i}$,
+and let $\tilde{\mathbf{y}} = (\tilde y_1, \dots, \tilde y_k)^\top$, $\mathbf{X} = (x_1, \dots, x_k)^\top
+\in \mathbb{R}^{k\times 1}$. Multiplying $\hat\theta_i = \theta + e_i$ by $\sqrt{\tilde w_i}$ gives
+$$
+\tilde y_i = \theta\, x_i + \tilde e_i, \qquad \tilde e_i = \sqrt{\tilde w_i}\, e_i \sim \mathcal{N}(0,
+\sigma^2) \ \text{independent},
+$$
+which is the Gaussian linear model of @def-linear-model with $n = k$ observations, $p = 1$ coefficient
+$\theta$, homoscedastic variance $\sigma^2$, and full column rank. Here $\mathbf{X}^\top\mathbf{X} =
+\sum_i \tilde w_i$ and $\mathbf{X}^\top\tilde{\mathbf{y}} = \sum_i \tilde w_i \hat\theta_i$, so the OLS
+estimator is $\hat\theta_R = (\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top\tilde{\mathbf{y}} = \sum_i
+\tilde w_i \hat\theta_i/\sum_i \tilde w_i$, matching the stated $\hat\theta_R$. The residual sum of
+squares is
+$$
+\mathrm{RSS} = \sum_i (\tilde y_i - \hat\theta_R x_i)^2 = \sum_i \tilde w_i(\hat\theta_i - \hat\theta_R)^2,
+$$
+and the unbiased error-variance estimate (@thm-sigma2-unbiased) is $s^2 = \mathrm{RSS}/(k - 1) =
+\frac{1}{k-1}\sum_i \tilde w_i(\hat\theta_i - \hat\theta_R)^2$, with $\widehat{\mathrm{Var}}_{\mathrm{HK}}
+(\hat\theta_R) = s^2 \,(\mathbf{X}^\top\mathbf{X})^{-1} = s^2/\sum_i \tilde w_i$, which is @eq-hk-var.
+Applying the $t$-statistic theorem @thm-ttest with contrast $\mathbf{c} = 1$ (a scalar) gives directly
+$$
+\frac{\hat\theta_R - \theta}{s\sqrt{(\mathbf{X}^\top\mathbf{X})^{-1}}} = \frac{\hat\theta_R - \theta}
+{\sqrt{\widehat{\mathrm{Var}}_{\mathrm{HK}}(\hat\theta_R)}} = T_{\mathrm{HK}} \sim t_{k-1}.
+$$
+Inverting the two-sided $t$ test yields the stated confidence interval. $\square$
+:::
+
+::: {.remark}
+**Why this calibrates the random-effects interval.** The actual random-effects model @eq-re-model, with
+$\tau^2$ replaced by its estimate, corresponds to the working model with the "true" scale $\sigma^2 = 1$,
+because then $\mathrm{Var}(\hat\theta_i) = 1/\tilde w_i$. The Wald interval imposes $\sigma^2 = 1$ and uses
+a normal quantile. Hartung-Knapp instead *estimates* $\sigma^2$ from the weighted residuals and uses a
+$t_{k-1}$ quantile, exactly as one estimates the error variance in a regression rather than assuming it.
+Writing $q = \frac{1}{k-1}\sum_i \tilde w_i(\hat\theta_i - \hat\theta_R)^2$ for the estimated scale, the
+two variance estimators are related by
+$$
+\widehat{\mathrm{Var}}_{\mathrm{HK}}(\hat\theta_R) = q \cdot \widehat{\mathrm{Var}}(\hat\theta_R), \qquad
+\widehat{\mathrm{Var}}(\hat\theta_R) = \frac{1}{\sum_i \tilde w_i},
+$$
+so Hartung-Knapp rescales the Wald variance by the data-driven factor $q$ and widens the quantile from
+$z$ to $t_{k-1}$. When the random-effects model fits, $q \approx 1$ and the adjustment is mild for large
+$k$; for small $k$ the wider $t$ quantile restores coverage that the Wald interval loses. The factor $q$
+can fall below $1$, occasionally yielding a Hartung-Knapp interval narrower than the Wald interval; a
+common conservative safeguard takes $\max\{1, q\}$. The method is recommended whenever $k \le 10$
+(@dias2018nma). $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Running trio: the interval to report.** With only $k = 3$ trials the difference is dramatic. The trio's
+random-effects fit gives $\hat\theta_R = 0.365$ with $\widehat{\mathrm{Var}}(\hat\theta_R) = 1/\sum_i
+\tilde w_i = 0.027$, so the Wald interval is $0.365 \pm 1.96\sqrt{0.027} = (0.04, 0.69)$. The scale
+factor is $q = \frac{1}{k-1}\sum_i \tilde w_i(\hat\theta_i - \hat\theta_R)^2 = 0.79$, giving
+$\widehat{\mathrm{Var}}_{\mathrm{HK}} = q\,\widehat{\mathrm{Var}}(\hat\theta_R) = 0.0215$. Even though
+$q < 1$ shrinks the variance a little, the Student quantile $t_{2,\,0.975} = 4.303$ (a heavy penalty for
+having only two degrees of freedom) dominates, and the interval
+$$
+0.365 \pm 4.303\sqrt{0.0215} = (-0.27,\, 1.00)
+$$
+is far wider than the Wald interval, and honest about how little three trials pin down. A cautious analyst
+reports the wider one. $\blacktriangleleft$
+:::
+
+## Bayesian meta-analysis {#sec-ma-bayes}
+
+The Bayesian treatment places priors on the parameters and reports the posterior. It is the framework
+that generalizes most cleanly to networks (Chapter 15) and to the multilevel models of Part V, and it
+handles the uncertainty in $\tau^2$ coherently rather than by plug-in. We work the conjugate core: with
+$\tau^2$ fixed, the mean effect has a closed-form Gaussian posterior.
+
+Concretely, the network meta-analysis models of Chapter 15 and the multilevel models of Part V are
+Bayesian hierarchical models fit by Markov chain Monte Carlo; the conjugacy proved here is the one piece
+of them that can be done by hand, and it is worth seeing once in closed form before the machine takes
+over.
+
+::: {#thm-bayesian-ma-conjugate}
+## Normal-normal conjugacy for the mean effect
+Take the random-effects model @eq-re-model with the conjugate prior $\theta \sim \mathcal{N}(\theta_0,
+\sigma_0^2)$ on the mean effect and any prior $\pi(\tau^2)$ on the heterogeneity variance. Conditional on
+$\tau^2$ and the data, the posterior of $\theta$ is Gaussian,
+$$
+\theta \mid \hat\theta_1, \dots, \hat\theta_k, \tau^2 \sim \mathcal{N}(m_\ast, v_\ast), \qquad
+\frac{1}{v_\ast} = \frac{1}{\sigma_0^2} + \sum_{i=1}^k \frac{1}{s_i^2 + \tau^2}, \qquad
+m_\ast = v_\ast\Big(\frac{\theta_0}{\sigma_0^2} + \sum_{i=1}^k \frac{\hat\theta_i}{s_i^2 + \tau^2}\Big).
+$$ {#eq-bayes-posterior}
+(Corresponds to C.8 in the proof catalogue.)
+:::
+
+::: {.proof}
+Given $\tau^2$, the marginal model @eq-re-marginal makes the $\hat\theta_i$ independent with
+$\hat\theta_i \mid \theta \sim \mathcal{N}(\theta, s_i^2 + \tau^2)$ and known variances $v_i := s_i^2 +
+\tau^2$. We process the observations sequentially and invoke normal-normal conjugacy @thm-conjugate-normal
+at each step. Start from the prior $\theta \sim \mathcal{N}(\mu^{(0)}, \varsigma^{(0)2})$ with
+$\mu^{(0)} = \theta_0$ and $\varsigma^{(0)2} = \sigma_0^2$. Suppose after incorporating $\hat\theta_1,
+\dots, \hat\theta_{i-1}$ the posterior is $\mathcal{N}(\mu^{(i-1)}, \varsigma^{(i-1)2})$. Treating this as
+the prior and observing $\hat\theta_i \sim \mathcal{N}(\theta, v_i)$, @thm-conjugate-normal gives the
+updated posterior $\mathcal{N}(\mu^{(i)}, \varsigma^{(i)2})$ with
+$$
+\frac{1}{\varsigma^{(i)2}} = \frac{1}{\varsigma^{(i-1)2}} + \frac{1}{v_i}, \qquad \frac{\mu^{(i)}}
+{\varsigma^{(i)2}} = \frac{\mu^{(i-1)}}{\varsigma^{(i-1)2}} + \frac{\hat\theta_i}{v_i} .
+$$
+These recursions are additive, so after all $k$ updates
+$$
+\frac{1}{\varsigma^{(k)2}} = \frac{1}{\sigma_0^2} + \sum_{i=1}^k \frac{1}{v_i}, \qquad \frac{\mu^{(k)}}
+{\varsigma^{(k)2}} = \frac{\theta_0}{\sigma_0^2} + \sum_{i=1}^k \frac{\hat\theta_i}{v_i} .
+$$
+Identifying $v_\ast = \varsigma^{(k)2}$ and $m_\ast = \mu^{(k)}$ gives @eq-bayes-posterior. The
+conclusion that the posterior is exactly Gaussian at each step, hence at the last, is the content of
+@thm-conjugate-normal. $\square$
+:::
+
+::: {.remark}
+**Reader translation.** Read @eq-bayes-posterior as precision bookkeeping: a Gaussian prior contributes
+precision $1/\sigma_0^2$ centered at $\theta_0$, each trial contributes precision $1/(s_i^2 + \tau^2)$
+centered at $\hat\theta_i$, the posterior precision is their sum, and the posterior mean is the
+precision-weighted average of all of them. @thm-conjugate-normal is the fact that a normal prior and
+normal data give a normal posterior, so the update is exact rather than approximate. Numerically, for the
+running trio with $\tau^2$ fixed at the DerSimonian-Laird value $0.048$ and a vague prior, the posterior
+is $\mathcal{N}(0.365,\, 0.027)$, matching the frequentist random-effects estimate and its Wald variance
+exactly, which is the content of the next remark. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Flat-prior limit and the frequentist tie.** Let the prior become uninformative, $\sigma_0^2 \to
+\infty$. Then $v_\ast^{-1} \to \sum_i \tilde w_i$ and $m_\ast \to \sum_i \tilde w_i \hat\theta_i/\sum_i
+\tilde w_i = \hat\theta_R$, with $v_\ast \to 1/\sum_i \tilde w_i = \widehat{\mathrm{Var}}(\hat\theta_R)$.
+The conditional Bayesian posterior mean and variance coincide exactly with the random-effects point
+estimate and its Wald variance. The Bayesian and frequentist random-effects analyses agree at the
+conditional level; they differ in how they propagate the uncertainty in $\tau^2$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**The full posterior and the link to REML.** With $\tau^2$ unknown there is no conjugate prior for it in
+this model, so the joint posterior $\pi(\theta, \tau^2 \mid \text{data}) \propto \pi(\tau^2)\,\pi(\theta)
+\prod_i \mathcal{N}(\hat\theta_i; \theta, s_i^2 + \tau^2)$ is computed numerically, typically by Markov
+chain Monte Carlo (Chapter 24) with a half-normal or half-$t$ prior on $\tau$, which behave better than
+inverse-gamma priors when $\tau$ may be near zero. Integrating $\theta$ out of the likelihood under the
+improper flat prior $\pi(\theta) \propto 1$ gives, by the Gaussian integral (obtained by completing the
+square in $\theta$)
+$\int \exp(-\tfrac12 \sum_i \tilde w_i(\hat\theta_i - \theta)^2)\,\mathrm{d}\theta = \sqrt{2\pi/\sum_i
+\tilde w_i}\,\exp(-\tfrac12 \sum_i \tilde w_i(\hat\theta_i - \hat\theta_R)^2)$, the marginal likelihood
+$$
+L_R(\tau^2) = \int \prod_i \mathcal{N}(\hat\theta_i; \theta, s_i^2 + \tau^2)\,\mathrm{d}\theta \;\propto\;
+\Big(\prod_i (s_i^2 + \tau^2)\Big)^{-1/2}\Big(\sum_i \tilde w_i\Big)^{-1/2}\exp\!\Big(-\tfrac12 \sum_i
+\tilde w_i (\hat\theta_i - \hat\theta_R)^2\Big),
+$$
+whose logarithm is exactly @eq-reml-loglik. The REML estimator of $\tau^2$ is therefore the Bayesian
+marginal-likelihood (type-II maximum likelihood, that is, maximizing the likelihood after integrating the
+mean $\theta$ out) estimator under a flat prior on the mean effect, which
+is why REML and the marginal posterior mode of $\tau^2$ so often agree. $\blacktriangleleft$
+:::
+
+## Egger's test for small-study effects {#sec-ma-egger}
+
+Small studies are more prone to selective reporting than large ones, and the resulting *small-study
+effects* distort the pooled estimate. The funnel plot displays $\hat\theta_i$ against its precision; under
+no bias it is symmetric, and asymmetry signals small-study effects. Egger's test quantifies the
+asymmetry by a regression.
+
+**The funnel plot, and what "precision" means.** Plot each trial as a point: its effect estimate
+$\hat\theta_i$ on the horizontal axis, its *precision* $1/s_i$ (large for big, tight trials; small for
+little, noisy ones) on the vertical axis. Large precise trials sit near the top and, if all is well,
+cluster tightly around the pooled effect; small imprecise trials sit near the bottom and scatter widely
+to both sides. The cloud then resembles an inverted funnel that is *symmetric* about the pooled effect
+when there is no bias. Asymmetry, small trials leaning to one side, is the signature of *small-study
+effects*, for instance small trials with unimpressive results going unpublished. For the running
+example's five trials:
+
+```
+  precision
+  10.00 |           C      :
+   7.07 |              A   :
+   5.00 |                  :                     D
+   4.47 |                  :           B
+   3.54 |                  :              E
+        ++------------+------------+------------+------
+         0.0          0.2          0.4          0.6        log OR
+```
+
+The pooled value sits at the dotted line. The tightest trial $C$ falls to its left while the looser
+trials $B, D, E$ lean right, a left-leaning asymmetry. Egger's test replaces this eyeballing with a
+regression line through the plot and tests whether it is level.
+
+::: {#thm-egger}
+## Egger's regression test
+Define the standardized effect $z_i = \hat\theta_i/s_i$ and the precision $p_i = 1/s_i$, and consider the
+ordinary least squares regression
+$$
+z_i = \alpha + \beta\, p_i + u_i .
+$$ {#eq-egger}
+Two facts hold.
+
+(i) *Null behavior.* Under the fixed-effect model @eq-fe-model with no small-study effects, $z_i = \theta
+p_i + u_i$ with $u_i = \varepsilon_i/s_i$ having mean $0$ and variance $1$; the population regression
+@eq-egger then has intercept $\alpha = 0$ and slope $\beta = \theta$.
+
+(ii) *Algebraic identity.* The fitted Egger intercept $\hat\alpha$ equals the slope coefficient in the
+precision-weighted (weights $w_i = 1/s_i^2$) regression of the effect $\hat\theta_i$ on its standard
+error $s_i$; and the fitted Egger slope $\hat\beta$ equals the intercept of that weighted regression.
+
+Consequently the test of $H_0: \alpha = 0$, carried out as the usual $t$ test on the intercept of
+@eq-egger with $k - 2$ degrees of freedom, is a test for a linear dependence of the effect estimate on
+its standard error, that is, for funnel-plot asymmetry. (Corresponds to C.9 in the proof catalogue.)
+:::
+
+::: {.proof}
+(i) Under @eq-fe-model, $\hat\theta_i = \theta + \varepsilon_i$ with $\mathbb{E}[\varepsilon_i] = 0$ and
+$\mathrm{Var}(\varepsilon_i) = s_i^2$. Divide by $s_i$:
+$$
+z_i = \frac{\hat\theta_i}{s_i} = \frac{\theta}{s_i} + \frac{\varepsilon_i}{s_i} = \theta\, p_i + u_i,
+\qquad u_i := \frac{\varepsilon_i}{s_i},
+$$
+and $\mathbb{E}[u_i] = 0$, $\mathrm{Var}(u_i) = s_i^2/s_i^2 = 1$, so the errors are homoscedastic. Hence
+the data-generating line through the origin has intercept $0$ and slope $\theta$; the population least
+squares fit of @eq-egger recovers $\alpha = 0$, $\beta = \theta$.
+
+(ii) Egger's regression minimizes $\sum_i (z_i - \alpha - \beta p_i)^2$ over $(\alpha, \beta)$. Substitute
+$z_i = \hat\theta_i/s_i$ and $p_i = 1/s_i$ and factor out $1/s_i^2$:
+$$
+\sum_i (z_i - \alpha - \beta p_i)^2 = \sum_i \Big(\frac{\hat\theta_i}{s_i} - \alpha - \frac{\beta}{s_i}
+\Big)^2 = \sum_i \frac{1}{s_i^2}\big(\hat\theta_i - \beta - \alpha\, s_i\big)^2 = \sum_i w_i\big(\hat
+\theta_i - (\beta + \alpha s_i)\big)^2 .
+$$
+The right-hand side is precisely the objective of the weighted least squares regression of $\hat\theta_i$
+on the covariate $s_i$ with weights $w_i = 1/s_i^2$, where the role of the intercept is played by $\beta$
+and the role of the slope on $s_i$ by $\alpha$. Minimizing the identical objective produces identical
+minimizers, so the weighted regression of $\hat\theta_i$ on $s_i$ has intercept $\hat\beta$ and slope
+$\hat\alpha$. This is the claimed identity. Inference on $\hat\alpha$ uses the standard normal-theory
+$t$ statistic for a regression coefficient (@thm-ttest) with $n = k$ points and $p = 2$ parameters,
+hence $k - 2$ degrees of freedom. $\square$
+:::
+
+::: {.remark}
+The identity (ii) is the conceptual content of the test. A nonzero intercept $\alpha$ means the effect
+estimate $\hat\theta_i$ varies systematically with its standard error $s_i$: large, imprecise studies
+sit at a different effect level than small, precise ones, which is exactly funnel asymmetry. The weighted
+intercept $\hat\beta$, the extrapolation of the effect to $s_i = 0$ (infinite precision), is the
+"precision-effect test" estimate of the bias-adjusted effect. Egger's test has low power for $k < 10$
+studies and conflates genuine small-study reporting effects with ordinary between-study heterogeneity,
+since heterogeneity also breaks the homoscedasticity assumed in part (i); trim-and-fill, the funnel
+plot itself, and the PET-PEESE family are common complements. We include the test for completeness; it
+is diagnostic, not confirmatory. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why this matters for ITC.** An indirect comparison is only as trustworthy as the direct comparisons it
+is built from. If the $A$-versus-$C$ evidence is distorted by small-study effects, the Bucher contrast
+$\hat d_{AB} = \hat d_{AC} - \hat d_{BC}$ of Chapter 14 and the network estimates of Chapter 15 inherit
+that distortion. Screening each pairwise contrast for funnel asymmetry is therefore part of judging
+whether the evidence base is solid enough to compare treatments indirectly at all. The caution above
+applies with force: with few trials the test is underpowered and confounds reporting bias with ordinary
+heterogeneity, so it informs judgment rather than deciding it. $\blacktriangleleft$
+:::
+
+## A fully worked example {#sec-ma-example}
+
+Five trials report a log odds ratio $\hat\theta_i$ with within-study variance $s_i^2$. We carry the
+entire pipeline through by hand.
+
+| Study $i$ | $\hat\theta_i$ | $s_i^2$ | $w_i = 1/s_i^2$ | $w_i\hat\theta_i$ | $w_i^2$ |
+|---|---|---|---|---|---|
+| A | $0.20$ | $0.02$ | $50.0$ | $10.00$ | $2500.0$ |
+| B | $0.45$ | $0.05$ | $20.0$ | $9.00$ | $400.0$ |
+| C | $0.15$ | $0.01$ | $100.0$ | $15.00$ | $10000.0$ |
+| D | $0.60$ | $0.04$ | $25.0$ | $15.00$ | $625.0$ |
+| E | $0.50$ | $0.08$ | $12.5$ | $6.25$ | $156.25$ |
+| Sum | | | $W = 207.5$ | $55.25$ | $13681.25$ |
+
+**Fixed-effect estimate.** By @eq-ivw and @eq-ivw-var,
+$$
+\hat\theta_{\mathrm{FE}} = \frac{55.25}{207.5} = 0.2663, \qquad \mathrm{Var}(\hat\theta_{\mathrm{FE}}) =
+\frac{1}{207.5} = 0.004819, \qquad \mathrm{SE} = 0.0694 .
+$$
+The precise study C ($w_C = 100$) carries nearly half the weight and pulls the summary toward $0.15$.
+
+**Cochran's $Q$ and $I^2$.** Using @eq-cochran-q,
+$$
+Q = 50(0.20 - 0.2663)^2 + 20(0.45 - 0.2663)^2 + 100(0.15 - 0.2663)^2 + 25(0.60 - 0.2663)^2 + 12.5(0.50 -
+0.2663)^2 = 5.714 .
+$$
+With $k - 1 = 4$ degrees of freedom, the upper-tail probability is $P(\chi^2_4 > 5.714) = 0.222$, so $Q$
+is not significant at the usual levels, yet it exceeds its null mean of $4$. The heterogeneity summaries
+@eq-isquared are
+$$
+H^2 = \frac{5.714}{4} = 1.428, \qquad I^2 = 1 - \frac{4}{5.714} = 0.300 = 30.0\% ,
+$$
+a low-to-moderate level: about $30\%$ of the variability is in excess of sampling error.
+
+**DerSimonian-Laird heterogeneity variance.** From the table, $c = W - \sum_i w_i^2/W = 207.5 -
+13681.25/207.5 = 207.5 - 65.93 = 141.57$. By @eq-dl,
+$$
+\hat\tau^2_{\mathrm{DL}} = \frac{Q - (k - 1)}{c} = \frac{5.714 - 4}{141.57} = \frac{1.714}{141.57} =
+0.01211 .
+$$
+
+**Random-effects estimate.** The random-effects weights $\tilde w_i = 1/(s_i^2 + 0.01211)$ are
+
+| Study | $s_i^2 + \hat\tau^2$ | $\tilde w_i$ |
+|---|---|---|
+| A | $0.03211$ | $31.15$ |
+| B | $0.06211$ | $16.10$ |
+| C | $0.02211$ | $45.23$ |
+| D | $0.05211$ | $19.19$ |
+| E | $0.09211$ | $10.86$ |
+| Sum | | $122.53$ |
+
+so by the random-effects analogue of @eq-ivw,
+$$
+\hat\theta_R = \frac{31.15(0.20) + 16.10(0.45) + 45.23(0.15) + 19.19(0.60) + 10.86(0.50)}{122.53} =
+\frac{37.20}{122.53} = 0.3036,
+$$
+with $\widehat{\mathrm{Var}}(\hat\theta_R) = 1/122.53 = 0.008161$ and $\mathrm{SE} = 0.0903$. Allowing
+for heterogeneity moves the estimate up from $0.266$ to $0.304$ (the precise study C now carries $37\%$
+of the weight rather than $48\%$) and widens the standard error from $0.069$ to $0.090$. The Wald
+interval is $0.3036 \pm 1.96(0.0903) = (0.127,\, 0.481)$.
+
+**Hartung-Knapp interval.** The scale factor is $q = \frac{1}{k-1}\sum_i \tilde w_i(\hat\theta_i -
+\hat\theta_R)^2 = 0.963$, so by @eq-hk-var $\widehat{\mathrm{Var}}_{\mathrm{HK}} = q/\sum_i \tilde w_i =
+0.963/122.53 = 0.007858$ and $\mathrm{SE}_{\mathrm{HK}} = 0.0886$. With $t_{4, 0.975} = 2.776$ the
+interval is
+$$
+0.3036 \pm 2.776(0.0886) = (0.058,\, 0.550),
+$$
+noticeably wider than the Wald interval $(0.127, 0.481)$, driven mainly by the $t_4$ quantile $2.776$
+replacing $1.96$. With only $k = 5$ studies this is the interval to trust.
+
+**Egger's test.** Forming $z_i = \hat\theta_i/s_i$ and $p_i = 1/s_i$ and fitting @eq-egger by least
+squares gives intercept $\hat\alpha = 2.634$ with standard error $0.815$, so $t = 2.634/0.815 = 3.23$ on
+$k - 2 = 3$ degrees of freedom, two-sided $p = 0.048$. The algebraic identity of @thm-egger is visible
+in the companion weighted regression of $\hat\theta_i$ on $s_i$: its slope is $2.634$ (equal to
+$\hat\alpha$) and its intercept is $-0.116$ (equal to $\hat\beta$). Taken at face value the test flags
+asymmetry, but with $k = 5$ it is severely underpowered and unstable; the "signal" is essentially the
+single precise low-effect study C, and no conclusion about reporting bias is warranted from five trials.
+The example shows both the mechanics and the fragility of the test.
+
+**Decision impact: which interval, and why.** It is worth stating what a decision-maker would actually
+conclude from these five trials, because the three analyses tell noticeably different stories. The
+fixed-effect interval $0.266 \pm 1.96(0.069) = (0.130, 0.402)$ is the narrowest, but it excludes no
+effect only because it *assumes* the five trials share one effect, which the $I^2$ of $30\%$ already
+questions. The random-effects Wald interval $(0.127, 0.481)$ widens to admit heterogeneity, yet still
+trusts a normal quantile and a plug-in $\tau^2$. The Hartung-Knapp interval $(0.058, 0.550)$ is wider
+still and is the only one whose stated $95\%$ coverage survives having just $k = 5$ trials. All three keep
+the effect positive here, but the *strength* of that conclusion weakens as the interval widens; a cautious
+analyst reports the Hartung-Knapp interval and treats the fixed-effect interval as an optimistic bound.
+This is the pattern to expect whenever heterogeneity is present and trials are few, which is the normal
+situation in health technology assessment, and it is the same caution that will attend every indirect
+comparison built on these pooled inputs.
+
+## Notes and references {#sec-ma-notes}
+
+This chapter expands items C.1 through C.9 of the companion proof catalogue into complete proofs in the
+notation of this book, and adds the worked example and exercises. The primary reference for the
+random-effects model, its estimation, and the Bayesian formulation is @dias2018nma, which is also the
+source for the bridge from pairwise to network meta-analysis taken up in Chapters 14 and 15. The
+method-of-moments heterogeneity estimator @eq-dl is from @dersimonian1986; we sharpened the catalogue's
+asymptotic statement by proving exact unbiasedness of the untruncated estimator (@thm-dersimonian-laird),
+which holds under second moments alone.
+
+Several attributions rely on sources not yet in the bibliography, listed with full data in the work log
+for the orchestrator to merge: Higgins and Thompson (2002) for $H^2$ and $I^2$ (@def-i-squared,
+@prp-i2-interpretation); Hartung (1999), Hartung and Knapp (2001), and Sidik and Jonkman (2002) for the
+$t$ adjustment (@thm-hartung-knapp), with IntHout et al. (2014) for its small-$k$ recommendation;
+Viechtbauer (2005) and the `metafor` package (Viechtbauer 2010) for the REML estimating equation and its
+iterative solution (@thm-reml-tau2); Egger et al. (1997) for the regression test (@thm-egger), with
+Sterne and Egger and the PET-PEESE literature for the complements noted there; Gelman (2006) for
+half-normal and half-$t$ priors on $\tau$; and Veroniki et al. (2016) for the modern comparison of
+$\tau^2$ estimators.
+
+The proofs lean on Part I: the Gauss-Markov theorem and the linear-model machinery (@thm-ols-blue,
+@def-linear-model, @thm-ttest, @thm-sigma2-unbiased, @thm-rss-chisq, @lem-mvn-affine-closure) carry the
+fixed-effect optimality, Cochran's $Q$, and the Hartung-Knapp result; the spectral theorem
+(@thm-spectral-theorem) underlies @lem-projector-chisq; Fisher information and the Cramer-Rao bound
+(@def-fisher-information, @thm-cramer-rao) give the efficiency of inverse-variance weighting; restricted
+maximum likelihood (@def-reml, @thm-reml-one-sample) is specialized to the heterogeneity variance; and
+normal-normal conjugacy (@thm-conjugate-normal) gives the Bayesian posterior. The random-effects model
+@def-random-effects-ma is the meta-analytic case of the hierarchical construction @def-random-effects.
+
+No result in this chapter carries a machine-checked tag. The companion Coq development under
+`theories/` formalizes the identification and algebraic content of the indirect-comparison methods
+(propensity scores, the Bucher contrast, outcome regression, doubly robust estimation, MAIC), not the
+classical estimation theory of meta-analysis: there is no Coq counterpart to inverse-variance weighting,
+Cochran's $Q$, or the heterogeneity-variance estimators, a scope decision recorded in the companion
+manuscript. The cleanest candidates for future formalization are the purely algebraic identities here,
+namely the best-linear-unbiased property of inverse-variance weights (@thm-fixed-effect-blue) and the
+expected value of $Q$ (@prp-expected-q).
+
+**Forward connections.** The fixed-effect contrast estimator and its variance @eq-ivw-var are the inputs
+to the Bucher indirect comparison of Chapter 14 (@thm-bucher-unbiased) under the transitivity assumption
+(@def-transitivity); the random-effects structure of @def-random-effects-ma becomes the multivariate
+random effect of network meta-analysis, where contrasts sharing a comparator acquire the characteristic
+correlation of @thm-re-nma-correlation; and Cochran's $Q$ generalizes to the network heterogeneity and
+inconsistency statistics of Chapter 15. The within-study effects pooled here live on the linear-predictor
+(link) scale, which is why their collapsibility properties (@def-collapsibility,
+@thm-noncollapsibility-or-hr) matter for what the pooled $\theta$ means.
+
+## Exercises {#sec-ma-exercises}
+
+Exercises marked with a star ($\star$) have a complete worked solution in Appendix F. Start with the two
+warm-ups, which need only the running example and a calculator; the later exercises build toward the
+proofs.
+
+::: {#exr-ma-warmup-weights}
+## Which trial gets more weight? (warm-up)
+Two trials estimate the same log odds ratio: trial $P$ reports $\hat\theta_P = 0.30$ with $s_P^2 = 0.01$,
+and trial $R$ reports $\hat\theta_R = 0.10$ with $s_R^2 = 0.04$. (a) Compute the inverse-variance weights
+$w_P$ and $w_R$, and state in words how many times more weight the more precise trial receives and why.
+(b) Compute the fixed-effect estimate $\hat\theta_{\mathrm{FE}}$ and check that it lies closer to the more
+precise trial. (c) Without recomputing from scratch, describe what happens to the two weights and to their
+ratio if a heterogeneity variance $\tau^2 = 0.03$ is added to each $s_i^2$, and connect this to the
+random-effects reweighting of Section @sec-ma-random.
+:::
+
+::: {#exr-ma-i2-interpretation}
+## Interpreting $I^2$ (interpretation)
+A meta-analysis of $k = 8$ trials reports $I^2 = 60\%$. For each statement, say whether it is true or
+false and why. (a) "$60\%$ of the eight trials are biased." (b) "There is a $60\%$ probability that
+heterogeneity is present." (c) "About $60\%$ of the observed variability among the estimates exceeds what
+sampling error alone would produce." (d) "The pooled effect is wrong by $60\%$." (e) "A fixed-effect
+analysis is therefore the safe choice." Justify each answer from @def-i-squared and @prp-i2-interpretation.
+:::
+
+::: {#exr-ma-fe-pipeline}
+## Fixed-effect pipeline by hand ($\star$)
+Three trials report a mean difference: $\hat\theta_1 = 1.2$ with $s_1^2 = 0.16$, $\hat\theta_2 = 0.8$
+with $s_2^2 = 0.09$, $\hat\theta_3 = 1.5$ with $s_3^2 = 0.25$. (a) Compute the inverse-variance weights,
+the fixed-effect estimate $\hat\theta_{\mathrm{FE}}$, and its standard error. (b) Compute Cochran's $Q$,
+state its null distribution, and compute $I^2$. (c) Compute the constant $c$ of @eq-expected-q and the
+DerSimonian-Laird estimate $\hat\tau^2_{\mathrm{DL}}$. (d) Recompute the pooled estimate and its standard
+error under the random-effects weights $\tilde w_i = 1/(s_i^2 + \hat\tau^2_{\mathrm{DL}})$.
+:::
+
+::: {#exr-ma-cauchy-schwarz}
+## Optimality and the equality case
+Prove from scratch, using the Cauchy-Schwarz inequality, that any linear unbiased estimator
+$\sum_i a_i \hat\theta_i$ of $\theta$ under @eq-fe-model has variance at least $1/\sum_i w_i$, and that
+equality holds if and only if $a_i = w_i/\sum_j w_j$. Then show, without Lagrange multipliers, that the
+same conclusion follows by writing $a_i = w_i/W + d_i$ with $\sum_i d_i = 0$ and expanding the variance.
+*Hint.* For the first route, apply Cauchy-Schwarz to the vectors $(a_i s_i)_i$ and $(1/s_i)_i$ exactly as
+in the remark after @thm-fixed-effect-blue. For the second, expand $\mathrm{Var}(\hat\theta) = \sum_i
+a_i^2 s_i^2$ with $a_i = w_i/W + d_i$; the cross term vanishes because $\sum_i d_i = 0$, leaving $1/W$ plus
+a nonnegative remainder $\sum_i d_i^2 s_i^2$ that is zero only when every $d_i = 0$.
+:::
+
+::: {#exr-ma-dl-unbiased}
+## Exact unbiasedness and truncation bias of DerSimonian-Laird
+(a) Using only the second-moment assumptions of @prp-expected-q, prove that the untruncated estimator
+$\tilde\tau^2_{\mathrm{DL}} = (Q - (k-1))/c$ satisfies $\mathbb{E}[\tilde\tau^2_{\mathrm{DL}}] = \tau^2$.
+(b) Deduce that the truncated estimator @eq-dl has $\mathbb{E}[\hat\tau^2_{\mathrm{DL}}] \ge \tau^2$, with
+strict inequality whenever $P(\tilde\tau^2_{\mathrm{DL}} < 0) > 0$. (c) Explain why the truncation bias is
+largest when the true $\tau^2$ is near zero and negligible when $\tau^2$ is large.
+:::
+
+::: {#exr-ma-reml-balanced}
+## REML reproduces the $(k-1)$ divisor ($\star$)
+Suppose all within-study variances are equal, $s_i^2 \equiv s^2$. Starting from the REML estimating
+equation @eq-reml-eqn, show that $\hat\tau^2_{\mathrm{REML}} = \frac{1}{k-1}\sum_i (\hat\theta_i -
+\bar{\hat\theta})^2 - s^2$ (truncated at $0$), where $\bar{\hat\theta}$ is the unweighted mean. Compare
+with the maximum likelihood estimator, which would divide by $k$, and explain the discrepancy in terms of
+the degree of freedom spent on $\theta$, referencing @thm-reml-one-sample. *Hint.* Set all $\tilde w_i$
+equal in @eq-reml-eqn; the right-hand side collapses to $(k-1)\tilde w$ and $\hat\theta_R$ becomes the
+unweighted mean $\bar{\hat\theta}$, as in the equal-variance remark after @thm-reml-tau2.
+:::
+
+::: {#exr-ma-hk-scale}
+## The Hartung-Knapp scale factor
+Within the working model of @thm-hartung-knapp, let $q = \frac{1}{k-1}\sum_i \tilde w_i(\hat\theta_i -
+\hat\theta_R)^2$. (a) Show that $\widehat{\mathrm{Var}}_{\mathrm{HK}}(\hat\theta_R) = q\,
+\widehat{\mathrm{Var}}(\hat\theta_R)$ with $\widehat{\mathrm{Var}}(\hat\theta_R) = 1/\sum_i \tilde w_i$.
+(b) Show $\mathbb{E}[q] = 1$ under the working model with $\sigma^2 = 1$, using
+$(k-1)q = \sum_i \tilde w_i(\hat\theta_i - \hat\theta_R)^2$ and @thm-cochran-q applied to the weights
+$\tilde w_i$. (c) Explain why the Hartung-Knapp interval can be narrower than the Wald interval, and what
+the $\max\{1, q\}$ safeguard does. *Hint for (b).* Under the working model with $\sigma^2 = 1$ the
+variables $\sqrt{\tilde w_i}(\hat\theta_i - \theta)$ are standard normal, so
+$(k-1)q = \sum_i \tilde w_i(\hat\theta_i - \hat\theta_R)^2$ is exactly the Cochran statistic of
+@thm-cochran-q formed with the weights $\tilde w_i$, and that statistic has mean $k - 1$.
+:::
+
+::: {#exr-ma-bayes-shrinkage}
+## Bayesian study-specific effects and shrinkage
+In the random-effects model @eq-re-model with $\tau^2$ and $\theta$ known, derive the posterior of an
+individual study effect $\theta_i$ given $\hat\theta_i$ using @thm-conjugate-normal, and show it is
+$$
+\theta_i \mid \hat\theta_i \sim \mathcal{N}\big(B_i \theta + (1 - B_i)\hat\theta_i,\; (1 - B_i)s_i^2\big),
+\qquad B_i = \frac{s_i^2}{s_i^2 + \tau^2}.
+$$
+Interpret $B_i$ as a shrinkage factor: less precise studies (large $s_i^2$) are pulled harder toward the
+mean $\theta$. Connect this to the shrinkage estimator @thm-shrinkage-posterior-mean of Chapter 8.
+:::
+
+::: {#exr-ma-egger-identity}
+## Egger's intercept as a weighted slope
+For the data of @exr-ma-fe-pipeline, (a) fit Egger's regression @eq-egger and report $\hat\alpha$ and its
+$t$ statistic on $k - 2 = 1$ degree of freedom. (b) Fit the precision-weighted regression of $\hat\theta_i$
+on $s_i$ with weights $1/s_i^2$, and verify numerically that its slope equals $\hat\alpha$ and its
+intercept equals $\hat\beta$, as @thm-egger asserts. (c) Comment on why a test on a single residual degree
+of freedom is uninformative. *Hint.* Reuse the algebraic identity of @thm-egger: Egger's regression and
+the weighted regression of $\hat\theta_i$ on $s_i$ minimize the same objective, so their fitted
+coefficients swap roles. With $k = 3$ points and $p = 2$ parameters there are $k - 2 = 1$ residual degrees
+of freedom.
+:::

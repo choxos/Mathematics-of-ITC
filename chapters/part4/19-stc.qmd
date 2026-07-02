@@ -1,0 +1,1469 @@
+---
+title: "Simulated Treatment Comparison"
+---
+
+## Introduction {#sec-stc-intro}
+
+The previous chapter repaired a failing indirect comparison by reweighting. Matching-adjusted indirect
+comparison (MAIC) leaves the outcomes untouched and bends the *sample* until its covariate moments match
+the target, so that a weighted average of the observed outcomes estimates what the trial would have found
+in the target population. This chapter develops the other half of the population-adjustment dichotomy. The
+**simulated treatment comparison** (STC) of @caro2010stc leaves the *sample* untouched and bends a *model*:
+it fits an outcome regression to the individual patient data (IPD), then uses the fitted regression
+surface to predict what the outcomes would have been in the target population. Where MAIC is the indirect
+comparison analogue of inverse-probability weighting, STC is the analogue of outcome regression, or
+g-computation, of Chapter 10 (@thm-g-computation-unbiased). The two methods stand in exactly the relation
+that weighting and standardization stand in throughout causal inference: dual routes to the same estimand,
+with complementary assumptions and complementary failure modes.
+
+The setting is the anchored triangle of Chapter 14. An IPD trial, the *index* trial, compares an active
+treatment $A$ against a common comparator $C$ in a population $\mathcal P_{AC}$, and supplies the full
+covariate, treatment, and outcome record of every patient. A second trial, available only in aggregate, the
+*comparator* trial, compares $B$ against the same anchor $C$ in a population $\mathcal P_{BC}$, and supplies
+covariate summaries (means $\bar{\mathbf x}_{BC}$, and where available a covariance $\boldsymbol\Sigma_{BC}$)
+together with a published relative effect $\hat d_{BC}$. The clinical question is $A$ versus $B$. As in
+Chapter 14 the answer runs through the anchor: estimate the $A$-versus-$C$ effect *in the comparator
+population* $\mathcal P_{BC}$, then close the triangle by Bucher's subtraction (@thm-bucher-unbiased). The
+entire job of STC is the first step, producing $\hat d_{AC(\mathcal P_{BC})}$, the index trial's relative
+effect transported to the comparator population. The bias that this corrects is the transitivity failure of
+Chapter 16: the two trials enroll different distributions of effect modifiers (@def-effect-modifier), so the
+unadjusted index effect $\hat d_{AC(\mathcal P_{AC})}$ is the right contrast in the wrong population
+(@thm-failure-of-bucher).
+
+STC predicts. It fits the conditional mean surface $\mu_k(\mathbf x)=\mathbb E[Y(k)\mid X=\mathbf x]$ on the
+index IPD and integrates that surface over the comparator covariate distribution. This is g-computation
+with the integrating measure swapped from the source $f_{AC}$ to the target $f_{BC}$, and its validity rests
+on conditional transportability of the outcome surface (@thm-conditional-transportability), not on overlap.
+A regression can be evaluated wherever its covariates are defined, so STC interpolates and even extrapolates
+where MAIC, confined to the convex hull of the IPD (the range of covariate combinations actually observed in
+the index trial; @thm-maic-no-extrapolation), cannot. The price is the
+mirror image of MAIC's: STC is consistent only if the outcome model is correctly specified, while MAIC
+asks only that the matched moments be balanced and is indifferent to the functional form beyond them.
+
+One technical phenomenon dominates the chapter, and it is the phenomenon of Chapter 11:
+**non-collapsibility** (@def-non-collapsibility, @thm-noncollapsibility-or-hr). On a nonlinear link the
+relative effect for the *average patient* is not the *average* relative effect, and neither equals the
+*marginal* relative effect a trial reports. STC must therefore choose what it predicts. The historical and
+simplest choice, **conditional STC**, plugs the comparator's mean covariate vector $\bar{\mathbf x}_{BC}$
+into the fitted model and reports the effect at that single synthetic patient. We prove that this is biased
+for the marginal estimand under any nonlinear link (@thm-conditional-stc-bias), with a bias governed by the
+curvature of the inverse link and the covariate variance, and that it silently answers a different and
+usually unwanted question. The correct choice, **marginal STC**, integrates the fitted means over the
+comparator covariate distribution *on the natural outcome scale* and only then applies the link; we prove it
+consistent for the marginal effect under correct specification (@thm-marginal-stc-unbiased). A closed-form
+counterexample (@thm-stc-noncollapsibility-counterexample) exhibits the gap in a single line of arithmetic,
+and a fully worked logistic example (@exm-stc-logistic) carries an STC analysis from a fitted model to three
+distinct numbers: the biased plug-in, the correct target marginal, and the unadjusted source marginal.
+
+The plan is as follows. @sec-stc-outcome-model sets up the outcome model and proves the maximum likelihood
+estimator (MLE) consistent and asymptotically normal (catalogue G.1), specializing the general theory of
+Chapter 5 (@thm-mle-asymptotic-normality). @sec-stc-conditional defines conditional STC and proves its
+plug-in bias (G.2). @sec-stc-marginal defines marginal STC, proves its consistency, and identifies it as
+transported g-computation (G.3). @sec-stc-noncollapsibility isolates non-collapsibility with a counterexample
+and its collapsible boundary (G.4). @sec-stc-example is the worked example. @sec-stc-bayes develops Bayesian
+g-computation (G.5). @sec-stc-consistency states the anchored and unanchored STC consistency theorems under
+the population-adjustment conditions of Chapter 17 (G.6). @sec-stc-maic-equivalence proves that under a
+linear model with first-moment matching MAIC and STC asymptotically coincide (G.7). This chapter corresponds
+to results G.1 to G.7 of the proof catalogue. We use the relative-effect notation of [Notation](/notation.qmd)
+and the link-position machinery of Chapter 14.
+
+## A concrete picture and the STC workflow {#sec-stc-picture}
+
+The introduction moved fast. Before any formula, fix a picture and keep it for the whole chapter.
+
+**A running clinical example.** A new drug $A$ is to be compared against a competitor drug $B$ for an
+autoimmune disease. No trial has ever randomized $A$ directly against $B$. What we have is two separate
+randomized trials that share a common comparator, the standard of care $C$:
+
+- the **index trial** $AC$ randomizes $A$ against $C$ and reports **individual patient data (IPD)**: for every
+  patient we see the baseline covariates, the assigned arm, and the outcome;
+- the **comparator trial** $BC$ randomizes $B$ against $C$ but is published only as **aggregate data (AgD)**:
+  covariate summaries (the fraction of patients with each feature) and a single headline effect $\hat d_{BC}$.
+
+Take a single binary covariate $x$, a baseline risk marker, with $x=1$ for a **high-risk** patient and $x=0$
+for a **low-risk** patient, and let the outcome be an unfavorable event (a disease flare within six months).
+The two trials enrolled different case mixes: the comparator trial $BC$ recruited sicker patients, a fraction
+$0.8$ high-risk, against $0.5$ high-risk in the index trial $AC$. Because risk also drives the event
+probability, this difference in case mix is precisely what makes a naive indirect comparison invalid; the two
+trials answer their questions in two different populations. The numbers in this paragraph are the numbers of
+the worked example @exm-stc-logistic, so everything below is a rehearsal for it. The coefficients are chosen
+for arithmetic transparency, not clinical realism.
+
+**The anchored triangle.** The three treatments sit at the corners of a triangle. Two edges are supported by
+trials; the third, the one we want, is not.
+
+```
+     A - - - - - - - - - - - - - B      target: A vs B  (no direct trial)
+      \                         /
+ A vs C\   AC trial (IPD)      /  BC trial (aggregate)   B vs C
+        \                     /
+         \                   /
+          \                 /
+                  C
+            common comparator (anchor)
+```
+
+STC does exactly one job: it produces the $A$-versus-$C$ effect **evaluated in the comparator population**
+$\mathcal P_{BC}$, written $\hat d_{AC(\mathcal P_{BC})}$ (the left edge, transported to the population of the
+right edge). Bucher's identity (@thm-bucher-unbiased) then closes the triangle,
+$\hat d_{AB}=\hat d_{AC(\mathcal P_{BC})}-\hat d_{BC}$, because both contrasts now refer to the *same*
+population $\mathcal P_{BC}$.
+
+**g-computation in two sentences.** STC is the outcome-regression route, called *g-computation* or
+*standardization* in Chapter 10 (@thm-g-computation-unbiased). g-computation fits a model for the outcome
+given treatment and covariates, then, to get the effect in a chosen population, predicts the outcome for every
+covariate profile in that population and averages the predictions. STC is this same recipe with one twist: the
+model is fitted in the index population $\mathcal P_{AC}$, but the averaging is done over the *target*
+population $\mathcal P_{BC}$.
+
+::: {.remark}
+**STC in five steps (the whole method, before the theory).** Given the index IPD and the comparator summaries:
+
+1. **Fit.** Fit an outcome regression $\mu_A(x)$, $\mu_C(x)$ on the index IPD: a model for the event
+   probability (or mean) given arm and covariates.
+2. **Obtain target covariates.** Get, or reconstruct, the covariate distribution $f_{BC}$ of the comparator
+   trial. With IPD this is the covariate table; with only summaries, simulate synthetic patients matching the
+   published proportions, means, and (if reported) correlations.
+3. **Predict.** For each target covariate profile, use the fitted model to predict the event probability under
+   $A$ and under $C$.
+4. **Average, then link.** Average those predicted probabilities over the target population *on the natural
+   outcome scale* (probabilities, not log odds), and only then convert to the reported effect scale (for
+   example the log odds ratio). This order is the crux of the chapter.
+5. **Close the triangle.** Combine the resulting $\hat d_{AC(\mathcal P_{BC})}$ with the published
+   $\hat d_{BC}$ by Bucher's subtraction (@thm-bucher-unbiased) to get $\hat d_{AB}$.
+:::
+
+The single most important warning of the chapter lives in step 4: there are two ways to summarize the fitted
+model in the target population, and for a nonlinear outcome model they give *different answers*.
+
+| | **Conditional STC (plug-in)** | **Marginal STC (integrate/simulate)** |
+|---|---|---|
+| Recipe | plug the target *mean* covariate $\bar{\mathbf x}_{BC}$ into the fitted model, read off the effect | predict for *every* target covariate profile, average the predictions, then take the effect |
+| Order of operations | link, then average (contrast at the average patient) | average, then link (average the outcomes, then contrast) |
+| Data needed | only the covariate *means* $\bar{\mathbf x}_{BC}$ | the full covariate *distribution* $f_{BC}$ |
+| Estimand | effect for the single "average patient" (@eq-stc-cond-estimand) | population-average (marginal) effect (@eq-stc-marg-estimand) |
+| Correct for a population decision? | only under a linear model; biased under any nonlinear link | yes, under correct specification |
+| Developed in | @sec-stc-conditional | @sec-stc-marginal |
+
+The plug-in is historically the original STC of @caro2010stc, and it is tempting for a concrete reason: it
+needs only the published covariate *means* $\bar{\mathbf x}_{BC}$, which every trial reports, not the full
+covariate distribution, which most trials do not. Its defect is that "the effect for the average patient" is
+not "the average effect" once the outcome model is nonlinear, a phenomenon called **non-collapsibility**
+(Chapter 11). Making that gap visible, and fixing it, is the spine of this chapter.
+
+**When to reach for STC.** STC and MAIC (Chapter 18) solve the same transport problem by dual routes, and the
+choice between them is a choice of what to trust:
+
+- Reach for **STC** when you are willing to commit to an outcome model (a link and a functional form) and when
+  the comparator population lies partly outside the covariate range of the index trial, so that weighting would
+  break down. A regression can predict anywhere its covariates are defined.
+- Reach for **MAIC** when you do not want to commit to a functional form and the two populations overlap well,
+  so that reweighting is stable. MAIC balances covariate moments and is indifferent to the shape of the outcome
+  surface beyond them.
+
+The trade-off, made precise in @sec-stc-maic-equivalence, is "trust a model" (STC) versus "trust an overlap"
+(MAIC). Keep it in mind as the assumptions accumulate.
+
+**A guide to the signs and scales.** Two bookkeeping conventions recur and are worth tabulating once. First,
+the *direction* of a contrast. The GLM treatment coefficient orients the *active* arm against the *reference*
+arm; the relative-effect symbol of [Notation](/notation.qmd) orients the *reference* first. They differ only by
+a sign:
+
+| Quantity | Definition | Reads as |
+|---|---|---|
+| $\Lambda(\mathbf x)$, $\ell_{AC}$ | $\eta_A-\eta_C$ (active minus reference) | GLM/model convention; positive means a higher linear predictor under $A$ |
+| $d_{AC(\mathcal P)}$ | $\eta_C-\eta_A$ (reference first) | Notation/Bucher convention; $d_{AC}=-\Lambda$ at the marginal level |
+
+Nothing mathematical depends on the choice; we compute in the positive $\ell_{AC}=\eta_A-\eta_C$ where it keeps
+arithmetic tidy and flip the sign only when handing the result to Bucher. Second, the *scale*. Every effect can
+be read on two scales, and the whole non-collapsibility story is that they do not commute with averaging:
+
+| Phrase (used interchangeably) | Meaning |
+|---|---|
+| **natural outcome scale** = response scale | the untransformed outcome: an event *probability*, a *rate*, a mean |
+| **link scale** | the transformed outcome $g(\cdot)$: a *log odds*, a *log rate*, on which the model is linear |
+
+We say "natural outcome scale" for the untransformed scale throughout. "Averaging on the natural outcome scale,
+then linking" is marginal STC; "linking, then reading the contrast at the average covariate" is conditional
+STC. Finally, a compact glossary of the symbols this chapter leans on, all consistent with
+[Notation](/notation.qmd):
+
+| Symbol | Plain meaning |
+|---|---|
+| $\mathcal P_{AC}$, $\mathcal P_{BC}$ | source (index) and target (comparator) populations |
+| $f_{BC}$ | covariate distribution in the target population |
+| $\eta_k(\mathbf x)$ | linear predictor (link-scale outcome) under arm $k$ |
+| $\mu_k(\mathbf x)$ | fitted event probability or mean under arm $k$, on the natural outcome scale |
+| $\bar\mu_{k(\mathcal P)}$ | that mean, *averaged* over population $\mathcal P$ (a marginal mean) |
+| $d^{\mathrm{cond}}$ | conditional-at-the-mean effect (the plug-in target) |
+| $d^{\mathrm{marg}}$ | marginal (population-average) effect (the correct target) |
+| $\Lambda(\mathbf x)$ | conditional relative effect on the link scale, $\gamma+\mathbf x^\top\boldsymbol\beta_2$ |
+
+With the picture, the workflow, the two estimands, and the bookkeeping in hand, we now build the method
+rigorously, beginning with the regression that step 1 fits.
+
+## The outcome model and its estimation {#sec-stc-outcome-model}
+
+This section carries out step 1 of the workflow: fitting the outcome regression. Why begin with a page of
+maximum likelihood theory in a chapter about STC? Because *every* downstream STC estimator, the plug-in of
+@sec-stc-conditional, the marginal estimator of @sec-stc-marginal, and their variances, is a function of the
+fitted coefficients $\hat{\boldsymbol\xi}$. To push convergence and a limiting distribution through those
+functions we need two guarantees about $\hat{\boldsymbol\xi}$ itself: that it converges to the truth
+(consistency) and that it has a known limiting spread (asymptotic normality). @thm-stc-outcome-mle supplies
+both; the reader who trusts that GLMs are well behaved may skim its proof and rejoin at @sec-stc-conditional.
+
+Fix a strictly increasing, twice continuously differentiable link function $g$ (@def-link-function) with
+inverse $g^{-1}$: the logit for binary outcomes, the log for rates and hazards, the identity for continuous
+outcomes. The index IPD consist of $n$ independent records $(Y_i, T_i, \mathbf x_i)$, $i=1,\dots,n$, drawn
+from $\mathcal P_{AC}$, with arm indicator $T_i\in\{A,C\}$ randomized and covariates
+$\mathbf x_i\in\mathcal X\subseteq\mathbb R^p$.
+
+::: {#def-stc-outcome-model}
+## The STC outcome model
+The **outcome model** is the generalized linear model that, with $C$ as the reference arm, writes the
+conditional mean of the outcome on the link scale as a linear predictor
+$$
+\eta_k(\mathbf x;\boldsymbol\xi)
+\;=\;\alpha \;+\; \mathbf x^\top\boldsymbol\beta_1 \;+\; \mathbf 1\{k=A\}\,\bigl(\gamma+\mathbf x^\top\boldsymbol\beta_2\bigr),
+\qquad k\in\{A,C\},
+$$ {#eq-stc-linpred}
+with intercept $\alpha$, prognostic coefficients $\boldsymbol\beta_1$ (@def-prognostic-variable), treatment
+main effect $\gamma$, and treatment-by-covariate interactions $\boldsymbol\beta_2$ encoding effect
+modification (@def-effect-modifier). The full parameter is $\boldsymbol\xi=(\alpha,\gamma,\boldsymbol\beta_1,\boldsymbol\beta_2)\in\mathbb R^{q}$,
+$q=2p+2$. The **fitted conditional mean** under arm $k$ is
+$$
+\mu_k(\mathbf x;\boldsymbol\xi)\;=\;g^{-1}\!\bigl(\eta_k(\mathbf x;\boldsymbol\xi)\bigr),
+\qquad
+\mu_k(\mathbf x)\;:=\;\mu_k(\mathbf x;\boldsymbol\xi_0)\;=\;\mathbb E[Y(k)\mid X=\mathbf x],
+$$ {#eq-stc-condmean}
+the last equality holding at the true parameter $\boldsymbol\xi_0$ under correct specification. The
+**conditional relative effect** of $A$ versus $C$ at covariate value $\mathbf x$ is the contrast of linear
+predictors,
+$$
+\Lambda(\mathbf x;\boldsymbol\xi)\;=\;\eta_A(\mathbf x;\boldsymbol\xi)-\eta_C(\mathbf x;\boldsymbol\xi)\;=\;\gamma+\mathbf x^\top\boldsymbol\beta_2 .
+$$ {#eq-stc-cate-link}
+$\blacktriangleleft$
+:::
+
+*Reader's translation.* The model says that each patient's outcome, on the link scale, is a baseline level
+($\alpha$), plus a prognostic tilt for how sick they are ($\mathbf x^\top\boldsymbol\beta_1$), plus, only if
+they received the active drug, a treatment bump ($\gamma$) that may itself depend on their covariates
+($\mathbf x^\top\boldsymbol\beta_2$, effect modification). Set $\boldsymbol\beta_2=\mathbf 0$ and every patient
+gets the same treatment bump; let it be nonzero and the drug helps some patients more than others. The
+conditional relative effect @eq-stc-cate-link is just that treatment bump on the link scale.
+
+Writing $z_i=\bigl(1,\ \mathbf 1\{T_i=A\},\ \mathbf x_i^\top,\ \mathbf 1\{T_i=A\}\,\mathbf x_i^\top\bigr)^\top\in\mathbb R^{q}$
+for the design row of patient $i$, the linear predictor is $\eta_i=z_i^\top\boldsymbol\xi$, so
+@eq-stc-linpred is an ordinary GLM with model matrix $Z=[z_1,\dots,z_n]^\top$. The conditional relative
+effect @eq-stc-cate-link is constant in $\mathbf x$ exactly when $\boldsymbol\beta_2=\mathbf 0$, that is,
+when no measured covariate modifies the treatment effect on the link scale; this is the link-scale form of
+the effect-modifier definition of Chapter 11.
+
+::: {.remark}
+**Orientation of the contrast.** Equation @eq-stc-cate-link is the effect of the *active* arm relative to
+the *reference* arm, $\eta_A-\eta_C$, which is the sign convention of the GLM treatment coefficient and of
+the STC literature. The relative-effect symbol of [Notation](/notation.qmd) and Chapter 14 places the
+reference first, $d_{AC(\mathcal P)}=\eta_{C(\mathcal P)}-\eta_{A(\mathcal P)}$, so the marginal version of
+@eq-stc-cate-link enters Bucher's identity as $d_{AC}=-\Lambda$ at the marginal level. The overall sign is
+bookkeeping, exactly as in the index-order remark of Chapter 14, and it changes none of the bias,
+consistency, or non-collapsibility statements below, each of which is a statement about a single arm or about
+the difference of two arms on a fixed scale. To keep the worked arithmetic in positive numbers we report the
+active-versus-reference log odds-ratio $\ell_{AC}:=\eta_{A}-\eta_{C}$ where convenient and note
+$d_{AC}=-\ell_{AC}$. $\blacktriangleleft$
+:::
+
+### Estimation and its large-sample behavior {#sec-stc-mle}
+
+The model is fitted by maximum likelihood. For an outcome whose conditional law is a one-parameter
+exponential-family member with mean $\mu_i=g^{-1}(z_i^\top\boldsymbol\xi)$, the log-likelihood is
+$$
+\ell_n(\boldsymbol\xi)\;=\;\sum_{i=1}^n \ell_i(\boldsymbol\xi),
+\qquad
+\ell_i(\boldsymbol\xi)=\frac{Y_i\vartheta_i-b(\vartheta_i)}{a(\phi)}+c(Y_i,\phi),
+$$ {#eq-stc-loglik}
+where $\vartheta_i$ is the natural parameter, related to the mean by $\mu_i=b'(\vartheta_i)$ and to the
+linear predictor by the link $g(\mu_i)=z_i^\top\boldsymbol\xi$, and $a(\phi)>0$ is the dispersion. The score
+and observed information are
+$$
+\mathbf s_n(\boldsymbol\xi)=\nabla\ell_n(\boldsymbol\xi)=\sum_i \frac{Y_i-\mu_i}{a(\phi)\,V(\mu_i)\,g'(\mu_i)}\,z_i,
+\qquad
+\mathcal I_n(\boldsymbol\xi)=\sum_i W_i\,z_iz_i^\top,
+$$ {#eq-stc-score}
+with variance function $V(\mu)=b''(\vartheta)$ and GLM working weight
+$W_i=\bigl[a(\phi)\,V(\mu_i)\,g'(\mu_i)^2\bigr]^{-1}>0$ (the standard iteratively reweighted least squares
+weight; see @mccullagh1989glm, Chapter 2). We record the asymptotics as catalogue result G.1.
+
+::: {#thm-stc-outcome-mle}
+## Consistency and asymptotic normality of the outcome MLE
+Suppose the outcome model @def-stc-outcome-model is correctly specified, with true parameter
+$\boldsymbol\xi_0$ in the interior of a compact parameter set $\Xi\subseteq\mathbb R^{q}$, and that
+
+1. the records $(Y_i,T_i,\mathbf x_i)$ are independent and identically distributed from $\mathcal P_{AC}$,
+   with $\mathbb E[Y(k)\mid X=\mathbf x]=g^{-1}(\eta_k(\mathbf x;\boldsymbol\xi_0))$;
+2. the covariates are bounded and the limiting design second moment
+   $\mathbf M:=\mathbb E[\,W\,zz^\top\,]$ is finite and positive definite, which requires both arms to be
+   present with positive probability and the covariates to vary within the active arm so that the columns of
+   $z$ corresponding to $\alpha,\gamma,\boldsymbol\beta_1,\boldsymbol\beta_2$ are not collinear;
+3. the link $g$ is twice continuously differentiable with $g'>0$, and the dispersion $a(\phi)$ is fixed or
+   estimated by a $\sqrt n$-consistent estimator.
+
+Then the maximum likelihood estimator $\hat{\boldsymbol\xi}$ exists with probability tending to one, is
+consistent, $\hat{\boldsymbol\xi}\xrightarrow{p}\boldsymbol\xi_0$, and is asymptotically normal,
+$$
+\sqrt n\,(\hat{\boldsymbol\xi}-\boldsymbol\xi_0)\ \xrightarrow{d}\ \mathcal N\!\bigl(\mathbf 0,\ \mathcal I(\boldsymbol\xi_0)^{-1}\bigr),
+\qquad
+\mathcal I(\boldsymbol\xi_0)=\mathbf M,
+$$ {#eq-stc-mle-an}
+where $\mathcal I(\boldsymbol\xi_0)$ is the per-observation Fisher information. (Corresponds to G.1 in the
+proof catalogue.)
+:::
+
+::: {.proof}
+The result is the master maximum likelihood theorem of Chapter 5 (@thm-mle-asymptotic-normality) applied to
+the estimating function @eq-stc-score; the work is to verify its hypotheses for the GLM @eq-stc-loglik. We
+take $a(\phi)$ known to lighten notation; a $\sqrt n$-consistent $\hat\phi$ enters the mean parameters only
+through a block-diagonal information and does not change the limit for $\hat{\boldsymbol\xi}$.
+
+*Identifiability.* The map $\boldsymbol\xi\mapsto(\eta_1,\dots,\eta_n)=(z_1^\top\boldsymbol\xi,\dots)$ is
+injective on $\mathbb R^q$ iff the design rows span $\mathbb R^q$, equivalently iff
+$\mathbb E[zz^\top]\succ0$. Hypothesis 2 grants this: an intercept needs a constant column; $\gamma$ needs
+$\Pr(T=A)\in(0,1)$ so the column $\mathbf 1\{T=A\}$ is nonconstant; $\boldsymbol\beta_1$ needs covariate
+variation; $\boldsymbol\beta_2$ needs covariate variation within the active arm. Since $g$ is strictly
+increasing, distinct linear predictors give distinct mean vectors, so distinct $\boldsymbol\xi$ give distinct
+distributions and the parameter is identified.
+
+*The score has mean zero at the truth.* Under correct specification, $\mathbb E[Y_i\mid z_i]=\mu_i(\boldsymbol\xi_0)$,
+so each summand of @eq-stc-score has conditional mean
+$$
+\mathbb E\!\left[\frac{Y_i-\mu_i(\boldsymbol\xi_0)}{a(\phi)V(\mu_i)g'(\mu_i)}\,z_i\ \middle|\ z_i\right]=\mathbf 0,
+$$
+and hence unconditional mean zero by the tower property (the law of iterated expectations,
+$\mathbb E[\mathbb E[Y\mid X]]=\mathbb E[Y]$). Thus $\boldsymbol\xi_0$ solves the population score
+equation $\mathbb E[\mathbf s_i(\boldsymbol\xi_0)]=\mathbf 0$, the defining property of the estimand for an
+M-estimator (an estimator defined as the zero of an estimating function, here the score $\mathbf s_n$).
+
+*Information and the second-moment matrix.* Differentiating @eq-stc-score and taking expectations, the
+cross-product terms in $Y_i-\mu_i$ vanish in expectation at $\boldsymbol\xi_0$, leaving the Fisher
+information per observation
+$$
+\mathcal I(\boldsymbol\xi_0)=\mathbb E\!\left[-\nabla^2\ell_i(\boldsymbol\xi_0)\right]=\mathbb E\!\left[\,W_i\,z_iz_i^\top\,\right]=\mathbf M,
+$$
+which is finite (bounded covariates, continuous weights) and positive definite by hypothesis 2 together with
+$W_i>0$. This is the information equality for a correctly specified exponential family.
+
+*Existence, uniqueness, and consistency.* For the canonical link the log-likelihood @eq-stc-loglik is
+concave in $\boldsymbol\xi$ because $b$ is convex and $\eta_i$ is linear in $\boldsymbol\xi$, so any
+stationary point is the unique global maximizer; for a noncanonical but smooth strictly increasing link the
+log-likelihood is locally concave near $\boldsymbol\xi_0$ and the estimating function $\mathbf s_n$ is, by
+the uniform law of large numbers on the compact $\Xi$, uniformly close to its expectation, whose unique
+zero is $\boldsymbol\xi_0$. By the standard M-estimation consistency argument (the zero of an estimating
+function that converges uniformly to a function with a well-separated unique zero is consistent;
+@vandervaart1998, Theorem 5.9), $\hat{\boldsymbol\xi}\xrightarrow{p}\boldsymbol\xi_0$.
+
+*Asymptotic normality.* A first-order Taylor expansion of $\mathbf 0=\mathbf s_n(\hat{\boldsymbol\xi})$ about
+$\boldsymbol\xi_0$ gives
+$$
+\mathbf 0=\frac1{\sqrt n}\mathbf s_n(\boldsymbol\xi_0)+\Bigl(\frac1n\nabla\mathbf s_n(\tilde{\boldsymbol\xi})\Bigr)\sqrt n(\hat{\boldsymbol\xi}-\boldsymbol\xi_0),
+$$
+for $\tilde{\boldsymbol\xi}$ on the segment between $\hat{\boldsymbol\xi}$ and $\boldsymbol\xi_0$. The score
+summands are independent, mean zero, with per-observation covariance $\mathcal I(\boldsymbol\xi_0)=\mathbf M$
+(the information equality), so by the multivariate central limit theorem
+$n^{-1/2}\mathbf s_n(\boldsymbol\xi_0)\xrightarrow{d}\mathcal N(\mathbf 0,\mathbf M)$. By consistency and the
+uniform law of large numbers $-n^{-1}\nabla\mathbf s_n(\tilde{\boldsymbol\xi})\xrightarrow{p}\mathbf M$ (the
+observed information per observation converging to the Fisher information $\mathbf M$), which
+is invertible. Solving for $\sqrt n(\hat{\boldsymbol\xi}-\boldsymbol\xi_0)$ and applying Slutsky's theorem,
+$$
+\sqrt n(\hat{\boldsymbol\xi}-\boldsymbol\xi_0)=\mathbf M^{-1}\,\frac1{\sqrt n}\mathbf s_n(\boldsymbol\xi_0)+o_p(1)\ \xrightarrow{d}\ \mathcal N\!\bigl(\mathbf 0,\ \mathbf M^{-1}\mathbf M\,\mathbf M^{-1}\bigr)=\mathcal N\!\bigl(\mathbf 0,\ \mathbf M^{-1}\bigr),
+$$
+which is @eq-stc-mle-an. The sandwich form $\mathbf M^{-1}\mathbf M\mathbf M^{-1}$ collapses to
+$\mathbf M^{-1}$ precisely because correct specification forces the meat to equal the bread. $\square$
+:::
+
+**Why this matters.** Every STC estimator in this chapter, the plug-in, the marginal estimator, and their
+delta-method and Bayesian variances, is a function of $\hat{\boldsymbol\xi}$. @thm-stc-outcome-mle is what lets
+us carry convergence and a limiting distribution *through* those functions: consistency of $\hat{\boldsymbol\xi}$
+becomes consistency of the transported effect (@thm-marginal-stc-unbiased), and the Gaussian limit becomes the
+standard error we report. It is the same relationship regression has to everything built on it: pin down the
+coefficients first, then read off whatever functional the application needs.
+
+::: {.remark}
+**Misspecification and the sandwich.** Drop hypothesis 1. The estimating function @eq-stc-score still has a
+well-defined zero $\boldsymbol\xi^\ast$, the **pseudo-true parameter**, solving
+$\mathbb E[\mathbf s_i(\boldsymbol\xi^\ast)]=\mathbf 0$; it minimizes the Kullback-Leibler divergence from the
+true law to the model family (@vandervaart1998, Section 5.5). The same Taylor argument then yields
+$\sqrt n(\hat{\boldsymbol\xi}-\boldsymbol\xi^\ast)\xrightarrow{d}\mathcal N(\mathbf 0,\ \mathbf A^{-1}\mathbf B\mathbf A^{-1})$,
+the **sandwich** of @def-sandwich-variance, with bread $\mathbf A=\mathbb E[-\nabla\mathbf s_i(\boldsymbol\xi^\ast)]$
+and meat $\mathbf B=\mathbb E[\mathbf s_i(\boldsymbol\xi^\ast)\mathbf s_i(\boldsymbol\xi^\ast)^\top]$, which no
+longer coincide. The estimator is then consistent for $\boldsymbol\xi^\ast$, not $\boldsymbol\xi_0$, and the
+STC contrasts built from it inherit a bias equal to the discrepancy between the pseudo-true surface and the
+truth. This is the formal statement of STC's central vulnerability: it is only as good as its model.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**A misspecification example.** Suppose the true event probability rises with the *square* of a covariate,
+$\operatorname{logit}\mu_C(x)=-1+x^2$, but the analyst fits the straight-line model
+$\operatorname{logit}\mu_C(x)=\alpha+\beta_1 x$. Inside the index covariate range the straight line can track
+the curve tolerably, so the fit looks fine on the data at hand. But STC's selling point is that it
+*extrapolates* into the comparator population, and where that population places patients at larger $x$ than the
+index trial ever observed, the straight line and the true parabola diverge without bound. STC then transports a
+confident prediction that is simply wrong: the pseudo-true surface $\mu_k(\cdot;\boldsymbol\xi^\ast)$ is not the
+truth off the index support, and the transported contrast inherits exactly that error. This is why "no overlap
+required" (@sec-stc-marginal below) is a statement about mathematical definability, not a license to
+extrapolate blindly. $\blacktriangleleft$
+:::
+
+## Conditional simulated treatment comparison and its plug-in bias {#sec-stc-conditional}
+
+The fitted model can be queried in two essentially different ways, and the difference is the subject of the
+chapter. The first, historically the original STC of @caro2010stc, evaluates the fitted contrast at a single
+synthetic patient whose covariates equal the comparator-population mean.
+
+::: {#def-stc-conditional}
+## Conditional (plug-in) STC
+Given the fitted model $\hat{\boldsymbol\xi}$ and the comparator covariate mean $\bar{\mathbf x}_{BC}$, the
+**conditional STC estimator** of the $A$-versus-$C$ relative effect is the fitted conditional relative
+effect @eq-stc-cate-link evaluated at $\bar{\mathbf x}_{BC}$,
+$$
+\hat d_{AC}^{\,\mathrm{cond}}
+\;:=\; g\!\bigl(\mu_C(\bar{\mathbf x}_{BC};\hat{\boldsymbol\xi})\bigr)-g\!\bigl(\mu_A(\bar{\mathbf x}_{BC};\hat{\boldsymbol\xi})\bigr)
+\;=\;\eta_C(\bar{\mathbf x}_{BC};\hat{\boldsymbol\xi})-\eta_A(\bar{\mathbf x}_{BC};\hat{\boldsymbol\xi})
+\;=\;-\bigl(\hat\gamma+\bar{\mathbf x}_{BC}^\top\hat{\boldsymbol\beta}_2\bigr),
+$$ {#eq-stc-cond}
+in the reference-first orientation of [Notation](/notation.qmd). It is the relative effect predicted for an
+individual whose covariate vector equals the comparator mean. $\blacktriangleleft$
+:::
+
+*Reader's translation.* Conditional STC builds one synthetic "average patient," whose covariates are the
+target-population means, and reports the treatment effect the model predicts for that single patient. It was
+the original proposal of @caro2010stc for a blunt practical reason: it needs only the published covariate
+*means* $\bar{\mathbf x}_{BC}$, which every trial reports, and never the full covariate distribution, which most
+trials do not. The rest of this section shows what that convenience costs.
+
+The middle equality in @eq-stc-cond is exact and not an approximation: applying the link $g$ to a fitted
+conditional mean returns the linear predictor, $g(\mu_k(\mathbf x;\hat{\boldsymbol\xi}))=\eta_k(\mathbf x;\hat{\boldsymbol\xi})$,
+because $\mu_k=g^{-1}\circ\eta_k$. The conditional estimator is therefore a difference of *linear*
+predictors, and it inherits no curvature. That is exactly the trouble: the marginal estimand it is meant to
+approximate is a difference of links of *averaged* means, which does carry curvature. We isolate the target.
+
+::: {#def-stc-estimands}
+## The marginal and conditional-at-the-mean estimands
+Let $\mathcal P$ be a population with covariate density $f_{\mathcal P}$, and write the arm marginal mean and
+its link-scale position, as in @eq-bucher-eta of Chapter 14,
+$$
+\bar\mu_{k(\mathcal P)}=\int \mu_k(\mathbf x)\,f_{\mathcal P}(\mathbf x)\,d\mathbf x,
+\qquad
+\eta_{k(\mathcal P)}=g\!\bigl(\bar\mu_{k(\mathcal P)}\bigr).
+$$ {#eq-stc-armmean}
+The **marginal relative effect** in $\mathcal P$ is the contrast of link positions (@def-marginal-effect),
+$$
+d_{AC(\mathcal P)}^{\,\mathrm{marg}}\;=\;\eta_{C(\mathcal P)}-\eta_{A(\mathcal P)}\;=\;g\!\bigl(\bar\mu_{C(\mathcal P)}\bigr)-g\!\bigl(\bar\mu_{A(\mathcal P)}\bigr),
+$$ {#eq-stc-marg-estimand}
+and the **conditional-at-the-mean** effect is the link contrast at the mean covariate (@def-conditional-effect),
+$$
+d_{AC(\mathcal P)}^{\,\mathrm{cond}}\;=\;g\!\bigl(\mu_C(\bar{\mathbf x}_{\mathcal P})\bigr)-g\!\bigl(\mu_A(\bar{\mathbf x}_{\mathcal P})\bigr)\;=\;\eta_C(\bar{\mathbf x}_{\mathcal P})-\eta_A(\bar{\mathbf x}_{\mathcal P}).
+$$ {#eq-stc-cond-estimand}
+$\blacktriangleleft$
+:::
+
+*Reader's translation: the average of outcomes versus the outcome of the average.* The **marginal** effect
+@eq-stc-marg-estimand averages the outcomes and *then* contrasts (what a trial run in $\mathcal P$ would
+report); the **conditional-at-the-mean** effect @eq-stc-cond-estimand contrasts at the single average patient.
+A straight-line model makes the two equal; a curved link splits them, and a population-level decision wants the
+first.
+
+The marginal effect @eq-stc-marg-estimand is the quantity a randomized trial in $\mathcal P$ would report
+from its arm summaries, and the quantity Bucher's identity requires (@def-constancy-relative-effects). The
+conditional-at-the-mean effect @eq-stc-cond-estimand is the effect for a single hypothetical average patient.
+The conditional STC estimator @eq-stc-cond is consistent for @eq-stc-cond-estimand, by @thm-stc-outcome-mle
+and the continuity of $g\circ g^{-1}$, but for the marginal estimand it carries a bias that we now compute
+exactly. The result is catalogue G.2.
+
+The intuition is one sentence: *a curved link makes the prediction at the mean covariate differ from the mean
+of the predictions.* Bend a curve, mark the midpoint of two inputs, and the curve's height at that midpoint is
+not the average of its two output heights; the gap grows with how much the curve bends and how spread out the
+inputs are. The next theorem turns that sentence into an exact formula: the arm-level gap is, to second order,
+half the variance of the linear predictor times the curvature of the inverse link (@eq-stc-taylor).
+
+::: {#thm-conditional-stc-bias}
+## Plug-in bias of conditional STC under a nonlinear link
+Assume the outcome model @def-stc-outcome-model is correctly specified and that $g^{-1}$ is twice
+differentiable on the range of the linear predictors. Then:
+
+1. **What it estimates.** $\hat d_{AC}^{\,\mathrm{cond}}\xrightarrow{p} d_{AC(\mathcal P_{BC})}^{\,\mathrm{cond}}$,
+   the conditional-at-the-mean effect @eq-stc-cond-estimand, not the marginal effect.
+
+2. **Arm-level Jensen gap.** For each arm $k$ the link of the marginal mean differs from the linear
+   predictor at the mean by
+   $$
+   \eta_{k(\mathcal P_{BC})}-\eta_k(\bar{\mathbf x}_{BC})
+   = g\!\bigl(\mathbb E_{f_{BC}}[\mu_k(X)]\bigr)-g\!\bigl(\mu_k(\bar{\mathbf x}_{BC})\bigr),
+   $$ {#eq-stc-armgap}
+   and, writing $b_k:=\bar\mu_{k(\mathcal P_{BC})}-\mu_k(\bar{\mathbf x}_{BC})=\mathbb E_{f_{BC}}[\mu_k(X)]-\mu_k(\bar{\mathbf x}_{BC})$
+   for the response-scale gap,
+   $$
+   b_k=\tfrac12\,\mathbb E_{f_{BC}}\!\Bigl[\bigl(\boldsymbol\beta_{(k)}^\top(X-\bar{\mathbf x}_{BC})\bigr)^2\,(g^{-1})''(\xi_{k,X})\Bigr],
+   \qquad \boldsymbol\beta_{(C)}=\boldsymbol\beta_1,\ \boldsymbol\beta_{(A)}=\boldsymbol\beta_1+\boldsymbol\beta_2,
+   $$ {#eq-stc-taylor}
+   for some $\xi_{k,X}$ between $\eta_k(X)$ and $\eta_k(\bar{\mathbf x}_{BC})$. The gap $b_k$ is nonzero
+   whenever $(g^{-1})''\not\equiv0$ on the relevant range and $\mathrm{Var}_{f_{BC}}(\boldsymbol\beta_{(k)}^\top X)>0$.
+
+3. **Contrast bias.** The asymptotic bias of conditional STC for the marginal effect is the difference of
+   the two arm-level link gaps @eq-stc-armgap,
+   $$
+   d_{AC(\mathcal P_{BC})}^{\,\mathrm{cond}}-d_{AC(\mathcal P_{BC})}^{\,\mathrm{marg}}
+   =\bigl[\eta_A(\bar{\mathbf x}_{BC})-\eta_{A(\mathcal P_{BC})}\bigr]-\bigl[\eta_C(\bar{\mathbf x}_{BC})-\eta_{C(\mathcal P_{BC})}\bigr],
+   $$ {#eq-stc-contrastbias}
+   which vanishes for the identity link and is generally nonzero otherwise.
+:::
+
+::: {.proof}
+*Part 1 (what the plug-in converges to).* By @thm-stc-outcome-mle, $\hat{\boldsymbol\xi}\xrightarrow{p}\boldsymbol\xi_0$, and the maps
+$\boldsymbol\xi\mapsto\eta_k(\bar{\mathbf x}_{BC};\boldsymbol\xi)$ are continuous (indeed affine), so by the
+continuous mapping theorem$\hat d_{AC}^{\,\mathrm{cond}}=\eta_C(\bar{\mathbf x}_{BC};\hat{\boldsymbol\xi})-\eta_A(\bar{\mathbf x}_{BC};\hat{\boldsymbol\xi})\xrightarrow{p}\eta_C(\bar{\mathbf x}_{BC})-\eta_A(\bar{\mathbf x}_{BC})=d_{AC(\mathcal P_{BC})}^{\,\mathrm{cond}}$,
+which is @eq-stc-cond-estimand by definition.
+
+*Part 2 (the per-arm Jensen gap).* Fix an arm $k$ and abbreviate $\eta_k(\mathbf x)=\eta_k(\mathbf x;\boldsymbol\xi_0)$,
+$m(\mathbf x)=\mu_k(\mathbf x)=g^{-1}(\eta_k(\mathbf x))$, $\bar{\mathbf x}=\bar{\mathbf x}_{BC}$. Because
+$\eta_k$ is affine, $\eta_k(X)-\eta_k(\bar{\mathbf x})=\boldsymbol\beta_{(k)}^\top(X-\bar{\mathbf x})$ with
+$\boldsymbol\beta_{(k)}$ the covariate slope of arm $k$, namely $\boldsymbol\beta_1$ for $C$ and
+$\boldsymbol\beta_1+\boldsymbol\beta_2$ for $A$. A second-order Taylor expansion of $m=g^{-1}\circ\eta_k$
+about $\bar{\mathbf x}$ with Lagrange remainder gives, for each $\mathbf x$,
+$$
+m(\mathbf x)=m(\bar{\mathbf x})+(g^{-1})'(\eta_k(\bar{\mathbf x}))\,\boldsymbol\beta_{(k)}^\top(\mathbf x-\bar{\mathbf x})+\tfrac12(g^{-1})''(\xi_{k,\mathbf x})\,\bigl(\boldsymbol\beta_{(k)}^\top(\mathbf x-\bar{\mathbf x})\bigr)^2,
+$$
+with $\xi_{k,\mathbf x}$ between $\eta_k(\mathbf x)$ and $\eta_k(\bar{\mathbf x})$. Take the expectation over
+$X\sim f_{BC}$. The first term is constant; the second term vanishes because
+$\mathbb E_{f_{BC}}[X-\bar{\mathbf x}]=\mathbf 0$ and the coefficient is constant; the third term gives
+@eq-stc-taylor:
+$$
+b_k=\mathbb E_{f_{BC}}[m(X)]-m(\bar{\mathbf x})=\tfrac12\,\mathbb E_{f_{BC}}\!\Bigl[(g^{-1})''(\xi_{k,X})\bigl(\boldsymbol\beta_{(k)}^\top(X-\bar{\mathbf x})\bigr)^2\Bigr].
+$$
+The integrand is a product of $(g^{-1})''$ and a nonnegative quadratic with positive expectation when the
+slope contrast has positive variance; if moreover $(g^{-1})''$ has a constant sign on the range (true for the
+logit on either side of zero and for the log everywhere), the gap $b_k$ is strictly of that sign, hence
+nonzero. Applying the increasing function $g$ to the two means in @eq-stc-armmean and subtracting gives the
+link-scale gap @eq-stc-armgap, which is a strictly monotone transform of $b_k$ and therefore vanishes iff
+$b_k=0$.
+
+*Part 3 (the contrast bias is the difference of the two gaps).* Subtract the marginal estimand @eq-stc-marg-estimand from the conditional-at-the-mean estimand
+@eq-stc-cond-estimand and regroup by arm:
+$$
+\begin{aligned}
+d_{AC(\mathcal P_{BC})}^{\,\mathrm{cond}}-d_{AC(\mathcal P_{BC})}^{\,\mathrm{marg}}
+&=\bigl[\eta_C(\bar{\mathbf x}_{BC})-\eta_A(\bar{\mathbf x}_{BC})\bigr]-\bigl[\eta_{C(\mathcal P_{BC})}-\eta_{A(\mathcal P_{BC})}\bigr]\\
+&=\bigl[\eta_A(\bar{\mathbf x}_{BC})-\eta_{A(\mathcal P_{BC})}\bigr]-\bigl[\eta_C(\bar{\mathbf x}_{BC})-\eta_{C(\mathcal P_{BC})}\bigr],
+\end{aligned}
+$$
+which is @eq-stc-contrastbias. For the identity link $g^{-1}(\eta)=\eta$, so $(g^{-1})''\equiv0$ and each
+$b_k=0$ by @eq-stc-taylor, hence each bracket in @eq-stc-contrastbias vanishes and the contrast bias is zero.
+For a nonlinear link the two brackets are the arm-level gaps @eq-stc-armgap, which are individually nonzero
+and need not cancel, so the contrast bias is generally nonzero. $\square$
+:::
+
+**Why this matters.** A cost-effectiveness model, the engine of a health technology assessment, is handed a
+*single* marginal effect together with a target population, and it prices a technology for that whole
+population. Feed it the conditional-at-the-mean effect instead and you have silently evaluated the drug for one
+hypothetical average patient, not for the population the funding decision actually covers. @thm-conditional-stc-bias
+says the substitution is not a rounding error: under any nonlinear link it is a systematic bias, invisible
+without the covariate distribution and unshrinkable by collecting more data (it is a bias, not a variance).
+This is why STC, and its descendant ML-NMR (Chapter 20), integrate on the natural outcome scale rather than
+plug in a mean.
+
+The decomposition @eq-stc-contrastbias is the precise content of the slogan "the link does not commute with
+averaging." It also shows *exactly when conditional STC happens to be unbiased for the marginal effect*: not
+only under the identity link, but whenever the two arm-level Jensen gaps coincide. The log link makes this
+boundary explicit and connects it to collapsibility.
+
+::: {#exm-stc-loglink}
+## The log link: exact bias and the collapsibility of the rate ratio
+Let $g=\log$, so $g^{-1}(\eta)=e^{\eta}$ and $(g^{-1})''=e^{\eta}>0$ everywhere, and let
+$X\sim\mathcal N(\bar{\mathbf x}_{BC},\boldsymbol\Sigma_{BC})$ in the comparator population. By the moment
+generating function of the multivariate Gaussian (Chapter 4), for each arm
+$$
+\bar\mu_{k(\mathcal P_{BC})}=\mathbb E[e^{\eta_k(X)}]=\exp\!\Bigl(\eta_k(\bar{\mathbf x}_{BC})+\tfrac12\boldsymbol\beta_{(k)}^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_{(k)}\Bigr),
+$$
+so the arm link gap @eq-stc-armgap is the exact constant
+$\eta_{k(\mathcal P_{BC})}-\eta_k(\bar{\mathbf x}_{BC})=\tfrac12\boldsymbol\beta_{(k)}^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_{(k)}>0$.
+The plug-in underestimates each arm's marginal mean by the multiplicative factor
+$e^{\frac12\boldsymbol\beta_{(k)}^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_{(k)}}>1$. The contrast bias
+@eq-stc-contrastbias is therefore the exact quantity
+$$
+d^{\,\mathrm{cond}}-d^{\,\mathrm{marg}}=\tfrac12\bigl(\boldsymbol\beta_1+\boldsymbol\beta_2\bigr)^\top\boldsymbol\Sigma_{BC}\bigl(\boldsymbol\beta_1+\boldsymbol\beta_2\bigr)-\tfrac12\boldsymbol\beta_1^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_1
+=\boldsymbol\beta_1^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_2+\tfrac12\boldsymbol\beta_2^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_2.
+$$
+This vanishes exactly when $\boldsymbol\beta_2=\mathbf 0$, that is, when no covariate modifies the treatment
+effect: under the log link the two arm gaps are equal whenever the arm slopes are equal, and the contrast is
+**collapsible** even though each arm separately suffers a nonzero plug-in gap. The rate ratio and risk ratio
+are collapsible in exactly this sense (@def-collapsibility). The logit link enjoys no such cancellation, as
+the next section's counterexample shows: the odds ratio is non-collapsible, and conditional STC is biased for
+the marginal log odds ratio even with $\boldsymbol\beta_2=\mathbf 0$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**A legitimate estimand for the wrong question.** The conditional-at-the-mean effect @eq-stc-cond-estimand is
+not a mistake of definition; it is a well-defined quantity, the effect a clinician would quote for a patient
+whose covariates sit at the population average. Its defect is one of *fitness for purpose*. A health
+technology assessment compares two treatments at the level of a whole population, and the population-level
+contrast is the marginal effect @eq-stc-marg-estimand, the average of outcomes, not the outcome of the
+average. Reporting @eq-stc-cond-estimand where @eq-stc-marg-estimand is wanted substitutes one estimand for
+another and, by @thm-conditional-stc-bias, does so with a bias that is invisible without the covariate
+distribution. The defect is also not removed by a larger sample: it is a bias, not a variance.
+$\blacktriangleleft$
+:::
+
+## Marginal simulated treatment comparison {#sec-stc-marginal}
+
+The cure is to integrate before linking. Marginal STC averages the fitted conditional means over the
+comparator covariate distribution *on the natural outcome scale*, and applies the link only to the resulting
+marginal means.
+
+::: {#def-stc-marginal}
+## Marginal STC
+With the fitted model $\hat{\boldsymbol\xi}$ and a sample (or density) representing the comparator covariate
+distribution $f_{BC}$, the **marginal STC predicted means** under the two arms are
+$$
+\hat\mu_A^{\mathrm{STC}}=\int \mu_A(\mathbf x;\hat{\boldsymbol\xi})\,f_{BC}(\mathbf x)\,d\mathbf x,
+\qquad
+\hat\mu_C^{\mathrm{STC}}=\int \mu_C(\mathbf x;\hat{\boldsymbol\xi})\,f_{BC}(\mathbf x)\,d\mathbf x,
+$$ {#eq-stc-marg-mean}
+and the **marginal STC estimator** of the relative effect is their link contrast
+$$
+\hat d_{AC}^{\,\mathrm{marg}}\;=\;g\!\bigl(\hat\mu_C^{\mathrm{STC}}\bigr)-g\!\bigl(\hat\mu_A^{\mathrm{STC}}\bigr).
+$$ {#eq-stc-marg}
+In practice the integrals @eq-stc-marg-mean are Monte Carlo averages over $M$ covariate vectors
+$\{\mathbf x_s^\ast\}_{s=1}^M$ drawn from $f_{BC}$, or over the observed AgD patient covariates when those are
+available,
+$$
+\hat\mu_k^{\mathrm{STC}}\;\approx\;\frac1M\sum_{s=1}^M \mu_k(\mathbf x_s^\ast;\hat{\boldsymbol\xi}).
+$$ {#eq-stc-mc}
+When only marginal covariate summaries are published, $f_{BC}$ is reconstructed from a parametric model,
+typically a Gaussian copula (Chapter 22), before sampling. $\blacktriangleleft$
+:::
+
+*Reader's translation: this is where the "simulation" happens.* The integral @eq-stc-marg-mean is almost never
+available in closed form for a nonlinear model, so in practice we *simulate*: draw $M$ synthetic patients from
+the target covariate distribution $f_{BC}$, push each through the fitted model to get their predicted event
+probabilities under $A$ and $C$, and average @eq-stc-mc. That averaging is the "simulated" in *simulated
+treatment comparison*. We are not simulating outcomes, nor a missing trial arm; we are numerically averaging
+fitted predictions over a target case mix.
+
+::: {.remark}
+**Simulating covariates from aggregate data.** When the comparator trial reports patient-level covariates,
+$f_{BC}$ *is* those patients and step 2 is trivial. When it reports only summaries, we must *reconstruct*
+$f_{BC}$ before we can sample it, and how much we can reconstruct depends on what was published:
+
+- *Only proportions and means.* A binary covariate is reproduced exactly from its reported prevalence; a
+  continuous covariate is reproduced from a reported mean and standard deviation under an assumed shape (often
+  Gaussian). With no reported correlations, the covariates are simulated as *independent*, which is itself an
+  assumption.
+- *Means, variances, and a correlation matrix.* The joint distribution can be reconstructed with a copula
+  (Chapter 22; see [Notation](/notation.qmd)), typically a Gaussian copula, which glues the reported margins
+  together with the reported correlations.
+- *Impossible combinations.* A naive independent simulation can generate covariate profiles that never occur
+  clinically (for example a pregnant male, or an implausible age-comorbidity pairing); realistic dependence, or
+  explicit constraints, are needed to avoid predicting the fitted model into nonsense regions.
+
+The reconstructed $f_{BC}$ is an *input*, not a fact: if it is wrong, marginal STC integrates the fitted
+surface over the wrong measure and is biased even when the outcome model is perfect. This dependence on a
+reconstructed covariate distribution is a distinct source of uncertainty, listed in the checklist of
+@sec-stc-bayes. $\blacktriangleleft$
+:::
+
+The order of operations in @eq-stc-marg is the whole point, and it is the order of g-computation. We make
+that identification precise, then prove consistency.
+
+::: {#prp-stc-gcomp}
+## Marginal STC is transported g-computation
+The marginal STC predicted means @eq-stc-marg-mean are the g-computation (standardization) functionals of
+Chapter 10 with the integrating measure set to the *target* covariate distribution $f_{BC}$ rather than the
+source $f_{AC}$. If, in addition to correct specification, the conditional outcome surface is transportable,
+$\mathbb E_{\mathcal P_{BC}}[Y(k)\mid X=\mathbf x]=\mu_k(\mathbf x)$ for $f_{BC}$-almost every $\mathbf x$
+(@thm-conditional-transportability), then $\bar\mu_{k(\mathcal P_{BC})}=\mathbb E_{\mathcal P_{BC}}[Y(k)]$,
+the marginal potential-outcome mean of arm $k$ in the comparator population.
+:::
+
+::: {.proof}
+The g-computation functional for arm $k$ in a population $\mathcal P$ is, by @thm-g-computation-unbiased,
+$\int\mu_k(\mathbf x)\,f_{\mathcal P}(\mathbf x)\,d\mathbf x=\mathbb E_{\mathcal P}[Y(k)]$ under consistency,
+ignorability, and a correct $\mu_k$. Equation @eq-stc-marg-mean is this functional evaluated with
+$f_{\mathcal P}=f_{BC}$ and the source-fitted surface $\mu_k(\cdot;\hat{\boldsymbol\xi})$. The surface is
+identified from the index trial, where arm $A$ is observed; transportability (@thm-conditional-transportability,
+the population-adjustment instance of @def-transportability) asserts that this same surface governs the
+conditional means in the comparator population, where arm $A$ is unobserved. Under that assumption the tower
+property gives
+$\mathbb E_{\mathcal P_{BC}}[Y(k)]=\mathbb E_{f_{BC}}\bigl[\mathbb E_{\mathcal P_{BC}}[Y(k)\mid X]\bigr]=\mathbb E_{f_{BC}}[\mu_k(X)]=\bar\mu_{k(\mathcal P_{BC})}$.
+$\square$
+:::
+
+::: {.remark}
+**Why STC needs no overlap.** The g-computation identity requires only that $\mu_k(\cdot)$ be the correct and
+transportable conditional surface; it places no positivity requirement on $f_{BC}$ relative to $f_{AC}$. The
+integral @eq-stc-marg-mean can be evaluated at covariate values the index trial never observed, because a
+regression returns a prediction wherever its predictors are defined. This is precisely the property that
+inverse-probability weighting, and therefore MAIC, lacks (@thm-maic-no-extrapolation): a weight is undefined
+where the source density is zero. STC trades the overlap requirement for an extrapolation that is only as
+trustworthy as the model is correct off the support of $f_{AC}$. Read those two words carefully: STC's freedom
+from overlap is a statement about mathematical *definability*, not scientific *credibility*. A regression will
+always return a number outside the index covariate range, but that number rests entirely on the model's assumed
+functional form there, which the data cannot check (recall the misspecification example after
+@thm-stc-outcome-mle). Good practice therefore diagnoses and reports the extent of extrapolation, for instance
+by flagging how much of the target covariate distribution falls outside the index trial's observed range,
+exactly the region where MAIC would refuse to weight and STC quietly predicts anyway. $\blacktriangleleft$
+:::
+
+::: {#thm-marginal-stc-unbiased}
+## Consistency of marginal STC
+Assume (i) the outcome model @def-stc-outcome-model is correctly specified, so $\hat{\boldsymbol\xi}\xrightarrow{p}\boldsymbol\xi_0$
+by @thm-stc-outcome-mle; (ii) the conditional outcome surface is transportable to the comparator population
+(@prp-stc-gcomp); and (iii) the integrals @eq-stc-marg-mean are computed exactly, or by Monte Carlo
+@eq-stc-mc with $M\to\infty$. Then the marginal STC predicted means and the marginal STC estimator are
+consistent,
+$$
+\hat\mu_k^{\mathrm{STC}}\xrightarrow{p}\bar\mu_{k(\mathcal P_{BC})}=\mathbb E_{\mathcal P_{BC}}[Y(k)],
+\qquad
+\hat d_{AC}^{\,\mathrm{marg}}\xrightarrow{p} d_{AC(\mathcal P_{BC})}^{\,\mathrm{marg}},
+$$ {#eq-stc-marg-consistency}
+the marginal relative effect @eq-stc-marg-estimand of $A$ versus $C$ in the comparator population.
+(Corresponds to G.3 in the proof catalogue.)
+
+[machine-checked: `theories/STC.v`, `Theorem STC_consistent`]
+:::
+
+::: {.proof}
+Fix an arm $k$. The fitted conditional mean is $\mu_k(\mathbf x;\hat{\boldsymbol\xi})=g^{-1}(\eta_k(\mathbf x;\hat{\boldsymbol\xi}))$,
+a composition of the continuous $g^{-1}$ with the affine $\eta_k(\mathbf x;\cdot)$. Since
+$\hat{\boldsymbol\xi}\xrightarrow{p}\boldsymbol\xi_0$ and the covariates are bounded (hypothesis 2 of
+@thm-stc-outcome-mle), the convergence is uniform over the bounded covariate range: for any $\epsilon>0$,
+$\sup_{\mathbf x}\,|\mu_k(\mathbf x;\hat{\boldsymbol\xi})-\mu_k(\mathbf x;\boldsymbol\xi_0)|\xrightarrow{p}0$,
+because $g^{-1}$ is uniformly continuous on the compact image of the linear predictor and the affine map is
+jointly continuous. Integrating against the probability measure $f_{BC}$ preserves the uniform bound,
+$$
+\Bigl|\,\hat\mu_k^{\mathrm{STC}}-\textstyle\int\mu_k(\mathbf x;\boldsymbol\xi_0)f_{BC}(\mathbf x)\,d\mathbf x\,\Bigr|
+\le \sup_{\mathbf x}\bigl|\mu_k(\mathbf x;\hat{\boldsymbol\xi})-\mu_k(\mathbf x;\boldsymbol\xi_0)\bigr|\xrightarrow{p}0,
+$$
+so $\hat\mu_k^{\mathrm{STC}}\xrightarrow{p}\int\mu_k(\mathbf x;\boldsymbol\xi_0)f_{BC}(\mathbf x)\,d\mathbf x=\bar\mu_{k(\mathcal P_{BC})}$.
+By @prp-stc-gcomp this limit equals $\mathbb E_{\mathcal P_{BC}}[Y(k)]$, the transported potential-outcome
+mean. When the integral is replaced by the Monte Carlo average @eq-stc-mc, the strong law of large numbers
+gives $\frac1M\sum_s\mu_k(\mathbf x_s^\ast;\boldsymbol\xi)\xrightarrow{\text{a.s.}}\bar\mu_{k(\mathcal P_{BC})}$
+for each fixed $\boldsymbol\xi$ as $M\to\infty$, and the bounded integrand makes the double limit in $(n,M)$
+interchangeable, so the conclusion is unchanged. Finally, $g$ is continuous, so by the continuous mapping
+theorem$$
+\hat d_{AC}^{\,\mathrm{marg}}=g(\hat\mu_C^{\mathrm{STC}})-g(\hat\mu_A^{\mathrm{STC}})\xrightarrow{p} g(\bar\mu_{C(\mathcal P_{BC})})-g(\bar\mu_{A(\mathcal P_{BC})})=d_{AC(\mathcal P_{BC})}^{\,\mathrm{marg}},
+$$
+which is @eq-stc-marg-consistency. $\square$
+:::
+
+**Why this matters.** This is the theorem that licenses the whole method: integrate the fitted surface over the
+*target* covariate distribution on the natural outcome scale, and you recover the marginal effect a trial in
+that population would have reported, with no bias from non-collapsibility. It is the exact analogue, for
+transport, of the g-computation result that standardization recovers the average treatment effect
+(@thm-g-computation-unbiased); the only change is the population you standardize to. It is also the seed of
+ML-NMR (Chapter 20), which puts this same natural-outcome-scale integration inside a single Bayesian network
+model and dispenses with the separate Bucher step.
+
+::: {.remark}
+**On the machine-checked tag.** The Coq development `theories/STC.v` defines the marginal STC predicted means
+`mu_A_STC`, `mu_C_STC` as the target-population means of the fitted surfaces and the estimator
+`effect_AC_STC` as their difference, and `Theorem STC_consistent` proves the response-scale contrast
+identity $\texttt{effect\_AC\_STC}=\mathbb E_2[Y_A^{\mathrm{target}}]-\mathbb E_2[Y_C^{\mathrm{target}}]$
+given the two per-arm identification premises (the transported g-computation identities of @prp-stc-gcomp).
+The Coq theorem is thus the identity-scale skeleton of @eq-stc-marg-consistency; the link transformation by
+$g$ and the uniform-convergence step are the pen-and-paper additions made above. The companion development
+treats the target-population expectation as an abstract linear operator, exactly as Chapter 14 treats
+expectation in Bucher's theorem. $\blacktriangleleft$
+:::
+
+## Non-collapsibility and its collapsible boundary {#sec-stc-noncollapsibility}
+
+@thm-conditional-stc-bias located the plug-in bias in the curvature of $g^{-1}$. The same curvature is the
+source of non-collapsibility (@def-non-collapsibility): the marginal effect is not the conditional effect
+even when the conditional effect is constant across patients, that is, even with no effect modification. We
+exhibit the gap in closed form for the odds ratio (catalogue G.4), then identify the boundary on which it
+disappears.
+
+Before the algebra, see the phenomenon in a table of two patients. Take the logistic model
+$\operatorname{logit}\Pr(\text{event}\mid k,x)=\alpha_k+\beta x$ with $\alpha_C=-1$, $\alpha_A=0.5$,
+$\beta=2$ (a steeper covariate slope than the running example, chosen to enlarge the gap), and a population
+that is half low-risk ($x=0$) and half high-risk ($x=1$). The fitted event probabilities are
+$\operatorname{expit}$ of the linear predictors:
+
+| Patient stratum | $\Pr(\text{event}\mid C)$ | $\Pr(\text{event}\mid A)$ | within-stratum log odds ratio |
+|---|---|---|---|
+| low-risk ($x=0$) | $\operatorname{expit}(-1)=0.2689$ | $\operatorname{expit}(0.5)=0.6225$ | $1.5$ |
+| high-risk ($x=1$) | $\operatorname{expit}(1)=0.7311$ | $\operatorname{expit}(2.5)=0.9241$ | $1.5$ |
+| population average (50/50) | $0.5000$ | $0.7733$ | $1.227$ (marginal) |
+
+Read the last column. Within *each* stratum the log odds ratio of $A$ versus $C$ is exactly $1.5$: the effect
+is constant across patients, so there is no effect modification. Yet the bottom row, formed by averaging the
+probabilities down each arm and *then* taking the odds ratio, gives $1.227$, a different number. Averaging the
+probabilities and taking the odds ratio does not recover the common within-stratum odds ratio. That mismatch is
+**non-collapsibility**, and it is exactly why plug-in STC, which reports the constant conditional $1.5$,
+overstates the marginal effect the population would show. The theorem below is this table written in symbols.
+
+::: {#exm-stc-two-stratum}
+## Two patients, one broken average
+The table above is the whole idea in miniature. The plug-in reports the within-stratum effect $1.5$; the
+population marginal effect is $1.227$; the gap $0.273$ is present with *no* effect modification, so it is a
+property of the odds-ratio scale, not of patient heterogeneity. A risk difference would show no such gap: the
+two within-stratum differences $0.6225-0.2689=0.3536$ and $0.9241-0.7311=0.1930$ average to
+$(0.3536+0.1930)/2=0.2733$, which is exactly the marginal difference $0.7733-0.5000=0.2733$, because the
+identity link commutes with averaging. The odds ratio does not. $\blacktriangleleft$
+:::
+
+::: {#thm-stc-noncollapsibility-counterexample}
+## A closed-form non-collapsibility gap for the odds ratio
+Let $g$ be the logit, so $g^{-1}=\operatorname{expit}$, and suppose the conditional model
+$\operatorname{logit}\Pr(Y=1\mid k,X=x)=\alpha_k+\beta x$ holds with a single covariate $x$, equal slope
+$\beta\ne0$ in both arms (so the conditional log odds ratio $\Lambda=\alpha_A-\alpha_C$ is constant in $x$,
+no effect modification). Then the marginal log odds ratio
+$$
+d^{\,\mathrm{marg}}=\operatorname{logit}\bigl(\mathbb E_X[\operatorname{expit}(\alpha_A+\beta X)]\bigr)-\operatorname{logit}\bigl(\mathbb E_X[\operatorname{expit}(\alpha_C+\beta X)]\bigr)
+$$
+differs from the conditional log odds ratio $\Lambda=\alpha_A-\alpha_C$. Concretely, take
+$\alpha_C=-1$, $\alpha_A=0.5$, $\beta=2$, and $X\sim\mathrm{Bernoulli}(0.5)$. Then the conditional log odds
+ratio is $\Lambda=0.5-(-1)=1.5$, while
+$$
+\mathbb E_X[\operatorname{expit}(\alpha_C+\beta X)]=\tfrac12\operatorname{expit}(-1)+\tfrac12\operatorname{expit}(1)=\tfrac12(0.268941)+\tfrac12(0.731059)=0.5,
+$$
+$$
+\mathbb E_X[\operatorname{expit}(\alpha_A+\beta X)]=\tfrac12\operatorname{expit}(0.5)+\tfrac12\operatorname{expit}(2.5)=\tfrac12(0.622459)+\tfrac12(0.924142)=0.773301,
+$$
+so the marginal log odds ratio is
+$$
+d^{\,\mathrm{marg}}=\operatorname{logit}(0.773301)-\operatorname{logit}(0.5)=\log\tfrac{0.773301}{0.226699}-0=\log(3.41122)=1.22707.
+$$
+The conditional effect $1.5$ exceeds the marginal effect $1.22707$ in magnitude: the gap is
+$0.27293\ne0$, and conditional STC, which reports $\Lambda=1.5$, is biased upward for the marginal estimand.
+(Corresponds to G.4 in the proof catalogue.)
+:::
+
+::: {.proof}
+The arithmetic is the statement. We verify the four inverse-logit values and that the gap is genuine, not
+rounding. With $e=2.718281828$: $\operatorname{expit}(-1)=1/(1+e)=0.2689414$;
+$\operatorname{expit}(1)=e/(1+e)=0.7310586$, summing to $1$ so their half-sum is exactly $0.5$;
+$\operatorname{expit}(0.5)=1/(1+e^{-0.5})=1/(1+0.6065307)=0.6224593$;
+$\operatorname{expit}(2.5)=1/(1+e^{-2.5})=1/(1+0.0820850)=0.9241418$; the half-sum is $0.7733006$. Then
+$\operatorname{logit}(0.7733006)=\log(0.7733006)-\log(0.2266994)=\log(3.411221)=1.227074$, while
+$\operatorname{logit}(0.5)=0$. The difference $1.227074$ is not $1.5$; the discrepancy $0.272926$ is far
+larger than the seventh-decimal precision of the inputs, so it is a genuine gap and not a numerical artifact.
+That the conditional effect exceeds the marginal in magnitude is the generic direction of odds-ratio
+non-collapsibility established in Chapter 11 (@thm-noncollapsibility-or-hr): marginalizing a logistic model
+over a covariate with $\beta\ne0$ attenuates the effect toward the null. $\square$
+:::
+
+The counterexample uses no effect modification: the conditional log odds ratio is the constant $1.5$ in both
+strata, yet the marginal effect is smaller. Non-collapsibility is therefore a phenomenon of the *scale*, not
+of effect heterogeneity, and it is what forces STC to choose between the conditional and marginal estimands
+even when @eq-stc-cate-link is constant. The boundary on which the choice becomes vacuous is the linear,
+identity-link model, and there the choice provably does not matter. This is the machine-checked core of the
+chapter.
+
+::: {#prp-stc-linear-collapse}
+## Collapsibility under a linear model
+Suppose the outcome model is linear with the identity link,
+$\mathbb E[Y\mid k,X=\mathbf x]=\alpha+\mathbf x^\top\boldsymbol\beta_1+\mathbf 1\{k=A\}(\gamma+\mathbf x^\top\boldsymbol\beta_2)$,
+so $g=\mathrm{id}$ and $\mu_k(\mathbf x)=\eta_k(\mathbf x)$. Then for every population $\mathcal P$ the
+marginal and conditional-at-the-mean effects coincide,
+$$
+d_{AC(\mathcal P)}^{\,\mathrm{marg}}=d_{AC(\mathcal P)}^{\,\mathrm{cond}}=-\bigl(\gamma+\bar{\mathbf x}_{\mathcal P}^\top\boldsymbol\beta_2\bigr),
+$$ {#eq-stc-linear-collapse}
+and in the absence of effect modification ($\boldsymbol\beta_2=\mathbf 0$) both equal the constant $-\gamma$,
+independent of the covariate distribution. Marginal and conditional STC then return the same number, and the
+plug-in is exact.
+
+[machine-checked: `theories/STC.v`, `Lemma STC_collapse_linear`]
+:::
+
+::: {.proof}
+With the identity link, the arm marginal mean @eq-stc-armmean is, by linearity of expectation,
+$$
+\bar\mu_{k(\mathcal P)}=\mathbb E_{f_{\mathcal P}}[\eta_k(X)]=\alpha+\bar{\mathbf x}_{\mathcal P}^\top\boldsymbol\beta_1+\mathbf 1\{k=A\}\bigl(\gamma+\bar{\mathbf x}_{\mathcal P}^\top\boldsymbol\beta_2\bigr)=\eta_k(\bar{\mathbf x}_{\mathcal P}),
+$$
+so $g(\bar\mu_{k(\mathcal P)})=\bar\mu_{k(\mathcal P)}=\eta_k(\bar{\mathbf x}_{\mathcal P})=g(\mu_k(\bar{\mathbf x}_{\mathcal P}))$,
+the marginal and conditional-at-the-mean arm positions coincide, and so do their contrasts: @eq-stc-linear-collapse.
+The contrast is $\eta_C(\bar{\mathbf x}_{\mathcal P})-\eta_A(\bar{\mathbf x}_{\mathcal P})=-(\gamma+\bar{\mathbf x}_{\mathcal P}^\top\boldsymbol\beta_2)$,
+which reduces to $-\gamma$ when $\boldsymbol\beta_2=\mathbf 0$, a constant free of the covariate distribution.
+Equivalently, this is @eq-stc-contrastbias with every $b_k=0$. $\square$
+:::
+
+::: {.remark}
+**What the Coq proof isolates.** The companion `Lemma STC_collapse_linear` proves that for a linear outcome
+model the marginal STC estimate equals the treatment coefficient $\gamma$, using *only* linearity of the
+abstract target-population expectation operator and its constant rule. That single hypothesis, linearity of
+expectation, is exactly what a nonlinear link destroys: $g^{-1}$ does not pass through an average, and the
+proof of @prp-stc-linear-collapse breaks at its first line. The machine-checked lemma is therefore the
+positive boundary of the non-collapsibility theorem @thm-stc-noncollapsibility-counterexample; the
+counterexample itself, an arithmetic over the logit, is pen-and-paper. $\blacktriangleleft$
+:::
+
+## A worked simulated treatment comparison {#sec-stc-example}
+
+We carry a complete logistic STC from a fitted model to a reported relative effect, computing the biased
+plug-in, the correct target marginal, and, for contrast, the unadjusted source marginal, so that every
+number can be checked by hand. The covariate is the single binary risk marker of the running
+example ($x=1$ high-risk, $x=0$ low-risk), the event is an unfavorable disease flare within six months, and a
+larger log odds ratio means worse.
+
+::: {#exm-stc-logistic}
+## Conditional plug-in versus correct marginalization
+The index trial of the running example (@sec-stc-picture) compares active $A$ against comparator $C$ with
+individual data; fitting the logistic model
+@def-stc-outcome-model returns the coefficients (treated here as exact for transparency)
+$$
+\hat\alpha=-1.0,\qquad \hat{\beta}_1=1.0,\qquad \hat\gamma=1.5,\qquad \hat{\beta}_2=0,
+$$
+so $\operatorname{logit}\mu_C(x)=-1.0+x$ and $\operatorname{logit}\mu_A(x)=0.5+x$, and the conditional log
+odds ratio of $A$ versus $C$ is the constant $\Lambda=\hat\gamma=1.5$ (no effect modification, $\hat\beta_2=0$).
+The fitted conditional event probabilities are
+$$
+\mu_C(0)=\operatorname{expit}(-1)=0.26894,\quad \mu_C(1)=\operatorname{expit}(0)=0.50000,
+$$
+$$
+\mu_A(0)=\operatorname{expit}(0.5)=0.62246,\quad \mu_A(1)=\operatorname{expit}(1.5)=0.81757.
+$$
+The comparator (target) population has biomarker prevalence $\Pr_{BC}(X=1)=0.8$, hence
+$\bar{x}_{BC}=0.8$; the index (source) population has $\Pr_{AC}(X=1)=0.5$.
+
+**Step 1: conditional (plug-in) STC.** Evaluate the linear predictors at the target mean $\bar x_{BC}=0.8$:
+$\eta_C(0.8)=-1.0+0.8=-0.2$ and $\eta_A(0.8)=0.5+0.8=1.3$. The plug-in log odds ratio of $A$ versus $C$ is
+$$
+\ell^{\,\mathrm{cond}}=\eta_A(0.8)-\eta_C(0.8)=1.3-(-0.2)=1.5,
+$$
+equal to $\hat\gamma$ as @prp-stc-linear-collapse predicts on the *link* scale: a difference of linear
+predictors carries no curvature. In the reference-first convention $\hat d_{AC}^{\,\mathrm{cond}}=-1.5$.
+
+**Step 2: marginal STC in the target population.** Average the fitted probabilities over $f_{BC}$ on the
+response scale @eq-stc-marg-mean:
+$$
+\hat\mu_C^{\mathrm{STC}}=0.2(0.26894)+0.8(0.50000)=0.45379,\quad
+\hat\mu_A^{\mathrm{STC}}=0.2(0.62246)+0.8(0.81757)=0.77855.
+$$
+Apply the logit and contrast @eq-stc-marg:
+$$
+\ell^{\,\mathrm{marg}}_{BC}=\operatorname{logit}(0.77855)-\operatorname{logit}(0.45379)=1.25723-(-0.18538)=1.44261.
+$$
+
+**Step 3: the unadjusted source marginal.** The marginal effect the index trial itself reports averages over
+$f_{AC}$ ($\Pr=0.5$):
+$$
+\hat\mu_C^{AC}=0.5(0.26894)+0.5(0.50000)=0.38447,\quad
+\hat\mu_A^{AC}=0.5(0.62246)+0.5(0.81757)=0.72002,
+$$
+$$
+\ell^{\,\mathrm{marg}}_{AC}=\operatorname{logit}(0.72002)-\operatorname{logit}(0.38447)=0.94454-(-0.47061)=1.41515.
+$$
+
+**Step 4: comparison.** Collecting the three log odds ratios of $A$ versus $C$ and exponentiating,
+$$
+\underbrace{\ell^{\,\mathrm{cond}}=1.50000}_{\widehat{\mathrm{OR}}=4.4817},\qquad
+\underbrace{\ell^{\,\mathrm{marg}}_{BC}=1.44261}_{\widehat{\mathrm{OR}}=4.2317},\qquad
+\underbrace{\ell^{\,\mathrm{marg}}_{AC}=1.41515}_{\widehat{\mathrm{OR}}=4.1171}.
+$$
+$\blacktriangleleft$
+:::
+
+Three lessons sit in these numbers.
+
+::: {.remark}
+**The plug-in bias.** The conditional STC estimate $1.50000$ overstates the target marginal effect
+$1.44261$ by $0.05739$ on the log odds-ratio scale, an odds ratio inflated from $4.232$ to $4.482$. This is
+the non-collapsibility gap @eq-stc-contrastbias of @thm-conditional-stc-bias, present here even though there
+is no effect modification ($\hat\beta_2=0$): the odds ratio simply is not collapsible. By @exm-stc-loglink,
+had the link been the log rather than the logit, the contrast bias with $\hat\beta_2=0$ would have been
+exactly zero, the arm-level Jensen gaps cancelling. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**What population adjustment moves.** The correct marginal effect is not a single number; it is
+population-specific. In the source population it is $1.41515$; in the target it is $1.44261$. STC's job is to
+report the *target* value $1.44261$, and it does so by integrating the fitted surface over $f_{BC}$ in Step 2
+rather than over $f_{AC}$ in Step 3. The shift $1.41515\to1.44261$ is the entire population adjustment: it is
+small here because the biomarker is not an effect modifier ($\hat\beta_2=0$), so only the non-collapsibility
+interaction with the changed covariate mix moves the marginal effect. With $\hat\beta_2\ne0$ the shift would
+be first-order in the covariate-mean difference and typically far larger; @exr-stc-em-shift works such a
+case. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Closing the triangle.** To reach the clinical target $A$ versus $B$, the STC output
+$\hat d_{AC(\mathcal P_{BC})}^{\,\mathrm{marg}}=-1.44261$ (reference-first) is differenced against the
+comparator trial's published $\hat d_{BC}$ by Bucher's identity (@thm-bucher-unbiased),
+$\hat d_{AB}=\hat d_{AC(\mathcal P_{BC})}-\hat d_{BC}$, both now evaluated in the common population
+$\mathcal P_{BC}$. The marginalization of Step 2 is exactly what makes the two contrasts live in the same
+population, repairing the transitivity failure (@def-transitivity) that the raw source effect $1.41515$ of
+Step 3 would have carried into the subtraction. $\blacktriangleleft$
+:::
+
+## Bayesian g-computation {#sec-stc-bayes}
+
+We now handle *uncertainty* properly, then (in @sec-stc-consistency) fold STC back into the Chapter 17
+framework. In applied terms, Bayesian g-computation runs the five-step workflow once per posterior draw of the
+model coefficients: each draw is one plausible fitted surface, hence one plausible target effect, and the
+spread of those target effects across draws *is* the uncertainty interval. Because the marginal STC functional
+is nonlinear in $\boldsymbol\xi$, its uncertainty is generally skewed; simulating from the posterior captures
+that skew automatically, whereas the delta method (@exr-stc-delta) forces a symmetric Gaussian on the link
+scale.
+
+Marginal STC is a smooth functional of the fitted parameter, so its uncertainty can be propagated either by
+the delta method (@exr-stc-delta) or, more naturally for the nonlinear integration step, by simulation from a
+posterior. The Bayesian implementation is **g-computation from the posterior** and is catalogue result G.5.
+
+::: {#def-stc-bayes}
+## Bayesian g-computation for STC
+Place a prior $\pi(\boldsymbol\xi)$ on the outcome-model parameters and obtain the posterior
+$\pi(\boldsymbol\xi\mid\mathcal D)$ from the index IPD $\mathcal D$. Define the **STC functional**
+$$
+\Psi(\boldsymbol\xi)\;=\;g\!\Bigl(\textstyle\int\mu_C(\mathbf x;\boldsymbol\xi)f_{BC}(\mathbf x)\,d\mathbf x\Bigr)-g\!\Bigl(\textstyle\int\mu_A(\mathbf x;\boldsymbol\xi)f_{BC}(\mathbf x)\,d\mathbf x\Bigr),
+$$ {#eq-stc-functional}
+which maps a parameter to the marginal STC relative effect @eq-stc-marg it induces. The **posterior of the
+target effect** is the pushforward $\Psi_\#\,\pi(\cdot\mid\mathcal D)$ (the "pushforward" is simply the
+distribution of $\Psi(\boldsymbol\xi)$ when $\boldsymbol\xi$ is drawn from the posterior: feed posterior draws
+through $\Psi$ and collect the outputs), approximated by drawing
+$\boldsymbol\xi^{(1)},\dots,\boldsymbol\xi^{(S)}\sim\pi(\boldsymbol\xi\mid\mathcal D)$ and forming
+$\{\Psi(\boldsymbol\xi^{(s)})\}_{s=1}^S$, with each integral in @eq-stc-functional itself a Monte Carlo
+average @eq-stc-mc over $f_{BC}$. $\blacktriangleleft$
+:::
+
+::: {#thm-bayesian-g-computation}
+## Validity of Bayesian g-computation
+Let $\Psi$ be the STC functional @eq-stc-functional with $g$ and $g^{-1}$ continuous. Then:
+
+1. **Pushforward.** $\Psi$ is a measurable (indeed continuous) function of $\boldsymbol\xi$, so the posterior
+   distribution of the target effect is well defined as $\Psi_\#\,\pi(\cdot\mid\mathcal D)$, and the empirical
+   measure of $\{\Psi(\boldsymbol\xi^{(s)})\}_{s=1}^S$ converges weakly to it as $S\to\infty$, with the
+   posterior mean and any posterior quantile of $\Psi$ estimated at the Monte Carlo rate $O_p(S^{-1/2})$.
+
+2. **Frequentist calibration.** Under the regularity conditions of @thm-stc-outcome-mle and a prior with a
+   continuous positive density at $\boldsymbol\xi_0$, the Bernstein-von Mises theorem (@vandervaart1998,
+   Chapter 10) gives $\|\pi(\cdot\mid\mathcal D)-\mathcal N(\hat{\boldsymbol\xi},n^{-1}\mathcal I(\boldsymbol\xi_0)^{-1})\|_{\mathrm{TV}}\xrightarrow{p}0$.
+   Consequently, by the delta method (@thm-delta-method) applied to the smooth $\Psi$, the posterior of the
+   target effect is asymptotically $\mathcal N\bigl(\Psi(\hat{\boldsymbol\xi}),\,n^{-1}\nabla\Psi(\boldsymbol\xi_0)^\top\mathcal I(\boldsymbol\xi_0)^{-1}\nabla\Psi(\boldsymbol\xi_0)\bigr)$,
+   the same Gaussian law as the sampling distribution of the frequentist marginal STC point estimate
+   @eq-stc-marg. Equal-tailed posterior credible intervals therefore have asymptotically correct frequentist
+   coverage. (Corresponds to G.5 in the proof catalogue.)
+:::
+
+::: {.proof}
+*Part 1.* For each fixed $\boldsymbol\xi$ the integrand $\mu_k(\mathbf x;\boldsymbol\xi)=g^{-1}(\eta_k(\mathbf x;\boldsymbol\xi))$
+is continuous in $\boldsymbol\xi$ (composition of continuous $g^{-1}$ with the affine $\eta_k$) and bounded
+on the covariate range, so by dominated convergence the integrals $\int\mu_k(\mathbf x;\boldsymbol\xi)f_{BC}(\mathbf x)\,d\mathbf x$
+are continuous in $\boldsymbol\xi$; composing with the continuous $g$ and differencing,
+$\Psi$ is continuous, hence Borel measurable. A measurable function of a random variable has a well-defined
+law, the pushforward $\Psi_\#\,\pi(\cdot\mid\mathcal D)$. The draws $\boldsymbol\xi^{(s)}$ are distributed
+(exactly, or in the stationary limit of the Markov chain, by @def-stc-bayes) according to
+$\pi(\cdot\mid\mathcal D)$, so $\Psi(\boldsymbol\xi^{(s)})$ are distributed according to the pushforward; the
+Glivenko-Cantelli theorem gives weak convergence of their empirical measure as $S\to\infty$, and the central
+limit theorem gives the $O_p(S^{-1/2})$ Monte Carlo rate for the posterior mean and, via the smoothness of
+the quantile map of the continuous pushforward, for posterior quantiles. The inner Monte Carlo over $f_{BC}$
+adds an independent $O_p(M^{-1/2})$ error to each $\Psi(\boldsymbol\xi^{(s)})$, controlled by taking $M$
+large.
+
+*Part 2.* The Bernstein-von Mises theorem applies because @thm-stc-outcome-mle verified the local asymptotic
+normality conditions (smooth log-likelihood, nonsingular Fisher information $\mathcal I(\boldsymbol\xi_0)$,
+consistent MLE) and the prior charges a neighborhood of $\boldsymbol\xi_0$ with a continuous positive density;
+its conclusion is the stated total-variation convergence of the posterior to the Gaussian centered at the MLE
+with covariance $n^{-1}\mathcal I(\boldsymbol\xi_0)^{-1}$. The functional $\Psi$ is differentiable at
+$\boldsymbol\xi_0$ with gradient $\nabla\Psi(\boldsymbol\xi_0)$ obtained by differentiating @eq-stc-functional
+under the integral sign (legitimate by bounded, continuous integrands), so the delta method transports the
+Gaussian limit through $\Psi$: the posterior of $\Psi(\boldsymbol\xi)$ converges to
+$\mathcal N(\Psi(\hat{\boldsymbol\xi}),n^{-1}\nabla\Psi^\top\mathcal I^{-1}\nabla\Psi)$. The frequentist
+marginal STC estimate $\hat d_{AC}^{\,\mathrm{marg}}=\Psi(\hat{\boldsymbol\xi})$ has, again by the delta
+method applied to the sampling law @eq-stc-mle-an of $\hat{\boldsymbol\xi}$, the identical asymptotic Gaussian
+distribution. Two asymptotically equal Gaussian laws produce intervals with the same coverage, so the
+credible interval is asymptotically a confidence interval. $\square$
+:::
+
+**Why this matters.** Part 2 says the honest Bayesian interval and the frequentist confidence interval agree
+asymptotically, so a health technology assessment that runs STC in a Bayesian pipeline is not buying a
+different answer, only a more convenient and more faithful propagation of the nonlinearity. It is the same
+guarantee that lets network meta-analysis (Chapters 15 and 20) report Bayesian credible intervals to
+decision-makers who reason in frequentist terms.
+
+::: {.remark}
+**Why simulate rather than delta.** The delta-method standard error requires the gradient
+$\nabla\Psi(\boldsymbol\xi_0)$, whose entries are themselves integrals of $g^{-1}{}'$ against $f_{BC}$ and
+must be approximated; the approximation is awkward and the resulting interval is symmetric on the link scale
+by construction. Bayesian g-computation instead propagates the full nonlinear functional through the
+posterior sample, so it captures asymmetry and higher-order curvature exactly within Monte Carlo error, and
+it composes cleanly with a Bayesian comparator summary: a posterior draw of $\hat d_{BC}$ differenced against
+a posterior draw $\Psi(\boldsymbol\xi^{(s)})$ yields, by Bucher's identity, a posterior draw of the anchored
+$\hat d_{AB}$, propagating all uncertainty coherently. This is the implementation used by the multilevel
+methods of Chapters 20 and 26. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**A practical uncertainty checklist.** A defensible interval for the final $A$-versus-$B$ effect must combine
+four distinct sources of uncertainty, which Bayesian g-computation can propagate jointly:
+
+1. **Outcome-model parameters.** Uncertainty in $\hat{\boldsymbol\xi}$ from the finite index sample; this is
+   the posterior $\pi(\boldsymbol\xi\mid\mathcal D)$, or the sandwich variance (@def-sandwich-variance) when
+   misspecification is suspected.
+2. **Monte Carlo integration.** The $O_p(M^{-1/2})$ error from approximating the integral @eq-stc-marg-mean by
+   an average over $M$ synthetic patients; drive it down by taking $M$ large.
+3. **Reconstructed covariate distribution.** Uncertainty in $f_{BC}$ itself when it was rebuilt from published
+   summaries (the warning after @def-stc-marginal); the reported means and correlations are themselves
+   estimates, and the assumed copula is a modeling choice.
+4. **Published comparator effect.** The standard error of $\hat d_{BC}$ from the comparator trial, which enters
+   at the Bucher step.
+
+A common failure is to report only source 1 (the model fit) and to treat $f_{BC}$ and $\hat d_{BC}$ as fixed,
+understating the interval. Sources 1, 2, and 4 compose cleanly by differencing posterior draws (the "Why
+simulate" remark above); source 3 requires either a Bayesian model for the covariate summaries or a sensitivity
+analysis over plausible reconstructions. $\blacktriangleleft$
+:::
+
+## STC consistency under the population-adjustment conditions {#sec-stc-consistency}
+
+@thm-marginal-stc-unbiased established consistency for the marginal effect *in the comparator population*
+under correct specification and transportability of the outcome surface. The population-adjustment theory of
+Chapter 17 expresses transportability through the conditions on effect modifiers and prognostic variables
+that an indirect comparison actually needs, separately for the anchored and unanchored cases. We restate STC
+consistency in those terms (catalogue G.6), so that STC slots into the general framework alongside MAIC.
+
+::: {.remark}
+**Two data scenarios, in the running example.** *Anchored* is the situation we have carried throughout: the
+index trial randomizes $A$ against $C$ and the comparator trial randomizes $B$ against the *same* $C$, so $C$ is
+a shared anchor and Bucher's subtraction cancels the study baselines. Here STC need only get the
+$A$-versus-$C$ *contrast* right in $\mathcal P_{BC}$, so it must include every covariate that *modifies* that
+contrast (every effect modifier). *Unanchored* is the harder situation where the two trials share no common arm,
+for instance a single-arm study of $A$ and a single-arm study of $B$. Now there is no baseline to cancel, so
+STC must get each *absolute* arm outcome right in $\mathcal P_{BC}$, which means including every covariate that
+is merely *prognostic* (that shifts the outcome level) in addition to every effect modifier. Concretely: if age
+is prognostic for the flare but does not change the $A$-versus-$C$ effect, the anchored analysis may safely omit
+it, but the unanchored analysis may not, because age now moves arm levels that no longer cancel.
+$\blacktriangleleft$
+:::
+
+::: {#thm-stc-consistency}
+## Anchored and unanchored STC consistency
+Assume the outcome model @def-stc-outcome-model is correctly specified on the chosen link scale, so
+$\hat{\boldsymbol\xi}\xrightarrow{p}\boldsymbol\xi_0$ by @thm-stc-outcome-mle, and the integrals are computed
+as in @thm-marginal-stc-unbiased.
+
+1. **Anchored.** If conditional constancy of relative effects holds (@def-conditional-constancy-relative) and
+   every effect modifier of the $A$-versus-$C$ contrast that is distributed differently between the index and
+   comparator populations is included in $\mathbf x$ (the anchored sufficiency condition of
+   @thm-anchored-paic-consistency), then the marginal STC estimator @eq-stc-marg is consistent for the
+   target-population marginal relative effect $d_{AC(\mathcal P_{BC})}^{\,\mathrm{marg}}$, and the anchored
+   Bucher combination $\hat d_{AC}^{\,\mathrm{marg}}-\hat d_{BC}$ is consistent for $d_{AB(\mathcal P_{BC})}$.
+
+2. **Unanchored.** If conditional constancy of absolute effects holds (@def-conditional-constancy-absolute)
+   and every prognostic variable and effect modifier distributed differently between the populations is
+   included in $\mathbf x$ (the unanchored condition of @thm-unanchored-paic-consistency), then the
+   unanchored marginal STC estimator, the single-arm predicted contrast
+   $g(\hat\mu_C^{\mathrm{STC}})-g(\hat\mu_A^{\mathrm{STC}})$ taken without a common anchor, is consistent for
+   the target-population effect.
+
+(Corresponds to G.6 in the proof catalogue.)
+:::
+
+::: {.proof}
+The argument is the regression-route counterpart of the MAIC consistency theorems
+@thm-anchored-maic-consistency and @thm-unanchored-maic-consistency, with the weighted mean replaced by the
+predicted marginal mean @eq-stc-marg-mean.
+
+*Anchored.* By @thm-marginal-stc-unbiased, $\hat\mu_k^{\mathrm{STC}}\xrightarrow{p}\bar\mu_{k(\mathcal P_{BC})}$
+provided the source-fitted surface $\mu_k(\cdot)$ is the correct conditional surface in the comparator
+population. Conditional constancy of relative effects (@def-conditional-constancy-relative) states that the
+conditional contrast @eq-stc-cate-link is the same function of $\mathbf x$ in both populations; including
+every differentially distributed effect modifier in $\mathbf x$ (@thm-anchored-paic-consistency) makes the
+fitted conditional means transportable in the sense of @prp-stc-gcomp, because any covariate that would
+otherwise carry an unmodeled interaction is now a modeled coordinate of $\mathbf x$. Hence
+$\hat d_{AC}^{\,\mathrm{marg}}\xrightarrow{p}d_{AC(\mathcal P_{BC})}^{\,\mathrm{marg}}$. The comparator trial's
+$\hat d_{BC}$ already estimates $d_{BC(\mathcal P_{BC})}$ in its own population, so both contrasts now live in
+$\mathcal P_{BC}$, transitivity holds across them by construction, and @thm-bucher-unbiased gives consistency
+of the difference for $d_{AB(\mathcal P_{BC})}$.
+
+*Unanchored.* Without a common anchor the estimand is a contrast of *absolute* arm positions across
+populations, so the cancellation of study baselines that the anchor provides (the
+$\mu_{AC}-\mu_{BC}$ cancellation of Chapter 14) is unavailable, and the prognostic structure no longer drops
+out. Conditional constancy of *absolute* effects (@def-conditional-constancy-absolute) is then required, and
+*every* differentially distributed prognostic variable as well as every effect modifier must be in
+$\mathbf x$ (@thm-unanchored-paic-consistency), so that both fitted arm surfaces $\mu_A(\cdot)$ and
+$\mu_C(\cdot)$, not merely their contrast, are transportable. Under these stronger hypotheses
+@prp-stc-gcomp applies to each arm separately, @thm-marginal-stc-unbiased gives
+$\hat\mu_k^{\mathrm{STC}}\xrightarrow{p}\bar\mu_{k(\mathcal P_{BC})}$, and the continuous mapping theorem
+delivers consistency of the unanchored predicted contrast. $\square$
+:::
+
+**Why this matters.** This is where STC stops being a stand-alone trick and becomes a citizen of the
+population-adjustment framework of Chapter 17: its consistency rests on exactly the same effect-modifier and
+prognostic-variable conditions that govern MAIC and ML-NMR, only discharged through a fitted regression instead
+of weights. The practical reading is a covariate-selection rule: for an anchored comparison, model every effect
+modifier that differs between the trials; for an unanchored one, model every prognostic variable too. Getting
+that list wrong is misspecification, and by the remark after @thm-stc-outcome-mle its price is bias, not merely
+variance.
+
+::: {.remark}
+**STC against MAIC, assumption for assumption.** STC and MAIC are dual routes through the same
+conditional-transportability framework, and Chapter 17 shows they target the same estimand when both are
+valid. Their hypotheses differ in two mirror-image ways. STC is *stronger* in demanding a correctly specified
+parametric outcome model, link and functional form and included covariates; if the model is wrong, STC
+inherits the pseudo-true bias of the misspecification remark after @thm-stc-outcome-mle, whereas MAIC asks
+only that the matched moments balance and is robust to functional form beyond them. STC is *weaker* in
+demanding no overlap: a regression extrapolates where weights cannot exist (@thm-maic-no-extrapolation,
+@prp-stc-gcomp), so STC's variance is not inflated by poor overlap the way MAIC's is by a small effective
+sample size (@thm-maic-ess-bound). The companion development records this trade-off as a comparison of method
+profiles in `theories/Comparison.v`; the two methods provably agree when both sets of assumptions hold, which
+we make precise next. $\blacktriangleleft$
+:::
+
+## Equivalence of MAIC and STC under a linear model {#sec-stc-maic-equivalence}
+
+When the outcome model is linear and only first moments are matched, the weighting route and the regression
+route are not merely both valid; they are asymptotically the same estimator. This is catalogue result G.7. It
+explains the close agreement of MAIC and STC seen in practice when the outcome surface is near-linear and
+overlap is good, and it locates exactly where the two methods part company.
+
+We first record the trivial but useful fact that the two methods agree whenever both are valid, the
+abstract statement that has a machine-checked counterpart.
+
+::: {#cor-maic-stc-agree}
+## Agreement under joint validity
+Suppose the anchored MAIC assumptions and the anchored STC assumptions both hold, so that, by
+@thm-anchored-maic-consistency and @thm-stc-consistency respectively, each estimator is consistent for the
+same target estimand $d_{AC(\mathcal P_{BC})}^{\,\mathrm{marg}}$. Then the two estimators have the same
+probability limit, $\hat d_{AC}^{\,\mathrm{MAIC}}-\hat d_{AC}^{\,\mathrm{marg}}\xrightarrow{p}0$.
+
+[machine-checked: `theories/Comparison.v`, `Theorem methods_agree_when_correct`]
+:::
+
+::: {.proof}
+By hypothesis each estimator converges in probability to the common target $d_{AC(\mathcal P_{BC})}^{\,\mathrm{marg}}$,
+so their difference converges in probability to $0$ by the algebra of limits. The Coq theorem
+`methods_agree_when_correct` is this statement stripped to its logical core: from the two identification
+premises (MAIC's assumptions imply its estimate equals the true effect, STC's assumptions imply the same for
+its estimate) it derives equality of the two estimates. $\square$
+:::
+
+The substantive theorem is sharper: under a linear model the agreement is exact in the limit even before
+invoking a shared target, because the two estimators are two consistent estimators of the *same linear
+functional* of the same parameters.
+
+::: {#thm-maic-stc-equivalence}
+## Asymptotic equivalence of MAIC and STC under a linear model
+Suppose (i) the outcome model is linear with the identity link,
+$\mathbb E[Y\mid k,X=\mathbf x]=\alpha_k+\mathbf x^\top\boldsymbol\beta_{(k)}$ for $k\in\{A,C\}$; (ii) the MAIC
+weights are the entropy-balanced exponential weights of @thm-maic-exponential-weights, with parameters chosen
+to satisfy the first-moment balance constraint (@def-moment-balance, @def-entropy-balancing); and (iii) only
+the first moments of the covariates are matched, the weighted index mean equalling $\bar{\mathbf x}_{BC}$.
+Then the marginal STC estimator @eq-stc-marg and the MAIC weighted-difference estimator have the same
+probability limit,
+$$
+\hat d_{AC}^{\,\mathrm{marg}}\ \xrightarrow{p}\ (\alpha_C-\alpha_A)+\bar{\mathbf x}_{BC}^\top(\boldsymbol\beta_{(C)}-\boldsymbol\beta_{(A)})\ \xleftarrow{p}\ \hat d_{AC}^{\,\mathrm{MAIC}},
+$$ {#eq-stc-maic-equiv}
+and are therefore asymptotically equivalent. (Corresponds to G.7 in the proof catalogue.)
+:::
+
+::: {.proof}
+*The common target.* With the identity link, @prp-stc-linear-collapse gives the marginal arm position
+$\bar\mu_{k(\mathcal P_{BC})}=\alpha_k+\bar{\mathbf x}_{BC}^\top\boldsymbol\beta_{(k)}$, so the marginal
+relative effect @eq-stc-marg-estimand in the comparator population is
+$$
+d_{AC(\mathcal P_{BC})}^{\,\mathrm{marg}}=\bar\mu_{C(\mathcal P_{BC})}-\bar\mu_{A(\mathcal P_{BC})}=(\alpha_C-\alpha_A)+\bar{\mathbf x}_{BC}^\top(\boldsymbol\beta_{(C)}-\boldsymbol\beta_{(A)}),
+$$
+the right-hand quantity in @eq-stc-maic-equiv.
+
+*STC side.* Under the linear model the predicted marginal means @eq-stc-marg-mean are, by linearity of
+expectation, $\hat\mu_k^{\mathrm{STC}}=\hat\alpha_k+\bar{\mathbf x}_{BC}^\top\hat{\boldsymbol\beta}_{(k)}$, so
+$\hat d_{AC}^{\,\mathrm{marg}}=(\hat\alpha_C-\hat\alpha_A)+\bar{\mathbf x}_{BC}^\top(\hat{\boldsymbol\beta}_{(C)}-\hat{\boldsymbol\beta}_{(A)})$.
+By @thm-stc-outcome-mle the coefficient estimates are consistent, $(\hat\alpha_k,\hat{\boldsymbol\beta}_{(k)})\xrightarrow{p}(\alpha_k,\boldsymbol\beta_{(k)})$,
+so $\hat d_{AC}^{\,\mathrm{marg}}\xrightarrow{p}d_{AC(\mathcal P_{BC})}^{\,\mathrm{marg}}$, the left
+convergence in @eq-stc-maic-equiv.
+
+*MAIC side.* The MAIC estimator is the difference of weighted arm means
+$\hat\mu_k^{\mathrm{MAIC}}=\sum_{i:T_i=k}w_i Y_i\big/\sum_{i:T_i=k}w_i$, with the entropy-balanced weights
+$w_i=\exp(\hat\alpha_w+\hat{\boldsymbol\beta}_w^\top(\mathbf x_i-\bar{\mathbf x}_{BC}))$ of
+@thm-maic-exponential-weights. Let $P^\ast_k$ denote the limiting weighted law of the covariates in arm $k$;
+under overlap and the law of large numbers for weighted averages,
+$\hat\mu_k^{\mathrm{MAIC}}\xrightarrow{p}\mathbb E_{P^\ast_k}[Y\mid T=k]=\mathbb E_{P^\ast_k}\bigl[\mathbb E[Y\mid k,X]\bigr]=\mathbb E_{P^\ast_k}[\alpha_k+X^\top\boldsymbol\beta_{(k)}]=\alpha_k+\mathbb E_{P^\ast_k}[X]^\top\boldsymbol\beta_{(k)}$,
+the middle step by the tower property and the linear model, the last by linearity of expectation. The
+first-moment balance constraint (iii) forces $\mathbb E_{P^\ast_k}[X]=\bar{\mathbf x}_{BC}$, so
+$\hat\mu_k^{\mathrm{MAIC}}\xrightarrow{p}\alpha_k+\bar{\mathbf x}_{BC}^\top\boldsymbol\beta_{(k)}=\bar\mu_{k(\mathcal P_{BC})}$,
+the same arm limit as the STC side. Differencing the arms,
+$\hat d_{AC}^{\,\mathrm{MAIC}}=\hat\mu_C^{\mathrm{MAIC}}-\hat\mu_A^{\mathrm{MAIC}}\xrightarrow{p}d_{AC(\mathcal P_{BC})}^{\,\mathrm{marg}}$,
+the right convergence in @eq-stc-maic-equiv.
+
+Both estimators converge in probability to the same number, hence their difference converges to zero: they
+are asymptotically equivalent. $\square$
+:::
+
+::: {.remark}
+**A one-line numeric check.** Take the linear model of @exr-stc-maic-numeric: $\mathbb E[Y\mid C,x]=1+0.5x$ and
+$\mathbb E[Y\mid A,x]=2+0.5x$, with target covariate mean $\bar x_{BC}=1$. *STC side*: the predicted target
+means are $\hat\mu_C^{\mathrm{STC}}=1+0.5(1)=1.5$ and $\hat\mu_A^{\mathrm{STC}}=2+0.5(1)=2.5$, so the effect is
+$1.5-2.5=-1$. *MAIC side*: entropy-balanced weights that pull the index covariate mean to $\bar x_{BC}=1$ give
+weighted arm means $\alpha_k+\beta_{(k)}\cdot 1$, again $1.5$ and $2.5$, so the effect is again $-1$. The two
+routes land on the identical number because, under a linear model, the weighted mean of $Y$ depends on the
+covariates *only through their first moment*, which is exactly what MAIC matches and what STC's linear
+prediction uses. This is why the two methods so often agree in practice: near-linear outcome and good overlap
+make them two computations of the same first-moment functional. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Where the equivalence breaks.** The proof used linearity twice and first-moment balance once, and the
+equivalence fails as soon as any of the three is removed.
+
+1. *Nonlinear link.* If $g$ is not the identity, $\mu_k(\mathbf x)=g^{-1}(\eta_k(\mathbf x))$ is curved,
+   STC's response-scale integration carries the Jensen terms of @thm-conditional-stc-bias, and MAIC's
+   first-moment balance no longer reproduces them; the two estimators target the same marginal effect but by
+   different finite-sample routes and need not coincide except in the limit, and only then if both remain
+   consistent.
+
+2. *Higher moments needed.* If the conditional mean involves $\mathbf x$ nonlinearly, for instance a
+   quadratic term $\mathbf x^\top\boldsymbol\gamma\mathbf x$, then $\mathbb E_{P^\ast_k}[\mathbb E[Y\mid k,X]]$
+   depends on the second moment of $P^\ast_k$, which first-moment balance does not pin to $\boldsymbol\Sigma_{BC}$;
+   MAIC then estimates a different number from STC unless the higher moments are also matched.
+
+3. *Nonlinear interactions.* Even with the identity link, an interaction structure richer than the additive
+   $\mathbf x^\top\boldsymbol\beta_2$ makes the conditional contrast a nonlinear function of $\mathbf x$, and
+   first-moment balance is again insufficient.
+
+In practice the two methods agree closely when overlap is good and the outcome surface is near-linear, and
+diverge under poor overlap, where MAIC's variance inflates (@thm-maic-ess-bound) while STC extrapolates, or
+under misspecification, where STC is biased while MAIC remains robust to functional form beyond the matched
+moments. The choice between them is the choice between trusting a model and trusting an overlap.
+$\blacktriangleleft$
+:::
+
+## Notes and references {#sec-stc-notes}
+
+Simulated treatment comparison was introduced by @caro2010stc under the title "No head-to-head trial?
+Simulate the missing arms," as a regression-and-simulation alternative to matching; the original proposal is
+the conditional plug-in of @def-stc-conditional, evaluated at the comparator covariate means. The
+distinction between conditional and marginal STC, the diagnosis of the plug-in bias as non-collapsibility,
+and the recommendation to integrate on the response scale are due to the population-adjustment methods
+literature, principally the NICE technical support document @phillippo2016tsd18 and the thesis of
+@phillippo2019thesis (Sections 2.2 to 2.4), which also frame STC and MAIC as the outcome-regression and
+weighting implementations of one conditional-transportability problem; the estimand-based reframing in terms
+of marginal versus conditional targets and the transportability of the outcome surface is developed by
+@chandler2026transport. The identification of marginal STC as g-computation standardized to a target
+population (@prp-stc-gcomp) places it in the lineage of @hernan2020whatif and @rosenbaum1983, and is the seed
+of the multilevel network meta-regression of @phillippo2020mlnmr (Chapter 20), which embeds the same
+response-scale integration inside a coherent Bayesian network model and removes STC's reliance on a separate
+Bucher step. The comparison of MAIC and STC against the MLE asymptotics of @thm-mle-asymptotic-normality
+follows the GLM treatment of @mccullagh1989glm and the M-estimation theory of @vandervaart1998, the latter
+also supplying the Bernstein-von Mises theorem behind @thm-bayesian-g-computation.
+
+This chapter corresponds to results G.1 through G.7 of the proof catalogue in `proofs/G_stc.md`: the outcome
+MLE asymptotics G.1 (@thm-stc-outcome-mle), the conditional plug-in bias G.2 (@thm-conditional-stc-bias),
+the marginal STC consistency G.3 (@thm-marginal-stc-unbiased), the non-collapsibility counterexample G.4
+(@thm-stc-noncollapsibility-counterexample), Bayesian g-computation G.5 (@thm-bayesian-g-computation), STC
+consistency under the Chapter 17 conditions G.6 (@thm-stc-consistency), and the MAIC-STC equivalence G.7
+(@thm-maic-stc-equivalence).
+
+Two results carry machine-checked tags confirmed in the companion Coq development. The marginal STC contrast
+identity @thm-marginal-stc-unbiased is `Theorem STC_consistent` in `theories/STC.v`, which proves the
+response-scale identity $\texttt{effect\_AC\_STC}=\mathbb E_2[Y_A^{\mathrm{target}}]-\mathbb E_2[Y_C^{\mathrm{target}}]$
+from the per-arm transported g-computation premises; the link transformation and uniform convergence are the
+analytic additions made here. The collapsibility boundary @prp-stc-linear-collapse is
+`Lemma STC_collapse_linear` in the same file, which proves that a linear outcome model makes the marginal STC
+estimate equal the treatment coefficient using only linearity of the abstract target expectation, the single
+property a nonlinear link destroys. The agreement-under-joint-validity corollary @cor-maic-stc-agree is
+`Theorem methods_agree_when_correct` in `theories/Comparison.v`, the logical core of the equivalence. The
+non-collapsibility counterexample @thm-stc-noncollapsibility-counterexample is deliberately left as
+pen-and-paper arithmetic over the logit, as its content is a numerical witness rather than an algebraic
+identity; the companion file confirms only the collapsible boundary. As in Chapter 14, the Coq files treat
+the target-population expectation as an abstract linear operator, so the formalization captures the algebraic
+content while leaving the measure-theoretic construction of the integral @eq-stc-marg-mean to the caller. The
+files `theories/OutcomeRegression.v` (g-computation, the source-population analogue) and `theories/Comparison.v`
+(the MAIC-versus-STC method profiles) provide the surrounding structure.
+
+## Exercises {#sec-stc-exercises}
+
+An exercise marked with a star ($\star$) has a full worked solution in Appendix F. The first two are warm-ups;
+do them before the proof-heavy exercises that follow.
+
+::: {#exr-stc-warmup-table}
+**(Warm-up, computation) A full STC table by hand.** An index trial fits the logistic model
+$\operatorname{logit}\mu_C(x)=-0.5+0.7x$ and $\operatorname{logit}\mu_A(x)=0.4+0.7x$ for a single binary
+covariate $x$ (so there is no effect modification). The target comparator population has $\Pr_{BC}(x=1)=0.6$.
+(a) Compute the four fitted event probabilities $\mu_C(0),\mu_C(1),\mu_A(0),\mu_A(1)$ with $\operatorname{expit}$.
+(b) Conditional plug-in: evaluate the linear predictors at $\bar x_{BC}=0.6$ and report the plug-in log odds
+ratio of $A$ versus $C$. (c) Marginal STC: average the fitted probabilities over the target on the natural
+outcome scale, apply the logit, and report the marginal log odds ratio. (d) State which of (b) and (c) a
+health technology assessment should use, and by how much they differ. This is the five-step workflow of
+@sec-stc-picture with the Bucher step omitted.
+:::
+
+::: {#exr-stc-warmup-interpret}
+**(Warm-up, interpretation) Which scale, which average?** In one or two sentences each, explain to a colleague:
+(a) why "average then link" and "link then average" give different answers for an odds ratio but the same
+answer for a risk difference; (b) what "simulated" refers to in *simulated treatment comparison*; and (c) why
+STC can predict into a comparator population that MAIC cannot weight into, and what STC must assume to justify
+that prediction. No arithmetic required.
+:::
+
+::: {#exr-stc-recompute}
+**Recompute with a new target.** In the worked example @exm-stc-logistic, keep the fitted model
+($\hat\alpha=-1$, $\hat\beta_1=1$, $\hat\gamma=1.5$, $\hat\beta_2=0$) but change the target biomarker
+prevalence to $\Pr_{BC}(X=1)=0.3$. Compute the conditional plug-in log odds ratio, the marginal STC log odds
+ratio in the new target, and the non-collapsibility gap between them. Confirm that the plug-in is unchanged
+at $1.5$ while the marginal value moves, and explain why the plug-in ignores the covariate distribution
+entirely.
+:::
+
+::: {#exr-stc-em-shift}
+**With effect modification.** Repeat @exm-stc-logistic but with $\hat\beta_2=0.8$ (the biomarker now modifies
+the $A$-versus-$C$ effect), so $\operatorname{logit}\mu_A(x)=0.5+1.8x$. With target prevalence
+$\bar x_{BC}=0.8$ and source prevalence $0.5$, compute the conditional plug-in, the target marginal STC, and
+the source marginal log odds ratios. Show that the source-to-target shift is now much larger than in the
+$\hat\beta_2=0$ case, and identify how much of the conditional-versus-marginal gap is non-collapsibility and
+how much is effect modification interacting with the covariate shift.
+:::
+
+::: {#exr-stc-identity-exact}
+**Identity link is exact.** Prove directly from @def-stc-estimands that for the identity link the conditional
+plug-in STC estimator @eq-stc-cond and the marginal STC estimator @eq-stc-marg have the same probability
+limit for every covariate distribution, recovering @prp-stc-linear-collapse without the Taylor expansion.
+Then exhibit a continuous outcome with a log link for which they differ, and compute the gap using
+@exm-stc-loglink.
+:::
+
+::: {#exr-stc-gcomp-positivity}
+**No overlap required.** Let the index trial observe the covariate only on $[0,1]$ but the target place mass
+on $[1,2]$. Explain why the marginal STC integral @eq-stc-marg-mean is still defined while the MAIC weights
+are not, and state precisely the assumption (correctness of $\mu_k$ off the index support) that STC must add
+to justify the extrapolation. Relate this to @prp-stc-gcomp and @thm-maic-no-extrapolation.
+:::
+
+::: {#exr-stc-noncollapsibility-sign}
+**Direction of the gap.** For the logit link with equal arm slopes ($\boldsymbol\beta_2=\mathbf 0$) and a
+covariate symmetric about its mean, use @eq-stc-taylor and the sign of $(\operatorname{expit})''$, which is
+positive for $\eta<0$ and negative for $\eta>0$, to argue that the conditional-at-the-mean odds ratio is
+generically farther from the null than the marginal odds ratio. Confirm the direction against the
+counterexample @thm-stc-noncollapsibility-counterexample, where the conditional $1.5$ exceeds the marginal
+$1.227$.
+:::
+
+::: {#exr-stc-loglink-cancellation}
+**($\star$) The collapsible contrast.** Using @exm-stc-loglink, prove that under the log link with Gaussian
+covariates the conditional plug-in STC is unbiased for the marginal effect *if and only if*
+$\boldsymbol\beta_1^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_2+\tfrac12\boldsymbol\beta_2^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_2=0$,
+and in particular whenever there is no effect modification ($\boldsymbol\beta_2=\mathbf 0$). Contrast this
+with the logit link, where @thm-stc-noncollapsibility-counterexample shows the plug-in is biased even with
+$\boldsymbol\beta_2=\mathbf 0$. Conclude that collapsibility of the contrast is a property of the link, and
+relate your finding to the collapsibility of the rate ratio in Chapter 11. (A solution appears in
+Appendix F.)
+:::
+
+::: {#exr-stc-delta}
+**($\star$) Delta-method variance of marginal STC.** Let $\Psi(\boldsymbol\xi)$ be the STC functional
+@eq-stc-functional. Using @thm-stc-outcome-mle and the delta method (@thm-delta-method), show that
+$\sqrt n(\hat d_{AC}^{\,\mathrm{marg}}-d_{AC(\mathcal P_{BC})}^{\,\mathrm{marg}})\xrightarrow{d}\mathcal N(0,\nabla\Psi(\boldsymbol\xi_0)^\top\mathcal I(\boldsymbol\xi_0)^{-1}\nabla\Psi(\boldsymbol\xi_0))$,
+and write the gradient $\nabla\Psi(\boldsymbol\xi_0)$ as an integral of $g^{-1}{}'$ against $f_{BC}$ for each
+coordinate of $\boldsymbol\xi$. Explain why @thm-bayesian-g-computation reproduces this variance
+asymptotically, and why the Bayesian route avoids computing the gradient. Under misspecification, replace
+$\mathcal I^{-1}$ by the sandwich of @def-sandwich-variance and state what $\Psi(\boldsymbol\xi^\ast)$ then
+estimates. (A solution appears in Appendix F.)
+:::
+
+::: {#exr-stc-maic-numeric}
+**MAIC equals STC, numerically.** Construct a linear-model dataset with one covariate: arm means
+$\mathbb E[Y\mid C,x]=1+0.5x$ and $\mathbb E[Y\mid A,x]=2+0.5x$ (so $\boldsymbol\beta_2=0$), source covariate
+mean $0$, target covariate mean $\bar x_{BC}=1$. Compute the marginal STC effect from @thm-maic-stc-equivalence,
+then verify that entropy-balanced MAIC weights matching the first moment give the same limit. Now add a
+quadratic term $0.3x^2$ to the comparator arm only and show that first-moment MAIC and STC now disagree,
+matching the breakdown clause of the equivalence remark.
+:::

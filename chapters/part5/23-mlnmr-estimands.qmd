@@ -1,0 +1,1201 @@
+---
+title: "Multilevel Network Meta-Regression IV: Estimands, Identifiability, and Generality"
+---
+
+## Introduction {#sec-mlnmr-est-intro}
+
+Chapters 20 to 22 built an engine. Chapter 20 wrote the individual-level outcome model
+(@def-individual-model) and proved the aggregation theorem (@thm-aggregation): the aggregate-level
+likelihood is the individual model integrated over the within-study covariate distribution, and the
+integration must be done on the response scale to avoid the Jensen aggregation bias
+(@thm-aggregation-bias). Chapter 21 handled the discrete-outcome likelihoods that integration produces,
+and Chapter 22 built the numerical machinery, Sobol' sequences, Sklar's theorem, and the Gaussian
+copula, that evaluates the aggregation integral against a covariate distribution specified only by its
+marginals and correlations (@thm-hypercube-integration). At the end of Chapter 22 we can fit a
+multilevel network meta-regression (ML-NMR) to a network mixing individual patient data (IPD) and
+aggregate data (AgD), and we can compute every integral the likelihood requires.
+
+A fitted model is not yet an answer. Three questions stand between the likelihood and a usable indirect
+comparison, and this chapter answers all three.
+
+First, *which quantity, in which population?* A fitted ML-NMR model is a surface over covariate space:
+the conditional mean outcome for each treatment at each covariate value. An indirect comparison is a
+single number, a relative effect. To collapse the surface to a number we must average it over a
+covariate distribution, and the choice of that distribution is a choice of *target population*. The
+defining flexibility of ML-NMR is that this choice is free: we may report the relative effect in the
+population of either trial, in a third decision-relevant population, or in any population whose
+covariate distribution we can describe. The first half of @sec-mlnmr-est-estimand makes the resulting
+**target-population estimand** precise, shows it is the ML-NMR realization of the transport g-formula of
+Chapter 17 (@thm-target-population-estimand), and isolates the one place where the choice of population
+genuinely bites: on a non-collapsible scale the marginal relative effect depends on the target's
+absolute risk and on the spread of its covariates, not merely on their mean. This is catalogue result
+H.20.
+
+Second, *is the quantity even identified?* Flexibility is worthless if the data cannot pin down the
+coefficients the estimand depends on. The estimand involves the effect-modifier interaction
+coefficients, and an AgD study reports only a handful of aggregate means: too few equations, in general,
+to recover a whole interaction vector. We prove that in the smallest useful network, one IPD trial and
+one AgD trial, the shared effect modifier assumption (@def-sema) is exactly what restores
+identifiability, and that without it the comparison is identified *only* in the comparator's own
+population and nowhere else (@sec-mlnmr-est-2study, catalogue H.21). We then lift the result to larger
+networks, where exchangeable or treatment-class structures on the interaction coefficients trade
+strength of assumption for flexibility, and where the identification rests on network connectivity in
+the precise graph-theoretic sense of Chapter 15 (@sec-mlnmr-est-large, catalogue H.22).
+
+Third, *how does ML-NMR relate to everything before it?* We close with the generality theorem
+(@sec-mlnmr-est-generality, catalogue H.23): ML-NMR contains, as exact special cases, standard network
+meta-analysis and IPD network meta-regression, and it contains, as estimand-and-limit special cases, the
+two population-adjustment methods of Part IV, matching-adjusted indirect comparison (MAIC) and simulated
+treatment comparison (STC). The STC reduction is an exact functional identity: the ML-NMR aggregation
+integral *is* the marginal STC predicted mean. The MAIC reduction is the coincidence of *probability limits* (the values two estimators settle on as the sample size grows) already familiar from the MAIC-STC equivalence (@thm-maic-stc-equivalence). Seen from the summit,
+every method in Parts III and IV is ML-NMR with some piece switched off.
+
+Throughout, $g$ is the link function on whose scale the model and effects are written, $\mathcal X$ is
+the covariate space, and a population $\mathcal P$ is a distribution over $\mathcal X$ with density
+$f_{\mathcal P}$; we abbreviate the target density $f_{\mathcal P^{*}}$ to $f_{*}$. We use the
+relative-effect notation $d_{ab(\mathcal P)}$ of [Notation](/notation.qmd): the marginal effect of
+treatment $b$ versus treatment $a$ in population $\mathcal P$, on the stated scale. The ML-NMR
+individual model and aggregate mean are those of Chapter 20; we recall them in @sec-mlnmr-est-setup.
+
+## A running clinical decision problem {#sec-mlnmr-est-running}
+
+Before any formulas, here is the decision this chapter serves. We return to it at every step and give it exact numbers in @exm-mlnmr-new-target.
+
+::: {#exm-mlnmr-anticoagulant}
+## The anticoagulant decision (the chapter's running example)
+A health technology agency (say NICE) must decide whether to reimburse a new oral anticoagulant, treatment $A$, in preference to warfarin, treatment $B$, for patients at risk of stroke. The harm that matters is a major bleeding event, an *unfavorable* outcome. No head-to-head $A$-versus-$B$ trial exists. What exists is:
+
+- an **individual patient data (IPD)** trial comparing $A$ against a shared comparator $C$ (a standard anticoagulant used as control in both trials), for which the analyst holds every patient's covariates and outcome; this trial enrolled a *younger, fitter* sample;
+- an **aggregate data (AgD)** trial comparing warfarin $B$ against the same comparator $C$, for which the analyst holds only arm-level bleeding rates and a table of covariate summaries; this trial enrolled an *older, frailer* sample.
+
+The one covariate we track is age, coded as a binary effect modifier $X\in\{0,1\}$ with $X=1$ for an older patient. Age is both *prognostic* (older patients bleed more regardless of drug) and an *effect modifier* (age changes how much each drug raises bleeding risk relative to $C$). The reimbursement population, a UK NHS target, is older and sicker than the IPD trial and need not match either trial exactly.
+
+When we fit this network in @exm-mlnmr-new-target the estimated coefficients come out as follows: the drugs raise the bleeding log odds relative to $C$ by $\gamma_A=0.8$ and $\gamma_B=0.3$ at a younger patient, age carries a prognostic log-odds effect $\boldsymbol\beta_1=0.4$, and, assuming (as @sec-mlnmr-est-2study justifies) that age modifies both drugs the same way, a single effect-modification slope $\boldsymbol\beta_2=0.5$. We carry these numbers through the chapter.
+
+The decision maker does not want the effect of $A$ versus $B$ "in general." They want it *in their population*, on a scale they can act on: a bleeding log odds ratio, or a bleeding risk difference. That target-specific quantity is the **estimand** of this chapter. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**What ML-NMR will do with this problem, in one breath.** Fit one conditional outcome model to both trials at once (the IPD patient by patient, the AgD trial through the aggregation integral of Chapter 20). This yields a *surface*: the predicted bleeding probability for each drug at each age. Then average that surface over the *target* population's age distribution to get a predicted bleeding probability per drug in that population, and finally contrast those predictions on the chosen scale. The three questions of this chapter are three questions about this decision. **Which quantity, in which population?** ML-NMR may average over the UK NHS age distribution, not only over a trial's. **Is it identified?** The AgD trial reports only two bleeding rates, so on its own it cannot recover how age modifies warfarin's effect; something must supply that, and the shared effect modifier assumption is the usual candidate. **How does it relate to earlier methods?** Switch off pieces of this one model and it becomes network meta-analysis, IPD meta-regression, MAIC, or STC. $\blacktriangleleft$
+:::
+
+## The fitted model and its population-free surface {#sec-mlnmr-est-setup}
+
+We recall the model and fix the one structural fact that makes target-population transport possible: the
+ML-NMR coefficients other than the study baselines are *network-level*, shared across studies and hence
+across populations.
+
+::: {.remark}
+**The ML-NMR model (recalled from Chapter 20).** A network of $J$ studies on $K$ treatments, with
+treatment $1$ the reference, is modeled at the individual level (@def-individual-model) by the linear
+predictor
+$$
+\eta_{jk}(x)\;=\;g\!\left(\theta_{jk}(x)\right)\;=\;\mu_j+x^\top\boldsymbol\beta_1+\gamma_k+\boldsymbol\beta_{2,k}^\top x,
+\qquad \gamma_1=0,\ \boldsymbol\beta_{2,1}=\mathbf 0,
+$$ {#eq-mlnmr-est-model}
+for individual covariates $x\in\mathcal X$, study $j$, and arm $k$, where $\theta_{jk}(x)$ is the
+conditional mean outcome, $\mu_j$ is the study-$j$ baseline, $\boldsymbol\beta_1\in\mathbb R^p$ the
+prognostic main effects, $\gamma_k$ the treatment main effect of $k$ versus the reference, and
+$\boldsymbol\beta_{2,k}\in\mathbb R^p$ the treatment-by-covariate interactions (the effect modifiers,
+@def-effect-modifier). For an AgD arm the aggregate mean (@def-aggregate-model) is the response-scale
+average
+$$
+\theta_{\bullet jk}\;=\;\int_{\mathcal X} g^{-1}\!\big(\eta_{jk}(x)\big)\,f_j(x)\,dx ,
+$$ {#eq-mlnmr-est-aggmean}
+evaluated by the integration pipeline of Chapter 22 (@thm-hypercube-integration). The defining identity
+@thm-aggregation packages @eq-mlnmr-est-model and @eq-mlnmr-est-aggmean into one likelihood over the
+combined IPD and AgD data, with parameter vector
+$\boldsymbol\xi=\big(\{\mu_j\},\boldsymbol\beta_1,\{\gamma_k\},\{\boldsymbol\beta_{2,k}\}\big)$ (and any
+dispersion parameters). $\blacktriangleleft$
+:::
+
+The symbols in @eq-mlnmr-est-model carry a lot of freight, so before using them we name each one in words in @tbl-mlnmr-params and, crucially, record whether it is *study-specific* (changes from trial to trial) or *network-level* (one value shared by the whole network). That distinction is the hinge of the chapter: only network-level quantities can be carried into a population where no trial was run.
+
+| Symbol | Plain meaning | Scope | Role in transport |
+|---|---|---|---|
+| $\mu_j$ | study-$j$ baseline: reference-arm outcome level in trial $j$ | study-specific | does not transport; a target needs its own $\mu_{*}$ |
+| $\boldsymbol\beta_1$ | prognostic effect: covariate shift on outcome, any treatment | network-level | shared; shifts every arm equally, cancels in a conditional contrast |
+| $\gamma_k$ | treatment main effect of $k$ versus the reference, at $x=0$ | network-level | shared; part of every relative effect |
+| $\boldsymbol\beta_{2,k}$ | effect modification: covariate shift on treatment $k$'s relative effect | network-level | shared; the reason a relative effect can differ across populations |
+| $\theta_{jk}(x)$ | conditional mean outcome (here a bleeding probability) at covariate $x$ | derived | the height of the fitted *surface* at $x$ |
+| $g$ | link fixing the scale (logit, log, identity) | fixed | decides whether the baseline cancels from a marginal contrast |
+
+: Reading the ML-NMR parameters. Study-specific means it changes from trial to trial; network-level means one value is shared across the whole network and can therefore be transported. {#tbl-mlnmr-params}
+
+The coefficients $\boldsymbol\beta_1$, $\gamma_k$, and $\boldsymbol\beta_{2,k}$ carry no study index:
+they are common to the whole network. Only the baseline $\mu_j$ is study-specific. This is the modeling
+assumption that lets a coefficient estimated where IPD is available speak about a population where it is
+not, and it is worth recording as a lemma, because two different transport statements follow from it and
+they behave very differently.
+
+::: {#lem-mlnmr-surface-transport}
+## The network surface is population-free; its relative-effect part is also baseline-free
+Fix the network-level coefficients $(\boldsymbol\beta_1,\{\gamma_k\},\{\boldsymbol\beta_{2,k}\})$ of
+@eq-mlnmr-est-model. For any population $\mathcal P$ with reference-arm baseline $\mu_{\mathcal P}$,
+define the population-$\mathcal P$ arm-$t$ linear predictor and conditional mean
+$$
+\eta^{\mathcal P}_t(x)=\mu_{\mathcal P}+x^\top\boldsymbol\beta_1+\gamma_t+\boldsymbol\beta_{2,t}^\top x,
+\qquad
+\mu_t^{\mathcal P}(x)=g^{-1}\!\big(\eta^{\mathcal P}_t(x)\big).
+$$
+
+1. **(Conditional relative effect is population-free.)** For any two treatments $a,b$ the conditional
+contrast on the link scale does not depend on the population at all, neither on its baseline nor on its
+covariate distribution:
+$$
+g\!\big(\mu_b^{\mathcal P}(x)\big)-g\!\big(\mu_a^{\mathcal P}(x)\big)
+=\eta^{\mathcal P}_b(x)-\eta^{\mathcal P}_a(x)
+=(\gamma_b-\gamma_a)+(\boldsymbol\beta_{2,b}-\boldsymbol\beta_{2,a})^\top x .
+$$ {#eq-mlnmr-est-condcontrast}
+
+2. **(Absolute arm surface needs the baseline.)** The arm-$t$ conditional mean $\mu_t^{\mathcal P}(x)$
+depends on $\mathcal P$ only through its baseline $\mu_{\mathcal P}$; two populations with the same
+baseline have identical arm surfaces, and two with different baselines have arm surfaces that differ by a
+link-scale shift $\mu_{\mathcal P}-\mu_{\mathcal P'}$.
+:::
+
+::: {.proof}
+By @eq-mlnmr-est-model the link of the conditional mean is exactly the linear predictor,
+$g(\mu_t^{\mathcal P}(x))=\eta^{\mathcal P}_t(x)$. Subtracting the two arm predictors, the common terms
+$\mu_{\mathcal P}+x^\top\boldsymbol\beta_1$ cancel, leaving
+$(\gamma_b-\gamma_a)+(\boldsymbol\beta_{2,b}-\boldsymbol\beta_{2,a})^\top x$, which contains no
+population-specific quantity; this is part 1. For part 2, $\eta^{\mathcal P}_t(x)$ contains
+$\mu_{\mathcal P}$ additively and no other population-specific term, so
+$\eta^{\mathcal P}_t(x)-\eta^{\mathcal P'}_t(x)=\mu_{\mathcal P}-\mu_{\mathcal P'}$ for every $x$ and
+every arm $t$, and applying the fixed function $g^{-1}$ gives the stated shift. $\square$
+:::
+
+::: {.remark}
+**Reader translation.** The relative-effect formula transports across populations for free; the absolute risks do not. Part 1 says the *difference* between two arms on the link scale is a fixed function of covariates you may carry into any population, because everything population-specific (the baseline, the covariate distribution) sits equally in both arms and cancels. Part 2 says that to recover an *absolute* outcome level in a new population, say the bleeding probability on warfarin in the UK NHS, you must also know that population's baseline $\mu_{\mathcal P}$; the network coefficients alone cannot supply it. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why the asymmetry is the whole story.** Part 1 says ML-NMR builds in *conditional constancy of
+relative effects* on the link scale (@def-conditional-constancy-relative): the conditional contrast
+surface @eq-mlnmr-est-condcontrast is a fixed function of $x$, the same in every population, determined
+entirely by the network-level $\gamma$ and $\boldsymbol\beta_2$. Part 2 says ML-NMR does *not* build in
+conditional constancy of absolute effects (@def-conditional-constancy-absolute): an arm's absolute
+outcome level in a target population requires that population's baseline $\mu_{\mathcal P}$, which is not
+a network-level quantity. On a collapsible scale the baseline cancels out of any marginal relative
+effect, so part 1 suffices; on a non-collapsible scale (@def-non-collapsibility) it does not, and the
+baseline reappears. This single asymmetry drives the collapsibility dichotomy in @thm-target-population-integral,
+the role of the anchor in @sec-mlnmr-est-generality, and the entire unanchored extension of Chapter 26.
+$\blacktriangleleft$
+:::
+
+## Estimands in any target population {#sec-mlnmr-est-estimand}
+
+::: {.remark}
+**The stakes, before the definitions.** Here is what ML-NMR estimates, in words: for a named target population it predicts the mean outcome each treatment would produce in that population, then compares those predicted means on a chosen scale. On the identity scale the comparison is a risk difference or mean difference; on the logit scale, taken after averaging, it is a *marginal log odds ratio*. This is ML-NMR's advantage over the pairwise methods of Part IV: MAIC and STC report the effect only in the comparator trial's population, whereas ML-NMR reports it in *any* population whose covariate distribution you can describe. The price, made precise in @thm-target-population-integral below, is that on a non-collapsible scale (an odds ratio, a hazard ratio) you must *name the target population and supply its baseline risk* before the marginal number is even defined. Keep the anticoagulant decision (@exm-mlnmr-anticoagulant) in view: the quantity we are building is "the bleeding log odds ratio of $A$ versus $B$ in the UK NHS population," not "in general." $\blacktriangleleft$
+:::
+
+We now collapse the surface to a number. Fix a target population $\mathcal P^{*}$ with covariate density
+$f_{*}$, and write the target arm mean
+$$
+\bar\theta_t(\mathcal P^{*})\;:=\;\int_{\mathcal X} g^{-1}\!\big(\eta^{\,*}_t(x)\big)\,f_{*}(x)\,dx,
+\qquad
+\eta^{\,*}_t(x)=\mu_{*}+x^\top\boldsymbol\beta_1+\gamma_t+\boldsymbol\beta_{2,t}^\top x,
+$$ {#eq-mlnmr-est-armmean}
+the response-scale average of the arm-$t$ conditional mean over $\mathcal P^{*}$, with $\mu_{*}$ the
+target's reference-arm baseline. Equation @eq-mlnmr-est-armmean is @eq-mlnmr-est-aggmean with the study
+covariate density $f_j$ replaced by the target density $f_{*}$ and the study baseline $\mu_j$ replaced by
+the target baseline $\mu_{*}$; it is computed by the very same Chapter 22 pipeline.
+
+::: {#def-mlnmr-target-contrast}
+## Target-population marginal and conditional contrasts
+For treatments $a,b$ and target population $\mathcal P^{*}$, the **target marginal contrast** of $b$
+versus $a$ on scale $g$ is
+$$
+\Delta_{ab}(\mathcal P^{*})\;:=\;g\!\big(\bar\theta_b(\mathcal P^{*})\big)-g\!\big(\bar\theta_a(\mathcal P^{*})\big),
+$$ {#eq-mlnmr-est-marg}
+the difference of the link-transformed target arm means; this is the quantity denoted
+$d_{ab(\mathcal P^{*})}$ in [Notation](/notation.qmd). The **target conditional contrast** of $b$ versus
+$a$ is
+$$
+\Delta^{\mathrm{Cond}}_{ab}(\mathcal P^{*})\;:=\;\int_{\mathcal X}\Big[g\!\big(\mu_b^{*}(x)\big)-g\!\big(\mu_a^{*}(x)\big)\Big]f_{*}(x)\,dx,
+$$ {#eq-mlnmr-est-cond}
+the target average of the conditional link-scale contrast, where $\mu_t^{*}(x)=g^{-1}(\eta^{\,*}_t(x))$.
+The order of operations distinguishes them: @eq-mlnmr-est-marg integrates *then* contrasts on the link
+scale, while @eq-mlnmr-est-cond contrasts on the link scale *then* integrates. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Reading the contrast subscripts (a warning).** By the convention of [Notation](/notation.qmd), $\Delta_{ab}$ is the effect of $b$ *versus* $a$: the second subscript is the treatment being evaluated, the first is the reference. Do not read the subscripts left to right. In the running example this matters constantly, so we tabulate it once in @tbl-mlnmr-contrast-key.
+
+| Symbol | Reads as | In the anticoagulant example |
+|---|---|---|
+| $\Delta_{CA}(\mathcal P^{*})$ | $A$ versus $C$ | new drug versus comparator |
+| $\Delta_{CB}(\mathcal P^{*})$ | $B$ versus $C$ | warfarin versus comparator |
+| $\Delta_{BA}(\mathcal P^{*})$ | $A$ versus $B$ | new drug versus warfarin (the decision) |
+
+: The contrast $\Delta_{ab}$ always reads "$b$ versus $a$." {#tbl-mlnmr-contrast-key}
+:::
+
+::: {.remark}
+**Integrate then contrast, versus contrast then integrate.** @def-mlnmr-target-contrast defines two numbers a reader can easily assume are the same. The *marginal* contrast @eq-mlnmr-est-marg averages each arm's outcome over the population *first* and contrasts the two averages *after*: it is what you get by comparing population-level event rates. The *conditional* contrast @eq-mlnmr-est-cond contrasts the two arms at each covariate value *first* and averages the per-patient contrasts *after*: it is the typical patient-level effect. On a collapsible scale these coincide; on a non-collapsible scale they are genuinely different quantities with different data requirements, which is why the distinction is worth naming before it bites in part (c). In regulatory language this is the same marginal versus conditional estimand choice that ICH E9(R1) forces every analysis to declare. $\blacktriangleleft$
+:::
+
+The main result of this section identifies these estimands, gives the integral form, exhibits when the two coincide and when they part, and pins down exactly which target inputs each one needs. It rests on one import from Chapter 17. The **transport g-formula** (@thm-target-population-estimand) said, in words: to get a treatment's mean outcome in a target population, average its *conditional* mean outcome function over the target's covariate distribution. ML-NMR supplies the one missing piece, the conditional mean function itself, as the fitted surface $\mu_t^{*}(x)=g^{-1}(\eta^{\,*}_t(x))$; the theorem below is that substitution made explicit.
+
+::: {#thm-target-population-integral}
+## Target-population estimand by integrating the fitted model
+Suppose the ML-NMR model @eq-mlnmr-est-model holds across the network with network-level coefficients
+$(\boldsymbol\beta_1,\{\gamma_k\},\{\boldsymbol\beta_{2,k}\})$, and that these coefficients together with
+the baseline $\mu_{*}$ of a target population $\mathcal P^{*}$ are identified (the identifiability
+hypotheses are supplied by @thm-mlnmr-identifiability-2study and @thm-mlnmr-identifiability-large).
+Assume the model is correctly specified on the covariate support of $\mathcal P^{*}$ and that
+$g^{-1}\circ\eta^{\,*}_t$ is $f_{*}$-integrable for each arm. Then:
+
+**(a) Identification and integral form.** The target marginal contrast $\Delta_{ab}(\mathcal P^{*})$ and
+the target conditional contrast $\Delta^{\mathrm{Cond}}_{ab}(\mathcal P^{*})$ are identified, and equal
+the integral expressions @eq-mlnmr-est-marg and @eq-mlnmr-est-cond. They are the ML-NMR realization of
+the transport g-formula estimands of @thm-target-population-estimand: @eq-mlnmr-est-marg is that
+theorem's marginal estimand with reporting scale $h=g$ and conditional means $\mu_t^{*}=g^{-1}(\eta^{\,*}_t)$,
+and @eq-mlnmr-est-cond is its population-average conditional estimand.
+
+**(b) The conditional contrast needs only the covariate mean.** Because the conditional link-scale contrast is affine in $x$, that is, linear in $x$ plus a constant (@lem-mlnmr-surface-transport, part 1; this is also the sense in which the "linear surface" condition of @sec-mlnmr-est-generality is meant),
+$$
+\Delta^{\mathrm{Cond}}_{ab}(\mathcal P^{*})
+=(\gamma_b-\gamma_a)+(\boldsymbol\beta_{2,b}-\boldsymbol\beta_{2,a})^\top\bar x_{*},
+\qquad \bar x_{*}=\int_{\mathcal X} x\,f_{*}(x)\,dx,
+$$ {#eq-mlnmr-est-cond-mean}
+so it depends on $\mathcal P^{*}$ only through the covariate mean $\bar x_{*}$, and not at all on the
+baseline $\mu_{*}$ or on the prognostic effects $\boldsymbol\beta_1$.
+
+**(c) Collapsibility dichotomy for the marginal contrast.** If $g$ is collapsible (the identity scale,
+@thm-identity-link-exact, or more generally a scale on which marginalization commutes with the
+contrast), then $\Delta_{ab}(\mathcal P^{*})=\Delta^{\mathrm{Cond}}_{ab}(\mathcal P^{*})$ and the
+marginal contrast also depends on $\mathcal P^{*}$ only through $\bar x_{*}$. If $g$ is non-collapsible
+(logit, log-hazard, @def-non-collapsibility), then in general
+$\Delta_{ab}(\mathcal P^{*})\neq\Delta^{\mathrm{Cond}}_{ab}(\mathcal P^{*})$, and the marginal contrast
+depends on the *whole* target distribution $f_{*}$ and on the target baseline $\mu_{*}$, not only on
+$\bar x_{*}$.
+
+**(d) Computation.** Each target arm mean @eq-mlnmr-est-armmean is computed by the integration pipeline
+of @thm-hypercube-integration; the marginal contrast is one link-scale subtraction of two such integrals,
+and the conditional contrast is read off from @eq-mlnmr-est-cond-mean.
+
+(Corresponds to H.20 in the proof catalogue.)
+:::
+
+::: {.proof}
+**(a).** By @lem-mlnmr-surface-transport the conditional mean functions $\mu_t^{*}(x)=g^{-1}(\eta^{\,*}_t(x))$
+are determined by the identified network coefficients and the identified baseline $\mu_{*}$; in
+particular they are fixed functions of $x$ once the baseline is fixed, and are the correct conditional
+means in $\mathcal P^{*}$ by the correct-specification hypothesis. Theorem @thm-target-population-estimand
+identifies, for any fixed function $\varphi$ of $x$, the target expectation $\int\varphi(x)f_{*}(x)\,dx$
+by the transport g-formula. Applying it to $\varphi=\mu_b^{*}$ and $\varphi=\mu_a^{*}$ yields the two
+target arm means $\bar\theta_b(\mathcal P^{*})$ and $\bar\theta_a(\mathcal P^{*})$; transforming by $g$
+and differencing gives @eq-mlnmr-est-marg, which is the marginal estimand of
+@thm-target-population-estimand with $h=g$. Applying it instead to
+$\varphi(x)=g(\mu_b^{*}(x))-g(\mu_a^{*}(x))$ yields @eq-mlnmr-est-cond, the population-average
+conditional estimand. The integrability hypothesis makes the integrals finite, so both estimands are
+well defined and identified.
+
+**(b).** By @eq-mlnmr-est-condcontrast the integrand of @eq-mlnmr-est-cond is the affine function
+$x\mapsto(\gamma_b-\gamma_a)+(\boldsymbol\beta_{2,b}-\boldsymbol\beta_{2,a})^\top x$. Integrating an
+affine function against $f_{*}$ replaces $x$ by its mean $\bar x_{*}$ (linearity of the integral),
+giving @eq-mlnmr-est-cond-mean. The constant and the linear coefficient are the network-level
+$\gamma$'s and $\boldsymbol\beta_2$'s; neither $\mu_{*}$ nor $\boldsymbol\beta_1$ appears, because they
+canceled in @eq-mlnmr-est-condcontrast. (Intuitively, the prognostic effects and the baseline shift both arms by the same amount, so they leave every contrast unchanged.)
+
+**(c).** *Collapsible case.* Direct collapsibility of $g$ means, by definition, that for every arm the
+link of the marginal mean equals the marginal of the link applied to the conditional mean,
+$g(\bar\theta_t(\mathcal P^{*}))=\int g(\mu_t^{*}(x))f_{*}(x)\,dx$. Subtracting the arm-$a$ identity from
+the arm-$b$ identity gives $\Delta_{ab}(\mathcal P^{*})=\Delta^{\mathrm{Cond}}_{ab}(\mathcal P^{*})$, and
+by part (b) this depends on $\mathcal P^{*}$ only through $\bar x_{*}$. On the identity scale the equality
+$g(\bar\theta_t)=\int g(\mu_t^{*})f_{*}$ is exactly the exact-aggregation identity of
+@thm-identity-link-exact (both sides equal $\eta^{\,*}_t(\bar x_{*})$). *Non-collapsible case.* When $g$
+is non-collapsible, $g$ does not commute with the response-scale average: by @thm-aggregation-bias
+applied to the strictly convex or strictly concave $g^{-1}$ on the support of $\eta^{\,*}_t(X)$, the
+quantity $g(\bar\theta_t(\mathcal P^{*}))=g\big(\int g^{-1}(\eta^{\,*}_t)f_{*}\big)$ differs from
+$\int \eta^{\,*}_t(x)f_{*}(x)\,dx=\int g(\mu_t^{*}(x))f_{*}(x)\,dx$ whenever $\eta^{\,*}_t(X)$ is
+non-degenerate under $f_{*}$. The two arm discrepancies do not cancel in general, so
+$\Delta_{ab}(\mathcal P^{*})\neq\Delta^{\mathrm{Cond}}_{ab}(\mathcal P^{*})$. (A careful reader will object that $g^{-1}=\operatorname{expit}$, the inverse-logit $\operatorname{expit}(z)=1/(1+e^{-z})$, is convex below its inflection and concave above, not globally convex. The argument needs only strict Jensen applied to *each arm separately*: $\operatorname{expit}$ is strictly nonlinear on every nondegenerate interval, so each arm's response-scale average is strictly displaced from the average of its linear predictor, and the two displacements differ because the two arms sit at different baselines and slopes. It is the difference of the two per-arm displacements, not any single global convexity, that keeps the marginal and conditional contrasts apart.) Moreover the arm mean
+$\bar\theta_t(\mathcal P^{*})=\int g^{-1}(\mu_{*}+x^\top\boldsymbol\beta_1+\gamma_t+\boldsymbol\beta_{2,t}^\top x)f_{*}(x)\,dx$
+is a nonlinear functional of $f_{*}$ that involves the baseline $\mu_{*}$ and the prognostic effects
+$\boldsymbol\beta_1$ inside the nonlinear $g^{-1}$, so it cannot be reduced to a function of $\bar x_{*}$
+alone: it depends on the full distribution of $\eta^{\,*}_t(X)$, hence on the spread of $f_{*}$ and on
+the level $\mu_{*}$. The worked example @exm-mlnmr-new-target exhibits both phenomena numerically.
+
+**(d).** Immediate from @thm-hypercube-integration applied to each arm integral @eq-mlnmr-est-armmean,
+and from @eq-mlnmr-est-cond-mean for the conditional contrast. $\square$
+:::
+
+::: {.remark}
+**The superpower and its price.** Part (a) is what distinguishes ML-NMR from the pairwise
+population-adjustment methods of Part IV. MAIC and STC, by construction, report the relative effect in
+the *comparator* population, because that is the population whose moments they match or whose covariate
+distribution they integrate over (@thm-anchored-maic-consistency, @thm-stc-consistency). ML-NMR reports
+the relative effect in *any* population $\mathcal P^{*}$ for which $f_{*}$ can be described, by simply
+changing the density in @eq-mlnmr-est-armmean. The price is parts (b) and (c): on a non-collapsible
+scale the marginal estimand is genuinely population-specific even when the conditional contrast is not,
+so one must *name the target population* and supply its baseline risk before the marginal number is
+defined. This is not a defect of ML-NMR; it is the non-collapsibility of the scale (@def-non-collapsibility)
+made operational, and it is the same warning that governs @thm-target-population-estimand(c) and the
+unanchored theory of Chapter 26. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**No overlap is required, but specification is.** Unlike MAIC, whose reweighting cannot manufacture
+information outside the IPD covariate hull and is therefore undefined when the target strays beyond it,
+the integral @eq-mlnmr-est-armmean is a model-based extrapolation: $g^{-1}(\eta^{\,*}_t(\cdot))$ is
+defined at every $x$, so $\mathcal P^{*}$ may place mass anywhere. The honesty cost is that, where
+$\mathcal P^{*}$ extends beyond the covariate region the network actually observed, identification in
+part (a) rests on the parametric form of @eq-mlnmr-est-model continuing to hold there, an assumption the
+data cannot check. ML-NMR shares this regression-style robustness to lack of overlap, and its dependence
+on correct specification, with STC; the contrast with MAIC's no-extrapolation theorem is the point of the
+generality results in @sec-mlnmr-est-generality. Concretely, if the UK NHS target is frailer or older than any patient the IPD trial enrolled, MAIC would refuse to answer, since there is no one to up-weight, whereas ML-NMR will still answer by trusting @eq-mlnmr-est-model out where no data constrain it. That extrapolation is the single assumption a decision maker should challenge hardest, and the honest response is a sensitivity analysis: refit under a plausibly different interaction slope $\boldsymbol\beta_2$, or restrict the target to the covariate range the network actually observed, and report how far the target estimate moves. $\blacktriangleleft$
+:::
+
+Two practical tables collect what the theorem demands of an analyst. @tbl-mlnmr-scales reads part (c) across the common scales; @tbl-mlnmr-inputs reads the same result as a checklist of target inputs.
+
+| Scale $g$ | Collapsible? | Marginal contrast is | Needs target baseline $\mu_{*}$? | Needs full $f_{*}$ or just $\bar x_{*}$? |
+|---|---|---|---|---|
+| identity (risk difference) | yes | risk or mean difference | no | $\bar x_{*}$ only |
+| log (risk ratio, rate ratio) | no in general | marginal log risk or rate ratio | yes | full $f_{*}$ |
+| logit (odds ratio) | no | marginal log odds ratio | yes | full $f_{*}$ |
+| log-hazard (hazard ratio) | no | marginal log hazard ratio | yes | full $f_{*}$ |
+
+: How @thm-target-population-integral reads on each scale. On a collapsible scale the target baseline cancels and only the covariate mean matters; on a non-collapsible scale the whole target distribution and its baseline risk enter. {#tbl-mlnmr-scales}
+
+| Estimand | Target mean $\bar x_{*}$ | Full target distribution $f_{*}$ | Target baseline $\mu_{*}$ | Fitted interactions $\boldsymbol\beta_{2,k}$ |
+|---|---|---|---|---|
+| conditional contrast (any scale) | required | not needed | not needed | required |
+| marginal contrast, collapsible scale | required | not needed | not needed | required |
+| marginal contrast, non-collapsible scale | subsumed | required | required | required |
+
+: Inputs required to compute a target-population contrast. The blank baseline entries are what "the baseline cancels" means in practice. {#tbl-mlnmr-inputs}
+
+::: {.remark}
+**Where does the target baseline $\mu_{*}$ come from?** On a non-collapsible scale the marginal odds ratio is undefined until the target's absolute risk level is fixed, so a health researcher must ask where that number originates. It is not read off the network; it is supplied from outside: from the reference-arm event rate in a registry or cohort representative of the target, from national epidemiology, or from the comparator arm of a trial judged close to the target. When the target matches neither trial, $\mu_{*}$ is often best treated as a *scenario input*, varied across a plausible range with the target estimate reported as a function of it. The dependence is real, not a nuisance: two populations with the same covariate distribution but different baseline bleeding risk have genuinely different marginal odds ratios, so uncertainty in $\mu_{*}$ is part of the honest uncertainty in the answer. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Prognostic variables do matter for a marginal odds ratio.** It is tempting to reason "a purely prognostic variable does not modify the relative effect, so it is irrelevant to the treatment contrast." Part (b) shows this is exactly right for the *conditional* contrast: $\boldsymbol\beta_1$ cancels. It is false for the *marginal* contrast on a non-collapsible scale. There $\boldsymbol\beta_1$ and the baseline $\mu_{*}$ set where on the sigmoid each patient sits, hence how much marginalizing bends the average, so a purely prognostic variable distributed differently in the target still moves the marginal odds ratio through @thm-aggregation-bias. This is why @tbl-mlnmr-inputs asks for the full $f_{*}$, not only the effect-modifier means, on a non-collapsible scale. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**The math behind a regulatory debate.** Part (c) is not an academic curiosity. Regulators and health technology bodies, through ICH E9(R1) and the estimand-based reading of health technology assessment in @chandler2026transport, require an analysis to declare whether its target effect is *marginal* (population-averaged) or *conditional* (patient-level), precisely because the two disagree on a non-collapsible scale and transport by different rules. A conditional log odds ratio under SEMA is a single number good for every population (@eq-mlnmr-est-2study-cond); a marginal odds ratio must be recomputed, with a baseline, for each target. @thm-target-population-integral is the theorem underneath that requirement. $\blacktriangleleft$
+:::
+
+## A monotonicity lemma for aggregate means {#sec-mlnmr-est-monotone}
+
+Before the identifiability theorems we isolate the elementary fact that makes an AgD study informative
+about scalar parameters at all. An aggregate mean @eq-mlnmr-est-aggmean is a smooth, strictly increasing
+function of any additive shift of the linear predictor; hence one observed aggregate mean pins one scalar
+shift. This is the workhorse of both @thm-mlnmr-identifiability-2study and @thm-mlnmr-identifiability-large.
+
+::: {#lem-mlnmr-aggregate-monotone}
+## Strict monotonicity of an aggregate mean in a scalar shift
+Let $g^{-1}:\mathbb R\to(\ell,u)$ be continuous and strictly increasing (as the inverse of any strictly
+monotone link is), let $f$ be a probability density on $\mathcal X$, and let $h:\mathcal X\to\mathbb R$
+be measurable with $\int g^{-1}(c_0+h(x))f(x)\,dx$ finite for some $c_0$. Define
+$$
+\Theta(c)\;:=\;\int_{\mathcal X} g^{-1}\!\big(c+h(x)\big)\,f(x)\,dx ,\qquad c\in\mathbb R .
+$$
+Then $\Theta$ is finite for every $c$, continuous, and strictly increasing, hence injective. If
+$g^{-1}(z)\to\ell$ as $z\to-\infty$ and $g^{-1}(z)\to u$ as $z\to+\infty$, then the range of $\Theta$ is
+the open interval $(\ell,u)$. Consequently, for any observed value $\theta^{\mathrm{obs}}\in(\ell,u)$ the
+equation $\Theta(c)=\theta^{\mathrm{obs}}$ has a unique solution $c$.
+:::
+
+::: {.proof}
+*Finiteness.* Fix $c$. Since $g^{-1}$ is increasing and bounded between $\ell$ and $u$, for $c\ge c_0$ we
+have $g^{-1}(c_0+h(x))\le g^{-1}(c+h(x))<u$, and for $c<c_0$ we have $\ell<g^{-1}(c+h(x))\le g^{-1}(c_0+h(x))$.
+In either case the integrand lies between the $f$-integrable function $g^{-1}(c_0+h(\cdot))$ and a finite
+constant ($u$ or $\ell$ when the limits exist; otherwise the one-sided monotone bound together with
+finiteness of $\Theta(c_0)$ controls the integral on the relevant side), so $\Theta(c)$ is finite. We spell out the two regimes this compresses. If the range is bounded above ($u<\infty$, as for the logit link with $u=1$), then for $c>c_0$ the integrand is below the constant $u$ and $\Theta(c)$ is finite outright, and the only work is the side $c<c_0$, dominated by $g^{-1}(c_0+h(\cdot))$. If the range is unbounded above ($u=+\infty$, as for the log link), the side $c<c_0$ is dominated as before, and the side $c>c_0$ is controlled by the multiplicative envelope the log link makes exact, $g^{-1}(c+h(x))=e^{\,c-c_0}g^{-1}(c_0+h(x))$, giving $\Theta(c)=e^{\,c-c_0}\Theta(c_0)<\infty$; this is the place where the standing assumption that $\Theta(c_0)$ is finite, a moment condition on $f$, does the work.
+
+*Strict monotonicity.* Let $c_1<c_2$. For every $x$, strict monotonicity of $g^{-1}$ gives
+$g^{-1}(c_1+h(x))<g^{-1}(c_2+h(x))$, a strict pointwise inequality. The difference
+$\Theta(c_2)-\Theta(c_1)=\int[g^{-1}(c_2+h)-g^{-1}(c_1+h)]\,f\,dx$ is the integral of a strictly positive
+function against a probability density, hence strictly positive. So $\Theta$ is strictly increasing,
+therefore injective.
+
+*Continuity and range.* As $c\to c'$, $g^{-1}(c+h(x))\to g^{-1}(c'+h(x))$ pointwise by continuity of
+$g^{-1}$, and for $c$ in a bounded neighborhood of $c'$ the integrands are dominated by
+$|g^{-1}(c'+1+h)|+|g^{-1}(c'-1+h)|$, which is integrable by the finiteness already shown; dominated
+convergence gives $\Theta(c)\to\Theta(c')$, so $\Theta$ is continuous. Under the stated limits, monotone
+convergence gives $\Theta(c)\to\ell$ as $c\to-\infty$ and $\Theta(c)\to u$ as $c\to+\infty$; a continuous
+strictly increasing function with these limits has range exactly $(\ell,u)$. Injectivity then makes the
+solution of $\Theta(c)=\theta^{\mathrm{obs}}$ unique for any $\theta^{\mathrm{obs}}\in(\ell,u)$.
+$\square$
+:::
+
+::: {.remark}
+**What the lemma buys, and its limit.** For the logit link, $g^{-1}=\operatorname{expit}$ has range
+$(0,1)$, so an observed aggregate event proportion in $(0,1)$ identifies one additive shift of the linear
+predictor uniquely; for the log link, range $(0,\infty)$, an observed positive aggregate rate does the
+same. The lemma identifies *one scalar*, an additive shift, per observed aggregate mean. It does not
+identify a *vector* of interaction coefficients from a single aggregate mean, because changing
+$\boldsymbol\beta_{2,k}$ reshapes the integrand $x\mapsto x^\top(\boldsymbol\beta_1+\boldsymbol\beta_{2,k})$
+rather than shifting it by a constant, and many such reshapings give the same integral. This gap between
+"one scalar per aggregate mean" and "a whole interaction vector" is precisely the obstruction that the
+shared effect modifier assumption removes, which is the subject of the next section. $\blacktriangleleft$
+:::
+
+## Identifiability in the two-study network {#sec-mlnmr-est-2study}
+
+The smallest network in which an indirect comparison is interesting has one IPD trial and one AgD trial
+sharing a common comparator. We prove that under the shared effect modifier assumption the target
+contrast is identified for any target population, and that without it the comparison collapses to a
+single population.
+
+We use the canonical anchored triangle of Part IV, now with one side reporting IPD: an IPD trial on
+treatments $\{A,C\}$ in population $\mathcal P_{AC}$, and an AgD trial on $\{B,C\}$ in population
+$\mathcal P_{BC}$, with $C$ the reference. The model is @eq-mlnmr-est-model with $K=3$ treatments and
+$J=2$ studies; the AgD trial reports the covariate distribution $f_{BC}$ (its marginals and
+correlations, from which Chapter 22 reconstructs $f_{BC}$) and the aggregate arm means for $B$ and $C$.
+
+Before the theorem, three plain-language pieces make it readable: a picture of the network, a ledger of what is known and unknown, and a statement of what the shared effect modifier assumption (SEMA) is doing.
+
+@tbl-mlnmr-triangle lays out the anchored triangle. The two trials share the comparator $C$; the target of interest, $A$ versus $B$, is not measured directly but chained through $C$.
+
+| | IPD trial | AgD trial |
+|---|---|---|
+| treatments | $A$ vs $C$ | $B$ vs $C$ |
+| data held | every patient's age $x$ and outcome | arm bleeding rates; covariate summaries |
+| population | $\mathcal P_{AC}$ (younger) | $\mathcal P_{BC}$ (older) |
+| what it can identify | $\boldsymbol\beta_1,\boldsymbol\beta_2,\gamma_A,\mu_{AC}$ | $\mu_{BC},\gamma_B$ (two scalars) |
+
+: The anchored triangle with one IPD side and one AgD side. The shared vertex is $C$; the indirect target $A$ versus $B$ is chained through it. {#tbl-mlnmr-triangle}
+
+The ledger of unknowns against data is @tbl-mlnmr-ledger. The moral is visible in its last row: one aggregate mean fixes one scalar (the monotonicity lemma), so an AgD-only interaction *vector* is underdetermined unless something supplies it.
+
+| Unknown | What would pin it | Available here? |
+|---|---|---|
+| $\boldsymbol\beta_1$ (prognostic slope) | individual covariate variation | yes, from IPD |
+| $\boldsymbol\beta_2$ (effect modification) | individual arm-to-arm slope difference | yes, from IPD (one vector for both drugs under SEMA) |
+| $\gamma_A,\mu_{AC}$ | IPD arm means | yes, from IPD |
+| $\mu_{BC}$ (AgD baseline) | one AgD arm mean, via monotonicity | yes, one scalar from the $C$ arm |
+| $\gamma_B$ (AgD treatment effect) | one AgD arm mean, via monotonicity | yes, one scalar from the $B$ arm |
+| $\boldsymbol\beta_{2,B}$ if *not* shared | a whole vector from one AgD mean | no: underdetermined |
+
+: The two-study ledger. The books balance only because SEMA sets the AgD trial's interaction to zero new unknowns. {#tbl-mlnmr-ledger}
+
+**What SEMA means here, clinically and arithmetically.** SEMA (@def-sema) says age modifies the $A$-versus-$C$ bleeding effect by exactly the same amount as it modifies the $B$-versus-$C$ effect: one slope $\boldsymbol\beta_2$ for both, $\boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}$. Clinically it is the claim that the mechanism by which age amplifies anticoagulant bleeding is a property of the drug class, not of one molecule. Arithmetically it is what lets the IPD trial, which sees age at the individual level, hand the interaction to the AgD trial, which cannot estimate it. Count the AgD trial's contribution: two new unknowns ($\mu_{BC}$ and $\gamma_B$) against two data points (its two arm means); SEMA keeps its interaction at zero new unknowns, so the count balances. Drop SEMA and the AgD trial owes a whole $p$-vector $\boldsymbol\beta_{2,B}$ against the same two data points, and identification fails (@prp-mlnmr-sema-necessary).
+
+With that in hand the proof is three plain steps: (1) the IPD $A$-$C$ trial estimates the shared slopes $\boldsymbol\beta_1,\boldsymbol\beta_2$ and the effect $\gamma_A$; (2) the AgD $C$ arm's bleeding rate pins the AgD baseline $\mu_{BC}$, one scalar from one mean; (3) the AgD $B$ arm's rate pins $\gamma_B$. With all five quantities known, $A$ versus $B$ transports to any target by @thm-target-population-integral.
+
+::: {#thm-mlnmr-identifiability-2study}
+## Two-study identifiability under the shared effect modifier assumption
+Consider the two-study network above, modeled by @eq-mlnmr-est-model on a strictly monotone link $g$,
+under the shared effect modifier assumption (@def-sema)
+$$
+\boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}=:\boldsymbol\beta_2 .
+$$
+Suppose the IPD trial has full-rank design (both arms present, with covariate variation of rank $p$
+within the trial, so the IPD-NMR identifiability conditions of @thm-ipd-nmr-identifiability hold for the
+$\{A,C\}$ sub-model), and the AgD arm means lie in the open range of $g^{-1}$. Then:
+
+1. The network-level coefficients $(\boldsymbol\beta_1,\gamma_A,\boldsymbol\beta_2)$ and the IPD baseline
+$\mu_{AC}$ are identified from the IPD likelihood; the AgD baseline $\mu_{BC}$ and the treatment effect
+$\gamma_B$ are identified from the two AgD aggregate means.
+
+2. Consequently, for any target population $\mathcal P^{*}$, the target conditional contrast of $A$
+versus $B$ is identified and equals the population-free constant
+$$
+\Delta^{\mathrm{Cond}}_{BA}(\mathcal P^{*})=\gamma_A-\gamma_B ,
+$$ {#eq-mlnmr-est-2study-cond}
+and the target marginal contrast $\Delta_{BA}(\mathcal P^{*})$ is identified by
+@thm-target-population-integral, given the target covariate distribution $f_{*}$ and (on a
+non-collapsible scale) a target baseline $\mu_{*}$.
+
+(Corresponds to H.21 in the proof catalogue.)
+:::
+
+::: {.proof}
+*Step 1 (IPD identifies the network coefficients).* Restricted to the IPD trial, @eq-mlnmr-est-model is
+a generalized linear model on arms $A$ and $C$ with linear predictors
+$\eta_C(x)=\mu_{AC}+x^\top\boldsymbol\beta_1$ and
+$\eta_A(x)=\mu_{AC}+\gamma_A+x^\top(\boldsymbol\beta_1+\boldsymbol\beta_2)$. By the IPD-NMR
+identifiability theorem @thm-ipd-nmr-identifiability (catalogue D.12), full column rank of the within-trial
+design and a strictly monotone link identify all coefficients: the $C$ arm identifies
+$(\mu_{AC},\boldsymbol\beta_1)$, and the $A$ arm then identifies $(\gamma_A,\boldsymbol\beta_2)$ from the
+arm-to-arm difference in intercept and in covariate slope. In particular the shared interaction vector
+$\boldsymbol\beta_2$ is known from the IPD alone.
+
+*Step 2 (AgD identifies its baseline).* Treat $\boldsymbol\beta_1,\boldsymbol\beta_2$ as known from
+Step 1 and $f_{BC}$ as reconstructed from the reported moments (Chapter 22). The aggregate mean of the
+AgD reference arm $C$ is
+$$
+\theta_{\bullet,BC,C}=\int_{\mathcal X} g^{-1}\!\big(\mu_{BC}+x^\top\boldsymbol\beta_1\big)f_{BC}(x)\,dx
+=\Theta_C(\mu_{BC}),
+$$
+which is $\Theta$ of @lem-mlnmr-aggregate-monotone with shift $c=\mu_{BC}$ and
+$h(x)=x^\top\boldsymbol\beta_1$. Since the observed $\theta_{\bullet,BC,C}$ lies in the open range of
+$g^{-1}$, the lemma gives a unique $\mu_{BC}$ solving $\Theta_C(\mu_{BC})=\theta_{\bullet,BC,C}$, so
+$\mu_{BC}$ is identified.
+
+*Step 3 (AgD identifies its treatment effect).* Now treat $\mu_{BC}$ as known from Step 2. The aggregate
+mean of the AgD active arm $B$ is
+$$
+\theta_{\bullet,BC,B}=\int_{\mathcal X} g^{-1}\!\big(\mu_{BC}+\gamma_B+x^\top(\boldsymbol\beta_1+\boldsymbol\beta_2)\big)f_{BC}(x)\,dx
+=\Theta_B(\gamma_B),
+$$
+which is again $\Theta$ of @lem-mlnmr-aggregate-monotone, now with shift $c=\gamma_B$ and
+$h(x)=\mu_{BC}+x^\top(\boldsymbol\beta_1+\boldsymbol\beta_2)$, all of $h$ known. The observed
+$\theta_{\bullet,BC,B}$ lies in the range of $g^{-1}$, so the lemma gives a unique $\gamma_B$. Thus
+$(\mu_{BC},\gamma_B)$ are identified, completing Step 1's list.
+
+*Step 4 (the target contrast).* By @lem-mlnmr-surface-transport(1) and SEMA, the conditional link-scale
+contrast of $A$ versus $B$ is
+$(\gamma_A-\gamma_B)+(\boldsymbol\beta_{2,A}-\boldsymbol\beta_{2,B})^\top x=\gamma_A-\gamma_B$, a constant;
+averaging over any $f_{*}$ (@thm-target-population-integral(b)) leaves
+$\Delta^{\mathrm{Cond}}_{BA}(\mathcal P^{*})=\gamma_A-\gamma_B$, which is identified because $\gamma_A$
+(Step 1) and $\gamma_B$ (Step 3) are. This is @eq-mlnmr-est-2study-cond. The target marginal contrast
+$\Delta_{BA}(\mathcal P^{*})=g(\bar\theta_A(\mathcal P^{*}))-g(\bar\theta_B(\mathcal P^{*}))$ is a fixed
+function of the identified coefficients, of $f_{*}$, and of the supplied $\mu_{*}$, hence identified by
+@thm-target-population-integral. $\square$
+:::
+
+::: {.remark}
+**Why SEMA is doing the work.** The IPD trial identifies the *shared* interaction vector
+$\boldsymbol\beta_2$ for free, because in the IPD trial the interaction is estimated at the individual
+level (Step 1). The AgD trial then only has to supply two scalars, its baseline and its treatment
+effect, and the monotonicity lemma extracts exactly two scalars from its two aggregate means (Steps 2
+and 3). The accounting balances precisely because SEMA reduced the AgD trial's unknown interaction from a
+$p$-vector to nothing new. Drop SEMA and the AgD trial must identify a $p$-vector
+$\boldsymbol\beta_{2,B}$ as well, from the same two aggregate means; the books no longer balance, as the
+next proposition makes exact. This is the network-regression face of the identifiability result
+@thm-shared-em-identifiability of Chapter 17. $\blacktriangleleft$
+:::
+
+The failure without SEMA is not a loss of precision but a genuine non-identification, and it is
+selective: the comparison survives in the comparator's own population and is lost everywhere else. We
+make this precise.
+
+In plain terms, the obstruction is this: with age's effect on warfarin left free, many different age-by-warfarin interaction patterns reproduce the *same* single aggregate bleeding rate the AgD trial reports, yet they disagree about warfarin's effect in any *other* age mix. The proposition makes that exact. (Read "$p$-dimensional manifold" as a smooth $p$-parameter family of equally good solutions, the "implicit function theorem" as the guarantee that this family is smooth, and a "generic target" as all but exceptional target populations.)
+
+::: {#prp-mlnmr-sema-necessary}
+## Without SEMA the two-study contrast is identified only in the comparator population
+In the two-study network of @thm-mlnmr-identifiability-2study, drop SEMA and let
+$\boldsymbol\beta_{2,B}\in\mathbb R^p$ be free ($p\ge 1$). Then the AgD likelihood constrains
+$(\gamma_B,\boldsymbol\beta_{2,B})$ only through the single scalar equation
+$\Theta_B(\gamma_B,\boldsymbol\beta_{2,B})=\theta_{\bullet,BC,B}$, whose solution set is a
+$p$-dimensional manifold. Along this manifold:
+
+1. The aggregate $B$-versus-$C$ comparison evaluated *in the comparator population* $\mathcal P_{BC}$ is
+constant (it is the observed datum), so the target contrast $\Delta_{BA}(\mathcal P_{BC})$ is identified.
+
+2. For a generic target $\mathcal P^{*}\neq\mathcal P_{BC}$ the target contrast
+$\Delta_{BA}(\mathcal P^{*})$ is *not* constant along the manifold; hence it is not identified.
+
+Concretely, for a single binary effect modifier $X\in\{0,1\}$ with $\Pr_{BC}(X=1)=q$, there exist two
+parameter pairs $(\gamma_B,\boldsymbol\beta_{2,B})\neq(\gamma_B',\boldsymbol\beta_{2,B}')$ producing the
+*identical* AgD data yet different conditional $A$-versus-$B$ contrasts at any target mean
+$\bar x_{*}\neq q$.
+:::
+
+::: {.proof}
+With $\mu_{BC}$ and $\boldsymbol\beta_1$ identified from Steps 1 to 2 of @thm-mlnmr-identifiability-2study
+(those steps do not use SEMA), the only AgD equation involving the $B$-arm interaction is
+$$
+\Theta_B(\gamma_B,\boldsymbol\beta_{2,B})
+=\int_{\mathcal X} g^{-1}\!\big(\mu_{BC}+\gamma_B+x^\top\boldsymbol\beta_1+\boldsymbol\beta_{2,B}^\top x\big)f_{BC}(x)\,dx
+=\theta_{\bullet,BC,B},
+$$
+one scalar equation in the $(p+1)$ unknowns $(\gamma_B,\boldsymbol\beta_{2,B})$. The partial derivative of
+$\Theta_B$ in $\gamma_B$ is strictly positive (@lem-mlnmr-aggregate-monotone), so $\nabla\Theta_B\neq 0$
+everywhere; by the implicit function theorem the level set $\{\Theta_B=\theta_{\bullet,BC,B}\}$ is a
+smooth $p$-dimensional manifold. Statement 1 is immediate: $\Delta_{BA}(\mathcal P_{BC})$ is, by the
+anchored identity, a function of $\theta_{\bullet,BC,B}$, $\theta_{\bullet,BC,C}$, and the IPD-identified
+quantities, none of which moves along the manifold.
+
+For statement 2 and the binary construction, take $\mathcal X=\{0,1\}$, $\Pr_{BC}(X=1)=q$, write
+$\beta_1$ and $\beta_2:=\boldsymbol\beta_{2,B}$ as scalars, and abbreviate $s_0:=\mu_{BC}$ and $s_1:=\mu_{BC}+\beta_1$ (the $C$-arm linear predictors at $X=0$ and $X=1$). The AgD $B$-arm equation is
+$$
+(1-q)\,g^{-1}\!\big(s_0+\gamma_B\big)+q\,g^{-1}\!\big(s_1+\gamma_B+\beta_2\big)=\theta_{\bullet,BC,B}.
+$$ {#eq-mlnmr-est-binary-agd}
+This is one equation in the two unknowns $(\gamma_B,\beta_2)$. Pick any $\beta_2$; the left side is
+strictly increasing and continuous in $\gamma_B$ with range equal to that of $g^{-1}$, so by
+@lem-mlnmr-aggregate-monotone there is a unique $\gamma_B(\beta_2)$ solving @eq-mlnmr-est-binary-agd. The
+map $\beta_2\mapsto(\gamma_B(\beta_2),\beta_2)$ traces the one-dimensional solution manifold. Choose two
+values $\beta_2\neq\beta_2'$ and their solved partners $\gamma_B,\gamma_B'$. Both pairs reproduce the
+exact same AgD data (and the same IPD, untouched). But the conditional $A$-versus-$B$ contrast at a target
+mean $\bar x_{*}$ is, by @eq-mlnmr-est-cond-mean, $(\gamma_A-\gamma_B)+(\beta_{2,A}-\beta_2)\,\bar x_{*}$,
+and the difference between the two pairs is
+$$
+\big(\gamma_B'-\gamma_B\big)+\big(\beta_2-\beta_2'\big)\,\bar x_{*}.
+$$
+This is an affine function of $\bar x_{*}$ with nonzero slope $\beta_2-\beta_2'$, so it vanishes for at
+most one value of $\bar x_{*}$. That single value is $\bar x_{*}=q$: differentiating
+@eq-mlnmr-est-binary-agd along the manifold gives $d\gamma_B/d\beta_2=-q\,\dot g_1/[(1-q)\dot g_0+q\dot g_1]$,
+where $\dot g_0:=(g^{-1})'(s_0+\gamma_B)>0$ and $\dot g_1:=(g^{-1})'(s_1+\gamma_B+\beta_2)>0$ are the derivatives of $g^{-1}$ evaluated at the $X=0$ and $X=1$ linear predictors of the AgD $B$ arm, and substituting shows the
+contrast difference is stationary in the manifold parameter exactly at $\bar x_{*}=q$. Hence for every
+target mean $\bar x_{*}\neq q$ the two observationally identical parameter pairs give different conditional
+contrasts, and the marginal contrast inherits the non-identification through @eq-mlnmr-est-marg. $\square$
+:::
+
+::: {#exm-mlnmr-sema-fail}
+## Two interaction patterns, identical data, different transported answers
+Attach numbers to the construction, using the coefficients of @exm-mlnmr-anticoagulant. On the logit scale take the shared prognostic slope $\boldsymbol\beta_1=0.4$, the IPD-identified $A$ interaction $\boldsymbol\beta_{2,A}=0.5$ and $\gamma_A=0.8$, an AgD baseline $\mu_{BC}=0$, and the older AgD mix $q=\Pr_{BC}(X=1)=0.6$. Suppose the AgD $B$ arm reports a bleeding proportion $\theta_{\bullet,BC,B}=0.6909$.
+
+Two very different warfarin-interaction hypotheses reproduce this datum exactly. The SEMA-consistent pair is $(\gamma_B,\boldsymbol\beta_{2,B})=(0.3,\,0.5)$; the no-modification pair is $(\gamma_B',\boldsymbol\beta_{2,B}')=(0.5717,\,0)$. Check both:
+$$
+\begin{aligned}
+0.4\,\operatorname{expit}(0.3)+0.6\,\operatorname{expit}(1.2)&=0.4(0.574443)+0.6(0.768525)=0.6909,\\
+0.4\,\operatorname{expit}(0.5717)+0.6\,\operatorname{expit}(0.9717)&=0.4(0.639166)+0.6(0.725419)=0.6909.
+\end{aligned}
+$$
+They are observationally identical in the AgD trial. Yet the conditional $A$-versus-$B$ log odds ratio they imply, $(\gamma_A-\gamma_B)+(\boldsymbol\beta_{2,A}-\boldsymbol\beta_{2,B})\bar x_{*}$ with the IPD-fixed $\boldsymbol\beta_{2,A}=0.5$, diverges as soon as the target differs from the AgD mix:
+
+| target mean $\bar x_{*}$ | SEMA pair | no-modification pair |
+|---|---|---|
+| $0.6$ (the AgD mix) | $0.500$ | $0.528$ |
+| $0.2$ (a younger target) | $0.500$ | $0.328$ |
+
+: Same aggregate data, two transported answers. {#tbl-mlnmr-semafail}
+
+The two answers are closest near the AgD mix, where they must nearly agree on the aggregate the data fixed, and separate as the target moves away. Only the AgD trial's own aggregate is pinned, which is why the comparison is trustworthy at $\mathcal P_{BC}$ and nowhere else. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**The geometry of the surviving comparison.** Without SEMA the AgD study pins exactly one functional of
+$(\gamma_B,\boldsymbol\beta_{2,B})$, the aggregate $B$-arm mean in its own population, which is the
+covariate-weighted combination matching $\mathcal P_{BC}$. The comparison is therefore identified at, and
+only at, $\mathcal P_{BC}$; pushing the estimand to any other target requires re-weighting the
+unidentified interaction and reopens the manifold. This is the regression mirror of the testability
+analysis @prp-testable-untestable-constancy: a single AgD contrast just-identifies the model at its own
+covariate mean and leaves SEMA both necessary for transport and beyond the reach of two-study data. The
+practical reading is the standard one of @phillippo2016tsd18: SEMA must be defended by pharmacological
+argument and sensitivity analysis, not extracted from a two-study network. $\blacktriangleleft$
+:::
+
+## Identifiability in larger networks {#sec-mlnmr-est-large}
+
+With three or more studies the rigid SEMA constraint can be relaxed. We state and prove the general
+identifiability theorem first under the shared-EM constraint, where a clean rank argument applies, then
+record the exchangeable and treatment-class variants, which weaken the constraint at the cost of moving
+from classical to Bayesian identifiability.
+
+Throughout, the network has $J\ge 3$ studies, some IPD and some AgD, on $K$ treatments with reference
+$1$, modeled by @eq-mlnmr-est-model. Recall from Chapter 15 the graph-theoretic notion of a connected
+network: form the graph whose vertices are treatments and whose edges join two treatments compared
+within some study; the network is *connected* when this graph is connected, equivalently when its
+incidence matrix has rank $K-1$ (@thm-fe-nma-identifiability, catalogue D.8).
+
+It helps to count once before the general statement. Take the smallest connected three-study network: $J=3$ studies on $K=3$ treatments (reference $1$), one IPD study on $\{1,2\}$ and AgD studies on $\{1,3\}$ and $\{2,3\}$, a single covariate ($p=1$), shared EM. The unknowns are three baselines $\mu_1,\mu_2,\mu_3$, two treatment effects $\gamma_2,\gamma_3$, one prognostic slope $\beta_1$, and one interaction $\beta_2$: eight scalars. The data reach them as follows. The IPD study identifies $\beta_1$ and $\beta_2$ (individual covariate variation) and its two cell intercepts. Each AgD arm mean pins one more cell intercept by monotonicity. The treatment graph has edges $12,13,23$ and is connected, so the identified cell intercepts $s_{jk}=\mu_j+\gamma_k$ separate into baselines and treatment effects exactly as in fixed-effects NMA. Every scalar is reached. The theorem is this accounting at scale, with the honest caveat that once interactions are allowed to differ by treatment (parts 2 and 3) the "IPD identifies the interaction" step must be re-earned class by class, or replaced by a prior.
+
+::: {#thm-mlnmr-identifiability-large}
+## Large-network identifiability under structured effect modification
+Suppose the network is connected, the link is strictly monotone, and each study contributes at least one
+observed arm whose mean (individual or aggregate) lies in the range of $g^{-1}$. Suppose further that the
+IPD studies collectively identify the network covariate coefficients, in the precise sense that the
+pooled IPD design satisfies the IPD-NMR rank conditions of @thm-ipd-nmr-identifiability for
+$\boldsymbol\beta_1$ and for the effect-modifier structure below. Then the full parameter vector is
+identified under any of the following structural assumptions on the interactions.
+
+1. **(Shared EM.)** $\boldsymbol\beta_{2,k}=\boldsymbol\beta_2$ for all $k\ge 2$ (one interaction
+vector). The parameters $(\{\mu_j\},\boldsymbol\beta_1,\{\gamma_k\}_{k\ge 2},\boldsymbol\beta_2)$ are
+classically identified.
+
+2. **(Treatment-class EM.)** The active treatments are partitioned into classes
+$\mathcal C_1,\dots,\mathcal C_m$, with $\boldsymbol\beta_{2,k}=\boldsymbol\beta_2^{(c)}$ for all $k$ in
+class $c$; the parameters are classically identified provided each class contains at least one treatment
+whose interaction is identified at the IPD level.
+
+3. **(Exchangeable EM.)** $\boldsymbol\beta_{2,k}=\boldsymbol\beta_2^{\mathrm{pop}}+\mathbf b_k$ with
+$\mathbf b_k\sim\mathcal N(\mathbf 0,\boldsymbol\Sigma_2)$ exchangeable across $k$ (@def-random-effects,
+@def-exchangeability). Under a proper prior on the hyperparameters
+$(\boldsymbol\beta_2^{\mathrm{pop}},\boldsymbol\Sigma_2)$ and on the random effects, the model is
+identified in the Bayesian sense (proper posterior), with $\boldsymbol\beta_2^{\mathrm{pop}}$ and the
+remaining parameters likelihood-identified as in part 1 and each $\boldsymbol\beta_{2,k}$ identified up to
+partial-pooling shrinkage.
+
+(Corresponds to H.22 in the proof catalogue.)
+:::
+
+::: {.proof}
+**Part 1 (shared EM).** Under the shared constraint the free parameters are the $J$ baselines
+$\{\mu_j\}$, the prognostic vector $\boldsymbol\beta_1\in\mathbb R^p$, the $K-1$ treatment effects
+$\{\gamma_k\}_{k\ge2}$, and the single interaction vector $\boldsymbol\beta_2\in\mathbb R^p$. We identify
+them in three blocks.
+
+*Block (i): the network covariate coefficients $(\boldsymbol\beta_1,\boldsymbol\beta_2)$.* By hypothesis
+the pooled IPD design satisfies the IPD-NMR conditions of @thm-ipd-nmr-identifiability. In an IPD study
+the linear predictor on a reference arm is $\mu_j+x^\top\boldsymbol\beta_1$ and on an active arm is
+$\mu_j+\gamma_k+x^\top(\boldsymbol\beta_1+\boldsymbol\beta_2)$; with within-study covariate variation of
+rank $p$ and at least one study carrying both a reference and an active arm, the individual-level GLM
+identifies the common slope $\boldsymbol\beta_1$ (from any arm) and the shared interaction
+$\boldsymbol\beta_2$ (from the slope difference between an active and the reference arm). These are
+network-level, so once identified by the IPD they are known throughout.
+
+*Block (ii): the per-arm intercepts $s_{jk}:=\mu_j+\gamma_k$ (the combined baseline-plus-treatment intercept of study $j$, arm $k$).* Treat $\boldsymbol\beta_1,\boldsymbol\beta_2$
+as known from block (i). For each study $j$ and each present arm $k$, the observed mean of that arm
+determines the scalar $s_{jk}$ uniquely: for an IPD arm, the individual-level intercept is identified by
+the GLM; for an AgD arm, the aggregate mean is
+$\theta_{\bullet jk}=\int g^{-1}(s_{jk}+x^\top\boldsymbol\beta_1+\boldsymbol\beta_2^\top x\,\mathbf 1\{k\ge2\})f_j(x)\,dx
+=\Theta_{jk}(s_{jk})$, a strictly increasing function of $s_{jk}$ by @lem-mlnmr-aggregate-monotone, so
+the observed $\theta_{\bullet jk}$ in the range of $g^{-1}$ pins $s_{jk}$ uniquely. Hence every present
+cell's combined intercept $s_{jk}=\mu_j+\gamma_k$ is identified.
+
+*Block (iii): separating baselines from treatment effects by connectivity.* The identified quantities
+$\{s_{jk}=\mu_j+\gamma_k:(j,k)\text{ present}\}$ are the cell values of a two-way (study by treatment)
+layout observed on the present cells. For two treatments $k,k'$ both present in study $j$, the within-study
+difference $s_{jk}-s_{jk'}=\gamma_k-\gamma_{k'}$ is identified and is free of $\mu_j$. These within-study
+treatment differences are exactly the edges of the network graph. Connectivity means the graph spans all
+$K$ treatments, so the system of identified differences $\{\gamma_k-\gamma_{k'}\}$ over the edges
+determines every $\gamma_k$ relative to the reference $\gamma_1=0$; this is the fixed-effects NMA
+identification of @thm-fe-nma-identifiability, whose incidence matrix has rank $K-1$ precisely under
+connectivity. With all $\gamma_k$ identified, each baseline follows from any present cell of its study,
+$\mu_j=s_{jk}-\gamma_k$. Blocks (i) to (iii) identify the entire parameter vector.
+
+**Part 2 (treatment-class EM).** Repeat block (i) within each class: by hypothesis each class
+$\mathcal C_c$ contains a treatment whose interaction is identified at the IPD level, so the class
+interaction $\boldsymbol\beta_2^{(c)}$ is identified there, and $\boldsymbol\beta_1$ is identified from
+any IPD arm. Blocks (ii) and (iii) are unchanged: the per-arm intercepts are pinned by monotonicity (now
+using the class interaction appropriate to each arm), and connectivity separates baselines from
+treatment effects exactly as before. The only new requirement, that each class carry IPD interaction
+information, is the block analogue of the shared case's single requirement.
+
+**Part 3 (exchangeable EM).** Now $\boldsymbol\beta_{2,k}=\boldsymbol\beta_2^{\mathrm{pop}}+\mathbf b_k$
+with $\mathbf b_k\sim\mathcal N(\mathbf 0,\boldsymbol\Sigma_2)$ iid across active treatments, a
+random-effects model (@def-random-effects) with the treatment-indexed interactions exchangeable
+(@def-exchangeability). The likelihood, after integrating out the random effects $\{\mathbf b_k\}$,
+depends on the hyperparameters $(\boldsymbol\beta_2^{\mathrm{pop}},\boldsymbol\Sigma_2)$ and the fixed
+parameters $(\{\mu_j\},\boldsymbol\beta_1,\{\gamma_k\})$. We argue Bayesian identifiability, the existence
+of a proper posterior under a proper prior, together with likelihood-identification of the network-level
+quantities.
+
+The fixed parameters $(\{\mu_j\},\boldsymbol\beta_1,\{\gamma_k\})$ are identified by blocks (ii) and (iii)
+of part 1, which used only the per-arm intercepts and connectivity and did not require the interactions
+to be equal. The population interaction $\boldsymbol\beta_2^{\mathrm{pop}}$ plays the role of the shared
+$\boldsymbol\beta_2$ in block (i): each treatment that carries IPD interaction information contributes an
+identified treatment-specific $\boldsymbol\beta_{2,k}$, and these are conditionally iid around
+$\boldsymbol\beta_2^{\mathrm{pop}}$ with variance $\boldsymbol\Sigma_2$; their mean identifies
+$\boldsymbol\beta_2^{\mathrm{pop}}$ and, when at least two treatments carry such information, their spread
+identifies $\boldsymbol\Sigma_2$ (the normal-normal structure of @thm-conjugate-normal applied to the
+identified interaction estimates). For a treatment carrying only AgD information, the single aggregate
+equation underdetermines $\boldsymbol\beta_{2,k}$ exactly as in @prp-mlnmr-sema-necessary; the
+random-effects prior regularizes it, and the posterior for $\boldsymbol\beta_{2,k}$ is the proper
+partial-pooling update, a precision-weighted compromise between the flat AgD information and the
+hyperprior $\mathcal N(\boldsymbol\beta_2^{\mathrm{pop}},\boldsymbol\Sigma_2)$, in the manner of
+@thm-conjugate-normal. With a proper prior on $(\boldsymbol\beta_2^{\mathrm{pop}},\boldsymbol\Sigma_2)$
+and on the random effects, the joint posterior integrates to one (the likelihood is bounded and the prior
+is proper, so their product has finite integral), which is Bayesian identifiability; and the
+network-level quantities are likelihood-identified as stated. Two points make this weaker than parts 1 and 2. First, *bounded likelihood*: each individual or aggregate contribution is a probability or density evaluated at a mean in the open range of $g^{-1}$, and for the standard families (Bernoulli, Poisson, normal with bounded dispersion) this contribution is bounded above uniformly in the parameters, so the product likelihood is bounded on the whole noncompact parameter space and cannot by itself make an improper prior integrable. Second, *prior-identified versus likelihood-identified*: an AgD-only treatment's interaction $\boldsymbol\beta_{2,k}$ is not pinned by the likelihood at all, since its profile likelihood is flat along the manifold of @prp-mlnmr-sema-necessary; what determines its posterior is the hyperprior together with partial pooling toward $\boldsymbol\beta_2^{\mathrm{pop}}$, and the data speak only through the treatments that carry IPD interaction information. That is the precise sense in which the exchangeable case buys flexibility with prior information rather than with data. $\square$
+:::
+
+::: {.remark}
+**A ladder of assumptions.** The three structures form a ladder from strongest to weakest constraint.
+Shared EM (part 1) imposes one interaction vector for the whole network and is classically identified by
+a clean rank argument; it is appropriate when the treatments are pharmacologically alike. Treatment-class
+EM (part 2) allows the interaction to differ across drug classes but not within them, classically
+identified provided each class is anchored by IPD interaction information; it suits networks spanning
+mechanistically distinct classes. Exchangeable EM (part 3) lets every treatment have its own interaction
+while borrowing strength through a common distribution; it is identified only in the Bayesian sense,
+because an AgD-only treatment's interaction is not pinned by the likelihood and survives only through the
+prior. The honest summary is that flexibility in the interaction structure is paid for in assumption
+strength and in reliance on the prior, and the choice should track network size and prior knowledge, as
+@phillippo2019thesis recommends. The frequentist rank argument of parts 1 and 2 has no analogue for the
+AgD-only interactions of part 3; this is a genuine limitation, not an oversight. $\blacktriangleleft$
+:::
+
+@tbl-mlnmr-ladder summarizes the three structures and, importantly, what "identified" means for each.
+
+| Structure | Constraint on interactions | Identification | When appropriate |
+|---|---|---|---|
+| Shared EM | one $\boldsymbol\beta_2$ for the whole network | classical (rank argument) | treatments pharmacologically alike |
+| Treatment-class EM | one $\boldsymbol\beta_2^{(c)}$ per drug class | classical, if each class carries IPD | mechanistically distinct classes |
+| Exchangeable EM | each $\boldsymbol\beta_{2,k}$ its own, from a common distribution | Bayesian only (proper posterior) | many treatments, prior knowledge available |
+
+: The ladder of effect-modification structures. "Classical" identification means the data alone pin the parameter; "Bayesian only" means an AgD-only interaction is pinned by the prior and by partial pooling toward the network mean, not by the likelihood. {#tbl-mlnmr-ladder}
+
+::: {.remark}
+**Where each hypothesis is spent.** Connectivity (the rank-$(K-1)$ incidence condition of
+@thm-fe-nma-identifiability) is spent in block (iii) to separate the $\gamma_k$ from the $\mu_j$;
+disconnect the network and a component of treatments floats free of the reference, exactly the NMA
+failure mode of Chapter 15. The IPD interaction information is spent in block (i); remove it and
+$\boldsymbol\beta_2$ (or $\boldsymbol\beta_2^{(c)}$, or $\boldsymbol\beta_2^{\mathrm{pop}}$) is
+unidentified, the multi-study analogue of @prp-mlnmr-sema-necessary. The monotonicity lemma is spent in
+block (ii); it is what lets an AgD arm contribute its one scalar intercept. Each "at least one observed
+arm per study" assumption ensures every baseline is touched by some cell. $\blacktriangleleft$
+:::
+
+## ML-NMR contains NMA, IPD-NMR, MAIC, and STC {#sec-mlnmr-est-generality}
+
+We close with the result that organizes Parts III to V: every earlier synthesis and adjustment method is
+ML-NMR with a component removed. Two of the reductions are exact at the level of the model and likelihood
+(network meta-analysis and IPD network meta-regression); two are reductions of estimand and probability
+limit, with exact estimator coincidence in the linear case (MAIC and STC).
+
+@tbl-mlnmr-roadmap is the map the theorem proves: each earlier method is this one model with a piece switched off. Read it before the formal statement.
+
+| Method | What is switched off or restricted | The aggregation integral @eq-mlnmr-est-aggmean | Resulting estimand | Data used to fit |
+|---|---|---|---|---|
+| ML-NMR (full) | nothing | evaluated on the response scale | contrast in *any* target $\mathcal P^{*}$ | IPD patients plus AgD outcomes and moments |
+| Standard NMA | $\boldsymbol\beta_1=\mathbf 0$ and $\boldsymbol\beta_{2,k}=\mathbf 0$ | collapses to $g^{-1}(\mu_j+\gamma_k)$; no integration | $\gamma_b-\gamma_a$, the same in every population | arm-level outcomes only |
+| IPD-NMR | every study is IPD | never invoked; covariates observed | individual-level contrasts | all patients |
+| STC | fit the surface on IPD only; fix target to $\mathcal P_{BC}$ | the same integral, over $f_{BC}$ | comparator-population contrast | IPD outcomes only |
+| MAIC | weight IPD to the $\mathcal P_{BC}$ moments | replaced by moment matching | comparator-population contrast | IPD outcomes, reweighted |
+
+: The generality theorem as a roadmap. NMA is the row where the integral *collapses* because the integrand is constant (both covariate terms are zero); IPD-NMR is the row where the integral is *never needed*; STC keeps the very same integral but fits and targets more narrowly; MAIC replaces the integral by moment matching. {#tbl-mlnmr-roadmap}
+
+One line to carry away: ML-NMR and MAIC agree exactly when the conditional outcome mean is affine (linear plus constant) in the covariates, and where the mean is genuinely nonlinear, ML-NMR's explicit integration over the whole distribution beats MAIC's matching of a few moments. STC and ML-NMR share the identical standardization integral; they differ only in what data fit the surface (IPD alone for STC, IPD and AgD jointly for ML-NMR) and in which target is allowed (the comparator for STC, any described population for ML-NMR).
+
+::: {#thm-mlnmr-generalizes-nma}
+## The generality theorem
+The ML-NMR model @eq-mlnmr-est-model, its combined likelihood @thm-aggregation, and its
+target-population estimand @thm-target-population-integral contain the following as special cases.
+
+**(a) Standard network meta-analysis (exact).** Setting $\boldsymbol\beta_1=\mathbf 0$ and
+$\boldsymbol\beta_{2,k}=\mathbf 0$ for all $k$ reduces @eq-mlnmr-est-model to $g(\theta_{jk})=\mu_j+\gamma_k$,
+the fixed-effects NMA model. The aggregation integral @eq-mlnmr-est-aggmean becomes exact with no
+integration, $\theta_{\bullet jk}=g^{-1}(\mu_j+\gamma_k)$, the combined likelihood reduces to the
+standard NMA likelihood in $(\{\mu_j\},\{\gamma_k\})$, and the target contrast is the
+population-independent network contrast $\Delta_{ab}(\mathcal P^{*})=\gamma_b-\gamma_a$ for every
+$\mathcal P^{*}$. In the two-study network this contrast is the Bucher estimand, consistent by
+@thm-bucher-unbiased; in larger networks it is the NMA estimand identified by @thm-fe-nma-identifiability.
+
+**(b) IPD network meta-regression (exact).** If every study is IPD, every covariate $x_{ijk}$ is
+observed, the aggregation integral is never invoked, and the combined likelihood reduces to the
+IPD-NMR likelihood of @thm-ipd-nmr-identifiability.
+
+**(c) MAIC (estimand and limit).** In the anchored triangle of @sec-mlnmr-est-2study under SEMA, with
+target $\mathcal P^{*}=\mathcal P_{BC}$ the comparator population, the ML-NMR target contrast
+$\Delta_{BA}(\mathcal P_{BC})$ and the anchored MAIC estimator target the *same* estimand
+$d_{BA(\mathcal P_{BC})}$; under the affine-mean (linear-surface, first-moment) conditions of
+@thm-anchored-maic-consistency the two estimators have the same probability limit.
+
+**(d) STC (exact functional identity).** The ML-NMR aggregation integral @eq-mlnmr-est-aggmean, applied
+to the IPD-fitted linear predictor and a target covariate distribution, is identically the marginal STC
+predicted mean of @thm-marginal-stc-unbiased. Hence ML-NMR restricted to "fit the outcome surface on the
+IPD study alone, integrate over the comparator distribution" reproduces marginal STC, consistent by
+@thm-stc-consistency.
+
+(Corresponds to H.23 in the proof catalogue.)
+:::
+
+::: {.proof}
+**(a).** Substituting $\boldsymbol\beta_1=\mathbf 0$ and $\boldsymbol\beta_{2,k}=\mathbf 0$ into
+@eq-mlnmr-est-model gives $\eta_{jk}(x)=\mu_j+\gamma_k$, independent of $x$. The aggregation integral
+@eq-mlnmr-est-aggmean integrates the constant $g^{-1}(\mu_j+\gamma_k)$ against the probability density
+$f_j$, returning the constant itself: $\theta_{\bullet jk}=g^{-1}(\mu_j+\gamma_k)$, with no covariate
+distribution entering. The aggregate likelihood thus reduces to the usual arm-level NMA likelihood in the
+baselines and treatment effects, and the IPD likelihood reduces likewise (the covariate terms vanish), so
+the combined likelihood is the standard NMA likelihood. For the estimand, the target arm mean
+@eq-mlnmr-est-armmean is $\bar\theta_t(\mathcal P^{*})=g^{-1}(\mu_{*}+\gamma_t)$ (again the integral of a
+constant), so
+$\Delta_{ab}(\mathcal P^{*})=g(g^{-1}(\mu_{*}+\gamma_b))-g(g^{-1}(\mu_{*}+\gamma_a))=\gamma_b-\gamma_a$,
+free of $\mu_{*}$ and of $f_{*}$, hence the same in every population: with no effect modification the
+contrast does not vary across populations, which is transitivity holding exactly. In the two-study
+network this is the Bucher estimand $d_{BA}=\gamma_B-\gamma_A$ chained from the two arm contrasts, whose
+estimator is unbiased under transitivity by @thm-bucher-unbiased; in larger connected networks it is the
+NMA contrast identified by @thm-fe-nma-identifiability.
+
+**(b).** If study $j$ is IPD then each individual's covariate $x_{ijk}$ is observed, so the individual
+conditional likelihood $\pi_{\mathrm{Ind}}(y_{ijk}\mid g^{-1}(\eta_{jk}(x_{ijk})))$ is evaluated at the
+known $x_{ijk}$ with no marginalization; this is the IPD term of @thm-aggregation, and the integral form
+@eq-mlnmr-est-aggmean is simply not used. With every study IPD the combined likelihood is the product of
+such individual terms over all studies, which is exactly the IPD-NMR likelihood whose parameters
+@thm-ipd-nmr-identifiability identifies under the stated rank conditions.
+
+**(c).** By @thm-mlnmr-identifiability-2study and @thm-target-population-integral, the ML-NMR estimand at
+$\mathcal P^{*}=\mathcal P_{BC}$ is the identified marginal contrast
+$\Delta_{BA}(\mathcal P_{BC})=g(\bar\theta_A(\mathcal P_{BC}))-g(\bar\theta_B(\mathcal P_{BC}))$, where
+$\bar\theta_t(\mathcal P_{BC})=\int g^{-1}(\eta^{BC}_t(x))f_{BC}(x)\,dx$ is the arm-$t$ mean integrated
+over the comparator distribution. This is, by definition, the marginal $A$-versus-$B$ effect in
+$\mathcal P_{BC}$, namely $d_{BA(\mathcal P_{BC})}$. The anchored MAIC estimator of
+@thm-anchored-maic-consistency is consistent for the same target $d_{BA(\mathcal P_{BC})}$ under its
+hypotheses (conditional constancy of relative effects, SEMA, balance of every imbalanced effect modifier,
+overlap). Hence both methods target $d_{BA(\mathcal P_{BC})}$. For the coincidence of limits under a
+linear surface, note that MAIC's arm mean is the weighted IPD average
+$\hat\mu_t^{\mathrm{MAIC}}=\sum_i w_i\mathbf 1\{T_i=t\}Y_i/\sum_i w_i\mathbf 1\{T_i=t\}$ whose probability
+limit, under the affine-mean condition $\mu_t(x)=a_0+\mathbf a^\top x$ of
+@thm-anchored-maic-consistency, is $a_0+\mathbf a^\top\bar x_{BC}=\mu_t(\bar x_{BC})$ (weighted balance
+forces the weighted covariate mean to $\bar x_{BC}$). ML-NMR's arm mean is the integral
+$\int\mu_t(x)f_{BC}(x)\,dx$, which for the same affine $\mu_t$ equals $a_0+\mathbf a^\top\bar x_{BC}=\mu_t(\bar x_{BC})$
+by linearity of the integral. The two probability limits coincide, $\hat\mu_t^{\mathrm{MAIC}}$ and the
+ML-NMR arm mean both converging to $\mu_t(\bar x_{BC})$; differencing on the link scale and combining with
+the comparator contrast gives the same limit for the two indirect estimators. This is the
+weighting-versus-modeling coincidence already proved for MAIC and STC in @thm-maic-stc-equivalence,
+restated here with ML-NMR's integral playing the role of STC's regression prediction. On a nonlinear
+surface the two limits can differ: ML-NMR integrates the full distribution $f_{BC}$ while MAIC matches
+only the moments it balances, so ML-NMR generalizes MAIC by replacing moment matching with explicit
+integration.
+
+**(d).** The marginal STC predicted mean for arm $k$ in a population $\mathcal P$ is, by
+@thm-marginal-stc-unbiased, the standardization (g-computation) of the IPD-fitted conditional surface
+over that population's covariate distribution,
+$$
+\hat\mu_k^{\mathrm{STC}}(\mathcal P)=\int_{\mathcal X} g^{-1}\!\big(\hat\eta_k(x)\big)\,f_{\mathcal P}(x)\,dx,
+$$
+where $\hat\eta_k$ is the linear predictor fitted on the IPD study. The ML-NMR aggregate mean
+@eq-mlnmr-est-aggmean for the same arm and the same covariate distribution is the identical integral
+$\int g^{-1}(\eta_k(x))f_{\mathcal P}(x)\,dx$. The two expressions are the same functional of the surface
+and the density; the only differences are upstream and downstream of this integral. Upstream: STC fits
+$\hat\eta_k$ by maximum likelihood on the IPD study alone, whereas ML-NMR fits $\eta_k$ jointly across
+the IPD and AgD studies through @thm-aggregation, so the AgD *outcomes* (not merely the AgD covariate
+moments) inform the fit. Downstream: STC fixes $\mathcal P$ to the comparator, whereas ML-NMR allows any
+target by @thm-target-population-integral, and ML-NMR evaluates the integral by the Sobol'-copula
+pipeline of @thm-hypercube-integration against a reconstructed $f_{\mathcal P}$, whereas STC typically
+uses a Monte Carlo average over a simulated comparator sample. Restricting ML-NMR to fit on the IPD alone
+and to integrate over the comparator distribution removes both differences and recovers marginal STC
+exactly; its consistency is then @thm-stc-consistency. $\square$
+:::
+
+::: {.remark}
+**The summit view.** Read downward, @thm-mlnmr-generalizes-nma says ML-NMR is the maximally informative
+model in this book: it uses individual covariates where they exist (the IPD terms), aggregate outcomes
+and moments where they do not (the AgD terms and the copula reconstruction), treatment-by-covariate
+interactions (the $\boldsymbol\beta_{2,k}$), and the full network structure (connectivity). Switch off
+the covariate effects and it is NMA (a); give it IPD everywhere and it is IPD-NMR (b); restrict it to a
+two-study anchored triangle reporting in the comparator population and it agrees with MAIC (c) and STC
+(d). It never *loses* information relative to a special case, which is the formal justification, made
+precise by parts (a) to (d), for taking ML-NMR as the default whenever IPD and AgD coexist. The two
+adjustments it generalizes correspond to its two computational ingredients: MAIC is the weighting shadow
+of integrating over the comparator's covariate mean, and STC is the regression shadow of integrating the
+fitted surface; ML-NMR keeps both, the joint outcome model and the explicit integration, and adds the
+freedom to choose the target population. The unanchored extension of Chapter 26 removes the anchor from
+this picture, at the cost of the stronger absolute-constancy assumptions catalogued in
+@thm-unanchored-maic-consistency. $\blacktriangleleft$
+:::
+
+## A worked target-population estimate {#sec-mlnmr-est-example}
+
+We carry a complete target-population calculation from a fitted ML-NMR model to relative effects in two
+different target populations, choosing a single binary effect modifier so that every integral is a
+two-term sum and every number can be checked with a calculator. The example exhibits, concretely, the
+three phenomena of @thm-target-population-integral: integration over a target covariate distribution
+(part a), the conditional contrast depending only on the covariate mean (part b), and the marginal
+contrast on a non-collapsible scale being genuinely population-specific (part c).
+
+::: {#exm-mlnmr-new-target}
+## Population-adjusted estimates in two target populations
+A connected network with an IPD trial on $\{A,C\}$ and an AgD trial on $\{B,C\}$ has been fitted under
+SEMA on the logit scale, with a single binary effect modifier $X\in\{0,1\}$. This is the anticoagulant network of @exm-mlnmr-anticoagulant: $A$ the new oral anticoagulant, $B$ warfarin, $C$ the shared comparator, the event a major bleed, and $X=1$ an older patient. Throughout, $\operatorname{expit}(z)=1/(1+e^{-z})$ is the inverse-logit, so $\operatorname{expit}(\eta)$ is the modeled bleeding probability at linear predictor $\eta$. The fitted network-level
+coefficients (treated as exact for transparency, as in the worked examples of Chapters 18 and 19) are
+$$
+\boldsymbol\beta_1=0.4,\quad \boldsymbol\beta_2=0.5,\quad \gamma_A=0.8,\quad \gamma_B=0.3,\quad \gamma_C=0,
+$$
+so the arm linear predictors in a population with reference baseline $\mu_{*}$ are, by @eq-mlnmr-est-armmean,
+$$
+\eta_C(x)=\mu_{*}+0.4x,\quad
+\eta_A(x)=\mu_{*}+0.4x+0.8+0.5x,\quad
+\eta_B(x)=\mu_{*}+0.4x+0.3+0.5x.
+$$
+The outcome is unfavorable (the event is bad), so on the logit scale a larger value of an
+active-versus-$C$ contrast means the active treatment raises the odds of the bad event relative to $C$.
+
+**Target $\mathcal P^{*}$: $\Pr(X=1)=0.6$, baseline $\mu_{*}=-0.5$.** The linear predictors and their
+inverse-logits at the two covariate values are
+$$
+\begin{array}{llll}
+\eta_C(0)=-0.5, & \operatorname{expit}=0.377541; & \eta_C(1)=-0.1, & \operatorname{expit}=0.475021;\\
+\eta_A(0)=\ \ 0.3, & \operatorname{expit}=0.574443; & \eta_A(1)=\ \ 1.2, & \operatorname{expit}=0.768525;\\
+\eta_B(0)=-0.2, & \operatorname{expit}=0.450166; & \eta_B(1)=\ \ 0.7, & \operatorname{expit}=0.668188.
+\end{array}
+$$
+The target arm means @eq-mlnmr-est-armmean are the $0.4/0.6$ weighted averages over $X$:
+$$
+\bar\theta_C=0.4(0.377541)+0.6(0.475021)=0.436029,
+$$
+$$
+\bar\theta_A=0.4(0.574443)+0.6(0.768525)=0.690892,\qquad
+\bar\theta_B=0.4(0.450166)+0.6(0.668188)=0.580979.
+$$
+Their logits are $g(\bar\theta_C)=-0.257295$, $g(\bar\theta_A)=0.804292$, $g(\bar\theta_B)=0.326794$, so
+the target *marginal* contrasts @eq-mlnmr-est-marg are
+$$
+\Delta_{CA}(\mathcal P^{*})=0.804292-(-0.257295)=1.061587\quad(A\text{ versus }C),
+$$
+$$
+\Delta_{CB}(\mathcal P^{*})=0.326794-(-0.257295)=0.584089\quad(B\text{ versus }C),
+$$
+$$
+\Delta_{BA}(\mathcal P^{*})=0.804292-0.326794=0.477498\quad(A\text{ versus }B).
+$$
+The anchored identity holds exactly: $\Delta_{CA}-\Delta_{CB}=1.061587-0.584089=0.477498=\Delta_{BA}$,
+confirming that the $A$-versus-$B$ marginal effect is the difference of the two active-versus-$C$ marginal
+effects in the *same* population, the network-consistency relation that licenses the indirect comparison. In words, in this older target (60 percent of patients in the older band) the model says the new drug $A$ raises the odds of a major bleed relative to $C$ by a marginal log odds ratio of $1.06$ (an odds ratio near $2.9$), warfarin $B$ raises them by $0.58$ (odds ratio near $1.8$), and $A$ versus $B$ is a marginal log odds ratio of $0.48$ (odds ratio near $1.6$): the new drug bleeds more than warfarin in this population.
+
+**The conditional contrasts.** By @eq-mlnmr-est-cond-mean the population-average conditional contrasts on
+the logit scale depend only on the covariate mean $\bar x_{*}=0.6$:
+$$
+\Delta^{\mathrm{Cond}}_{CA}=\gamma_A+\boldsymbol\beta_2\bar x_{*}=0.8+0.5(0.6)=1.1,\quad
+\Delta^{\mathrm{Cond}}_{CB}=0.3+0.5(0.6)=0.6,\quad
+\Delta^{\mathrm{Cond}}_{BA}=\gamma_A-\gamma_B=0.5.
+$$
+The $A$-versus-$B$ conditional contrast is the SEMA constant $0.5$ of @eq-mlnmr-est-2study-cond, with the
+interaction terms canceling. The marginal $A$-versus-$B$ effect $0.477498$ is smaller in magnitude than
+the conditional $0.5$: a non-collapsibility gap of $0.022502$, the attenuation toward the null that
+marginalizing a logistic model over a covariate produces (@def-non-collapsibility, @thm-aggregation-bias).
+For the $A$-versus-$C$ contrast the gap is $1.1-1.061587=0.038413$.
+
+**Target $\mathcal P^{**}$: $\Pr(X=1)=0.2$, same baseline $\mu_{*}=-0.5$.** The inverse-logits are
+unchanged (the linear predictors do not depend on the population's covariate distribution); only the
+averaging weights change, to $0.8/0.2$:
+$$
+\bar\theta_C=0.397037,\qquad \bar\theta_A=0.613259,\qquad \bar\theta_B=0.493770,
+$$
+with logits $-0.417828$, $0.461032$, $-0.024920$, giving marginal contrasts
+$$
+\Delta_{CA}(\mathcal P^{**})=0.878860,\qquad
+\Delta_{CB}(\mathcal P^{**})=0.392908,\qquad
+\Delta_{BA}(\mathcal P^{**})=0.485952.
+$$
+The conditional contrasts move with the new mean $\bar x_{*}=0.2$:
+$\Delta^{\mathrm{Cond}}_{CA}=0.8+0.5(0.2)=0.9$ and $\Delta^{\mathrm{Cond}}_{CB}=0.3+0.5(0.2)=0.4$, while
+$\Delta^{\mathrm{Cond}}_{BA}=\gamma_A-\gamma_B=0.5$ as before.
+
+**What the two targets show.** The $A$-versus-$C$ estimate is genuinely population-specific: its
+conditional value moves from $1.1$ in $\mathcal P^{*}$ to $0.9$ in $\mathcal P^{**}$, and its marginal
+value from $1.061587$ to $0.878860$, simply because the effect modifier $X$ has a different mean in the
+two populations and $\boldsymbol\beta_2\neq 0$. This is effect modification transported: the same fitted
+model gives different relative effects in different target populations, which is exactly the flexibility
+of @thm-target-population-integral(a) that MAIC and STC, locked to the comparator population, do not
+offer. The $A$-versus-$B$ conditional contrast, by contrast, is pinned at $\gamma_A-\gamma_B=0.5$ in
+*both* populations by SEMA (@eq-mlnmr-est-2study-cond); yet its *marginal* value still drifts, from
+$0.477498$ to $0.485952$, a residual population dependence that is pure non-collapsibility
+(@thm-target-population-integral(c)): even with the conditional effect fixed, the marginal odds ratio
+depends on the covariate spread and baseline risk of the target. A practitioner reporting a marginal odds
+ratio must therefore name the target population; a practitioner reporting the conditional log odds ratio
+under SEMA may quote the single number $0.5$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Baseline risk also matters, on a non-collapsible scale.** Repeating the $\mathcal P^{*}$ calculation
+($\Pr(X=1)=0.6$) but with a high-risk baseline $\mu_{*}=1.0$ instead of $-0.5$ gives arm means
+$\bar\theta_C=0.773734$, $\bar\theta_A=0.905476$, $\bar\theta_B=0.854484$, hence a marginal $A$-versus-$C$
+contrast $\Delta_{CA}=1.030086$ and an $A$-versus-$C$ non-collapsibility gap of $1.1-1.030086=0.069914$,
+nearly double the gap $0.038413$ at the low-risk baseline. The conditional contrast is $1.1$ in both,
+unchanged by the baseline. This is the second half of @thm-target-population-integral(c): on a
+non-collapsible scale the marginal estimand depends on the target baseline $\mu_{*}$, not only on the
+covariate distribution, which is why producing a marginal target-population estimate requires the target
+baseline risk as an input. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**The same example on the identity scale (collapsibility in one line).** Rerun target $\mathcal P^{*}$ ($\Pr(X=1)=0.6$, $\mu_{*}=-0.5$) on the identity link, so $\theta_t(x)=\eta_t(x)$ and the contrast is a plain difference of means. The arm means are the weighted linear predictors $\bar\theta_C=0.4(-0.5)+0.6(-0.1)=-0.26$, $\bar\theta_A=0.4(0.3)+0.6(1.2)=0.84$, and $\bar\theta_B=0.4(-0.2)+0.6(0.7)=0.34$, so the marginal contrasts are $\Delta_{CA}=1.10$, $\Delta_{CB}=0.60$, $\Delta_{BA}=0.50$. These equal the conditional contrasts $\gamma_A+\boldsymbol\beta_2\bar x_{*}=1.10$, $0.60$, and $\gamma_A-\gamma_B=0.50$ exactly: on a collapsible scale marginal and conditional coincide (@thm-target-population-integral(c)). The baseline $\mu_{*}$ has vanished from every contrast, because on the identity scale it is an additive shift common to both arms; changing it to $\mu_{*}=1.0$ leaves all three differences unchanged. Contrast this with the logit scale above, where the baseline did not cancel and the $A$-versus-$B$ marginal effect drifted with the population. $\blacktriangleleft$
+:::
+
+## Notes and references {#sec-mlnmr-est-notes}
+
+Multilevel network meta-regression and all four results of this chapter are due to @phillippo2020mlnmr
+and the thesis @phillippo2019thesis (Chapter 4 for the model, estimands, and identifiability; the
+target-population estimand is §4.4, the two-study and large-network identifiability §4.5 and §4.6, and
+the generality discussion §4.1 and §4.7). The chapter corresponds to results H.20 (the target-population
+estimand integral, @thm-target-population-integral), H.21 (two-study identifiability under SEMA,
+@thm-mlnmr-identifiability-2study), H.22 (large-network identifiability, @thm-mlnmr-identifiability-large),
+and H.23 (the generality theorem, @thm-mlnmr-generalizes-nma) of the proof catalogue in
+`proofs/H_ml_nmr.md`.
+
+The target-population estimand @thm-target-population-integral is the ML-NMR realization of the transport
+g-formula estimands of Chapter 17 (@thm-target-population-estimand, catalogue E.12), which in turn rest on
+the conditional-transportability theory of Chapter 12; the collapsibility dichotomy in part (c) is the
+non-collapsibility of Chapter 7 (@def-non-collapsibility) made operational, the same phenomenon that
+forces the marginal-versus-conditional choice in STC (Chapter 19) and that the worked example exhibits
+numerically. The expansion beyond the base draft of @phillippo2019thesis is in three places. First, the
+catalogue's one-line claim that "the AgD trial identifies $\gamma_B$ via the aggregate likelihood" is here
+given a complete proof through the monotonicity lemma @lem-mlnmr-aggregate-monotone, which isolates the
+elementary fact (an aggregate mean is strictly increasing in any additive shift of the linear predictor)
+that makes a single aggregate mean identify a single scalar; the same lemma then powers the large-network
+argument. Second, the no-SEMA non-identification is upgraded from a remark to the proposition
+@prp-mlnmr-sema-necessary, with an explicit binary-covariate two-point construction showing the comparison
+survives in the comparator population and is lost at every other target, the regression mirror of the
+testability analysis @prp-testable-untestable-constancy of Chapter 17. Third, the large-network theorem
+@thm-mlnmr-identifiability-large is given a full block rank argument for the shared and treatment-class
+cases (IPD identifies the interaction; monotonicity identifies the per-arm intercepts; connectivity, in
+the incidence-rank sense of @thm-fe-nma-identifiability, separates baselines from treatment effects),
+with the exchangeable case treated honestly as Bayesian identifiability via the normal-normal partial
+pooling of @thm-conjugate-normal; the absence of a frequentist rank statement for AgD-only interactions
+in the exchangeable case is recorded as a limitation, following @phillippo2019thesis §4.6.
+
+The generality theorem @thm-mlnmr-generalizes-nma collects reductions to the fixed-effects NMA of
+Chapter 15 (@thm-fe-nma-identifiability) and Bucher of Chapter 14 (@thm-bucher-unbiased), to the IPD-NMR
+of Chapter 15 (@thm-ipd-nmr-identifiability), and to the population-adjustment methods of Part IV: MAIC
+(@thm-anchored-maic-consistency) and STC (@thm-stc-consistency, @thm-marginal-stc-unbiased). The STC
+reduction is the exact functional identity that the ML-NMR aggregation integral equals the marginal STC
+predicted mean, so STC is ML-NMR with the outcome model fitted on the IPD alone and the target fixed to
+the comparator; the MAIC reduction is the coincidence of probability limits under a linear surface,
+already proved in another guise as the MAIC-STC equivalence @thm-maic-stc-equivalence. The complementary
+fact that ML-NMR, like STC and unlike MAIC, does not require covariate overlap but does require correct
+specification on the target support is the regression-versus-weighting trade-off of Chapter 19, and it is
+why ML-NMR can report estimates in target populations that no single trial sampled. Ecological bias
+(@def-ecological-bias, Chapter 16), the bias of naive meta-regression on study-level means, is exactly
+what the response-scale integration of @eq-mlnmr-est-armmean avoids, by @thm-aggregation-bias.
+
+ML-NMR has no counterpart in the companion Coq development: there is no `ML_NMR.v` (or aggregation or
+network-meta-regression file) in `theories/`, and the manuscript records this deliberately, because the
+substantive content of ML-NMR is numerical (quasi-Monte Carlo integration, Sobol' sequences, copulae)
+rather than algebraic, and the algebraic core, the aggregation identity, is a single application of
+Fubini and conditional independence that would add little once a measure-theoretic probability layer were
+in place. Accordingly none of the results in this chapter carries a machine-checked tag; the
+identifiability building blocks they invoke, the NMA and IPD-NMR rank theorems of Chapter 15, are
+likewise pen-and-paper in this development. Chapter 30 discusses what is and is not in the Coq tree.
+
+## Exercises {#sec-mlnmr-est-exercises}
+
+Throughout, a $\star$ marks an exercise whose full solution appears in Appendix F. The exercises are labeled by type and roughly ordered from warm-up and interpretation through computation to proof and challenge; a beginner should manage the two warm-ups and @exr-mlnmr-third-target after one reading, while @exr-mlnmr-monotone-general and the starred exercises are proof-building challenges.
+
+::: {#exr-mlnmr-which-population}
+**Warm-up (interpretation). Which population, in words.** For the anticoagulant decision of @exm-mlnmr-anticoagulant, a NICE submission wants the effect of $A$ versus $B$ in the UK NHS population, which is older than the IPD trial and differs from the AgD trial too. State which population's covariate distribution ML-NMR should average the fitted surface over, and explain in one or two sentences why MAIC and STC, as defined in Part IV, cannot target that population directly. Which single extra input does a *marginal* odds ratio in that population require that a *conditional* log odds ratio does not?
+:::
+
+::: {#exr-mlnmr-inputs-checklist}
+**Warm-up (reading the tables). What must you supply?** Using @tbl-mlnmr-scales and @tbl-mlnmr-inputs, list the target-population inputs needed to report each of: (i) a conditional log odds ratio; (ii) a marginal odds ratio; (iii) a risk difference on the identity scale. In each case say whether the target baseline risk $\mu_{*}$ is needed, and give the one-sentence reason (collapsible or not).
+:::
+
+::: {#exr-mlnmr-third-target}
+**Computation. A third target by hand.** Continue @exm-mlnmr-new-target with a third target population having
+$\Pr(X=1)=0.5$ and baseline $\mu_{*}=0$. Compute the six inverse-logit values, the three target arm means
+$\bar\theta_A,\bar\theta_B,\bar\theta_C$, the three marginal contrasts $\Delta_{CA},\Delta_{CB},\Delta_{BA}$,
+and verify the anchored identity $\Delta_{CA}-\Delta_{CB}=\Delta_{BA}$ to six decimals. Report the
+conditional contrasts from @eq-mlnmr-est-cond-mean and the $A$-versus-$B$ non-collapsibility gap.
+:::
+
+::: {#exr-mlnmr-identity-link}
+**Interpretation and computation. Collapsibility kills the population dependence.** Redo @exm-mlnmr-new-target on the identity link
+(replace $\operatorname{expit}$ by the identity, so $\theta_t(x)=\eta_t(x)$), using the same coefficients
+and the two targets $\mathcal P^{*}$ ($\Pr(X=1)=0.6$) and $\mathcal P^{**}$ ($\Pr(X=1)=0.2$). Show that
+the marginal and conditional contrasts coincide, that the $A$-versus-$B$ contrast equals $\gamma_A-\gamma_B=0.5$
+in *both* targets, and that the $A$-versus-$C$ contrast depends on the target only through $\bar x_{*}$.
+Explain, by reference to @thm-identity-link-exact and @thm-target-population-integral(c), why the baseline
+$\mu_{*}$ has now disappeared from every contrast.
+:::
+
+::: {#exr-mlnmr-monotone-general}
+**Challenge (proof). Monotonicity with a tilt instead of a shift.** Replace the additive shift in
+@lem-mlnmr-aggregate-monotone by a one-parameter family $c\mapsto\Theta_{\mathbf v}(c):=\int g^{-1}(c\,\mathbf v^\top x+h(x))f(x)\,dx$
+that *tilts* the linear predictor along a fixed direction $\mathbf v$. Show that $\Theta_{\mathbf v}$ need
+*not* be monotone in $c$, and exhibit a density $f$ on $\{0,1\}$ (or on a two-point support) and a
+direction for which two values of $c$ give the same $\Theta_{\mathbf v}$. Explain how this
+non-monotonicity is exactly the obstruction that defeats identification of a free interaction vector from
+one aggregate mean, connecting to the manifold in @prp-mlnmr-sema-necessary.
+:::
+
+::: {#exr-mlnmr-network-rank}
+**Computation. Counting in a three-study network.** Consider $J=3$ studies on $K=3$ treatments $\{1,2,3\}$ (reference
+$1$): study $1$ is IPD on $\{1,2\}$, study $2$ is AgD on $\{1,3\}$, study $3$ is AgD on $\{2,3\}$, with a
+single covariate ($p=1$) and shared EM. List the free parameters and their count, draw the treatment
+graph and verify connectivity, and walk through blocks (i) to (iii) of @thm-mlnmr-identifiability-large to
+confirm that every parameter is identified. Which single arm supplies the shared interaction
+$\boldsymbol\beta_2$, and why must it be the IPD arm?
+:::
+
+::: {#exr-mlnmr-sema-gap}
+**($\star$) Challenge (derivation). A closed form for the non-collapsibility gap.** For a single binary effect modifier
+$X\in\{0,1\}$ with $\Pr(X=1)=q$, the logit link, and SEMA, derive a closed-form expression for the
+$A$-versus-$B$ non-collapsibility gap
+$\Delta^{\mathrm{Cond}}_{BA}-\Delta_{BA}(\mathcal P^{*})=(\gamma_A-\gamma_B)-\Delta_{BA}(\mathcal P^{*})$
+in terms of $\mu_{*},\boldsymbol\beta_1,\boldsymbol\beta_2,\gamma_A,\gamma_B,q$. Prove that the gap is zero
+when $q\in\{0,1\}$ (a degenerate covariate) and when $\boldsymbol\beta_1+\boldsymbol\beta_2=0$ (no spread
+in the active-arm linear predictors), in agreement with @thm-aggregation-bias, and confirm your formula
+reproduces the value $0.022502$ at the inputs of @exm-mlnmr-new-target. Discuss why the gap, unlike the
+conditional contrast, cannot be eliminated by SEMA.
+:::
+
+::: {#exr-mlnmr-stc-reduction}
+**($\star$) Proof. The STC reduction in detail.** Fix a logistic outcome family. Write the marginal STC predicted
+arm means (Chapter 19) for an IPD trial on $\{A,C\}$ standardized to a comparator covariate distribution
+$f_{BC}$, and the ML-NMR aggregate arm means @eq-mlnmr-est-aggmean over the same $f_{BC}$ using the same
+fitted linear predictor. Prove the two are identical as functionals, and identify precisely the two ways
+in which a full ML-NMR fit differs from this restriction: namely, that ML-NMR's likelihood incorporates
+the AgD *outcomes* through @thm-aggregation, and that ML-NMR's estimand @thm-target-population-integral
+admits any target population. Conclude that STC is the special case of ML-NMR obtained by fitting the
+outcome surface on the IPD alone and fixing the target to the comparator, and state, with reference to
+@thm-stc-consistency and the no-extrapolation theorem of Chapter 18, one situation in which the extra
+information ML-NMR uses changes the answer and one in which it does not.
+:::

@@ -1,0 +1,1786 @@
+---
+title: "Multilevel Unanchored Meta-Regression"
+---
+
+## Introduction {#sec-mlumr-intro}
+
+Every method in this book until now has needed a bridge. The anchored indirect comparison of Chapter 14
+subtracts two relative effects that share a common comparator $C$, and is exact only when the
+$C$-anchored contrasts are transitive (@thm-bucher-unbiased); Chapter 16 showed that an effect modifier
+distributed differently across the two trials breaks transitivity and that no manipulation of aggregate
+data can repair it (@thm-failure-of-bucher). Population adjustment in Part IV rebuilt one trial's
+population in the image of the other, but matching-adjusted indirect comparison (MAIC, Chapter 18) and
+simulated treatment comparison (STC, Chapter 19) still reported their answer in the *comparator*
+population and, in their anchored form, still leaned on the shared comparator arm. Chapters 20 to 25 then
+built multilevel network meta-regression (ML-NMR), which fits one individual-level model across a
+*connected* network of individual patient data (IPD) and aggregate data (AgD) studies, integrates it over
+any covariate distribution, and so reports a contrast in *any* target population (@thm-target-population-integral).
+The connectivity was the last bridge standing: ML-NMR still required a path of shared treatments linking
+every study to every other.
+
+This chapter removes that bridge. The setting is the **unanchored disconnected network**: individual
+patient data on one treatment, say the index treatment $A$, aggregate data on a comparator $B$, and *no
+common comparator arm at all*. The two studies are single-arm trials, or arms extracted from larger
+trials, that share no treatment. Such evidence is the daily reality of health-technology assessment (HTA)
+for single-arm oncology trials, rare-disease registries, and real-world cohorts, where a randomized
+head-to-head comparison does not exist and a connecting study cannot be found. Bucher cannot start, because
+there is nothing to anchor on. Standard network meta-analysis cannot start, because the network is
+disconnected. Unanchored MAIC and unanchored STC can produce a pairwise number, but only in the comparator
+population and only under the strong conditional constancy of *absolute* effects (@thm-unanchored-maic-consistency,
+@thm-stc-consistency). What this chapter develops, following @chandler2025mlumr, is the multilevel
+generalization of that pairwise idea: **multilevel unanchored meta-regression** (ML-UMR), which carries the
+integration machinery of ML-NMR, the Sobol' quasi-Monte Carlo (QMC) rule and the Gaussian copula of
+Chapter 22, into the unanchored setting and so reports the unanchored contrast in any target population
+through one joint Bayesian likelihood.
+
+The price of removing the anchor is a stronger identifying assumption, and naming it precisely is the
+central conceptual work of the chapter. An anchored comparison can tolerate effect modification, provided
+it is *shared* across the active treatments, because the shared modification cancels against the common
+comparator; this is the shared-effect-modifier assumption (SEMA, @def-sema) that powers ML-NMR. An
+unanchored comparison has nothing to cancel against. To let the IPD on treatment $A$ inform the outcome
+under treatment $B$ at an arbitrary covariate value, ML-UMR assumes that the entire covariate-outcome
+relationship, not merely its treatment-by-covariate part, is the same under both treatments. This is the
+**shared prognostic factor assumption** (SPFA): the prognostic slopes coincide, $\boldsymbol\beta_A=
+\boldsymbol\beta_B$, which is equivalent to there being no effect modification at all. SPFA is the ML-UMR
+realization of conditional constancy of absolute effects (@def-conditional-constancy-absolute); it is
+strictly stronger than SEMA (@prp-spfa-vs-sema), and it is untestable from two single-arm studies. The
+chapter is honest about this throughout: ML-UMR extends the *menu of target populations* available for an
+unanchored comparison, at the cost of an assumption that the data cannot check.
+
+The development proceeds in catalogue order. We fix the disconnected setting and its estimand
+(@def-unanchored-network), isolate the structural fact that a single-arm study cannot separate its
+baseline from its treatment effect, and state SPFA and its meaning (@def-spfa). We then build the
+SPFA-invoking model and prove its identifiability from one IPD arm and one AgD arm (@thm-mlumr-model),
+relax SPFA when the comparator reports subgroup outcomes (@thm-spfa-relaxation), and specialize the
+aggregate integration to the unit hypercube (@thm-mlumr-qmc-marginalization). The survival case occupies
+the center of the chapter: the proportional-hazards and accelerated-failure-time models, the integrated
+censored likelihood, and the target-population survival, hazard, and restricted mean survival time
+(@thm-mlumr-tte, @thm-mlumr-target-survival), with the reconstruction of pseudo-individual data from a
+published Kaplan-Meier curve made precise (@thm-pseudo-ipd-reconstruction). The joint individual-plus-
+aggregate likelihood (@thm-mlumr-joint-likelihood) ties the two data types into one posterior. We then
+locate ML-UMR relative to its pairwise ancestor: it reduces to unanchored STC in the comparator population
+and extends it elsewhere (@thm-mlumr-stc-equivalence), under an assumption strictly stronger than SEMA
+(@prp-spfa-vs-sema). The chapter closes with the identifiability frontier and the inherent limits of
+unanchored comparison (@thm-mlumr-identifiability), a fully worked binary example whose every number can be
+checked by hand, a compact survival illustration, notes, and exercises. This chapter corresponds to results
+M.1 to M.12 of the proof catalogue.
+
+Throughout, $g$ is the link function (@def-link-function) on whose scale the linear predictor is built,
+$A$ denotes the index treatment for which IPD are available, and $B$ denotes the comparator for which only
+AgD are available. A population $\mathcal{P}$ is a distribution over the covariate space $\mathcal{X}$ with
+density $f_{\mathcal{P}}$; the index trial's population is $\mathcal{P}_A$ with density $f_A$ and the
+comparator's is $\mathcal{P}_B$ with density $f_B$, and a general reporting target is $\mathcal{P}^{*}$
+with density $f_{*}$ and mean $\bar{\mathbf{x}}_{*}$. We write $\boldsymbol\xi$ for the full parameter
+vector and use the relative-effect and aggregation notation of [Notation](/notation.qmd) and of
+Chapters 20 and 23.
+
+## A concrete scenario and a plain-language roadmap {#sec-mlumr-roadmap}
+
+Before any formalism, here is the clinical situation the chapter solves and the four-step logic that
+solves it. We return to this scenario at every transition, and the fully worked arithmetic appears in
+@sec-mlumr-example.
+
+::: {#exm-mlumr-running}
+## A single-arm oncology comparison (running example)
+A sponsor seeks reimbursement for a new therapy $A$ in advanced melanoma. The evidence is asymmetric:
+
+- **Index source (IPD on $A$).** A single-arm trial of $A$ with individual patient data: for each patient a
+covariate vector (for example age, prior lines of therapy, and a binary biomarker such as PD-L1 status)
+and an outcome (tumor response, yes or no; or a survival time).
+- **Comparator source (AgD on $B$).** For standard chemotherapy $B$ there are no patient rows, only a
+published report: the sample size, a table of baseline covariate means (and sometimes standard deviations
+and a correlation matrix), and an outcome summary, either a response rate or a Kaplan-Meier survival curve.
+- **No shared arm.** The trial of $A$ never gave $B$, and the report on $B$ never gave $A$; there is no
+common comparator to anchor on. The network is *disconnected*.
+- **The HTA question.** The reimbursement agency wants the effect of $A$ versus $B$ in a *decision
+population* $\mathcal{P}^{*}$, whose covariate profile may match neither trial.
+
+In the arithmetic of @sec-mlumr-example we make this numerical: one binary biomarker, an index fit giving
+intercept $\alpha_A=-0.5$ and prognostic slope $\beta_{\mathrm{PF}}=1.0$ on the logit scale, and a
+comparator report of $77$ responders out of $200$ with biomarker prevalence $0.5$. $\blacktriangleleft$
+:::
+
+**The data flow in words.** ML-UMR answers the HTA question in four steps, each of which becomes a theorem
+below. Read this once now; the rest of the chapter simply makes each step precise.
+
+1. **Fit the index arm from its IPD.** Regress the index outcome on the covariates to estimate one
+prognostic slope $\boldsymbol\beta_{\mathrm{PF}}$ (how strongly the covariates move the outcome) and one
+index level $\alpha_A$ (the fitted outcome of arm $A$ at covariate zero). This is an ordinary
+generalized-linear-model fit using only the index data (@thm-mlumr-model).
+2. **Borrow the slope: the shared prognostic factor assumption.** Assume arm $B$ has the *same* covariate
+slope as arm $A$ (@def-spfa). This is the price of having no anchor, and, as the chapter stresses
+repeatedly, the two-study data cannot check it.
+3. **Locate the comparator level from its AgD.** Use the single comparator outcome summary to pin the one
+remaining unknown, the comparator level $\alpha_B$: choose $\alpha_B$ so that arm $B$'s model-predicted
+average outcome, taken over the comparator's covariate distribution, equals the reported comparator outcome
+(@thm-mlumr-model).
+4. **Integrate over any target and contrast.** With both arm surfaces now known, average each arm's outcome
+over any chosen target population $\mathcal{P}^{*}$ and contrast on the link scale (@eq-mlumr-estimand,
+@thm-mlumr-target-survival).
+
+The advertised advantage over the simpler pairwise methods is step 4: the freedom to choose
+$\mathcal{P}^{*}$. The entire cost sits in step 2. Everything below unpacks these four steps and accounts
+carefully for what each assumes. @tbl-mlumr-methods places ML-UMR beside the methods it generalizes; the
+one column that separates them is "reports contrast in," and the price of the wider reach is the
+assumption column.
+
+| Method | Connected network? | Reports contrast in | Key assumption | What the data cannot check |
+|---|---|---|---|---|
+| Bucher / anchored NMA | required | any population, via the common comparator | transitivity; balanced effect modifiers | checkable when a closed loop exists |
+| Unanchored MAIC | not required | comparator population only | constancy of absolute effects | the transported absolute level |
+| Unanchored STC | not required | comparator population only | constancy of absolute effects | the transported absolute level |
+| ML-NMR | required (connected) | any target population | SEMA: shared effect modification | little; effect modifiers are estimable from IPD |
+| ML-UMR | not required | any target population | SPFA: no effect modification | the borrowed prognostic slope (Type 1) |
+
+: Where ML-UMR sits among indirect-comparison methods. Anchored methods report in any population but need a
+connected network; unanchored MAIC and STC drop the network but report only in the comparator population;
+ML-UMR keeps the target-population freedom of ML-NMR without a network, paying with the stronger SPFA.
+{#tbl-mlumr-methods}
+
+A reader who wants only the practical map may read @exm-mlumr-running, @tbl-mlumr-methods, and the worked
+@sec-mlumr-example, then return to the theorems. The proofs are where the identifiability and equivalence
+claims summarized here are earned.
+
+## The unanchored disconnected network {#sec-mlumr-setting}
+
+We fix the data structures and the estimand, and expose the structural obstruction that distinguishes the
+unanchored case from everything before it.
+
+::: {#def-unanchored-network}
+## The unanchored disconnected two-study network
+An **unanchored disconnected network** consists of two single-treatment data sources with no shared
+treatment:
+
+1. an **index source** providing individual patient data on treatment $A$: for each of $n_A$ patients a
+covariate vector $\mathbf{x}_i\in\mathcal{X}\subseteq\mathbb{R}^{d}$ and an outcome $y_i$, drawn from a
+population $\mathcal{P}_A$ with covariate density $f_A$;
+
+2. a **comparator source** providing aggregate data on treatment $B$: a sample size $n_B$, the marginal
+covariate means $\bar{\mathbf{x}}_B=(\bar x_{B,1},\dots,\bar x_{B,d})$ (and, where reported, marginal
+standard deviations and a covariate correlation matrix $\boldsymbol\Omega_B$), and an outcome summary, for
+example an event count $r_B$ for a binary outcome, a sample mean $\bar y_B$ for a continuous outcome, or a
+reconstructed Kaplan-Meier curve for a time-to-event outcome, from a population $\mathcal{P}_B$ with
+covariate density $f_B$.
+
+The treatments $A$ and $B$ share no common comparator arm; the network graph of Chapter 15 is
+**disconnected**. The **estimand** is the marginal relative effect of $A$ versus $B$ in a stated target
+population $\mathcal{P}^{*}$, on the link scale $g$,
+$$
+\Delta_{AB}(\mathcal{P}^{*})\;:=\;g\!\big(\bar\theta_A(\mathcal{P}^{*})\big)-g\!\big(\bar\theta_B(\mathcal{P}^{*})\big),
+\qquad
+\bar\theta_k(\mathcal{P}^{*})=\int_{\mathcal{X}}g^{-1}\!\big(\eta_k(\mathbf{x})\big)\,f_{*}(\mathbf{x})\,d\mathbf{x},
+$$ {#eq-mlumr-estimand}
+where $\eta_k(\mathbf{x})$ is the arm-$k$ linear predictor and $\bar\theta_k(\mathcal{P}^{*})$ is the
+arm-$k$ marginal mean outcome in $\mathcal{P}^{*}$. In the notation of [Notation](/notation.qmd) this is the
+target-population marginal contrast of @def-mlnmr-target-contrast, written here with $A$ as the subject so
+that a positive $\Delta_{AB}$ favors the index treatment. $\blacktriangleleft$
+:::
+
+**Reader translation.** Read @eq-mlumr-estimand from the inside out. For each arm,
+$g^{-1}(\eta_k(\mathbf{x}))$ is that arm's predicted outcome on the natural scale (a response probability
+for a binary outcome) at covariate value $\mathbf{x}$; integrating against $f_{*}$ *averages* this predicted
+outcome over the target population, giving the arm's marginal mean $\bar\theta_k(\mathcal{P}^{*})$; finally
+$g$ (the logit, say) is applied to each average, and the two are subtracted. In one sentence: average each
+arm's outcome over the target population first, then contrast on the link scale. The order is deliberate.
+Taking the link of the average, rather than the average of the conditional link-scale effect, is exactly
+what makes the *marginal* estimand differ from the *conditional* one; that gap is non-collapsibility
+(@def-non-collapsibility), and the worked @sec-mlumr-example displays it in two numbers you can check by
+hand. A novice reader may find it helpful to picture $\mathcal{P}^{*}$ as a spreadsheet of covariate rows:
+fill in each arm's predicted probability row by row, average the two columns, then compare the two averages
+on the logit scale.
+
+The estimand @eq-mlumr-estimand is identical in form to the ML-NMR target estimand of Chapter 23
+(@eq-mlnmr-est-marg); what changes is the evidence available to identify the two arm linear predictors.
+The defining difficulty of the unanchored case is recorded next.
+
+::: {#lem-mlumr-single-arm-conflation}
+## A single-arm study conflates baseline and treatment effect
+Adopt the ML-NMR linear predictor of @def-individual-model, in which the arm-$k$ linear predictor in study
+$j$ is $\eta_{jk}(\mathbf{x})=\mu_j+\mathbf{x}^\top\boldsymbol\beta_1+\gamma_k+\mathbf{x}^\top\boldsymbol\beta_{2,k}$,
+with $\mu_j$ the study baseline and $\gamma_k$ the treatment main effect. If a study contains a single arm
+$k$, then the study baseline $\mu_j$ and the treatment main effect $\gamma_k$ enter the likelihood only
+through their sum $\alpha:=\mu_j+\gamma_k$, and are not separately identified: any pair $(\mu_j,\gamma_k)$
+and $(\mu_j+c,\gamma_k-c)$ with $c\in\mathbb{R}$ induces the same distribution of the data.
+:::
+
+::: {.proof}
+With a single arm $k$ present in the study, every observation in the study has linear predictor
+$\eta(\mathbf{x})=\mu_j+\gamma_k+\mathbf{x}^\top(\boldsymbol\beta_1+\boldsymbol\beta_{2,k})$. The map
+$(\mu_j,\gamma_k)\mapsto\eta(\cdot)$ depends on $(\mu_j,\gamma_k)$ only through the sum $\mu_j+\gamma_k$:
+replacing $(\mu_j,\gamma_k)$ by $(\mu_j+c,\gamma_k-c)$ leaves $\mu_j+\gamma_k$, hence $\eta(\mathbf{x})$
+for every $\mathbf{x}$, hence the conditional outcome law $\pi_{\mathrm{Ind}}(\cdot\mid g^{-1}(\eta(\mathbf{x})))$,
+hence the likelihood, unchanged. The parameter $c$ is therefore free, so $(\mu_j,\gamma_k)$ is not
+identified; only the linear combination $\alpha=\mu_j+\gamma_k$ is. $\square$
+:::
+
+**Reader translation: what "identified" means, and why one arm cannot split the two pieces.** To say a
+parameter is *identified* is to say the data pin it to a single value, even in the ideal limit of infinite
+sample size; an *unidentified* parameter is one the data leave genuinely undetermined, so that no
+estimator, however clever, can recover it. (This is the same notion introduced for regression in Part I;
+we lean on it heavily below, so keep the one-line meaning in mind.) The content of
+@lem-mlumr-single-arm-conflation is clinical, not just algebraic: from a single-arm trial you never observe
+the enrolled patients *without* the treatment, so you cannot tell how much of the observed outcome level is
+the treatment doing something ($\gamma_k$) and how much is merely the baseline prognosis of the patients
+who happened to enroll ($\mu_j$). Only their sum, the arm's absolute outcome level $\alpha=\mu_j+\gamma_k$,
+is visible; we call this sum the **conflated intercept** of the arm, and use the term freely below. An
+anchored two-arm study escapes the trap because both arms share the one study baseline $\mu_j$, so
+differencing the arms cancels $\mu_j$ and exposes $\gamma_k$; the unanchored design has no second arm to
+difference against.
+
+This rank deficiency is the algebraic heart of "unanchored." In a connected network the same treatment
+appears in at least two studies, and the across-study comparison of arms that share a treatment removes the
+baseline, leaving $\gamma_k$ identified; this is exactly what the anchor provides. With no shared
+treatment there is no such comparison, and each single-arm source identifies only the *absolute* level of
+its own arm, the conflated intercept $\alpha$. We therefore write the two arm linear predictors with
+arm-specific intercepts and arm-specific covariate slopes,
+$$
+\eta_A(\mathbf{x})=\alpha_A+\mathbf{x}^\top\boldsymbol\beta_A,
+\qquad
+\eta_B(\mathbf{x})=\alpha_B+\mathbf{x}^\top\boldsymbol\beta_B,
+$$ {#eq-mlumr-two-arm}
+where $\alpha_A=\mu_{\text{index}}+\gamma_A$ and $\alpha_B=\mu_{\text{comp}}+\gamma_B$ each conflate a
+study baseline with a treatment main effect by @lem-mlumr-single-arm-conflation, and
+$\boldsymbol\beta_k=\boldsymbol\beta_1+\boldsymbol\beta_{2,k}$ is the total covariate slope on arm $k$ in
+the decomposition of @def-individual-model. (Recall from @def-individual-model, restated here because it is
+the pivot of the whole chapter: $\boldsymbol\beta_1$ is the *prognostic* slope, the covariate effect shared
+by every arm, the part of the outcome-covariate relationship that has nothing to do with treatment; and
+$\boldsymbol\beta_{2,k}$ is the arm-$k$ *effect-modification* slope, the treatment-by-covariate interaction
+that bends one arm's covariate response relative to another. Their sum $\boldsymbol\beta_k=
+\boldsymbol\beta_1+\boldsymbol\beta_{2,k}$ is the total slope that arm $k$'s own data actually trace out.
+Prognostic means "predicts outcome regardless of treatment"; effect-modifying means "changes the treatment
+contrast." Keep both meanings in view; SPFA is a statement about the second one.) The whole identification
+problem is now visible: the IPD
+identify $(\alpha_A,\boldsymbol\beta_A)$, but the AgD supply only a covariate distribution and one or a few
+outcome summaries, far too little to identify the $(d+1)$-dimensional $(\alpha_B,\boldsymbol\beta_B)$.
+Something must connect the two arms.
+
+::: {.remark}
+**Why this is a transportability problem.** Comparing $A$ and $B$ requires evaluating both arms in one
+population. The arm-$A$ surface $\mu_A(\mathbf{x})=g^{-1}(\eta_A(\mathbf{x}))$ is estimated where $A$ was
+observed, namely $\mathcal{P}_A$; to place it against $B$ in $\mathcal{P}_B$ or in any $\mathcal{P}^{*}$ we
+must assume that the *same* conditional surface governs $\mathcal{P}_B$ and $\mathcal{P}^{*}$, an instance
+of conditional transportability (@thm-conditional-transportability) and of the absolute-effect constancy
+of @def-conditional-constancy-absolute. The general theory of Chapter 17 already told us the unanchored
+price: @thm-unanchored-paic-consistency requires constancy of absolute effects and balance of every
+imbalanced *prognostic* variable, not merely every effect modifier. SPFA is the parametric assumption that
+delivers exactly this. $\blacktriangleleft$
+:::
+
+This setup corresponds to M.1 in the proof catalogue.
+
+## The shared prognostic factor assumption {#sec-mlumr-spfa}
+
+We now state the assumption that connects the two arms and makes the unanchored comparison identifiable.
+
+::: {#def-spfa}
+## Shared prognostic factor assumption (SPFA)
+In the two-arm unanchored model @eq-mlumr-two-arm, the **shared prognostic factor assumption** is the
+hypothesis that the covariate-outcome slopes coincide across the two treatments,
+$$
+\boldsymbol\beta_A=\boldsymbol\beta_B=:\boldsymbol\beta_{\mathrm{PF}}.
+$$ {#eq-spfa}
+The common value $\boldsymbol\beta_{\mathrm{PF}}$ is the single shared prognostic slope; the subscript PF
+abbreviates *prognostic factor*. Equivalently, in the decomposition
+$\boldsymbol\beta_k=\boldsymbol\beta_1+\boldsymbol\beta_{2,k}$ of
+@def-individual-model, SPFA states that the effect-modification vectors are equal,
+$\boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}$; and since in the two-treatment network one arm may be
+taken as the reference with $\boldsymbol\beta_{2}=\mathbf{0}$, SPFA forces $\boldsymbol\beta_{2,A}=
+\boldsymbol\beta_{2,B}=\mathbf{0}$, that is, **no treatment-by-covariate interaction and no effect
+modification** (@def-effect-modifier). Under SPFA the two arm linear predictors are
+$$
+\eta_A(\mathbf{x})=\alpha_A+\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}},
+\qquad
+\eta_B(\mathbf{x})=\alpha_B+\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}},
+$$ {#eq-spfa-predictors}
+differing only in the conflated intercepts $\alpha_A,\alpha_B$. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**SPFA in plain language (the one assumption that pays for everything).** SPFA encodes a specific clinical
+belief: *the way the covariates shape a patient's outcome is the same whichever of the two treatments the
+patient receives.* Put the other way, the treatment does not act more strongly in one covariate subgroup
+than another; there is no effect modification. A *plausible* case: two cytotoxic chemotherapies whose
+benefit is roughly uniform across age and performance status, so older and younger patients gain similarly.
+An *implausible* case: a targeted agent that works only in biomarker-positive patients, set against a
+chemotherapy that works regardless of biomarker; here the treatment contrast depends sharply on the
+biomarker, SPFA is false, and forcing it will bias any transported estimate. Two facts make SPFA the
+delicate point of the method. First, it is *stronger than SEMA* (@prp-spfa-vs-sema): SEMA lets the two
+treatments modify the outcome as long as they modify it *identically*, because in an anchored design the
+shared modification cancels against the common comparator; SPFA has no comparator to cancel against and so
+must assume the modification is *absent*. Second, in the Type 1 setting (one comparator outcome summary) it
+is *untestable*: the data are equally consistent with SPFA and with an effect-modifying alternative
+(@thm-mlumr-identifiability), so SPFA must be argued from external clinical knowledge, not checked against
+the two studies. @tbl-spfa-sema lays the two assumptions side by side. $\blacktriangleleft$
+:::
+
+| Aspect | SEMA (anchored, ML-NMR) | SPFA (unanchored, ML-UMR) |
+|---|---|---|
+| Formal statement | $\boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}$ | $\boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}=\mathbf{0}$ |
+| In words | both treatments modify the outcome *identically* | *neither* treatment modifies the outcome |
+| Effect modification | allowed, provided shared | forbidden |
+| Why the contrast is flat | shared modification cancels against the common comparator $C$ | nothing to modify, so nothing to cancel |
+| Constancy it requires | conditional constancy of *relative* effects | conditional constancy of *absolute* effects |
+| Design it fits | connected, anchored network | disconnected, unanchored network |
+| Testable from the data? | interaction estimable from IPD | not from two single-arm sources (Type 1) |
+| Method it powers | ML-NMR, Bucher | ML-UMR, unanchored STC and MAIC |
+
+: SEMA versus SPFA. The anchored assumption tolerates effect modification because a common comparator
+cancels it; the unanchored assumption must forbid it outright. This is the single conceptual difference
+between Chapter 17's SEMA and this chapter's SPFA, made precise in @prp-spfa-vs-sema. {#tbl-spfa-sema}
+
+The single line that SPFA buys is the following: it makes the conditional contrast a constant, which is
+what lets the index IPD project the comparator arm everywhere.
+
+::: {#lem-spfa-absolute-constancy}
+## SPFA is conditional constancy of absolute effects
+Under SPFA @eq-spfa, the conditional contrast of $A$ versus $B$ on the link scale is free of the covariate,
+$$
+\eta_A(\mathbf{x})-\eta_B(\mathbf{x})=\alpha_A-\alpha_B
+\qquad\text{for every }\mathbf{x}\in\mathcal{X},
+$$ {#eq-spfa-constant-contrast}
+and the arm-$B$ conditional surface is determined by the arm-$A$ surface and a single scalar level shift,
+$$
+\eta_B(\mathbf{x})=\eta_A(\mathbf{x})-(\alpha_A-\alpha_B).
+$$ {#eq-spfa-projection}
+Consequently, once $\boldsymbol\beta_{\mathrm{PF}}$ is known from the index IPD, knowledge of one scalar,
+$\alpha_B$, determines $\eta_B(\mathbf{x})$, and hence $g^{-1}(\eta_B(\mathbf{x}))$, at *every* covariate
+value, including values the comparator source never reported individually. This is the ML-UMR realization
+of conditional constancy of absolute effects (@def-conditional-constancy-absolute).
+:::
+
+::: {.proof}
+Subtract the two predictors of @eq-spfa-predictors:
+$\eta_A(\mathbf{x})-\eta_B(\mathbf{x})=(\alpha_A+\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}})-
+(\alpha_B+\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}})=\alpha_A-\alpha_B$, since the covariate terms are
+identical and cancel; this is @eq-spfa-constant-contrast, free of $\mathbf{x}$. Rearranging gives
+@eq-spfa-projection. The arm-$A$ surface $\eta_A(\cdot)=\alpha_A+(\cdot)^\top\boldsymbol\beta_{\mathrm{PF}}$
+is identified from the index IPD (a generalized linear model with full-rank design, @thm-mlumr-model below),
+so $\boldsymbol\beta_{\mathrm{PF}}$ is known; @eq-spfa-projection then expresses $\eta_B$ in terms of the
+known $\eta_A$ and the single unknown $\alpha_A-\alpha_B$, equivalently the single unknown $\alpha_B$.
+Evaluating $g^{-1}$ at $\eta_B(\mathbf{x})$ for any $\mathbf{x}$ is therefore possible once $\alpha_B$ is
+pinned, which @thm-mlumr-model does from the comparator outcome summary. The constancy of the absolute
+conditional contrast across covariate values is precisely @def-conditional-constancy-absolute applied to the
+$A$-versus-$B$ contrast. $\square$
+:::
+
+::: {.remark}
+**Why SPFA and not merely SEMA.** In the anchored triangle of Chapters 17 and 23, the active treatments
+$A$ and $B$ are each contrasted with a common comparator $C$, and the shared-effect-modifier assumption
+(@def-sema) sets $\boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}$; the $A$-versus-$B$ contrast then has
+effect-modification term $(\boldsymbol\beta_{2,A}-\boldsymbol\beta_{2,B})^\top\mathbf{x}=\mathbf{0}$, so the
+modification *cancels against the anchor* even when it is present and large. There is no anchor here to
+cancel against. The only way to make the contrast @eq-spfa-constant-contrast constant in $\mathbf{x}$, and
+so to project the index surface onto the comparator arm at arbitrary covariate values, is to assume the
+modification is *absent*, $\boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}=\mathbf{0}$. This is why SPFA is
+strictly stronger than SEMA, a claim we make precise in @prp-spfa-vs-sema. SPFA must be defended from
+external knowledge: that the natural history of the disease, the covariate-outcome relationship, is the
+same whichever treatment a patient receives. It is untestable from two single-arm sources, because there is
+no replicate of either treatment at a different covariate distribution against which to check the slope.
+$\blacktriangleleft$
+:::
+
+These results correspond to M.2 in the proof catalogue.
+
+## The SPFA-invoking ML-UMR model {#sec-mlumr-model}
+
+We assemble the model and prove that, under SPFA, it is identified from exactly the available evidence: a
+$(d+1)$-dimensional index arm and a one-dimensional comparator outcome summary.
+
+**The identification argument in one breath.** The theorem below is long, but its logic is the four-step
+roadmap of @sec-mlumr-roadmap made rigorous. In words: the index IPD estimate one slope
+$\boldsymbol\beta_{\mathrm{PF}}$ and one intercept $\alpha_A$ for arm $A$ (an ordinary GLM fit, so both are
+identified whenever the covariates are not collinear); SPFA lets that same slope be reused for arm $B$; the
+single comparator outcome summary then fixes the one remaining unknown, the comparator intercept
+$\alpha_B$, because arm $B$'s average outcome rises monotonically with $\alpha_B$ and so meets the observed
+value exactly once. That is the whole argument; the formal statement only names the regularity conditions
+that make each step go through. Two symbols recur that the chapter otherwise uses without introduction.
+$\pi_{\mathrm{Ind}}$ is the *individual-level* outcome distribution, the GLM likelihood kernel for one
+patient (a Bernoulli response, say, or a censored survival contribution); $\pi_{\mathrm{Agg}}$ is the
+*aggregate-level* distribution of a reported summary (a binomial event count, a normal sample mean). Both
+are inherited from Chapters 20 and 25. We write $\theta_{\bullet B}$ for the comparator's *aggregate mean*,
+the arm-$B$ average outcome over the comparator covariate distribution, the bullet marking the covariate
+that has been averaged out.
+
+::: {#thm-mlumr-model}
+## The SPFA ML-UMR model and its identifiability
+Adopt SPFA @eq-spfa, so the arm predictors are @eq-spfa-predictors with parameter
+$\boldsymbol\xi=(\alpha_A,\alpha_B,\boldsymbol\beta_{\mathrm{PF}},\boldsymbol\phi)$, where
+$\boldsymbol\phi$ is any dispersion parameter. The model is:
+
+*Individual level (index $A$, IPD).* For $i=1,\dots,n_A$ with covariates $\mathbf{x}_i$,
+$$
+Y_i^{(A)}\mid\mathbf{x}_i\ \sim\ \pi_{\mathrm{Ind}}\!\big(g^{-1}(\alpha_A+\mathbf{x}_i^\top\boldsymbol\beta_{\mathrm{PF}}),\,\boldsymbol\phi\big).
+$$ {#eq-mlumr-model-ind}
+
+*Aggregate level (comparator $B$, AgD).* The comparator outcome summary has mean equal to the aggregate
+response-scale average over the comparator covariate distribution,
+$$
+\theta_{\bullet B}=\int_{\mathcal{X}}g^{-1}\!\big(\alpha_B+\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}}\big)\,f_B(\mathbf{x})\,d\mathbf{x},
+\qquad
+\text{summary}_B\ \sim\ \pi_{\mathrm{Agg}}(\theta_{\bullet B},n_B),
+$$ {#eq-mlumr-model-agg}
+the aggregate model of @def-aggregate-model specialized to the comparator arm.
+
+Suppose (i) the index design has full column rank, that is the matrix $[\,\mathbf{1}\ \ \mathbf{X}_A\,]$
+with rows $(1,\mathbf{x}_i^\top)$ has rank $d+1$, and the link $g$ is strictly monotone and differentiable
+with $g^{-1}$ strictly monotone; (ii) the comparator covariate density $f_B$ is known (reported, or
+reconstructed by the copula method of @thm-mlumr-qmc-marginalization); and (iii) the observed comparator
+outcome mean lies in the open range of $g^{-1}$ (for the logit link this simply says the observed
+comparator proportion is strictly between $0$ and $1$; for the identity link it is no restriction at all).
+Then $\boldsymbol\xi$ is identified: $(\alpha_A,
+\boldsymbol\beta_{\mathrm{PF}})$ are identified from the index likelihood @eq-mlumr-model-ind, and
+$\alpha_B$ is the unique solution of
+$$
+\Theta_B(\alpha_B):=\int_{\mathcal{X}}g^{-1}\!\big(\alpha_B+\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}}\big)\,f_B(\mathbf{x})\,d\mathbf{x}\;=\;\theta_{\bullet B}^{\mathrm{obs}},
+$$ {#eq-mlumr-alphaB-solve}
+where $\theta_{\bullet B}^{\mathrm{obs}}$ is the observed comparator mean. The target estimand
+@eq-mlumr-estimand is then identified in every population $\mathcal{P}^{*}$ for which $f_{*}$ is specified.
+:::
+
+::: {.proof}
+*Identification of the index parameters.* Restricted to the index source, @eq-mlumr-model-ind is a
+generalized linear model with linear predictor $\alpha_A+\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}}$ and
+strictly monotone link $g$. The mean function $\mathbf{x}\mapsto g^{-1}(\alpha_A+\mathbf{x}^\top
+\boldsymbol\beta_{\mathrm{PF}})$ determines $(\alpha_A,\boldsymbol\beta_{\mathrm{PF}})$ uniquely: if two
+parameter pairs gave the same mean function then, applying the strictly monotone $g$, the affine functions
+$\alpha_A+\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}}$ and $\alpha_A'+\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}}'$
+would agree for all $\mathbf{x}$ in the index support, and full column rank of $[\,\mathbf{1}\ \ \mathbf{X}_A\,]$
+forces $\alpha_A=\alpha_A'$ and $\boldsymbol\beta_{\mathrm{PF}}=\boldsymbol\beta_{\mathrm{PF}}'$. This is the
+standard GLM identifiability already used for the IPD arm in @thm-mlnmr-identifiability-2study. The
+dispersion $\boldsymbol\phi$, when present, is identified from the index residual variation in the usual
+way.
+
+*Identification of the comparator intercept.* With $\boldsymbol\beta_{\mathrm{PF}}$ known from the previous
+step and $f_B$ known by hypothesis (ii), the comparator aggregate mean @eq-mlumr-model-agg is the function
+$\alpha_B\mapsto\Theta_B(\alpha_B)$ of @eq-mlumr-alphaB-solve. This is exactly the map $\Theta$ of the
+aggregate-monotonicity lemma @lem-mlnmr-aggregate-monotone, with scalar shift $c=\alpha_B$ and
+$h(\mathbf{x})=\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}}$. By that lemma $\Theta_B$ is finite,
+continuous, and strictly increasing, hence injective, with range the open interval that is the range of
+$g^{-1}$; by hypothesis (iii) the observed mean $\theta_{\bullet B}^{\mathrm{obs}}$ lies in that range, so
+the equation $\Theta_B(\alpha_B)=\theta_{\bullet B}^{\mathrm{obs}}$ has a unique solution. Thus $\alpha_B$
+is identified.
+
+*Identification of the estimand.* With $(\alpha_A,\alpha_B,\boldsymbol\beta_{\mathrm{PF}})$ identified, both
+arm predictors @eq-spfa-predictors are determined, so the target arm means $\bar\theta_k(\mathcal{P}^{*})=
+\int g^{-1}(\eta_k(\mathbf{x}))f_{*}(\mathbf{x})\,d\mathbf{x}$ are determined for any specified $f_{*}$, and
+the contrast @eq-mlumr-estimand is their link-scale difference. The integrals are finite under the
+integrability hypothesis implicit in (iii) and the boundedness of $g^{-1}$ for the standard links. $\square$
+:::
+
+**Why this matters.** This is the payoff of the whole setup, and it is worth stating as a slogan: *one IPD
+arm plus SPFA plus one aggregate number is exactly enough to place both treatments in any population.* The
+index regression does the heavy lifting (a slope and a level), SPFA supplies the bridge (reuse the slope),
+and the comparator's single reported outcome supplies the last degree of freedom (the comparator level).
+Nothing is over-determined and nothing is missing; the model is *just identified*. That tight accounting is
+also the warning label: with only one comparator number to spend, there is none left over to test SPFA.
+
+::: {#def-mlumr-model-types}
+## Type 1 and Type 2 ML-UMR models
+Two data regimes recur throughout, and we name them once. The **Type 1 model** invokes SPFA (@def-spfa) and
+uses a *single overall* comparator outcome summary; it identifies the comparator intercept $\alpha_B$ only,
+reusing the index slope $\boldsymbol\beta_{\mathrm{PF}}$, and is the model of @thm-mlumr-model. The **Type 2
+(relaxed) model** drops SPFA, allows a distinct comparator slope $\boldsymbol\beta_B$, and needs *subgroup*
+comparator outcomes to identify both $\alpha_B$ and $\boldsymbol\beta_B$ (@thm-spfa-relaxation). Type 1 is
+the default, because subgroup outcomes are rarely published; Type 2 is the principled remedy when effect
+modification cannot be ruled out and enough subgroups are reported. $\blacktriangleleft$
+:::
+
+@tbl-mlumr-identifies records which piece of evidence supplies which parameter, and, crucially, whether it
+is observed, reconstructed, or merely assumed. The single row marked "assumed" is SPFA, and it is the row
+the data cannot audit in Type 1.
+
+| Data source | What it identifies or supplies | Status |
+|---|---|---|
+| Index IPD (arm $A$) | index level $\alpha_A$ and prognostic slope $\boldsymbol\beta_{\mathrm{PF}}$ | observed patient rows |
+| SPFA (external belief) | that arm $B$'s slope equals $\boldsymbol\beta_{\mathrm{PF}}$ | assumed; untestable in Type 1 |
+| Comparator outcome summary (arm $B$) | comparator level $\alpha_B$ | observed aggregate |
+| Comparator covariate distribution $f_B$ | the weighting of the arm-$B$ aggregate integral | reported margins, reconstructed via copula |
+| Comparator subgroup outcomes | comparator slope $\boldsymbol\beta_B$ as well (Type 2) | rarely observed |
+| Target distribution $f_{*}$ | the population the contrast is reported in | chosen from the HTA question |
+
+: What identifies what in ML-UMR. Read top to bottom, this is the four-step roadmap of @sec-mlumr-roadmap
+with each step's data source and epistemic status made explicit. Only $\alpha_A$, $\boldsymbol\beta_{\mathrm{PF}}$,
+and $\alpha_B$ are estimated from data; $f_B$ is reconstructed; SPFA and $f_{*}$ are supplied from outside
+the two studies. {#tbl-mlumr-identifies}
+
+::: {.remark}
+**The two families in closed and not-closed form.** For a **continuous** outcome with the identity link and
+the linear model $\mathbb{E}[Y\mid\mathbf{x}]=\alpha_k+\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}}$,
+aggregation is exact (@thm-identity-link-exact): $\theta_{\bullet B}=\alpha_B+\bar{\mathbf{x}}_B^\top
+\boldsymbol\beta_{\mathrm{PF}}$, so @eq-mlumr-alphaB-solve solves in closed form,
+$$
+\alpha_B=\bar y_B-\bar{\mathbf{x}}_B^\top\boldsymbol\beta_{\mathrm{PF}},
+$$
+needing only the comparator covariate *mean*. For a **binary** outcome with the logit link, Bernoulli
+individual model and binomial aggregate model, $\Theta_B(\alpha_B)=\int\operatorname{expit}(\alpha_B+
+\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}})f_B(\mathbf{x})\,d\mathbf{x}$ has no closed form
+(@thm-logit-no-closed-form), and @eq-mlumr-alphaB-solve is solved numerically after the integral is
+evaluated by the QMC rule of @thm-mlumr-qmc-marginalization; here the comparator covariate *distribution*,
+not just its mean, enters. This is the binary "Type 1" model of @chandler2025mlumr; the reference software
+`mlumr` fits it as one joint Stan model rather than by the two-step solve, but the two-step solve is what
+the identifiability argument exhibits and what the worked example of @sec-mlumr-example carries out by hand.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Bayesian inference.** In practice one does not separate the two steps. Place priors on
+$(\alpha_A,\alpha_B,\boldsymbol\beta_{\mathrm{PF}})$, for example weakly informative normals, and sample the
+posterior of the joint likelihood @thm-mlumr-joint-likelihood by Hamiltonian Monte Carlo (@def-hmc,
+@carpenter2017stan); the QMC integral makes the comparator likelihood a smooth function of the parameters
+(@eq-qmc-fixed-nodes), so the gradient HMC needs is available. (Hamiltonian Monte Carlo is, for present
+purposes, a black-box sampler that draws from the posterior using its gradient; @def-hmc has the mechanics,
+and nothing below depends on them.) The reason to fit both blocks jointly, rather than run the two-step
+solve of the proof, is *uncertainty propagation*: the joint posterior carries the estimation error in
+$\boldsymbol\beta_{\mathrm{PF}}$ from the index arm through into the uncertainty in $\alpha_B$, and hence
+into every target-population contrast, whereas plugging a single point estimate of
+$\boldsymbol\beta_{\mathrm{PF}}$ into a separate solve for $\alpha_B$ would understate that uncertainty. The
+two-step identification argument is the guarantee that the posterior concentrates: the index data pin
+$(\alpha_A,\boldsymbol\beta_{\mathrm{PF}})$
+and the comparator mean then pins $\alpha_B$, so the likelihood has a unique maximizer in the limit.
+$\blacktriangleleft$
+:::
+
+This theorem corresponds to M.3 in the proof catalogue.
+
+## Relaxing SPFA with comparator subgroups {#sec-mlumr-relaxed}
+
+SPFA fails whenever the covariate genuinely modifies the treatment effect, that is when
+$\boldsymbol\beta_A\ne\boldsymbol\beta_B$. A single aggregate outcome mean cannot then identify the model,
+because it supplies one equation for the $(d+1)$ unknowns $(\alpha_B,\boldsymbol\beta_B)$. The remedy of
+@chandler2025mlumr is to demand more aggregate equations, by partitioning the comparator population into
+subgroups and using a reported outcome in each. Concretely, this means the comparator report must give, say,
+response rates separately for biomarker-positive and biomarker-negative patients, or Kaplan-Meier curves per
+risk stratum, each with its own covariate summary. The intuition is a counting argument any reader can hold
+onto: each subgroup outcome is one equation, the unknowns are the $d+1$ numbers $(\alpha_B,\boldsymbol\beta_B)$,
+and you need at least as many *genuinely different* equations as unknowns. "Genuinely different" is the
+catch, and the theorem makes it precise. Such stratified reporting is the exception rather than the rule,
+which is why the Type 1 model of @thm-mlumr-model remains the workhorse.
+
+::: {#thm-spfa-relaxation}
+## Identifiability of the relaxed model from comparator subgroups
+Drop SPFA and allow a treatment-specific comparator slope: the arm predictors are
+$\eta_A(\mathbf{x})=\alpha_A+\mathbf{x}^\top\boldsymbol\beta_A$ and
+$\eta_B(\mathbf{x})=\alpha_B+\mathbf{x}^\top\boldsymbol\beta_B$ with possibly distinct
+$\boldsymbol\beta_A,\boldsymbol\beta_B\in\mathbb{R}^{d}$. Suppose the comparator source reports outcomes
+for $Z$ non-overlapping subgroups $z=1,\dots,Z$, with known within-subgroup covariate densities $f_B^{z}$
+and observed aggregate means $\theta_{\bullet B}^{z,\mathrm{obs}}$, modeled by
+$$
+\theta_{\bullet B}^{z}(\alpha_B,\boldsymbol\beta_B)=\int_{\mathcal{X}}g^{-1}\!\big(\alpha_B+\mathbf{x}^\top\boldsymbol\beta_B\big)\,f_B^{z}(\mathbf{x})\,d\mathbf{x},
+\qquad z=1,\dots,Z.
+$$ {#eq-spfa-relaxed-agg}
+Let $\boldsymbol\psi=(\alpha_B,\boldsymbol\beta_B)\in\mathbb{R}^{d+1}$ and write
+$w_z(\mathbf{x}):=(g^{-1})'(\alpha_B+\mathbf{x}^\top\boldsymbol\beta_B)>0$. If
+
+1. (**counting**) $Z\ge d+1$, and
+
+2. (**non-degeneracy**) the $Z\times(d+1)$ matrix $M$ with rows
+$\mathbf{m}_z^\top=\int w_z(\mathbf{x})\,(1,\mathbf{x}^\top)\,f_B^{z}(\mathbf{x})\,d\mathbf{x}$ has rank
+$d+1$ at $\boldsymbol\psi$,
+
+then $\boldsymbol\psi=(\alpha_B,\boldsymbol\beta_B)$ is locally identified by the $Z$ subgroup equations
+@eq-spfa-relaxed-agg, given $\alpha_A,\boldsymbol\beta_A$ from the index IPD. In particular two binary
+effect modifiers crossed into $Z=4$ subgroups identify $\boldsymbol\beta_B\in\mathbb{R}^{2}$. If instead
+$Z<d+1$, the solution set of @eq-spfa-relaxed-agg is a manifold of dimension at least $d+1-Z\ge 1$, and
+$\boldsymbol\psi$ is *not* identified.
+:::
+
+::: {.proof}
+*Local identification when $Z\ge d+1$ and $M$ has full column rank.* Define the map
+$F:\mathbb{R}^{d+1}\to\mathbb{R}^{Z}$ by $F(\boldsymbol\psi)=(\theta_{\bullet B}^{1}(\boldsymbol\psi),\dots,
+\theta_{\bullet B}^{Z}(\boldsymbol\psi))$. Each component is differentiable, and by differentiating under
+the integral sign (the integrand and its $\boldsymbol\psi$-gradient are bounded for the standard links, so
+dominated convergence applies),
+$$
+\frac{\partial\theta_{\bullet B}^{z}}{\partial\alpha_B}=\int w_z(\mathbf{x})\,f_B^{z}(\mathbf{x})\,d\mathbf{x},
+\qquad
+\frac{\partial\theta_{\bullet B}^{z}}{\partial\boldsymbol\beta_B}=\int w_z(\mathbf{x})\,\mathbf{x}\,f_B^{z}(\mathbf{x})\,d\mathbf{x},
+$$
+so the Jacobian $DF(\boldsymbol\psi)$ is exactly the matrix $M$ with rows $\mathbf{m}_z^\top=\int w_z
+(1,\mathbf{x}^\top)f_B^{z}$. By hypothesis (2) $M$ has rank $d+1$, its full column rank; since $Z\ge d+1$
+by hypothesis (1), $DF(\boldsymbol\psi)$ has a left inverse, and the constant-rank form of the inverse
+function theorem gives a neighborhood of $\boldsymbol\psi$ on which $F$ is injective. Hence $\boldsymbol\psi$
+is the unique parameter in that neighborhood reproducing the observed subgroup means
+$(\theta_{\bullet B}^{z,\mathrm{obs}})_z$: it is locally identified. (The index parameters
+$\alpha_A,\boldsymbol\beta_A$ are identified from the IPD as in @thm-mlumr-model, separately from the
+comparator block.)
+
+*Non-identification when $Z<d+1$.* The Jacobian $DF(\boldsymbol\psi)=M$ is then a $Z\times(d+1)$ matrix
+with $Z<d+1$, so its rank is at most $Z<d+1$ and its kernel has dimension at least $d+1-Z\ge 1$. By the
+constant-rank theorem (or directly, by the implicit function theorem applied to the rank-$Z$ system) the
+level set $\{\boldsymbol\psi':F(\boldsymbol\psi')=F(\boldsymbol\psi)\}$ contains, near $\boldsymbol\psi$, a
+smooth submanifold of dimension $\ge d+1-Z\ge 1$; every point of it reproduces the same $Z$ subgroup means.
+Distinct parameter values therefore give identical observable aggregate data, so $\boldsymbol\psi$ is not
+identified. $\square$
+:::
+
+::: {.remark}
+**What the subgroups must deliver.** The non-degeneracy condition (2) is the requirement that the $Z$
+subgroups differ enough in their covariate distributions: the rows $\mathbf{m}_z$ are the
+hazard-weighted subgroup moments of $(1,\mathbf{x})$, and they must span $\mathbb{R}^{d+1}$. Two subgroups
+with identical covariate means contribute near-parallel rows and add little identifying power, exactly as
+two collinear regressors do in least squares. Crossing two binary effect modifiers gives four subgroups
+whose means sit at the four corners of a square in covariate space, which generically span $\mathbb{R}^{3}$
+and identify $(\alpha_B,\beta_{B,1},\beta_{B,2})$. This is the simulation design of @chandler2025mlumr.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Why Type 1 is the default.** Subgroup-specific aggregate outcomes, an event rate or a Kaplan-Meier curve
+reported separately within each effect-modifier stratum, are rarely published. When they are not, only the
+single overall comparator mean is available, $Z=1<d+1$, and by the theorem the relaxed model is not
+identified; one must invoke SPFA and fit the Type 1 model of @thm-mlumr-model. Even when a few subgroups
+are reported, the `mlumr` documentation warns that the comparator slope $\boldsymbol\beta_B$ is "weakly
+identified by aggregate data," meaning that $M$, while of full rank, is ill-conditioned, so informative
+priors or many subgroups are needed for stable estimation. The relaxed model is the principled way to
+accommodate effect modification, but its data demands are stringent. $\blacktriangleleft$
+:::
+
+::: {#exm-mlumr-relaxed-subgroups}
+## Two subgroups identify a slope, but only if they differ
+Take one binary covariate ($d=1$), the logit link, and the index parameters already fixed. The comparator
+now reports its response rate in two subgroups. In the favorable case the subgroups are the two covariate
+strata themselves: subgroup $z=0$ is the biomarker-negative patients (covariate mean $0$) with observed
+response $0.30$, and subgroup $z=1$ is the biomarker-positive patients (covariate mean $1$) with observed
+response $0.55$. Each subgroup integral @eq-spfa-relaxed-agg is then a single point, so the two equations
+read
+$$
+\operatorname{expit}(\alpha_B)=0.30,\qquad \operatorname{expit}(\alpha_B+\beta_B)=0.55,
+$$
+which solve exactly: $\alpha_B=\operatorname{logit}(0.30)=-0.85$ and
+$\alpha_B+\beta_B=\operatorname{logit}(0.55)=0.20$, so $\beta_B=1.05$. Two aggregate numbers have identified
+both the comparator intercept and its slope, with no SPFA invoked. This is the Type 2 model, and the count
+$Z=2=d+1$ meets the counting condition with room to spare on non-degeneracy, because the two subgroup means,
+$0$ and $1$, are as far apart as they can be.
+
+Now spoil it. Suppose instead the two reported subgroups are "younger" and "older" patients, and the
+biomarker prevalence is almost the same in both, say covariate means $0.48$ and $0.52$. Each equation is now
+$\theta_{\bullet B}^{z}\approx(1-\bar x_z)\operatorname{expit}(\alpha_B)+\bar x_z\operatorname{expit}
+(\alpha_B+\beta_B)$ with $\bar x_z$ near $0.5$ in both, so the two equations are nearly the *same* equation:
+together they pin the average level well, but say almost nothing about the slope $\beta_B$, because shifting
+a little covariate mass between two nearly identical strata barely changes either subgroup's outcome. The
+matrix $M$ of @thm-spfa-relaxation is then ill-conditioned; a small error in either reported rate swings the
+estimated $\beta_B$ wildly. Counting ($Z=d+1$) is satisfied, yet non-degeneracy nearly fails, and only
+strong priors or a genuinely different third subgroup rescue the estimate. This is the arithmetic behind the
+`mlumr` warning that the relaxed comparator slope is "weakly identified by aggregate data." $\blacktriangleleft$
+:::
+
+This theorem corresponds to M.4 in the proof catalogue.
+
+## Aggregate marginalization by quasi-Monte Carlo {#sec-mlumr-qmc}
+
+The aggregate integrals @eq-mlumr-model-agg and @eq-spfa-relaxed-agg are, except on the identity link,
+intractable in closed form. ML-UMR evaluates them with the exact pipeline ML-NMR uses, reconstructing the
+comparator covariate distribution from its reported margins and a correlation matrix and integrating on the
+unit hypercube. The result is a corollary of the hypercube-integration theorem of Chapter 22, recorded here
+in the unanchored notation.
+
+**Why an integral, and why the mean is not enough.** Here is the practical reason for the machinery, in one
+paragraph. Arm $B$'s average outcome is $\int g^{-1}(\alpha_B+\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}})
+f_B(\mathbf{x})\,d\mathbf{x}$. On the *identity* link $g^{-1}$ is linear, so the integral equals $g^{-1}$
+evaluated at the mean covariate $\bar{\mathbf{x}}_B$: the comparator's reported *means* are all you need. On
+the *logit* link (and the hazard scale, and every nonlinear link) $g^{-1}$ is curved, so the average of the
+outcome is *not* the outcome at the average covariate; the whole *distribution* of covariates matters, not
+just its mean. But the comparator paper reports margins, not patient rows. So the model *fabricates* a cloud
+of synthetic covariate points whose margins and correlations match what the paper reported, and averages the
+outcome over that cloud. The theorem below is the recipe for building the cloud, an inverse-CDF transform
+for each margin glued by a Gaussian copula for the correlations, together with a guarantee that a modest
+number of well-chosen points (a Sobol' quasi-Monte Carlo net) makes the average accurate. A reader content
+with this picture may skim the theorem and rejoin at the discrete remark, where a single binary covariate
+collapses the integral to an exact two-point sum.
+
+::: {#thm-mlumr-qmc-marginalization}
+## QMC marginalization of the comparator integral
+Let the comparator covariate distribution $f_B$ have continuous marginal distribution functions
+$F_{B,1},\dots,F_{B,d}$ (Normal for a continuous covariate of reported mean and standard deviation,
+Bernoulli for a binary covariate of reported prevalence, and so on) and Gaussian-copula correlation matrix
+$\boldsymbol\Omega_B=LL^\top$ (@def-gaussian-copula). Let $T:[0,1]^{d}\to\mathcal{X}$ be the transport map
+of @eq-qmc-pipeline built from these margins and $L$. Then for any integrand $\varphi:\mathcal{X}\to
+\mathbb{R}$, in particular the response-scale arm mean $\varphi=g^{-1}\circ\eta_B$,
+$$
+\int_{\mathcal{X}}\varphi(\mathbf{x})\,f_B(\mathbf{x})\,d\mathbf{x}=\int_{[0,1]^{d}}\varphi\big(T(\mathbf{u})\big)\,d\mathbf{u},
+$$ {#eq-mlumr-qmc-pullback}
+and the Sobol' QMC estimate over a net $P_N=\{\mathbf{u}^{(n)}\}_{n=1}^{N}$ (@def-sobol-net),
+$$
+\widehat\theta_{\bullet B}^{(N)}(\boldsymbol\xi)=\frac1N\sum_{n=1}^{N}g^{-1}\!\big(\alpha_B+T(\mathbf{u}^{(n)})^\top\boldsymbol\beta_{\mathrm{PF}}\big),
+$$ {#eq-mlumr-qmc}
+satisfies, whenever the pullback $\psi=g^{-1}\circ\eta_B\circ T$ has bounded Hardy-Krause variation
+(@def-hardy-krause-variation; intuitively, $\psi$ is not too wiggly on the cube, the multivariate analogue
+of a one-dimensional function of bounded total variation),
+$$
+\big|\widehat\theta_{\bullet B}^{(N)}-\theta_{\bullet B}\big|\le V_{\mathrm{HK}}(\psi)\,D_N^{*}(P_N)=O\!\Big(V_{\mathrm{HK}}(\psi)\,\frac{(\log N)^{d}}{N}\Big).
+$$ {#eq-mlumr-qmc-error}
+The same pipeline, with $f_B$ replaced by the target density $f_{*}$, evaluates the target arm means
+$\bar\theta_k(\mathcal{P}^{*})$ of @eq-mlumr-estimand.
+:::
+
+::: {.proof}
+The change-of-variables identity @eq-mlumr-qmc-pullback is part 1 of @thm-hypercube-integration: the map
+$T$ pushes the uniform law on $[0,1]^{d}$ forward to $f_B$, by the inverse-CDF transform (@thm-inverse-cdf)
+on each margin and Sklar's theorem (@thm-sklar) for the Gaussian copula, so the expectation of
+$\varphi(\mathbf{X})$ under $\mathbf{X}\sim f_B$ equals the cube integral of $\varphi\circ T$. Substituting
+$\varphi=g^{-1}\circ\eta_B$ and the Sobol' net gives @eq-mlumr-qmc. The error bound @eq-mlumr-qmc-error is
+the Koksma-Hlawka inequality (@thm-koksma-hlawka) applied to $\psi$ on the cube with the point set $P_N$,
+exactly as in part 2 of @thm-hypercube-integration; for continuous margins each $F_{B,i}^{-1}$ is
+continuous and, for a bounded smooth link such as the logit, $\psi$ is smooth and bounded, hence of bounded
+Hardy-Krause variation, so the Sobol' discrepancy rate $D_N^{*}=O((\log N)^{d}/N)$ yields the stated rate.
+Replacing $f_B$ by $f_{*}$ changes only the margins and correlation fed into $T$, leaving the argument
+verbatim. $\square$
+:::
+
+::: {.remark}
+**Discrete margins and the exact finite sum.** When a covariate is discrete, its inverse distribution
+function is a step function, and the pullback $\psi$ is piecewise constant in that coordinate, so its
+Hardy-Krause variation can be large and the smooth-integrand rate @eq-mlumr-qmc-error need not hold. This
+is not a defect in low dimension: a single binary covariate makes the integral an exact two-point sum,
+$\theta_{\bullet B}=(1-\bar x_B)\,g^{-1}(\alpha_B)+\bar x_B\,g^{-1}(\alpha_B+\beta_{\mathrm{PF}})$, with no
+QMC error at all, and the worked example of @sec-mlumr-example uses this exact form. For several discrete
+covariates, or mixed discrete and continuous sets, one enumerates the discrete cells and applies QMC within
+each continuous slice, or uses a randomized (Owen-scrambled, @owen1956) Sobol' net whose error behaves
+better on non-smooth integrands. The reference software defaults to $N=64$ Sobol' points and provides a
+doubling diagnostic, `check_integration()`, the empirical convergence check of @def-integration-error-monitoring,
+to verify that the integration error is negligible against the Markov chain Monte Carlo error before the
+results are interpreted. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Fixed nodes, smooth likelihood.** As in ML-NMR, the integration nodes $\mathbf{x}^{(n)}=T(\mathbf{u}^{(n)})$
+depend only on the comparator's reported margins and correlation, not on the parameters $\boldsymbol\xi$;
+they are computed once. The aggregate mean @eq-mlumr-qmc is then a deterministic smooth function of
+$\boldsymbol\xi$ with an exact gradient, which is what makes the joint posterior amenable to Hamiltonian
+Monte Carlo (@eq-qmc-fixed-nodes). Resampling the nodes at each step, as plain Monte Carlo would, would
+make the likelihood noisy and destroy the gradient; this is the same reason QMC, not Monte Carlo, is the
+integration rule throughout Part V. $\blacktriangleleft$
+:::
+
+This corresponds to M.5 in the proof catalogue.
+
+## Time-to-event outcomes {#sec-mlumr-tte}
+
+Survival is the outcome that motivates ML-UMR in oncology HTA, where the comparator is a single-arm trial
+reporting a Kaplan-Meier curve. The general-likelihood ML-NMR framework of Chapter 25 already extended
+aggregation from means to arbitrary individual likelihoods (@thm-general-likelihood-mlnmr); ML-UMR uses
+that framework in the unanchored setting, with SPFA acting on the log-hazard scale. We state the model and
+its consequences, building directly on the survival results of Chapter 25.
+
+**The survival workflow, before the formalism.** Picture the archetypal case from @exm-mlumr-running: a
+single-arm trial of a new agent in advanced melanoma provides IPD (each patient's covariates and survival
+time, some censored), while the comparator is a published chemotherapy trial showing only a Kaplan-Meier
+curve and a numbers-at-risk table. The analysis is a five-stage pipeline, and it helps to see the whole
+pipeline before the theorems dissect it.
+
+1. **Reconstruct** pseudo-individual event and censoring times from the comparator's published Kaplan-Meier
+curve and at-risk table (@thm-pseudo-ipd-reconstruction). These pseudo-patients carry times but *no
+covariates*.
+2. **Attach a covariate cloud.** Pair the reconstructed comparator times with the comparator's reported
+covariate distribution $f_B$, the same Gaussian-copula reconstruction used for binary outcomes
+(@thm-mlumr-qmc-marginalization); the covariates are integrated out, not matched one-to-one to pseudo-patients.
+3. **Integrate the censored likelihood** over that covariate cloud, arm by arm, to form each source's
+contribution to one joint likelihood (@eq-mlumr-censored-agg, @thm-mlumr-joint-likelihood).
+4. **Fit the posterior** by HMC, borrowing the index prognostic slope for the comparator through SPFA on
+the log-hazard scale.
+5. **Read off target estimands.** For any chosen population, push the posterior through the covariate
+integral to get marginal survival, marginal hazard, RMST, and median survival (@thm-mlumr-target-survival).
+
+A word on direction, because survival flips the sign convention of the binary example. There a *higher*
+response probability was better, so a positive $\Delta_{AB}$ favored $A$. With survival a *lower* hazard is
+better and a *longer* survival is better: a hazard ratio of $A$ versus $B$ below $1$, or an RMST difference
+($A$ minus $B$) above $0$, favors the index treatment. We keep each estimand's numerator explicit and
+restate the direction at each use.
+
+::: {#thm-mlumr-tte}
+## ML-UMR for time-to-event outcomes
+Let the index and comparator hazards follow a parametric survival model with shared baseline shape and
+SPFA on the log-hazard scale.
+
+*Proportional hazards (PH).* With a baseline hazard $h_0(t)>0$ and SPFA prognostic slope
+$\boldsymbol\beta_{\mathrm{PF}}$,
+$$
+h_k(t\mid\mathbf{x})=h_0(t)\,\exp\!\big(\eta_k(\mathbf{x})\big),
+\qquad \eta_k(\mathbf{x})=\alpha_k+\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}},\quad k\in\{A,B\},
+$$ {#eq-mlumr-ph}
+which is the PH model @eq-genlik-ph with the single unanchored contrast $\alpha_A-\alpha_B$ in place of the
+treatment effect and no effect-modification term.
+
+*Accelerated failure time (AFT).* With an error distribution $F_\epsilon$ and scale $\sigma$,
+$\log T=\eta_k(\mathbf{x})+\sigma\epsilon$, $\epsilon\sim F_\epsilon$.
+
+Then:
+
+**(a) Likelihood.** The index contributes the right-censored individual likelihood @eq-genlik-censored-lik
+at observed covariates; the comparator contributes, for each (possibly reconstructed) observation
+$(t_i,\delta_i)$ with unobserved covariates distributed as $f_B$, the integrated censored likelihood
+$$
+L_i^{(B)}(\boldsymbol\xi)=\int_{\mathcal{X}}h_B(t_i\mid\mathbf{x})^{\delta_i}\,S_B(t_i\mid\mathbf{x})\,f_B(\mathbf{x})\,d\mathbf{x},
+$$ {#eq-mlumr-censored-agg}
+well defined and finite by @thm-marginal-individual-likelihood and evaluated by the QMC rule
+@thm-mlumr-qmc-marginalization.
+
+**(b) Conditional log hazard ratio.** Under PH and SPFA the conditional log hazard ratio of $A$ versus $B$
+is the time-invariant, covariate-free, population-free scalar
+$$
+\log\frac{h_A(t\mid\mathbf{x})}{h_B(t\mid\mathbf{x})}=\eta_A(\mathbf{x})-\eta_B(\mathbf{x})=\alpha_A-\alpha_B
+\qquad\text{for all }t,\mathbf{x},
+$$ {#eq-mlumr-cond-loghr}
+by @thm-conditional-loghr-ph and @eq-spfa-constant-contrast.
+
+**(c) Target-population marginal survival, hazard, RMST.** For any target $\mathcal{P}^{*}$, the marginal
+survival is the covariate average $S_k(t\mid\mathcal{P}^{*})=\int S_k(t\mid\mathbf{x})f_{*}(\mathbf{x})\,
+d\mathbf{x}$; the marginal hazard is the survivor-weighted average @eq-genlik-survivor-rep; and the
+restricted mean survival time is the collapsible average $\operatorname{RMST}_k(\tau\mid\mathcal{P}^{*})=
+\int\operatorname{RMST}_k(\tau\mid\mathbf{x})f_{*}(\mathbf{x})\,d\mathbf{x}$ of @thm-rmst-collapsible.
+
+**(d) The marginal hazard ratio is time-varying.** Even under the conditional PH and SPFA of @eq-mlumr-ph,
+the marginal hazard ratio $h_A(t\mid\mathcal{P}^{*})/h_B(t\mid\mathcal{P}^{*})$ is in general not constant
+in $t$, and is population-dependent, by @thm-marginal-hr-time-varying.
+
+**(e) Scale misalignment: RMST is collapsible but not freely transportable.** Although the RMST contrast is
+collapsible within any population, it is *not* transportable across populations from the log-hazard model.
+Precisely, under @eq-mlumr-ph with $\boldsymbol\beta_{\mathrm{PF}}\ne\mathbf{0}$, the conditional RMST
+contrast $\mathbf{x}\mapsto\operatorname{RMST}_A(\tau\mid\mathbf{x})-\operatorname{RMST}_B(\tau\mid\mathbf{x})$
+is a non-constant function of $\mathbf{x}$, so its population average
+$$
+\Delta\!\operatorname{RMST}_{AB}(\tau\mid\mathcal{P}^{*})=\int_{\mathcal{X}}\big[\operatorname{RMST}_A(\tau\mid\mathbf{x})-\operatorname{RMST}_B(\tau\mid\mathbf{x})\big]\,f_{*}(\mathbf{x})\,d\mathbf{x}
+$$ {#eq-mlumr-rmst-transport}
+depends on the whole target distribution $f_{*}$ and differs across target populations even though the
+conditional log-hazard contrast @eq-mlumr-cond-loghr is the single population-free scalar $\alpha_A-\alpha_B$.
+:::
+
+::: {.proof}
+**(a).** The index term is @def-censored-likelihood, derived from independent censoring in
+@prp-censored-likelihood-density. For the comparator, the conditional kernel $h_B(t\mid\mathbf{x})^{\delta}
+S_B(t\mid\mathbf{x})$ is a nonnegative function of $\mathbf{x}$ that is a density (in $t$) when $\delta=1$
+and a probability (the survival) when $\delta=0$; in either case it is integrable against $f_B$ by
+@thm-marginal-individual-likelihood, giving the well-defined @eq-mlumr-censored-agg, and the QMC evaluation
+is @thm-mlumr-qmc-marginalization applied to this integrand. (This integrated censored likelihood is the
+$\pi_{\mathrm{Ind}}=h^{\delta}S$ instance of the general-likelihood theorem @thm-general-likelihood-mlnmr.)
+
+**(b).** By @thm-conditional-loghr-ph the conditional log hazard ratio under PH is $\eta_A(\mathbf{x})-
+\eta_B(\mathbf{x})$, free of $t$ and of the baseline; under SPFA this equals $\alpha_A-\alpha_B$ by
+@eq-spfa-constant-contrast, free also of $\mathbf{x}$.
+
+**(c).** Marginal survival is by definition the covariate average of conditional survival, and RMST
+collapsibility is @thm-rmst-collapsible (a Tonelli exchange of the time and covariate integrals); the
+survivor-weighted marginal hazard is @lem-survivor-weighted-hazard. All three carry over verbatim with
+$f_{\mathcal{P}}=f_{*}$.
+
+**(d).** Apply @thm-marginal-hr-time-varying: writing $h_B(t\mid\mathbf{x})=h_0(t)e^{\eta_B(\mathbf{x})}$
+as a frailty model (one in which each individual's hazard is scaled by a fixed positive multiplier, the
+*frailty*) with frailty $\rho(\mathbf{x})=e^{\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}}}$
+(non-degenerate when $\boldsymbol\beta_{\mathrm{PF}}\ne\mathbf{0}$ and the covariate varies under $f_{*}$),
+the constant conditional ratio is $\psi=e^{\alpha_A-\alpha_B}$, and the theorem gives a marginal hazard
+ratio that equals $\psi$ only at $t=0$ and is strictly attenuated toward the null for $t>0$, hence
+time-varying; the attenuation depends on $f_{*}$ through the survivor distribution
+@eq-genlik-survivor-density, hence is population-dependent.
+
+**(e).** Fix two covariate values $\mathbf{x},\mathbf{x}'$ with $\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}}
+\ne\mathbf{x}'^\top\boldsymbol\beta_{\mathrm{PF}}$ (possible since $\boldsymbol\beta_{\mathrm{PF}}\ne
+\mathbf{0}$). The conditional survival under arm $k$ is, by @thm-survival-hazard-relation,
+$S_k(t\mid\mathbf{x})=\exp(-e^{\eta_k(\mathbf{x})}H_0(t))$ with $H_0(t)=\int_0^t h_0$, so the conditional
+RMST is $\operatorname{RMST}_k(\tau\mid\mathbf{x})=\int_0^{\tau}\exp(-e^{\alpha_k+\mathbf{x}^\top
+\boldsymbol\beta_{\mathrm{PF}}}H_0(s))\,ds$, a strictly decreasing function of the scalar
+$e^{\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}}}$ (larger frailty, smaller survival, smaller area). The
+contrast
+$$
+\Delta(\mathbf{x}):=\operatorname{RMST}_A(\tau\mid\mathbf{x})-\operatorname{RMST}_B(\tau\mid\mathbf{x})
+=\int_0^{\tau}\Big[e^{-e^{\alpha_A}r(\mathbf{x})H_0(s)}-e^{-e^{\alpha_B}r(\mathbf{x})H_0(s)}\Big]ds,
+\quad r(\mathbf{x}):=e^{\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}}},
+$$
+is a non-constant function of $r(\mathbf{x})$ whenever $\alpha_A\ne\alpha_B$: as $r(\mathbf{x})\downarrow0$
+both exponentials tend to $1$ and $\Delta\to0$, while at a finite $r(\mathbf{x})$ the two areas differ, so
+$\Delta(\mathbf{x})$ is not constant in $\mathbf{x}$. Therefore its average @eq-mlumr-rmst-transport against
+$f_{*}$ is a genuine functional of the distribution of $r(\mathbf{X})$ under $f_{*}$, not a function of a
+single moment, and two targets with different covariate distributions give different
+$\Delta\!\operatorname{RMST}_{AB}(\tau\mid\mathcal{P}^{*})$, even though the conditional log-hazard contrast
+@eq-mlumr-cond-loghr is the same scalar $\alpha_A-\alpha_B$ in every population. $\square$
+:::
+
+::: {.remark}
+**Part (e) in two numbers.** The scale-misalignment proof is the densest block in the chapter, so here is a
+concrete check with the exponential model of the survival coda (@sec-mlumr-example): $h_k(t\mid x)=
+\lambda_k e^{\beta x}$, $\beta=\log 2$, $\lambda_A=0.10$, $\lambda_B=0.15$, horizon $\tau=10$. The
+conditional RMST contrast $\Delta(x)=\operatorname{RMST}_A(\tau\mid x)-\operatorname{RMST}_B(\tau\mid x)$
+with $\operatorname{RMST}_k(\tau\mid x)=(1-e^{-\lambda_k e^{\beta x}\tau})/(\lambda_k e^{\beta x})$ evaluates
+to $\Delta(0)=6.321-5.179=1.142$ at $x=0$ and $\Delta(1)=4.323-3.167=1.156$ at $x=1$: *not the same
+number*. Because $\Delta(x)$ varies with $x$, its population average shifts with the covariate mix, giving a
+target-population RMST contrast of $0.5(1.142)+0.5(1.156)=1.149$ under $P(X=1)=0.5$ but
+$0.7(1.142)+0.3(1.156)=1.146$ under $P(X=1)=0.3$. The gap is small in this benign example, but it is
+genuine, and it grows with the strength of the covariate effect $\beta$ and the horizon $\tau$. The
+conditional log hazard ratio, by contrast, is the single number $\log(\lambda_B/\lambda_A)$ in every
+population: that is the transportable object, and the RMST contrast is not. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Which estimand to report.** Part (b) gives the clean transportable object: the conditional log hazard
+ratio, a single number under SPFA, valid in every population. Part (d) warns that the *marginal* hazard
+ratio, the quantity a single Cox fit reports, is time-varying and population-dependent, hence not a
+transportable parameter; the `mlumr` default reports the scalar marginal hazard ratio as its value at the
+start of follow-up, $t=0$, and exposes the full curve through `predict(type = "loghr")`. Part (e) is the
+subtle one, and is the unanchored instance of the scale-misalignment caveat flagged after
+@thm-rmst-collapsible in Chapter 25: the RMST contrast is collapsible and clinically interpretable, but
+because the model is fitted on the log-hazard scale while RMST lives on the time scale, transporting the
+RMST contrast to a population with a different covariate distribution requires that target distribution and
+is not licensed by SPFA on the log-hazard scale alone. The practical recommendation, following
+@chandler2026survival, is to report the conditional log hazard ratio as the primary transportable summary
+and the target-population RMST as a collapsible read-out in each named population. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**Baselines and distributions.** The reference implementation supports exponential, Weibull, and Gompertz
+PH models and their AFT counterparts (exponential-AFT, Weibull-AFT, log-normal, log-logistic, gamma,
+generalized gamma), plus flexible M-spline and piecewise-exponential baselines with a random-walk smoothing
+prior, following the `multinma` survival models of @phillippo2025general. The choice of baseline shape is
+orthogonal to the SPFA structure: SPFA constrains the covariate slope, the baseline $h_0(t)$ is shared
+across arms by the PH assumption, and the unanchored contrast is carried entirely by $\alpha_A-\alpha_B$.
+$\blacktriangleleft$
+:::
+
+This theorem corresponds to M.6 in the proof catalogue.
+
+## Reconstructing pseudo-individual data from a Kaplan-Meier curve {#sec-mlumr-pseudo}
+
+The comparator likelihood @eq-mlumr-censored-agg is a product over individual observations
+$(t_i,\delta_i)$, but a published survival study reports a Kaplan-Meier curve and a numbers-at-risk table,
+not individual times. We reconstruct pseudo-individual data that reproduce the published curve, and prove
+that the reconstruction is exact in the idealized noiseless case.
+
+Recall the Kaplan-Meier (product-limit) estimator. With distinct observed event times $t_1<t_2<\cdots<t_m$,
+$n_j$ patients at risk just before $t_j$, and $d_j$ events at $t_j$, the estimator is
+$$
+\widehat S(t)=\prod_{j:\,t_j\le t}\Big(1-\frac{d_j}{n_j}\Big),
+\qquad \widehat S(t)=1\text{ for }t<t_1 .
+$$ {#eq-km-product}
+Between consecutive event times the number at risk decreases by the events at $t_j$ and by the patients
+censored in $[t_j,t_{j+1})$, say $c_j$ of them: $n_{j+1}=n_j-d_j-c_j$.
+
+::: {#thm-pseudo-ipd-reconstruction}
+## Exact reconstruction of pseudo-IPD from a Kaplan-Meier curve
+Suppose the published report provides, without digitization error, the step survival curve @eq-km-product
+(equivalently the event times $t_1<\cdots<t_m$ and the survival values $\widehat S(t_j)$) together with the
+numbers at risk $n_1,\dots,n_m$ at the event times and the initial sample size $n_B=n_1+(\text{any
+pre-}t_1\text{ censoring})$. Then:
+
+1. The event counts are uniquely determined by the curve and the risk set,
+$$
+d_j=n_j\Big(1-\frac{\widehat S(t_j)}{\widehat S(t_{j-1})}\Big),\qquad j=1,\dots,m,\ \ \widehat S(t_0):=1,
+$$ {#eq-km-inversion}
+and the censoring counts are determined by the risk-set recursion $c_j=n_j-d_j-n_{j+1}$ (with $n_{m+1}$ the
+final reported at-risk number).
+
+2. Any pseudo-sample $\{(t_i,\delta_i)\}_{i=1}^{n_B}$ that realizes these per-interval event counts $d_j$
+and censoring counts $c_j$ (placing $d_j$ events exactly at $t_j$ and $c_j$ censorings anywhere in
+$[t_j,t_{j+1})$) has Kaplan-Meier estimator identical to the published @eq-km-product at every $t$.
+
+3. The reconstruction preserves the marginal survival distribution exactly but discards individual-level
+covariate information: the pseudo-sample carries no covariate values, so it informs only the marginal
+$(t,\delta)$ law and not any covariate-stratified survival.
+:::
+
+::: {.proof}
+**(1).** From the product form @eq-km-product, consecutive values satisfy
+$\widehat S(t_j)/\widehat S(t_{j-1})=1-d_j/n_j$, because the product for $\widehat S(t_j)$ is the product
+for $\widehat S(t_{j-1})$ times the single extra factor $(1-d_j/n_j)$. Solving for $d_j$ gives
+@eq-km-inversion; the value is uniquely determined because $n_j>0$ and the ratio
+$\widehat S(t_j)/\widehat S(t_{j-1})\in(0,1]$ are both given. With $d_j$ known and the at-risk numbers
+$n_j,n_{j+1}$ given, the risk-set conservation $n_{j+1}=n_j-d_j-c_j$ solves uniquely for $c_j=n_j-d_j-
+n_{j+1}$. (These are nonnegative integers up to the rounding inherent in reading $\widehat S$; the Guyot
+algorithm rounds and redistributes to keep the counts integer and the at-risk numbers matched.)
+
+**(2).** Construct a pseudo-sample with exactly $d_j$ events at time $t_j$ and $c_j$ censorings at
+arbitrary times in $[t_j,t_{j+1})$. Its Kaplan-Meier estimator is computed from @eq-km-product using its
+own event times and risk sets. At time $t_1$ the pseudo-sample has $n_B$ at risk and $d_1$ events, matching
+$n_1,d_1$. Inductively, if the pseudo-sample has $n_j$ at risk just before $t_j$ (matching the published
+$n_j$), then it has $d_j$ events at $t_j$ and $c_j$ censorings in $[t_j,t_{j+1})$ by construction, so just
+before $t_{j+1}$ it has $n_j-d_j-c_j=n_{j+1}$ at risk, matching the published $n_{j+1}$; the censorings in
+the open interval contribute no event factor and only reduce the risk set. Hence at every event time the
+pseudo-sample has the same $(n_j,d_j)$ as the published data, so its product-limit estimator equals
+@eq-km-product factor by factor, at every $t$. (The placement of censorings within an interval is
+irrelevant to the estimator, which only counts how many remain at risk at the next event time, so the
+reconstruction is unique as a curve even though the exact censoring times are not.)
+
+**(3).** The pseudo-sample is a list of times and event indicators with no covariates attached, so any
+statistic that depends only on the marginal $(t,\delta)$ distribution (the survival curve, the marginal
+hazard, the RMST) is reproduced, while any covariate-conditional statistic is not recoverable from it. This
+is the standard limitation: the reconstruction is faithful at the margin and silent about within-strata
+structure. $\square$
+:::
+
+::: {#exm-mlumr-km-inversion}
+## A three-event Kaplan-Meier inversion by hand
+Suppose the comparator report gives $n_B=20$ patients, event times $t_1<t_2<t_3$, at-risk numbers
+$n_1=20$, $n_2=14$, $n_3=10$ (and $n_4=8$ after $t_3$), and the published step-curve values
+$\widehat S(t_1)=0.800$, $\widehat S(t_2)=0.629$, $\widehat S(t_3)=0.503$. Apply @eq-km-inversion with
+$\widehat S(t_0):=1$:
+$$
+d_1=20\Big(1-\tfrac{0.800}{1}\Big)=4,\quad
+d_2=14\Big(1-\tfrac{0.629}{0.800}\Big)=3,\quad
+d_3=10\Big(1-\tfrac{0.503}{0.629}\Big)=2,
+$$
+and the risk-set recursion $c_j=n_j-d_j-n_{j+1}$ gives the censoring counts
+$c_1=20-4-14=2$, $c_2=14-3-10=1$, $c_3=10-2-8=0$. So the published curve and at-risk table pin down exactly
+$4$ events then $2$ censorings, $3$ events then $1$ censoring, then $2$ events with $8$ still at risk. Any
+pseudo-sample placing events and censorings this way reproduces the curve factor by factor (part 2 of the
+theorem). **But note what the pseudo-sample does not have: a covariate for any of these $20$ patients.** The
+reconstruction recovers the marginal survival times and nothing about who was biomarker-positive or how old
+anyone was. That is why the survival likelihood @eq-mlumr-censored-agg still *integrates* over the reported
+covariate distribution $f_B$: the pseudo-times supply the $(t,\delta)$ margin, $f_B$ supplies the covariate
+cloud, and the two are combined but never matched patient by patient. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**From idealized inversion to the Guyot algorithm.** Theorem @thm-pseudo-ipd-reconstruction is the exact
+case in which the at-risk number is known at every event time. In practice the numbers at risk are reported
+only at a coarse grid of follow-up times, and the survival values are read off a figure with digitization
+error. The algorithm of Guyot and colleagues [@guyot2012] solves the same inversion under these realistic
+constraints: it allocates censorings between reported at-risk times so that the implied risk sets match the
+table, then applies @eq-km-inversion event by event, iterating to reconcile the curve drops with the
+at-risk evolution. The output is pseudo-IPD whose Kaplan-Meier curve matches the published one to within
+digitization noise; @chandler2026survival and the `mlumr` function `set_agd_surv()` implement it for the
+comparator arm. Sensitivity analyses over several independent digitizations quantify the reconstruction
+uncertainty, which is the price the unanchored survival comparison pays for having only a published figure.
+$\blacktriangleleft$
+:::
+
+This theorem corresponds to M.7 in the proof catalogue, and supplies the reconstruction whose existence
+Chapter 25 invoked in the remark following @thm-aggregate-marginal-likelihood.
+
+## The joint individual-plus-aggregate likelihood {#sec-mlumr-joint}
+
+The two data sources are combined into one likelihood, and one posterior. The factorization is the
+unanchored instance of the aggregate arm likelihood of Chapter 25.
+
+::: {#thm-mlumr-joint-likelihood}
+## The joint ML-UMR likelihood
+Assume the index observations are conditionally independent given their covariates and $\boldsymbol\xi$,
+and the comparator observations are conditionally independent given their (unobserved) covariates and
+$\boldsymbol\xi$, with comparator covariates drawn independently from $f_B$. Then the joint likelihood of
+the index IPD $\mathbf{Y}^{(A)}$ and the comparator data $\mathbf{Y}^{(B)}$ factorizes as
+$$
+L_{\mathrm{joint}}(\boldsymbol\xi)=\underbrace{\prod_{i=1}^{n_A}\pi_{\mathrm{Ind}}\!\big(y_i^{(A)}\mid g^{-1}(\eta_A(\mathbf{x}_i)),\boldsymbol\phi\big)}_{\text{index IPD, covariates observed}}\;\cdot\;\underbrace{\prod_{i=1}^{n_B}\int_{\mathcal{X}}\pi_{\mathrm{Ind}}\!\big(y_i^{(B)}\mid g^{-1}(\eta_B(\mathbf{x})),\boldsymbol\phi\big)\,f_B(\mathbf{x})\,d\mathbf{x}}_{\text{comparator AgD, covariates integrated}},
+$$ {#eq-mlumr-joint-lik}
+where for survival the kernel is the censored likelihood $h^{\delta}S$ and the comparator factors use the
+reconstructed pseudo-IPD of @thm-pseudo-ipd-reconstruction. With a prior $\pi(\boldsymbol\xi)$ the
+posterior is $\pi(\boldsymbol\xi\mid\mathcal{D})\propto L_{\mathrm{joint}}(\boldsymbol\xi)\,
+\pi(\boldsymbol\xi)$, and the two sources are weighted automatically by their information content.
+:::
+
+::: {.proof}
+*Index factor.* In the index source the covariates $\mathbf{x}_i$ are observed, so each individual
+contributes its conditional likelihood $\pi_{\mathrm{Ind}}(y_i^{(A)}\mid g^{-1}(\eta_A(\mathbf{x}_i)),
+\boldsymbol\phi)$ evaluated at the known covariate; conditional independence makes the index likelihood the
+product of these, the first factor of @eq-mlumr-joint-lik.
+
+*Comparator factor.* In the comparator source the covariates are unobserved. By
+@thm-marginal-individual-likelihood, the marginal likelihood of one comparator observation $y_i^{(B)}$,
+integrating out its covariate distributed as $f_B$, is $\int_{\mathcal{X}}\pi_{\mathrm{Ind}}(y_i^{(B)}\mid
+g^{-1}(\eta_B(\mathbf{x})),\boldsymbol\phi)f_B(\mathbf{x})\,d\mathbf{x}$; by @thm-aggregate-marginal-likelihood,
+conditional independence of the comparator outcomes given covariates together with independent covariate
+draws makes the comparator likelihood the product of these marginal contributions, the second factor of
+@eq-mlumr-joint-lik. (For a sufficient summary, a binomial event count or a normal sample mean, the product
+collapses to the corresponding aggregate one-line likelihood with mean $\theta_{\bullet B}$, as in
+@def-aggregate-model; for survival no single summary is sufficient and the product runs over the
+reconstructed pseudo-IPD.)
+
+*Joint factorization and posterior.* The index and comparator sources are independent given $\boldsymbol\xi$
+(different patients in different studies), so their joint likelihood is the product of the two factors,
+which is @eq-mlumr-joint-lik. Multiplying by the prior and normalizing gives the posterior. $\square$
+:::
+
+**Why this matters.** This single likelihood is what makes ML-UMR a *model* rather than a two-step recipe:
+the index IPD and the comparator AgD enter one posterior, so uncertainty flows automatically from each
+source into the final contrast, and the same fitted object yields the estimand in every target population.
+It is the unanchored counterpart of the ML-NMR likelihood of Chapter 20, with the comparator arm's
+covariates integrated out instead of observed. The next remark is a caution against over-reading this: more
+comparator data sharpen $\alpha_B$ but never test the borrowed slope.
+
+::: {.remark}
+**Automatic information weighting, and what it is not.** The posterior weights each source by its
+likelihood curvature: a large index sample sharpens $(\alpha_A,\boldsymbol\beta_{\mathrm{PF}})$, and a large
+comparator sample (more events, more at-risk follow-up) sharpens $\alpha_B$ through the aggregate factor.
+This is unlike MAIC and STC, which condition on the index IPD and use the comparator data only for
+reweighting or for the comparator-arm value; ML-UMR puts both data types into one likelihood and lets the
+posterior balance them. What the weighting is *not* is a substitute for the identifying assumption: the
+comparator factor informs only the one scalar $\alpha_B$ (Type 1) or the $(d+1)$-vector $(\alpha_B,
+\boldsymbol\beta_B)$ when subgroups are reported (Type 2, @thm-spfa-relaxation); the slope
+$\boldsymbol\beta_{\mathrm{PF}}$ that projects the index surface onto the comparator arm comes from the IPD
+under SPFA, and no amount of comparator data tests that projection in the Type 1 model. The reference model
+also has no random-effects term for between-study heterogeneity: the comparator rows are treated as one
+population, a limitation recorded in the `mlumr` documentation. $\blacktriangleleft$
+:::
+
+This theorem corresponds to M.8 in the proof catalogue.
+
+## Marginal survival, hazard, and RMST in target populations {#sec-mlumr-target}
+
+From the joint posterior we read off any target-population estimand by pushing the posterior through the
+integration pipeline. We state the construction and its convergence.
+
+::: {#thm-mlumr-target-survival}
+## Target-population survival estimands from the posterior
+Let $\pi(\boldsymbol\xi\mid\mathcal{D})$ be the ML-UMR posterior @thm-mlumr-joint-likelihood, and fix a
+target population $\mathcal{P}^{*}$ with covariate density $f_{*}$ and a horizon $\tau$. For each arm
+$k\in\{A,B\}$ define the functionals
+$$
+S_k(t\mid\mathcal{P}^{*};\boldsymbol\xi)=\!\int S_k(t\mid\mathbf{x};\boldsymbol\xi)f_{*}(\mathbf{x})d\mathbf{x},
+\quad
+\operatorname{RMST}_k(\tau\mid\mathcal{P}^{*};\boldsymbol\xi)=\!\int_0^{\tau}\! S_k(t\mid\mathcal{P}^{*};\boldsymbol\xi)\,dt,
+$$ {#eq-mlumr-target-functionals}
+and the marginal hazard $h_k(t\mid\mathcal{P}^{*};\boldsymbol\xi)$ by the survivor-weighted formula
+@eq-genlik-survivor-rep. Then:
+
+1. Each functional is a continuous (indeed smooth) function of $\boldsymbol\xi$, so its posterior is the
+well-defined pushforward of $\pi(\boldsymbol\xi\mid\mathcal{D})$, summarized by posterior draws.
+
+2. The estimands of the table below are obtained from these functionals; the survival, RMST, and median
+are collapsible read-outs (averages of conditional quantities), while the marginal hazard ratio and its log
+are non-collapsible and time-varying by @thm-mlumr-tte(d).
+
+| Estimand | Formula |
+|---|---|
+| Marginal survival | $S_k(t\mid\mathcal{P}^{*})=\int S_k(t\mid\mathbf{x})f_{*}(\mathbf{x})\,d\mathbf{x}$ |
+| Marginal hazard | $h_k(t\mid\mathcal{P}^{*})=\dfrac{\int h_k(t\mid\mathbf{x})S_k(t\mid\mathbf{x})f_{*}}{\int S_k(t\mid\mathbf{x})f_{*}}$ |
+| RMST | $\operatorname{RMST}_k(\tau\mid\mathcal{P}^{*})=\int_0^{\tau}S_k(t\mid\mathcal{P}^{*})\,dt$ |
+| RMST contrast | $\Delta\!\operatorname{RMST}_{AB}(\tau\mid\mathcal{P}^{*})=\operatorname{RMST}_A-\operatorname{RMST}_B$ |
+| Marginal log HR at $t$ | $\log\!\big[h_A(t\mid\mathcal{P}^{*})/h_B(t\mid\mathcal{P}^{*})\big]$ |
+| Median survival | the $t$ solving $S_k(t\mid\mathcal{P}^{*})=\tfrac12$ |
+
+3. Computed by QMC over $N$ Sobol' nodes for the inner covariate integral and $S$ posterior draws for the
+outer parameter integral, the posterior mean of any of these estimands converges, as $N\to\infty$ and
+$S\to\infty$, to the true posterior mean, with QMC error $O((\log N)^{d}/N)$ (@thm-mlumr-qmc-marginalization)
+and Monte Carlo error $O(S^{-1/2})$.
+:::
+
+::: {.proof}
+**(1).** For fixed $\mathbf{x}$ and $t$, $S_k(t\mid\mathbf{x};\boldsymbol\xi)=\exp(-e^{\eta_k(\mathbf{x};
+\boldsymbol\xi)}H_0(t;\boldsymbol\xi))$ is a smooth function of $\boldsymbol\xi$ (composition of the smooth
+exponential with the affine $\eta_k$ and the parametric cumulative baseline $H_0$), bounded in $[0,1]$.
+Integrating against the probability measure $f_{*}$ preserves smoothness and boundedness by differentiation
+under the integral sign (dominated convergence, the derivative bounded by an integrable envelope), so
+$S_k(t\mid\mathcal{P}^{*};\boldsymbol\xi)$ is smooth in $\boldsymbol\xi$; integrating over $t\in[0,\tau]$
+gives the smooth RMST functional by Tonelli (@thm-fubini-tonelli, @thm-rmst-collapsible). A smooth function
+of $\boldsymbol\xi$ has a well-defined pushforward law under the posterior, estimated by applying the
+functional to each posterior draw.
+
+**(2).** The marginal survival, RMST, RMST contrast, and median are averages or monotone read-outs of
+conditional survival, hence collapsible by @thm-rmst-collapsible; the marginal hazard is the
+survivor-weighted average @lem-survivor-weighted-hazard, and its ratio across arms is non-collapsible and
+time-varying by @thm-mlumr-tte(d). The table simply records these formulas.
+
+**(3).** For each posterior draw $\boldsymbol\xi^{(s)}$, the inner integral $S_k(t\mid\mathcal{P}^{*};
+\boldsymbol\xi^{(s)})$ is approximated by the QMC average $\frac1N\sum_n S_k(t\mid\mathbf{x}^{(n)};
+\boldsymbol\xi^{(s)})$ over Sobol' nodes $\mathbf{x}^{(n)}=T(\mathbf{u}^{(n)})$ for $f_{*}$, with error
+$O((\log N)^{d}/N)$ by @thm-mlumr-qmc-marginalization (the survival integrand is smooth and bounded). The
+posterior mean is then the average over draws, $\frac1S\sum_s(\cdot)$, with Monte Carlo error $O(S^{-1/2})$
+by the central limit theorem for the (stationary) posterior sample, exactly as in Bayesian g-computation
+(@def-stc-bayes). The two errors add, and both vanish as $N,S\to\infty$. $\square$
+:::
+
+Which of the six estimands should a health researcher actually report? @tbl-mlumr-survival-estimands pairs
+each with the clinical question it answers and flags whether it travels across populations. The rule of
+thumb, defended in the remark below, is to report the conditional log hazard ratio as the transportable
+summary and the RMST (or median) as the clinically interpretable read-out *in each named target
+population*, and to treat the marginal hazard ratio with care, because it is neither constant in time nor
+portable across populations.
+
+| Estimand | Clinical question it answers | Transportable? |
+|---|---|---|
+| Marginal survival $S_k(t\mid\mathcal{P}^{*})$ | what fraction of this population is alive at $t$ under arm $k$ | population-specific |
+| Median survival | the time by which half this population has had the event | population-specific |
+| RMST $\operatorname{RMST}_k(\tau\mid\mathcal{P}^{*})$ | average event-free time up to horizon $\tau$, per arm | collapsible, but population-specific |
+| RMST contrast | average event-free time gained on $A$ versus $B$ up to $\tau$ | collapsible; differs across populations (@thm-mlumr-tte) |
+| Marginal hazard ratio at $t$ | instantaneous risk ratio in this population at $t$ | not transportable; time-varying |
+| Conditional log HR $\alpha_A-\alpha_B$ | the per-patient log risk ratio, identical for all under SPFA | the single transportable scalar |
+
+: Which survival estimand to report. Everything except the conditional log hazard ratio is
+population-specific and must be recomputed for each target $\mathcal{P}^{*}$; the RMST and median are at
+least collapsible (clean averages of conditional quantities), while the marginal hazard ratio is neither
+collapsible nor time-constant. {#tbl-mlumr-survival-estimands}
+
+::: {.remark}
+**The whole point of the marginalization.** Parts (1) and (3) are what let ML-UMR report a survival
+contrast in a population represented by neither trial: choose any $f_{*}$, push the posterior through
+@eq-mlumr-target-functionals, and summarize. The honest cost is part (2) together with @thm-mlumr-tte(e):
+the marginal hazard ratio is not a single transportable number, and the RMST contrast, though collapsible,
+must be recomputed for each target distribution. The transportable scalar is the conditional log hazard
+ratio $\alpha_A-\alpha_B$ of @eq-mlumr-cond-loghr, valid in every population under SPFA. $\blacktriangleleft$
+:::
+
+This theorem corresponds to M.9 in the proof catalogue.
+
+## ML-UMR and unanchored STC {#sec-mlumr-stc}
+
+ML-UMR has a pairwise ancestor. We show that, in the comparator population, the SPFA model reduces exactly
+to unanchored STC, and that its extension to other targets is what the multilevel formulation buys, at the
+cost of the stronger assumption.
+
+Put plainly, and this is the motivation worth holding before the formalism: we want to know exactly what
+ML-UMR buys over the simpler method a health researcher may already know. So we prove the two *agree* where
+STC is valid, the comparator population, and pinpoint where they *part company*, every other target. The
+agreement is reassuring (ML-UMR is not doing anything exotic at the comparator); the extension to other
+populations is the entire value added; and SPFA is the price of that extension. A reader who trusts this
+paragraph can read the theorem as its proof.
+
+::: {#thm-mlumr-stc-equivalence}
+## Equivalence with unanchored STC at the comparator, extension elsewhere
+Adopt SPFA and suppose the comparator AgD provide a sufficient outcome summary (an event count, a sample
+mean) so that the comparator likelihood factor of @thm-mlumr-joint-likelihood is the aggregate model with
+mean $\theta_{\bullet B}$, and let $\hat{\boldsymbol\xi}$ be the (limiting) maximizer of the joint
+likelihood. Then:
+
+1. **(Calibration identity.)** At $\hat{\boldsymbol\xi}$ the fitted comparator aggregate mean equals the
+observed comparator outcome, $\theta_{\bullet B}(\hat{\boldsymbol\xi})=\theta_{\bullet B}^{\mathrm{obs}}$;
+equivalently $\bar\theta_B(\mathcal{P}_B)=\theta_{\bullet B}^{\mathrm{obs}}$.
+
+2. **(Equivalence at the comparator population.)** With target $\mathcal{P}^{*}=\mathcal{P}_B$, the ML-UMR
+estimand @eq-mlumr-estimand equals the unanchored marginal STC estimator of @def-stc-marginal, namely
+$$
+\Delta_{AB}(\mathcal{P}_B)=g\!\big(\bar\theta_A(\mathcal{P}_B)\big)-g\!\big(\theta_{\bullet B}^{\mathrm{obs}}\big),
+\qquad
+\bar\theta_A(\mathcal{P}_B)=\int_{\mathcal{X}}g^{-1}\!\big(\eta_A(\mathbf{x})\big)f_B(\mathbf{x})\,d\mathbf{x},
+$$ {#eq-mlumr-stc-equiv}
+the index surface integrated over the comparator covariate distribution, contrasted on the link scale with
+the observed comparator outcome. Under the conditions of @thm-marginal-stc-unbiased and the unanchored
+condition of @thm-stc-consistency(2), both are consistent for $\Delta_{AB}(\mathcal{P}_B)$.
+
+3. **(Strict extension elsewhere.)** For a target $\mathcal{P}^{*}\ne\mathcal{P}_B$, ML-UMR produces
+$\Delta_{AB}(\mathcal{P}^{*})$ by integrating both arms against $f_{*}$ using the fitted $\alpha_B$ and
+$\boldsymbol\beta_{\mathrm{PF}}$, whereas unanchored STC, lacking a model for arm $B$ beyond the observed
+comparator outcome, cannot move arm $B$ off $\mathcal{P}_B$. The extension uses SPFA, which is strictly
+stronger than the assumption STC needs for its native comparator-population estimand (@prp-spfa-vs-sema).
+:::
+
+::: {.proof}
+**(1).** Write the comparator factor as the aggregate model $\pi_{\mathrm{Agg}}(\text{summary}_B\mid
+\theta_{\bullet B}(\boldsymbol\xi),n_B)$, a one-parameter exponential-family likelihood in the mean
+$\theta_{\bullet B}$ (binomial in the event proportion, normal in the sample mean). Its score in
+$\theta_{\bullet B}$ vanishes exactly when the fitted mean equals the observed sufficient statistic, the
+standard mean-matching property of the exponential family; since $\boldsymbol\beta_{\mathrm{PF}}$ is fixed
+by the index factor and $\theta_{\bullet B}$ is a strictly monotone function of the free parameter
+$\alpha_B$ (@lem-mlnmr-aggregate-monotone), the joint maximizer sets $\theta_{\bullet B}(\hat{\boldsymbol\xi})
+=\theta_{\bullet B}^{\mathrm{obs}}$. By @eq-mlumr-model-agg, $\theta_{\bullet B}=\bar\theta_B(\mathcal{P}_B)$,
+giving the identity.
+
+**(2).** At target $\mathcal{P}_B$ the ML-UMR arm means are $\bar\theta_A(\mathcal{P}_B)=\int g^{-1}(\eta_A)
+f_B$ and $\bar\theta_B(\mathcal{P}_B)=\theta_{\bullet B}^{\mathrm{obs}}$ by part (1), so the estimand
+@eq-mlumr-estimand is $g(\bar\theta_A(\mathcal{P}_B))-g(\theta_{\bullet B}^{\mathrm{obs}})$, which is
+@eq-mlumr-stc-equiv. The unanchored marginal STC estimator of @def-stc-marginal fits the outcome surface on
+the index IPD, predicts arm $A$ in the comparator population as $\hat\mu_A^{\mathrm{STC}}=\int g^{-1}
+(\eta_A)f_B=\bar\theta_A(\mathcal{P}_B)$, and contrasts it on the link scale with the comparator's own
+observed outcome $g(\theta_{\bullet B}^{\mathrm{obs}})$; this is exactly @eq-mlumr-stc-equiv. Hence the two
+coincide. Consistency of the arm-$A$ prediction is @thm-marginal-stc-unbiased under correct specification
+and transportability of the index surface to $\mathcal{P}_B$; the unanchored validity of using the
+comparator's observed outcome as the arm-$B$ value is @thm-stc-consistency(2) under constancy of absolute
+effects, which SPFA supplies. The Bayesian version of @eq-mlumr-stc-equiv is the pushforward of the
+posterior through the same functional, the Bayesian g-computation of @def-stc-bayes.
+
+**(3).** For $\mathcal{P}^{*}\ne\mathcal{P}_B$, ML-UMR evaluates $\bar\theta_B(\mathcal{P}^{*})=\int g^{-1}
+(\alpha_B+\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}})f_{*}(\mathbf{x})\,d\mathbf{x}$ with the fitted
+$\alpha_B$ and the SPFA slope; this requires the arm-$B$ conditional surface at covariate values typical of
+$\mathcal{P}^{*}$, which @lem-spfa-absolute-constancy supplies *only because* SPFA fixes the comparator
+slope equal to the index slope. Unanchored STC, having fit no outcome model for treatment $B$ (no
+comparator IPD), has no value for arm $B$ away from the observed comparator outcome, so it cannot evaluate
+$\bar\theta_B(\mathcal{P}^{*})$; its estimand is defined only at $\mathcal{P}_B$. Thus ML-UMR strictly
+extends the set of admissible targets, and the extension is powered by SPFA, which @prp-spfa-vs-sema shows
+is strictly stronger than the shared-effect-modifier assumption. $\square$
+:::
+
+::: {.remark}
+**The honest summary.** @chandler2025mlumr state in their conclusions that ML-UMR "simplifies to unanchored
+STC in the comparator population"; part (2) is that statement, proved. The value added by ML-UMR is *not*
+at the comparator, where it agrees with the older and assumption-lighter STC, but at other target
+populations, where STC is silent. That added scope is bought entirely with SPFA. Whether the extra targets
+are worth the stronger, untestable assumption is an application-specific judgment, and the safe default,
+when SPFA is doubtful, is to report only the comparator-population contrast, where ML-UMR and unanchored STC
+coincide. $\blacktriangleleft$
+:::
+
+This theorem corresponds to M.10 in the proof catalogue.
+
+## SPFA versus SEMA {#sec-mlumr-spfa-sema}
+
+We now prove precisely the sense in which the unanchored assumption is stronger than the anchored one.
+
+::: {#prp-spfa-vs-sema}
+## SPFA is strictly stronger than SEMA
+Consider the linear-predictor model of @def-individual-model with treatments carrying interaction vectors
+$\boldsymbol\beta_{2,k}$, and the two assumptions, stated for the $A$-versus-$B$ contrast:
+$$
+\text{SEMA: }\ \boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B},
+\qquad
+\text{SPFA: }\ \boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}=\mathbf{0}.
+$$
+Then:
+
+1. **(SPFA $\Rightarrow$ SEMA.)** SPFA implies SEMA.
+
+2. **(Anchored cancellation under SEMA.)** In the anchored triangle with common comparator $C$
+($\boldsymbol\beta_{2,C}=\mathbf{0}$), SEMA makes the conditional $A$-versus-$B$ contrast free of the
+covariate, $\eta_A(\mathbf{x})-\eta_B(\mathbf{x})=\gamma_A-\gamma_B$, even when the shared interaction
+$\boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}$ is nonzero, because the modification cancels against the
+anchor.
+
+3. **(Unanchored necessity of SPFA.)** In the unanchored two-treatment network, the conditional
+$A$-versus-$B$ contrast $\eta_A(\mathbf{x})-\eta_B(\mathbf{x})=(\gamma_A-\gamma_B)+\mathbf{x}^\top
+(\boldsymbol\beta_{2,A}-\boldsymbol\beta_{2,B})$ is free of $\mathbf{x}$ if and only if
+$\boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}$; and the arm-$B$ absolute surface is determined by the index
+IPD (which identifies only $\boldsymbol\beta_A=\boldsymbol\beta_1+\boldsymbol\beta_{2,A}$, with one arm taken
+as reference so $\boldsymbol\beta_{2,A}=\mathbf{0}$) if and only if $\boldsymbol\beta_{2,B}=\mathbf{0}$, that
+is SPFA.
+
+4. **(Strictness.)** The implication in (1) is strict: there exist data-generating processes satisfying
+SEMA but not SPFA, namely any with a shared nonzero interaction $\boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}
+\ne\mathbf{0}$.
+:::
+
+::: {.proof}
+**(1).** If $\boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}=\mathbf{0}$ then in particular
+$\boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}$, so SPFA implies SEMA.
+
+**(2).** In the anchored model the active-versus-comparator predictors are $\eta_A(\mathbf{x})=\mu+
+\mathbf{x}^\top\boldsymbol\beta_1+\gamma_A+\mathbf{x}^\top\boldsymbol\beta_{2,A}$ and $\eta_B(\mathbf{x})=
+\mu+\mathbf{x}^\top\boldsymbol\beta_1+\gamma_B+\mathbf{x}^\top\boldsymbol\beta_{2,B}$ (sharing the study
+baseline and prognostic term as contrasts against $C$). Subtracting,
+$\eta_A(\mathbf{x})-\eta_B(\mathbf{x})=(\gamma_A-\gamma_B)+\mathbf{x}^\top(\boldsymbol\beta_{2,A}-
+\boldsymbol\beta_{2,B})$; under SEMA the bracket $\boldsymbol\beta_{2,A}-\boldsymbol\beta_{2,B}=\mathbf{0}$
+vanishes, leaving $\gamma_A-\gamma_B$, free of $\mathbf{x}$, regardless of the common value
+$\boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}$, which may be any nonzero vector. The anchor (the common
+$C$, against which both contrasts are formed) is what allows the nonzero modification to cancel.
+
+**(3).** The contrast expression is the same algebra as in (2). It is constant in $\mathbf{x}$ iff the
+linear term $\mathbf{x}^\top(\boldsymbol\beta_{2,A}-\boldsymbol\beta_{2,B})$ is identically zero, iff
+$\boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}$ (taking $\mathbf{x}$ to range over a set spanning
+$\mathbb{R}^{d}$). Now the unanchored index IPD is single-arm and identifies only the total slope
+$\boldsymbol\beta_A=\boldsymbol\beta_1+\boldsymbol\beta_{2,A}$ (by @lem-mlumr-single-arm-conflation there is
+no within-network contrast to separate $\boldsymbol\beta_1$ from $\boldsymbol\beta_{2,A}$); fixing the index
+arm as reference sets $\boldsymbol\beta_{2,A}=\mathbf{0}$, so $\boldsymbol\beta_A=\boldsymbol\beta_1$. The
+comparator slope is $\boldsymbol\beta_B=\boldsymbol\beta_1+\boldsymbol\beta_{2,B}$. The arm-$B$ surface is
+determined by the index-identified $\boldsymbol\beta_1$ alone (so that knowing one scalar $\alpha_B$ pins
+$\eta_B$ everywhere, @lem-spfa-absolute-constancy) iff $\boldsymbol\beta_B=\boldsymbol\beta_1$, iff
+$\boldsymbol\beta_{2,B}=\mathbf{0}$, which is SPFA. Without it, $\boldsymbol\beta_{2,B}$ is unidentified from
+the single comparator mean (@thm-mlumr-identifiability(3) below), and the projection fails.
+
+**(4).** Take any model with $\boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}=\mathbf{c}\ne\mathbf{0}$. It
+satisfies SEMA ($\boldsymbol\beta_{2,A}=\boldsymbol\beta_{2,B}$) but violates SPFA ($\boldsymbol\beta_{2,A}
+\ne\mathbf{0}$). Hence the set of SPFA-compliant processes is a proper subset of the SEMA-compliant ones:
+SPFA is strictly stronger. $\square$
+:::
+
+::: {.remark}
+**One picture.** SEMA says the two active treatments modify the outcome *identically*, so their contrast is
+flat; SPFA says they do not modify it *at all*. The anchored design exploits a common comparator to cancel
+shared modification, so it can live with SEMA; the unanchored design has nothing to cancel against and must
+assume there is nothing to cancel, which is SPFA. The same gap is the difference between conditional
+constancy of *relative* effects (@def-conditional-constancy-relative), which anchored adjustment needs, and
+conditional constancy of *absolute* effects (@def-conditional-constancy-absolute), which unanchored
+adjustment needs; SPFA is the parametric face of the latter, as established in @lem-spfa-absolute-constancy.
+The Chandler-Ishak posters describe SPFA as "a limitation inherent to unanchored comparisons," and this
+proposition is the precise statement of that remark. $\blacktriangleleft$
+:::
+
+This proposition corresponds to M.11 in the proof catalogue.
+
+## Identifiability and the limits of unanchored comparison {#sec-mlumr-limits}
+
+We collect the identifiability frontier into one theorem and then survey the limits that no estimator can
+overcome.
+
+::: {#thm-mlumr-identifiability}
+## Identifiability frontier of ML-UMR
+In the unanchored two-treatment network, with the index parameters $(\alpha_A,\boldsymbol\beta_A)$
+identified from the IPD, the comparator block has the following identifiability:
+
+1. **SPFA, overall AgD (one aggregate mean).** $(\alpha_B,\boldsymbol\beta_{\mathrm{PF}})$ identified
+($\boldsymbol\beta_{\mathrm{PF}}$ from IPD, $\alpha_B$ from the single mean): the model is just identified
+(@thm-mlumr-model).
+
+2. **SPFA, subgroup AgD ($Z\ge2$ means).** Over-identified: $\alpha_B$ solves any one subgroup equation,
+and the remaining $Z-1$ equations are testable constraints (a goodness-of-fit check on SPFA).
+
+3. **No SPFA, overall AgD.** $(\alpha_B,\boldsymbol\beta_B)\in\mathbb{R}^{d+1}$ is *not* identified from a
+single aggregate mean: the solution set of $\Theta_B(\alpha_B,\boldsymbol\beta_B)=\theta_{\bullet B}^{\mathrm{obs}}$
+is a $d$-dimensional manifold.
+
+4. **No SPFA, subgroup AgD with $Z\ge d+1$.** $(\alpha_B,\boldsymbol\beta_B)$ identified under the
+non-degeneracy of @thm-spfa-relaxation.
+:::
+
+::: {.proof}
+**(1)** is @thm-mlumr-model: $\boldsymbol\beta_{\mathrm{PF}}$ from the full-rank IPD design and $\alpha_B$ as
+the unique root of the strictly monotone $\Theta_B$ (@lem-mlnmr-aggregate-monotone), one unknown matched by
+one equation.
+
+**(2).** Under SPFA, $\boldsymbol\beta_{\mathrm{PF}}$ is known from the IPD and only $\alpha_B$ is free, so
+each subgroup equation $\Theta_B^{z}(\alpha_B)=\theta_{\bullet B}^{z,\mathrm{obs}}$ determines $\alpha_B$ by
+monotonicity; with $Z\ge2$ subgroups the system is over-determined in the single unknown $\alpha_B$, and
+the $Z-1$ residual equations are constraints that hold only if SPFA is correct, hence a test of SPFA. In
+practice the test is operationalized as a posterior predictive check: fit the SPFA model, then compare each
+observed subgroup outcome against its posterior predictive distribution under the fitted single $\alpha_B$;
+a systematic discrepancy (some subgroups over-predicted, others under-predicted, in a pattern aligned with a
+covariate) is evidence against SPFA. The parametric counterpart is a likelihood-ratio or score test of the
+Type 1 model nested in the relaxed Type 2 model of @thm-spfa-relaxation.
+
+**(3).** With $\boldsymbol\beta_B$ free, the map $(\alpha_B,\boldsymbol\beta_B)\mapsto\Theta_B(\alpha_B,
+\boldsymbol\beta_B)$ goes from $\mathbb{R}^{d+1}$ to $\mathbb{R}$; its gradient $\int(g^{-1})'(\alpha_B+
+\mathbf{x}^\top\boldsymbol\beta_B)(1,\mathbf{x}^\top)f_B$ is a nonzero row vector (the integrand is positive),
+so by the implicit function theorem the level set $\{\Theta_B=\theta_{\bullet B}^{\mathrm{obs}}\}$ is a
+smooth manifold of dimension $(d+1)-1=d\ge1$ near any solution. Every point of it reproduces the same
+observed mean, so distinct parameters give identical data: not identified. (This is the $Z=1<d+1$ case of
+@thm-spfa-relaxation.)
+
+**(4)** is @thm-spfa-relaxation with $Z\ge d+1$ and the full-rank weighted-moment matrix $M$. $\square$
+:::
+
+Three structural limits are shared by every unanchored method, ML-UMR included, and follow from the theory
+already developed.
+
+::: {.remark}
+**Inherent limits.** First, the identifying assumption is untestable in the overall-AgD case: by
+@thm-mlumr-identifiability(3) a single comparator mean cannot distinguish SPFA from any effect-modifying
+alternative, so SPFA must be defended externally; it becomes testable only with subgroup AgD
+(@thm-mlumr-identifiability(2)). Second, no unanchored method can remove confounding by *unmeasured*
+prognostic factors: the projection @eq-spfa-projection transports the index surface in the *measured*
+covariates only, and an imbalanced prognostic variable omitted from $\mathbf{x}$ biases the absolute arm
+positions exactly as in the necessity direction of @thm-unanchored-paic-consistency. Third, the comparator
+covariate distribution $f_B$ is reconstructed from reported margins and an assumed correlation
+(@thm-mlumr-qmc-marginalization); misspecifying it biases the aggregate integral and hence $\alpha_B$. For
+survival, the Kaplan-Meier reconstruction (@thm-pseudo-ipd-reconstruction) adds digitization noise on top.
+$\blacktriangleleft$
+:::
+
+::: {.remark}
+**Empirical behavior under SPFA violation (simulation evidence, not theorems).** The Chandler-Ishak studies
+report simulation results under specific data-generating mechanisms; we record them as evidence, not as
+proved statements, and the worked example of @sec-mlumr-example derives the qualitative pattern by hand. For
+binary outcomes [@chandler2025mlumr], with about 1000 patients per arm and two correlated binary prognostic
+factors, the SPFA model estimating the *comparator-population* log odds ratio shows absolute bias below
+about $0.009$ and 95% interval coverage near nominal across no-, weak-, and strong-modification scenarios;
+the *index-population* (transported) estimate degrades as modification strengthens, with bias around $-0.06$
+(about $-11\%$) under weak modification and around $-0.29$ (about $-67\%$) under strong modification, and
+coverage falling accordingly. The relaxed model (@thm-spfa-relaxation) restores small bias and near-nominal
+coverage when subgroup AgD are available. For survival outcomes [@chandler2026survival], RMST estimands are
+near-unbiased with near-nominal coverage when SPFA holds, degrade modestly under weak modification, and show
+substantial bias (often exceeding 25% to 30%) and undercoverage in the index population under strong
+modification. The robust pattern, derived analytically in @sec-mlumr-example, is that the comparator-
+population estimand is anchored by the observed comparator outcome and so resists SPFA violation, while
+non-comparator targets are fragile because the wrong slope is extrapolated to a different covariate
+distribution. Different mechanisms can give different profiles; these numbers are illustrative, not
+universal. $\blacktriangleleft$
+:::
+
+::: {.remark}
+**When to use ML-UMR.** First, a triage against ML-NMR. If even one study connects the index and comparator
+treatments through a common comparator, use the *anchored* machinery: Bucher (Chapter 14), network
+meta-analysis (Chapter 15), or connected ML-NMR (Chapters 20 to 25), all of which need only SEMA and let the
+IPD check for effect modification rather than assuming it away. Reach for ML-UMR only when the network is
+genuinely disconnected, so that no anchor exists and SPFA becomes unavoidable. The one-line rule: prefer
+ML-NMR whenever a connecting study exists; use ML-UMR when it does not (see @tbl-mlumr-methods). That
+settled, the method is appropriate when individual data exist for the index treatment, only aggregate data
+exist for the comparator, no connected (anchored) network is available, SPFA is defensible from clinical
+knowledge, and the comparator's covariate summaries are reported. Where SPFA is doubtful, the
+defensible report is the comparator-population contrast (where ML-UMR coincides with unanchored STC,
+@thm-mlumr-stc-equivalence), interpreted as population-specific rather than transportable, in line with the
+NICE guidance of @phillippo2016tsd18. The `mlumr` cautions, no between-study heterogeneity term, weak
+identification of the relaxed comparator slope, non-collapsibility of the hazard ratio, and the need to
+verify integration convergence, are the practical face of these limits. $\blacktriangleleft$
+:::
+
+This theorem corresponds to M.12 in the proof catalogue.
+
+## A worked unanchored example {#sec-mlumr-example}
+
+We carry a complete binary ML-UMR analysis through by hand, choosing one binary covariate so that every
+integral is an exact two-point sum (@thm-mlumr-qmc-marginalization, discrete remark) and every number can
+be checked with a calculator. This is the running example of @exm-mlumr-running made numerical. The
+covariate $X\in\{0,1\}$ is a binary biomarker (say PD-L1 positivity, with $X=1$ for biomarker-positive); the
+outcome is a binary response (a good outcome, so a higher probability is better, and biomarker-positive
+patients respond better under the fitted index model); the link is the logit, $g=
+\operatorname{logit}$, $g^{-1}=\operatorname{expit}$.
+
+**Inputs.** Fitting the index IPD on treatment $A$ returns the prognostic model
+$$
+\eta_A(x)=\alpha_A+\beta_{\mathrm{PF}}\,x,\qquad \hat\alpha_A=-0.5,\ \ \hat\beta_{\mathrm{PF}}=1.0,
+$$
+so the index conditional response probabilities are $p_A(0)=\operatorname{expit}(-0.5)=0.3775$ and
+$p_A(1)=\operatorname{expit}(0.5)=0.6225$. The comparator AgD on treatment $B$ report $n_B=200$ patients,
+$r_B=77$ responders (crude proportion $\theta_{\bullet B}^{\mathrm{obs}}=0.385$), and biomarker prevalence
+$\bar x_B=P(X=1\mid\mathcal{P}_B)=0.50$. The index population has biomarker prevalence
+$\bar x_A=P(X=1\mid\mathcal{P}_A)=0.30$. We use the constants $\operatorname{expit}(-1)=0.2689$,
+$\operatorname{expit}(-0.5)=0.3775$, $\operatorname{expit}(0)=0.5$, $\operatorname{expit}(0.5)=0.6225$.
+
+The whole analysis lives in the two rows $x=0$ and $x=1$; @tbl-mlumr-worked collects every conditional
+probability the steps below use, including the SPFA-violation column of Step 6. Reading it now makes each
+step a lookup rather than a fresh computation.
+
+| Covariate $x$ | weight in $\mathcal{P}_B$ | weight in $\mathcal{P}_A$ | $p_A(x)$ | fitted $p_B(x)$ under SPFA | true $p_B(x)$, slope $2$ |
+|---|---|---|---|---|---|
+| $x=0$ (biomarker-negative) | $0.5$ | $0.7$ | $0.3775$ | $0.2689$ | $0.1694$ |
+| $x=1$ (biomarker-positive) | $0.5$ | $0.3$ | $0.6225$ | $0.5000$ | $0.6011$ |
+
+: Every number in the worked example, by covariate stratum. The fitted and true arm-$B$ columns both average
+to the observed comparator response $0.385$ under the comparator weights $(0.5,0.5)$, which is why the
+comparator-population contrast is unbiased; they diverge pointwise, so under the index weights $(0.7,0.3)$
+they average to different values ($0.3383$ versus $0.2989$), which is the index-population bias of Step 6.
+{#tbl-mlumr-worked}
+
+**Step 1: identify $\alpha_B$ (@thm-mlumr-model, @eq-mlumr-alphaB-solve).** Under SPFA the comparator
+shares the slope $\beta_{\mathrm{PF}}=1.0$. With the binary covariate the aggregate mean is the exact
+two-point sum
+$$
+\Theta_B(\alpha_B)=(1-\bar x_B)\,\operatorname{expit}(\alpha_B)+\bar x_B\,\operatorname{expit}(\alpha_B+1)
+=0.5\,\operatorname{expit}(\alpha_B)+0.5\,\operatorname{expit}(\alpha_B+1).
+$$
+This is strictly increasing in $\alpha_B$ (@lem-mlnmr-aggregate-monotone), so the equation
+$\Theta_B(\alpha_B)=0.385$ has a unique root. Bracketing: $\Theta_B(-1.0)=0.5(0.2689)+0.5(0.5)=0.3845$ and
+$\Theta_B(-0.9)=0.5(0.2891)+0.5(0.5250)=0.4070$, so the root lies just above $-1.0$; to the precision of
+the reported proportion, $\hat\alpha_B=-1.00$. (The fitted aggregate mean $\Theta_B(-1.00)=0.3845$ matches
+the observed $0.385$ to within rounding, the exact-calibration identity of @thm-mlumr-stc-equivalence(1).)
+
+**Step 2: the conditional contrast.** Under SPFA the conditional log odds ratio of $A$ versus $B$ is the
+single number, free of $x$ and of population,
+$$
+\eta_A(x)-\eta_B(x)=\hat\alpha_A-\hat\alpha_B=-0.5-(-1.0)=0.5
+\qquad(\text{@eq-spfa-constant-contrast}).
+$$
+
+**Step 3: the estimand in the comparator population $\mathcal{P}_B$ ($\bar x_B=0.5$).** The arm means are
+exact two-point sums:
+$$
+\bar\theta_A(\mathcal{P}_B)=0.5\,\operatorname{expit}(-0.5)+0.5\,\operatorname{expit}(0.5)=0.5(0.3775)+0.5(0.6225)=0.5000,
+$$
+$$
+\bar\theta_B(\mathcal{P}_B)=0.5\,\operatorname{expit}(-1.0)+0.5\,\operatorname{expit}(0)=0.5(0.2689)+0.5(0.5)=0.3845,
+$$
+the latter equal to the observed comparator proportion, as it must be. The marginal log odds ratio is
+$$
+\Delta_{AB}(\mathcal{P}_B)=\operatorname{logit}(0.5000)-\operatorname{logit}(0.3845)=0-(-0.4706)=0.4706 .
+$$
+
+**Step 4: the estimand in the index population $\mathcal{P}_A$ ($\bar x_A=0.3$).** Now integrate against the
+index covariate distribution:
+$$
+\bar\theta_A(\mathcal{P}_A)=0.7(0.3775)+0.3(0.6225)=0.4510,
+\qquad
+\bar\theta_B(\mathcal{P}_A)=0.7(0.2689)+0.3(0.5)=0.3383,
+$$
+$$
+\Delta_{AB}(\mathcal{P}_A)=\operatorname{logit}(0.4510)-\operatorname{logit}(0.3383)=(-0.1966)-(-0.6711)=0.4745 .
+$$
+
+**Step 5: read the non-collapsibility.** The conditional log odds ratio is $0.5$ in every population
+(Step 2), but the marginal log odds ratio is $0.4706$ in $\mathcal{P}_B$ and $0.4745$ in $\mathcal{P}_A$,
+both attenuated toward the null $0$ and differing slightly between populations. This is exactly the
+collapsibility dichotomy of @thm-target-population-integral(c): on the non-collapsible logit scale the
+marginal estimand depends on the whole target distribution, while the conditional contrast does not. The
+attenuation and its population dependence are the @def-non-collapsibility phenomenon, here visible in two
+hand-computed numbers.
+
+**Step 6: robustness at the comparator, fragility at the index, under SPFA violation.** Suppose the *true*
+comparator model has a steeper slope, $\beta_B^{\mathrm{true}}=2.0\ne\beta_{\mathrm{PF}}=1.0$ (strong effect
+modification), with a true intercept calibrated so that the comparator-population proportion is still
+$0.385$ at $\bar x_B=0.5$: solving $0.5\,\operatorname{expit}(\alpha)+0.5\,\operatorname{expit}(\alpha+2)=
+0.385$ gives $\alpha_B^{\mathrm{true}}=-1.59$. Then:
+
+- *Comparator population.* The true arm-$B$ mean in $\mathcal{P}_B$ is $0.385$ by construction, identical to
+the SPFA fit of Step 3; the true arm-$A$ mean is $0.5$ (arm $A$ is correctly specified). So the true
+$\Delta_{AB}(\mathcal{P}_B)=0.4706$ equals the SPFA estimate: **no bias at the comparator**, because the
+observed comparator outcome anchors the arm-$B$ mean there regardless of the slope.
+
+- *Index population.* The true arm-$B$ mean in $\mathcal{P}_A$ ($\bar x_A=0.3$) is
+$0.7\,\operatorname{expit}(-1.59)+0.3\,\operatorname{expit}(0.41)=0.7(0.1694)+0.3(0.6011)=0.2989$, whereas
+the SPFA model (slope $1.0$, $\hat\alpha_B=-1.0$) gives $\bar\theta_B(\mathcal{P}_A)=0.3383$ from Step 4.
+The true index-population log odds ratio is $\operatorname{logit}(0.4510)-\operatorname{logit}(0.2989)=
+(-0.1966)-(-0.8525)=0.6559$, while the SPFA estimate is $0.4745$. The bias is $0.4745-0.6559=-0.1814$, about
+$-28\%$: **substantial bias at the index population**, because the wrong slope is extrapolated from the
+comparator's covariate distribution (mean $0.5$) to the index's (mean $0.3$).
+
+This is the central empirical pattern of @thm-mlumr-identifiability derived by hand: SPFA-invoking ML-UMR is
+robust where it is anchored by data (the comparator population) and fragile where it must extrapolate (any
+other target), and the fragility grows with the strength of the violated effect modification and with the
+distance between the covariate distributions. When SPFA is doubtful, report only $\Delta_{AB}(\mathcal{P}_B)$.
+
+::: {.remark}
+**A survival coda.** The same phenomena appear on the time scale. Take an exponential PH model with one
+binary covariate, $h_k(t\mid x)=\lambda_k\,e^{\beta x}$, $\beta=\log2$ (here $X=1$ marks a poor-prognosis
+stratum, for example elevated LDH, that doubles the hazard; lower hazard is better, so on this time-to-event
+scale $X=1$ is unfavorable, unlike the favorable response biomarker of the binary example),
+index rate $\lambda_A=0.10$ and comparator rate $\lambda_B=0.15$, so the conditional hazard ratio of $B$
+versus $A$ is the constant $\lambda_B/\lambda_A=1.5$ at every $t$ and $x$ (SPFA on the log-hazard scale,
+@eq-mlumr-cond-loghr). In a population with $P(X=1)=0.5$, the marginal survival is
+$\bar S_k(t)=0.5\,e^{-\lambda_k t}+0.5\,e^{-2\lambda_k t}$, and the marginal hazard ratio
+$\bar h_B(t)/\bar h_A(t)$ equals $1.500$ at $t=0$, dips to $1.438$ at $t=5$ and $1.398$ at $t=10$, then
+drifts back to $1.491$ by $t=50$: time-varying, attenuated toward $1$, exactly @thm-mlumr-tte(d) and
+@thm-marginal-hr-time-varying. The restricted mean survival times to $\tau=10$ are
+$\operatorname{RMST}_A=5.32$ and $\operatorname{RMST}_B=4.17$ (each the exact integral
+$0.5\frac{1-e^{-\lambda\tau}}{\lambda}+0.5\frac{1-e^{-2\lambda\tau}}{2\lambda}$), a collapsible difference of
+$1.15$ time units favoring the index treatment, the collapsible read-out of @thm-mlumr-target-survival.
+Recomputing the RMST difference in a population with $P(X=1)=0.3$ gives a different value, the scale-
+misalignment of @thm-mlumr-tte(e): collapsible within each population, but not the same number across them.
+$\blacktriangleleft$
+:::
+
+## Notes and references {#sec-mlumr-notes}
+
+Multilevel unanchored meta-regression is the contribution of @chandler2025mlumr, who introduced the binary
+and continuous SPFA and relaxed-SPFA models and the simulation evidence summarized in @sec-mlumr-limits, and
+of @chandler2026survival, who extended the method to time-to-event outcomes with parametric and flexible
+baselines and the Kaplan-Meier reconstruction of the comparator arm. The method is an extension beyond the
+2019 thesis of @phillippo2019thesis: it inherits the multilevel network meta-regression framework of
+@phillippo2020mlnmr and its general-likelihood extension of @phillippo2025general (Chapters 20 to 25),
+specifically the Sobol' quasi-Monte Carlo integration (@def-sobol-net, @sobol1967; @owen1956) with a
+Gaussian copula (@def-gaussian-copula, @thm-sklar, @sklar1959) developed in Chapter 22, and reuses that
+machinery in the disconnected setting. The reference implementation is the `mlumr` R package of
+Sofi-Mahmudi and Chandler, which fits the SPFA and relaxed models by Hamiltonian Monte Carlo in Stan
+(@carpenter2017stan), alongside frequentist STC and a naive benchmark, and whose documentation supplies the
+practical cautions recorded in @sec-mlumr-limits; it is an adaptation of the GPL-3 `multinma` package of
+Phillippo. The transportability framing of population-adjusted indirect comparison that situates the
+unanchored estimand, conditional constancy of absolute effects (@def-conditional-constancy-absolute) versus
+relative effects (@def-conditional-constancy-relative), is developed by @chandler2026transport and in
+Chapter 17; the NICE Technical Support Document guidance is @phillippo2016tsd18.
+
+The structural results of this chapter are new statements of the catalogue items M.1 to M.12, proved in the
+book's notation. The single-arm conflation (@lem-mlumr-single-arm-conflation) and the SPFA-as-
+absolute-constancy lemma (@lem-spfa-absolute-constancy) make explicit why the unanchored design needs the
+stronger assumption; the identifiability theorems (@thm-mlumr-model, @thm-spfa-relaxation,
+@thm-mlumr-identifiability) rest on the aggregate-monotonicity lemma @lem-mlnmr-aggregate-monotone of
+Chapter 23 and an inverse-function-theorem argument for the relaxed model; the equivalence with unanchored
+STC (@thm-mlumr-stc-equivalence) specializes the marginal STC consistency of Chapter 19
+(@thm-marginal-stc-unbiased, @thm-stc-consistency) and the generality theorem of Chapter 23
+(@thm-mlnmr-generalizes-nma), and the strict-strengthening proposition (@prp-spfa-vs-sema) makes precise the
+relationship to the shared-effect-modifier assumption (@def-sema). The survival development (@thm-mlumr-tte,
+@thm-mlumr-target-survival) builds entirely on the general-likelihood survival results of Chapter 25, the
+survival-hazard identity (@thm-survival-hazard-relation), the conditional and marginal hazard ratios
+(@thm-conditional-loghr-ph, @thm-marginal-hr-time-varying), the censored likelihood
+(@def-censored-likelihood, @prp-censored-likelihood-density), the integrated likelihoods
+(@thm-marginal-individual-likelihood, @thm-aggregate-marginal-likelihood), and the collapsible restricted
+mean survival time (@thm-rmst-collapsible); the scale-misalignment result @thm-mlumr-tte(e) is the
+unanchored counterpart of the caveat flagged after @thm-rmst-collapsible. The Kaplan-Meier reconstruction
+(@thm-pseudo-ipd-reconstruction) is the exact-inversion form of the algorithm of Guyot and colleagues
+[@guyot2012], whose realistic version handles coarse at-risk tables and digitization error.
+
+There is no machine-checked counterpart for this chapter. The companion Coq development
+(`~/Documents/GitHub/ITC_Coq/theories/`) does not formalize ML-UMR: there is no `ML_UMR.v`, and ML-NMR
+itself is unformalized for the reasons given in Chapter 25's notes (the integration and survival content
+exceed the development's analysis machinery). The algebraic core closest to formalization is the
+contrast-cancellation phenomenon of @prp-spfa-vs-sema, which parallels the anchored cancellation in
+`theories/EffectModifiers.v`, and the STC reduction of @thm-mlumr-stc-equivalence, whose comparator-
+population identity is the unanchored reading of `theories/STC.v`'s `STC_consistent` and
+`methods_agree_when_correct`; but the unanchored setting requires absolute-effect transport rather than
+contrast transport, a different algebraic structure that is not currently mechanized. The proofs above are
+therefore pen-and-paper and self-contained. This chapter corresponds to results M.1 (the unanchored
+setting), M.2 (SPFA), M.3 (the SPFA model and identifiability), M.4 (the relaxed model), M.5 (QMC
+marginalization), M.6 (time-to-event), M.7 (pseudo-IPD reconstruction), M.8 (the joint likelihood), M.9
+(target-population survival), M.10 (equivalence with unanchored STC), M.11 (SPFA versus SEMA), and M.12
+(the identifiability frontier and limits) of the proof catalogue in `proofs/M_ml_umr.md`.
+
+## Exercises {#sec-mlumr-exercises}
+
+Throughout, an exercise marked $\star$ has a full worked solution in Appendix F. The first three exercises
+are conceptual warm-ups that use the tables of this chapter and need no derivation; the remainder build the
+computations and proofs.
+
+::: {#exr-mlumr-data-picture}
+**(Warm-up: read the data picture.)** A mock HTA dossier reports an index single-arm trial of drug $A$ with
+patient-level age, biomarker status, and response; and for the comparator $B$, only the overall response
+rate, the sample size, and the mean age and biomarker prevalence (no subgroup outcomes, no covariate
+correlation). Using @tbl-mlumr-identifies, state for each of $\alpha_A$, $\boldsymbol\beta_{\mathrm{PF}}$,
+$\alpha_B$, $\boldsymbol\beta_B$, $f_B$, and $f_{*}$ whether this evidence identifies it, reconstructs it, or
+leaves it to assumption, and say whether a Type 1 or a Type 2 model is possible (@def-mlumr-model-types).
+What single additional item would the report need to make the relaxed model identifiable?
+:::
+
+::: {#exr-mlumr-spfa-belief}
+**(Interpretation: why SPFA cannot be tested.)** In one short paragraph, explain to a clinical colleague why
+the Type 1 ML-UMR model cannot check SPFA from the two studies (cite @thm-mlumr-identifiability), and why an
+anchored comparison can tolerate effect modification that an unanchored one cannot (cite @tbl-spfa-sema).
+Then give one clinical scenario where SPFA is plausible and one where it is clearly false, and say which
+target-population estimate would be most, and which least, trustworthy in the false case (cite Step 6 of
+@sec-mlumr-example).
+:::
+
+::: {#exr-mlumr-when-method}
+**(Interpretation: choose the method.)** For each evidence set, decide whether to use anchored NMA or
+ML-NMR, Type 1 ML-UMR, Type 2 relaxed ML-UMR, or only unanchored STC, and justify in one sentence using
+@tbl-mlumr-methods: (a) two single-arm trials sharing no comparator, the comparator reporting only an
+overall response rate; (b) the same, but the comparator reports response rates in four biomarker-by-age
+cells; (c) an index and a comparator trial that each contain a common placebo arm; (d) an unanchored pair in
+which SPFA is clinically indefensible and only the comparator population matters for the decision.
+:::
+
+::: {#exr-mlumr-conflation}
+**The conflation, concretely.** In a single-arm index study with the logit link and no covariates, the
+model is $\operatorname{logit}P(Y=1)=\mu+\gamma_A$. Show that the likelihood depends on $(\mu,\gamma_A)$
+only through $\alpha=\mu+\gamma_A$, that the maximum likelihood estimate of $\alpha$ is
+$\operatorname{logit}(\bar y)$ with $\bar y$ the observed response proportion, and that $\mu$ and
+$\gamma_A$ are individually unidentified (@lem-mlumr-single-arm-conflation). Explain in one sentence why an
+anchored two-arm study does not have this problem.
+:::
+
+::: {#exr-mlumr-identify-alphaB}
+**($\star$) Identifying the comparator intercept.** With the logit link, SPFA slope $\beta_{\mathrm{PF}}=0.8$, a
+single binary covariate with comparator prevalence $\bar x_B=0.4$, and an observed comparator response
+proportion $\theta_{\bullet B}^{\mathrm{obs}}=0.30$, write the two-point aggregation equation
+$\Theta_B(\alpha_B)=0.30$ explicitly and solve it for $\alpha_B$ to two decimal places by bracketing and
+linear interpolation (@thm-mlumr-model, @lem-mlnmr-aggregate-monotone). Then compute the comparator-
+population marginal response under arm $B$ and verify it equals $0.30$. Using an index fit
+$\alpha_A=-0.2$, compute the conditional and the comparator-population marginal log odds ratios of $A$
+versus $B$, and comment on the gap.
+:::
+
+::: {#exr-mlumr-continuous-closed-form}
+**Continuous outcomes need only the mean.** For a continuous outcome with the identity link and the linear
+model $\mathbb{E}[Y\mid x]=\alpha_k+\mathbf{x}^\top\boldsymbol\beta_{\mathrm{PF}}$, prove that
+$\alpha_B=\bar y_B-\bar{\mathbf{x}}_B^\top\boldsymbol\beta_{\mathrm{PF}}$ exactly (using
+@thm-identity-link-exact), so that ML-UMR for a continuous outcome under SPFA needs only the comparator
+covariate *mean*, not its full distribution. Deduce that for the identity link the target estimand
+$\Delta_{AB}(\mathcal{P}^{*})=\alpha_A-\alpha_B$ is the same in every target population, and explain why
+this collapsibility fails for the logit link.
+:::
+
+::: {#exr-mlumr-relaxed-counting}
+**Counting subgroups.** In the relaxed model with $d=2$ continuous covariates, you have $Z=3$ comparator
+subgroups. State whether $(\alpha_B,\boldsymbol\beta_B)\in\mathbb{R}^{3}$ is identified, citing the counting
+condition of @thm-spfa-relaxation, and describe a configuration of subgroup covariate means for which the
+non-degeneracy condition (full rank of the weighted-moment matrix $M$) holds and one for which it fails.
+What changes if a fourth subgroup is added?
+:::
+
+::: {#exr-mlumr-stc-reduction}
+**ML-UMR equals unanchored STC at the comparator.** Using the calibration identity
+@thm-mlumr-stc-equivalence(1) and the marginal STC definition @def-stc-marginal, show by direct
+substitution that at $\mathcal{P}^{*}=\mathcal{P}_B$ the SPFA ML-UMR estimand and the unanchored marginal
+STC estimator are the same expression @eq-mlumr-stc-equiv. Then exhibit, in one or two sentences, why STC
+cannot produce the estimand at a target $\mathcal{P}^{*}\ne\mathcal{P}_B$ while ML-UMR can, and name the
+assumption that powers the difference.
+:::
+
+::: {#exr-mlumr-marginal-hr}
+**Time-varying marginal hazard ratio.** In the exponential PH survival coda of @sec-mlumr-example
+($h_k(t\mid x)=\lambda_k e^{\beta x}$, $\beta=\log2$, $\lambda_A=0.10$, $\lambda_B=0.15$, $P(X=1)=0.5$),
+derive the closed form $\bar h_k(t)=\lambda_k\frac{(1-\pi)+2\pi e^{-\lambda_k t}}{(1-\pi)+\pi e^{-\lambda_k t}}$
+with $\pi=0.5$ (using @lem-survivor-weighted-hazard), and confirm by direct computation the marginal hazard
+ratios $1.500$ at $t=0$, $1.398$ at $t=10$, and the limit $\lambda_B/\lambda_A$ as $t\to\infty$. Explain in
+terms of survivor selection (@thm-marginal-hr-time-varying) why the ratio dips below the conditional value
+for intermediate $t$ and returns toward it as $t\to\infty$.
+:::
+
+::: {#exr-mlumr-rmst-transport}
+**($\star$) Collapsible but not transportable, unanchored.** For the exponential PH model of the survival coda,
+write $\operatorname{RMST}_k(\tau\mid x)=\frac{1-\exp(-\lambda_k e^{\beta x}\tau)}{\lambda_k e^{\beta x}}$
+and hence the population RMST contrast $\Delta\!\operatorname{RMST}_{AB}(\tau\mid\mathcal{P}^{*})$ as a
+two-point average over $P(X=1)=\pi^{*}$. Prove that this contrast is collapsible within each population
+(@thm-rmst-collapsible) but differs between two populations with $\pi^{*}=0.5$ and $\pi^{*}=0.3$, and give
+the numerical difference at $\tau=10$. Relate your finding to @thm-mlumr-tte(e) and contrast it with the
+conditional log hazard ratio, which is the single number $\log(\lambda_B/\lambda_A)$ in every population.
+:::
+
+::: {#exr-mlumr-spfa-violation}
+**Where the bias goes.** Reproduce the SPFA-violation calculation of Step 6 of @sec-mlumr-example with a
+*weaker* true comparator slope $\beta_B^{\mathrm{true}}=1.5$ (instead of $2.0$): find the calibrated true
+intercept $\alpha_B^{\mathrm{true}}$ from $\Theta_B^{\mathrm{true}}(\alpha)=0.385$ at $\bar x_B=0.5$, then
+compute the true and SPFA-estimated index-population ($\bar x_A=0.3$) marginal log odds ratios and the bias.
+Confirm that the comparator-population bias is zero and that the index-population bias is smaller in
+magnitude than the $-0.18$ of the strong-violation case, illustrating @thm-mlumr-identifiability and the
+empirical pattern that bias grows with the strength of the violated modification.
+:::
+
+Solutions to the starred exercises @exr-mlumr-identify-alphaB and @exr-mlumr-rmst-transport appear in
+Appendix F.
