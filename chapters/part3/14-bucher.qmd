@@ -14,9 +14,9 @@ $C$. The clinical question is about $A$ versus $B$; the evidence speaks only abo
 versus $C$. The task of this chapter is to make precise the simplest device that bridges the gap: the
 **anchored indirect comparison**, and the theorem of @bucher1997 that governs it.
 
-The idea is disarmingly simple. If the effect of $A$ relative to $C$ is $d_{AC}$ and the effect of $B$
-relative to $C$ is $d_{BC}$, both measured on a scale where contrasts add, then the effect of $A$
-relative to $B$ ought to be the difference $d_{AC}-d_{BC}$, because the common comparator $C$ cancels.
+The idea is disarmingly simple. If the effect of $C$ relative to $A$ is $d_{AC}$ and the effect of $C$
+relative to $B$ is $d_{BC}$, both measured on a scale where contrasts add, then the effect of $B$
+relative to $A$ ought to be the difference $d_{AC}-d_{BC}$, because the common comparator $C$ cancels.
 Replacing the unknown true effects by their trial estimates gives the **Bucher estimator**
 $\hat d_{AB}=\hat d_{AC}-\hat d_{BC}$. The algebra is the algebra of a triangle. What makes the chapter a
 piece of mathematics rather than a piece of arithmetic is the question of *when the algebra is licensed*.
@@ -703,10 +703,10 @@ the $B$-versus-$C$ evidence come from separate trials. It fails when a single mu
 to both contrasts through a shared comparator arm: then the shared arm's sampling error enters both
 $\hat d_{AC}$ and $\hat d_{BC}$ with the same sign, inducing a positive covariance. Intuitively, the
 shared comparator's error is *partly subtracted away* rather than counted twice, so a positive covariance
-*reduces* the Bucher variance below the sum @eq-bucher-varsum. The standard homoskedastic random-effects
-model (a model in which every contrast is given the same variance) makes that correlation exactly one
-half; the intuition is that two contrasts sharing one of their two arms overlap in half of their sampling
-error, and we compute it exactly in @thm-re-nma-correlation. Because the covariance is positive, treating
+*reduces* the Bucher variance below the sum @eq-bucher-varsum. When all arms have equal sampling
+variance this correlation is exactly one half, because two contrasts sharing one of their two arms share
+half of their sampling error (@exr-bucher-correlated); the random-effects network model imposes the same
+one-half correlation on the heterogeneity of contrasts that share an arm (@thm-re-nma-correlation). Because the covariance is positive, treating
 correlated contrasts as independent overstates the variance, which is conservative for this comparison.
 
 ::: {#cor-bucher-efficiency}
@@ -1093,8 +1093,9 @@ differs between the trial populations.
 
 To see the mechanism, suppose a binary covariate $Z$ modifies the $B$-versus-$C$ effect, so that the
 conditional contrast $d_{BC}(z)$ takes one value at $z=0$ and another at $z=1$. The marginal effect
-@eq-bucher-reldef is then a weighted average of $d_{BC}(0)$ and $d_{BC}(1)$ with weights given by the
-prevalence of $Z$ in the population. If study $BC$ has a different prevalence of $Z$ than the population
+@eq-bucher-reldef then depends on the prevalence of $Z$ in the population: on the risk-difference scale it
+is exactly the prevalence-weighted average of $d_{BC}(0)$ and $d_{BC}(1)$, and on the odds-ratio scale
+non-collapsibility adds a further population dependence (Chapter 16). If study $BC$ has a different prevalence of $Z$ than the population
 in which we wish to report $A$ versus $B$, the marginal $d_{BC(\mathcal P_{BC})}$ differs from
 $d_{BC(\mathcal P_{AB})}$, transitivity @eq-bucher-transitivity is violated, the consistency equation
 @eq-bucher-consistency no longer holds, and the Bucher estimator @eq-bucher-estimator is biased by exactly
@@ -1102,7 +1103,10 @@ the discrepancy $d_{BC(\mathcal P_{BC})}-d_{BC(\mathcal P_{AB})}$.
 
 ::: {#exm-transitivity-failure}
 ## A transitivity failure as a specific number
-Let $Z$ be presence of diabetes, an effect modifier of the statin-$B$ effect. On the log odds-ratio scale,
+Let $Z$ be presence of diabetes, an effect modifier of the statin-$B$ effect. To isolate effect
+modification we treat the contrasts as collapsible, so that each marginal effect is the
+prevalence-weighted average of the conditional ones (exact on the risk-difference scale; on the log
+odds-ratio scale non-collapsibility would add a further, smaller discrepancy). On the log odds-ratio scale,
 the conditional $B$-versus-$C$ contrast is $d_{BC}(Z=0)=0.4$ in non-diabetics and $d_{BC}(Z=1)=1.0$ in
 diabetics (statin $B$ is more protective in diabetics). Diabetes is more common in the $BC$ trial than in
 the target population where we want the answer:
@@ -1243,9 +1247,9 @@ with $95\%$ interval. Verify that the indirect odds ratio equals the ratio of th
 **Proof. Additivity holds on the right scales.** Prove that the antisymmetry and additivity laws
 @lem-relative-effect-algebra hold for the log risk-ratio contrast $d_{ab}=\log\bar\mu_b-\log\bar\mu_a$ and
 for the mean-difference contrast $d_{ab}=\bar\mu_b-\bar\mu_a$, and show by a numerical counterexample that
-they fail for the risk-ratio contrast taken on the ratio scale itself, $\bar\mu_b/\bar\mu_a$ (that is,
-that $\bar\mu_C/\bar\mu_A\ne(\bar\mu_C/\bar\mu_B)\cdot\text{(something additive)}$ unless one first takes
-logarithms). Conclude that Bucher's subtraction is a statement about the link scale.
+additivity fails for the risk-ratio contrast taken on the ratio scale itself, $d_{ab}=\bar\mu_b/\bar\mu_a$
+(ratios multiply along a path, $d_{ac}=d_{ab}\,d_{bc}$, rather than add). Conclude that Bucher's
+subtraction is a statement about the link scale.
 :::
 
 ::: {#exr-bucher-unanchored}

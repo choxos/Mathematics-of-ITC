@@ -109,8 +109,8 @@ below.
 
 | Method (package) | Network | IPD needed | AgD outcome summary | Covariate summary | Survival input | Main output |
 |---|---|---|---|---|---|---|
-| ML-NMR (`multinma`) | connected | one row per patient: study, treatment, outcome, covariates | per arm: responders `r` and arm size `n` (or mean and standard error) | for each AgD covariate: a distribution, e.g. mean and standard deviation, or a proportion | KM curve digitized to pseudo-IPD via `set_agd_surv()` | anchored contrasts and transported marginal effects |
-| ML-UMR (`mlumr`) | disconnected | one row per patient on index treatment `A`: outcome, covariates | comparator `B` only: responders and total (or mean, standard error) | comparator covariate means, and a type per covariate (`continuous`/`binary`) | digitized KM curve for `B` via `set_agd_surv()` | unanchored marginal `A` vs `B` effect in each population |
+| ML-NMR (`multinma`) | connected | one row per patient: study, treatment, outcome, covariates | per arm: responders `r` and arm size `n` (or mean and standard error) | for each AgD covariate: a distribution, e.g. mean and standard deviation, or a proportion | pseudo-IPD reconstructed from the KM curve, registered with `set_agd_surv()` | anchored contrasts and transported marginal effects |
+| ML-UMR (`mlumr`) | disconnected | one row per patient on index treatment `A`: outcome, covariates | comparator `B` only: responders and total (or mean, standard error) | comparator covariate means, and a type per covariate (`continuous`/`binary`) | pseudo-IPD for `B` reconstructed from its KM curve, registered with `set_agd_surv()` | unanchored marginal `A` vs `B` effect in each population |
 | MAIC (`uitc`) | disconnected | index `A` IPD: outcome, covariates | comparator `B` outcome summary | comparator covariate *means* to match | (as `mlumr`) | weighted effect, effective sample size, balance diagnostics |
 | STC (`uitc`/`mlumr`) | disconnected | index `A` IPD: outcome, covariates | comparator `B` outcome summary | comparator covariate means (and covariance if simulating) | (as `mlumr`) | G-computation effect |
 | Doubly-robust (`uitc`) | disconnected | index `A` IPD: outcome, covariates | comparator `B` outcome summary | comparator covariate means and covariance | not applicable | doubly-robust effect with bootstrap interval |
@@ -129,7 +129,7 @@ reads without flipping back. Each row points to the chapter that develops it.
 | effect modifier (EM) | a covariate that changes the *treatment effect*, so it must be balanced across populations | Chapter 11 |
 | prognostic variable (PV) | a covariate that predicts *outcome* regardless of treatment | Chapter 11 |
 | SPFA | shared prognostic factor assumption: prognostic effects are the same under both treatments | Chapter 26 |
-| SEMA | shared effect modifier assumption: effect-modifier interactions are shared across studies | Chapter 17 |
+| SEMA | shared effect modifier assumption: the compared active treatments share their effect-modifier interactions | Chapter 17 |
 | conditional effect | a contrast for patients with fixed covariate values (a within-subgroup effect) | Chapter 11, Chapter 23 |
 | marginal effect | a contrast averaged over a whole target population | Chapter 11, Chapter 23 |
 | collapsible / non-collapsible | whether the marginal effect equals the average of conditional effects on that scale | Chapter 11 |
@@ -163,8 +163,9 @@ In words: a patient's modeled log-odds of response is their study's baseline, pl
 being older or female, plus (only on an active arm) an effect-modifying shift and the drug's own effect.
 The single most important feature is that *the same* $\boldsymbol{\beta}_1$, $\boldsymbol{\beta}_{2,k}$,
 and $\gamma_k$ are shared across every study in the network; that sharing is what lets an IPD trial and an
-AgD trial inform one regression, and it is licensed by the shared-effect-modifier assumption (SEMA) of
-Chapter 17. When a covariate modifies the effect (its $\boldsymbol{\beta}_{2,k}$ is nonzero), the `A`
+AgD trial inform one regression, and it is licensed by conditional constancy of relative effects
+(Chapter 17); in a small network the shared-effect-modifier assumption (SEMA), which equates the
+interactions of the compared active treatments, is also needed. When a covariate modifies the effect (its $\boldsymbol{\beta}_{2,k}$ is nonzero), the `A`
 versus `B` contrast genuinely depends on the population's age and sex mix, which is the entire reason
 population adjustment is needed.
 
@@ -212,13 +213,13 @@ net <- combine_network(
 )
 net <- add_integration(net, age = distr(qnorm, mean = age_mean, sd = age_sd),
                             sex = distr(qbern, prob = sex_prop), n_int = 64L)
-fit <- nma(net, regression = ~ (age + sex):.trt, likelihood = "bernoulli2",
+fit <- nma(net, regression = ~ (age + sex)*.trt, likelihood = "bernoulli2",
            link = "logit", trt_effects = "fixed")
 ```
 
-The regression formula `~ (age + sex):.trt` encodes the effect-modifier interactions
-$\boldsymbol{\beta}_{2,k}$; the special term `.trt` is the treatment factor. Prognostic main effects
-$\boldsymbol{\beta}_1$ are added automatically with `center = TRUE`.
+The regression formula `~ (age + sex)*.trt` expands to the prognostic main effects $\boldsymbol{\beta}_1$
+(`age + sex`) plus the effect-modifier interactions $\boldsymbol{\beta}_{2,k}$ (`(age + sex):.trt`); the
+special term `.trt` is the treatment factor. Writing only `(age + sex):.trt` would omit the main effects.
 
 Each argument of that call controls one modeling choice. In ordinary trial language:
 
@@ -227,13 +228,13 @@ Each argument of that call controls one modeling choice. In ordinary trial langu
 | `study`, `trt` | the columns naming the study and the treatment arm |
 | `r = r` | set the model's responder input to the data column named `r`; the left `r` is the fixed argument name, the right `r` is your column name |
 | `n = n` | the arm size column (AgD only; IPD has one patient per row) |
-| `regression = ~ (age + sex):.trt` | which covariates are effect modifiers; `.trt` is the placeholder for the treatment factor, so `(age + sex):.trt` means "let age and sex modify the treatment effect" |
+| `regression = ~ (age + sex)*.trt` | the covariate terms; `.trt` is the placeholder for the treatment factor, so `(age + sex)*.trt` means "age and sex are prognostic and also modify the treatment effect" |
 | `likelihood = "bernoulli2"` | the outcome family; `bernoulli2` is the two-parameter binary likelihood of @sec-impl-multinma-aggregation |
 | `link = "logit"` | the link $g$; `logit` makes $\eta$ a log-odds |
 | `trt_effects = "fixed"` | fixed-effect (common-effect) treatment effects, one $\gamma_k$ shared across studies, as opposed to `"random"` for treatment effects that vary by study |
 
-The note that main effects are added "with `center = TRUE`" means the covariates are centered before
-entering the model, so that the treatment coefficients $\gamma_k$ read as effects *at the average
+The `nma()` argument `center = TRUE` (the default) centers the numeric covariates about their overall
+means before they enter the model, so that the treatment coefficients $\gamma_k$ read as effects *at the average
 covariate values of the network*, not at age zero. Centering does not change the fitted contrasts in any
 target population; it only fixes what the raw $\gamma_k$ mean and improves the sampler's geometry. Which
 population the final estimand refers to is set later, by `relative_effects()` and `marginal_effects()`
@@ -278,14 +279,18 @@ block for the $i$-th arm in a stacked array.)
 The two-parameter file `binomial_2par.stan` refines the likelihood, and the reason is a variance mismatch
 worth spelling out. The aggregate arm is a *mixture*: the model assigns patients with different covariates
 different response probabilities $\theta_m$, so summarizing the arm by the single number $\bar\theta_{jk}$
-discards the spread of those probabilities. A plain binomial with probability $\bar\theta_{jk}$ ignores
-that spread and can understate the dispersion. The first two moments of the per-patient probabilities are
+discards the spread of those probabilities. Given the patients' covariates, the responder count is a sum of
+independent Bernoulli variables with unequal probabilities, a Poisson binomial with variance
+$\sum_m\theta_m(1-\theta_m)$, which is *smaller* than the binomial variance
+$n_{jk}\bar\theta_{jk}(1-\bar\theta_{jk})$ (Appendix C); a plain binomial with probability
+$\bar\theta_{jk}$ therefore overstates the dispersion. The first two moments of the per-patient
+probabilities are
 $$
 \bar\theta_{jk}=\frac1N\sum_m\theta_m,\qquad \overline{\theta^2}_{jk}=\frac1N\sum_m\theta_m^2,
 $$
 and their gap $\overline{\theta^2}_{jk}-\bar\theta_{jk}^{\,2}\ge 0$ is precisely the variance of those
-probabilities (zero only if every patient has the same $\theta$). To carry that extra dispersion while
-keeping the same mean, `binomial_2par.stan` matches both moments with an adjusted binomial,
+probabilities (zero only if every patient has the same $\theta$). To match the Poisson-binomial mean and
+variance, `binomial_2par.stan` uses an adjusted binomial,
 $$
 n'_{jk}=n_{jk}\,\frac{\bar\theta_{jk}^{\,2}}{\overline{\theta^2}_{jk}},
 \qquad
@@ -293,8 +298,9 @@ p'_{jk}=\frac{\overline{\theta^2}_{jk}}{\bar\theta_{jk}},
 \qquad\text{so that } n'_{jk}\,p'_{jk}=n_{jk}\,\bar\theta_{jk},
 $$ {#eq-impl-adjusted-binomial}
 which preserves the integrated mean $n_{jk}\bar\theta_{jk}$ (the product $n'p'$ is unchanged) while using
-$p'_{jk}=\overline{\theta^2}_{jk}/\bar\theta_{jk}\ge\bar\theta_{jk}$ to widen the variance toward the
-mixture's. This is the implementation of the aggregate likelihood @eq-agg-aggregate-likelihood. Contrast
+$p'_{jk}=\overline{\theta^2}_{jk}/\bar\theta_{jk}\ge\bar\theta_{jk}$ to shrink the variance to
+$n'_{jk}p'_{jk}(1-p'_{jk})=n_{jk}\big(\bar\theta_{jk}-\overline{\theta^2}_{jk}\big)$, the Poisson-binomial
+value. This is the implementation of the aggregate likelihood @eq-agg-aggregate-likelihood. Contrast
 all of this with the *naive* plug-in $g^{-1}(\eta_{jk}(\bar{\mathbf{x}}_j))$ of @eq-agg-naive, whose bias
 @thm-aggregation-bias quantifies; `multinma` never forms the naive quantity for a nonlinear link.
 
@@ -339,7 +345,7 @@ afterward," and see the picture in Chapter 22. The pieces map to arguments as fo
 | Argument of `add_integration()` | Mathematical object |
 |---|---|
 | `<cov> = distr(qfun, ...)` | the marginal quantile function $F_{j,q}^{-1}$ of covariate $q$ (`distr` wraps a base-R `q*` function). |
-| `n_int` | the number of integration points $N$; error decays like $N^{-1}(\log N)^d$ by Koksma-Hlawka (@thm-koksma-hlawka), beating the $N^{-1/2}$ Monte Carlo rate (@cor-tensor-quadrature-curse). |
+| `n_int` | the number of integration points $N$; error decays like $N^{-1}(\log N)^d$ by Koksma-Hlawka (@thm-koksma-hlawka) when the integrand has bounded Hardy-Krause variation (Chapter 22 records when it does not), beating the $N^{-1/2}$ Monte Carlo rate. |
 | `cor` | the input covariate correlation matrix used to build $\Omega$. |
 | `cor_adjust` | the rule converting `cor` (Spearman or Pearson) to the Gaussian-copula correlation $\Omega$ (Sklar's theorem, @thm-sklar). |
 
@@ -498,13 +504,12 @@ In `inst/stan/mlumr_binary_spfa.stan` the comparator AgD likelihood is the aggre
 @eq-impl-aggregation written for one comparator arm,
 
 ```stan
-// Xq_int[k] is the N-by-p matrix of integration points for comparator arm k, and beta_tilde the shared
-// coefficient vector, so Xq_int[k] * beta_tilde is the N linear predictors; inv_link_binary_vec applies
-// g^{-1} (here the inverse logit) to each, giving the N per-patient probabilities p_int.
-vector[n_int] p_int = inv_link_binary_vec(Xq_int[k] * beta_tilde, link);
-// "~" is a sampling statement: the comparator responder count is binomial with size n_agd[k] and the
-// integrated (averaged) probability mean(p_int), i.e. the aggregation integral for one arm.
-r_agd[k] ~ binomial(n_agd[k], mean(p_int));
+// Xq_int[k] is the design at the N integration points of comparator row k and beta_tilde the shared
+// coefficients, so eta_int holds the N linear predictors.
+vector[n_int] eta_int = Xq_int[k] * beta_tilde;
+// integrated_binomial_lpmf is the binomial log-likelihood of r_agd[k] out of n_agd[k] with probability
+// mean(g^{-1}(eta_int)), computed on the log scale for stability: the aggregation integral for one arm.
+target += integrated_binomial_lpmf(r_agd[k] | n_agd[k], eta_int, link);
 ```
 
 which is @eq-mlumr-model-agg and the joint likelihood of @thm-mlumr-joint-likelihood (the IPD Bernoulli
@@ -539,14 +544,15 @@ quantities` block.
 
 `stc()` fits the outcome regression on the IPD and integrates the fitted model over the comparator
 covariate distribution, the G-computation form @prp-stc-gcomp; @thm-mlumr-stc-equivalence shows that
-ML-UMR under SPFA and STC target the same estimand, so the two should agree up to Monte Carlo and
-posterior error when the SPFA holds. Always run `naive()` alongside the adjusted methods as the
+in the comparator population ML-UMR and STC target the same estimand, so there the two should agree up to
+Monte Carlo and posterior error, whether or not the SPFA holds. Always run `naive()` alongside the adjusted methods as the
 unadjusted reference point.
 
 How to read the three together. Treat `naive()` as the unadjusted baseline, `stc()` and
-`mlumr(model = "spfa")` as two routes to the *same* adjusted estimand (@thm-mlumr-stc-equivalence), and
-`mlumr(model = "relaxed")` as the stress test. Reassuring pattern: `stc()` and `mlumr("spfa")` agree (they
-should, when the SPFA holds), and both differ from `naive()` in the direction the covariate imbalance
+`mlumr(model = "spfa")` as two routes to the *same* adjusted estimand in the comparator population
+(@thm-mlumr-stc-equivalence), and
+`mlumr(model = "relaxed")` as the stress test. Reassuring pattern: `stc()` and `mlumr("spfa")` agree in the comparator population (they
+should), and both differ from `naive()` in the direction the covariate imbalance
 predicts, showing the adjustment did something. Concerning pattern: `stc()` and `mlumr("spfa")` disagree
 materially, which points to a modeling or convergence problem since they target one estimand; or the
 `"relaxed"` fit moves the estimate a lot and its `delta_beta` excludes zero, signaling effect modification
@@ -561,13 +567,13 @@ survival) and the `mlumr` survival vignette before relying on the calls below. T
 is as follows.
 
 The input problem is that a published survival trial reports a *Kaplan-Meier curve* (a step plot of the
-fraction still event-free over time), not patient records. `set_agd_surv()` reconstructs approximate
-patient-level data from it: you supply points read off the curve (time and survival-probability pairs,
-typically extracted with a plot digitizer) together with the numbers at risk printed under the axis, and
-the function inverts the curve into individual event and censoring times. This reconstruction is
-@thm-pseudo-ipd-reconstruction, the inversion @eq-km-inversion; more digitized points and reported
-at-risk tables give a more faithful reconstruction. The result is *pseudo-IPD* for the comparator arm,
-which the model then treats like real IPD.
+fraction still event-free over time), not patient records. Approximate patient-level data are first reconstructed from it by the algorithm of
+@guyot2012: points read off the curve (time and survival-probability pairs, typically extracted with a plot
+digitizer), together with the numbers at risk printed under the axis, are inverted into individual event
+and censoring times. This reconstruction is @thm-pseudo-ipd-reconstruction, the inversion @eq-km-inversion;
+more digitized points and reported at-risk tables give a more faithful reconstruction. The resulting
+*pseudo-IPD* for the comparator arm are registered with `set_agd_surv()`, and the model then treats them as
+observed data (so intervals are conditional on one reconstruction).
 
 The hazard is modeled with one of nine parametric families (`distribution = "weibull"`, `"gompertz"`,
 accelerated-failure-time variants, and so on) or a flexible baseline (`"mspline"`, an M-spline hazard, or
@@ -582,9 +588,11 @@ population-average HR is not the average of subgroup HRs, and it can drift over 
 treatment effect, so a single number understates the story. Accordingly
 `marginal_effects(fit, effect = "hr")` reports the HR at the start of follow-up, and the time-varying
 curve comes from `predict(type = "loghr")`. Restricted mean survival time (RMST, the average event-free
-time up to a horizon) is *collapsible* and transports more cleanly, which is why it is often the better
-headline for an HTA: `predict(type = "rmst")` and the RMST difference and ratio implement the transported
-restricted-mean functionals @thm-mlumr-target-survival and @eq-mlumr-rmst-transport. When in doubt, report
+time up to a horizon) is *collapsible*, so within a named population it is a clean average of conditional
+RMSTs, which is why it is often the better headline for an HTA; it still differs across populations and
+must be recomputed for each target (@thm-mlumr-tte(e)). `predict(type = "rmst")` and the RMST difference
+and ratio implement the target-population restricted-mean functionals @thm-mlumr-target-survival and
+@eq-mlumr-rmst-transport. When in doubt, report
 an RMST contrast at a clinically meaningful horizon alongside the HR.
 
 ### Object-to-code map {#sec-impl-mlumr-map}
@@ -604,7 +612,7 @@ an RMST contrast at a clinically meaningful horizon alongside the HR.
 Stan files live in `inst/stan/` as `mlumr_<family>_<model>.stan` for `<family>` in
 `{binary, normal, poisson, survival, survival_mspline}` and `<model>` in `{spfa, relaxed}`, ten files in
 all; shared blocks (`numerical_functions.stan`, `priors_functions.stan`, `survival_functions.stan`) are
-in `inst/stan/include/`.
+in `inst/stan/include/`, alongside `binary_functions.stan` and the prior-hyperparameter blocks.
 
 ## uitc: unanchored PAIC and bias analysis {#sec-impl-uitc}
 
@@ -729,9 +737,9 @@ table rather than the unanchored estimand.
 
 | Function | Method | Book object |
 |---|---|---|
-| `confounders_evalue()` | E-value for the minimum unmeasured association that could explain away the effect | @def-itc-evalue, @thm-evalue-derivation, @eq-qba-evalue |
+| `confounders_evalue()` | standard E-value for the minimum unmeasured association that could explain away the effect | @thm-evalue-derivation, @eq-qba-evalue |
 | `qba_unmeasured_itc()` | simulate an unmeasured confounder jointly with the measured covariates by NORTA, re-estimate | @thm-norta-copula, @eq-qba-norta, the correction @eq-qba-correction |
-| `qba_tipping_itc()` | find the sensitivity-parameter value at which the corrected estimate crosses a threshold | @def-tipping-point, @eq-qba-tipping, monotone @prp-qba-tipping-monotone |
+| `qba_tipping_itc()` | find the sensitivity-parameter value at which the corrected estimate crosses a threshold; also reports the indirect-comparison E-value, computed from the per-unit coefficient and so valid as written only for a binary unreported covariate | @def-tipping-point, @eq-qba-tipping, monotone @prp-qba-tipping-monotone, @def-itc-evalue |
 | `qba_prob_itc()` | probabilistic bias analysis: priors on the bias parameters, Monte Carlo over the bias-corrected estimand | @def-probabilistic-bias-analysis, @thm-qba-pba-convergence |
 | `probsens()`, `confounders()`, `misclass()`, `selection()` | classical epidemiologic QBA on a $2\times2$ table | @def-quantitative-bias-analysis, the bias factor @eq-qba-bias-factor |
 

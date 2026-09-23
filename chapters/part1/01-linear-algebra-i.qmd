@@ -19,8 +19,8 @@ Consider the simplest possible comparison: a single trial with a control arm and
 record for each patient an intercept and a treatment indicator, giving a matrix with two columns. If
 those two columns are linearly independent, the trial can resolve a baseline level and a treatment
 effect, and the effect is estimable. If we carelessly add a third column for the control indicator, the
-three columns become linearly dependent, the rank drops, and the treatment effect is no longer uniquely
-determined by the data. This is the celebrated "dummy variable trap," and it is nothing more than a
+three columns become linearly dependent, the rank stays at two while the number of coefficients rises to
+three, and the coefficients are no longer uniquely determined by the data. This is the celebrated "dummy variable trap," and it is nothing more than a
 statement about the null space of a matrix. The entire theory of when an indirect comparison is
 identifiable, developed in Parts II through V, is built on exactly this vocabulary.
 
@@ -31,7 +31,7 @@ coordinate spaces, with matrix multiplication forced upon us by composition; we 
 rank-nullity theorem, the conservation law that governs all of the above; we assemble the four
 fundamental subspaces and their dimension counts; and we characterize exactly when a square matrix is
 invertible. We close with a worked design-matrix example that previews the regression theory of
-@sec-la1-intro's promise. The standard reference for this material, and the source of the
+Chapter 6. The standard reference for this material, and the source of the
 four-fundamental-subspaces framing we adopt, is @strang2016.
 
 Throughout, scalars are real numbers. Everything generalizes verbatim to an arbitrary field, but the
@@ -319,7 +319,7 @@ subspace, this one check is all we run.
 
 Every space $V$ has at least the two *trivial* subspaces $\{\mathbf{0}\}$ and $V$ itself. The
 intersection of subspaces is again a subspace, a fact we use repeatedly; the union is not, in general
-(Exercise @exr-la1-subspace-intersection).
+(@exr-la1-subspace-intersection).
 
 ::: {#lem-intersection-subspace}
 ## Intersections of subspaces
@@ -933,9 +933,9 @@ $\square$
 **Why this matters.** Rank-nullity is the conservation law behind every degrees-of-freedom count in the
 book. Read on the columns of a design: the $n$ columns split into $\operatorname{rank}(A)$ that carry
 estimable effects plus $\dim\mathcal{N}(A)$ that are pure redundancy. This is why a model with more
-columns than the data can support has a nontrivial null space, and why adding a column that is collinear
-with the others raises the nullity instead of the rank, "stealing" a direction from the effect you
-actually wanted to estimate rather than adding information. The companion count on the rows, that a trial
+columns than the data can support has a nontrivial null space, and why adding a column that is a linear
+combination of the others raises the nullity by one and leaves the rank unchanged: it adds a parameter
+but no information. The companion count on the rows, that a trial
 with $m$ patients fitting $r$ independent effects leaves $m-r$ residual degrees of freedom, is the same
 theorem applied to the orthogonal-complement side and reappears throughout the regression chapters.
 
@@ -1196,7 +1196,7 @@ theorem is that, in a linear model, the parameter you can learn is not the coeff
 its coset.
 
 ::: {.remark}
-This proposition is the algebraic skeleton of *identifiability* in regression and indirect comparison. In
+@prp-system-solvability is the algebraic skeleton of *identifiability* in regression and indirect comparison. In
 a linear model the parameter $\boldsymbol\beta$ enters only through $\mathbf{X}\boldsymbol\beta$, so two
 parameter values that differ by an element of $\mathcal{N}(\mathbf{X})$ produce identical predictions and
 cannot be distinguished by any amount of data. The treatment effect is identifiable precisely when the
@@ -1473,7 +1473,7 @@ $\square$
 In Chapter 6 the least-squares coefficients solve
 $\mathbf{X}^\top\mathbf{X}\boldsymbol\beta=\mathbf{X}^\top\mathbf{y}$, which has a unique solution exactly
 when the $p\times p$ matrix $\mathbf{X}^\top\mathbf{X}$ is invertible, that is (condition 7) when it has
-full rank, which Exercise @exr-la1-gram-rank shows happens precisely when $\mathbf{X}$ has full column
+full rank, which @exr-la1-gram-rank shows happens precisely when $\mathbf{X}$ has full column
 rank. So "the columns of the design are independent" (no dummy-variable trap) and "the treatment effect
 has a unique estimate" are, through this chain of equivalences, the same statement.
 
@@ -1564,7 +1564,7 @@ $$
 (One checks $\begin{pmatrix}4&2\\2&2\end{pmatrix}\begin{pmatrix}\tfrac12&-\tfrac12\\-\tfrac12&1\end{pmatrix}
 =\begin{pmatrix}1&0\\0&1\end{pmatrix}$ by hand.) The invertibility of $\mathbf{X}^\top\mathbf{X}$ is no
 accident: it holds exactly because $\mathbf{X}$ has full column rank, the equivalence proved in general in
-Exercise @exr-la1-gram-rank. This is the precise condition under which the regression coefficients, and
+@exr-la1-gram-rank. This is the precise condition under which the regression coefficients, and
 hence the treatment effect $\beta_1$, are uniquely estimable. $\blacktriangleleft$
 :::
 
@@ -1610,7 +1610,7 @@ equivalence, and the eigenvalue and singular-value characterizations of invertib
 Chapter 3 (@thm-spectral-theorem, @thm-svd, @thm-pd-characterization). The design-matrix example of
 @sec-la1-design-example is the seed of the linear-model theory developed from first principles in
 Chapter 6 (@def-linear-model, @thm-ols-normal-equations, @def-hat-matrix); the invertibility of
-$\mathbf{X}^\top\mathbf{X}$ under full column rank, previewed there and proved in Exercise
+$\mathbf{X}^\top\mathbf{X}$ under full column rank, previewed there and proved in 
 @exr-la1-gram-rank, is the algebraic precondition for the existence and uniqueness of the least-squares
 estimator.
 

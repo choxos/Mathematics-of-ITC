@@ -282,7 +282,7 @@ $d_{ab(\mathcal{P})}$ are placed in a concrete $AC$-versus-$BC$ comparison.
 |---|---|---|
 | $w_i,\ w(x)$ | matching weight for individual $i$, or weight function (tilts the IPD sample to match the comparator's covariate profile) | Ch. 18, `@def-moment-balance` |
 | $\mathrm{ESS}=\left(\sum_i w_i\right)^2/\sum_i w_i^2$ | effective sample size of a weighted sample; a small $\mathrm{ESS}$ warns of unstable weights (not the MCMC $N_{\mathrm{eff}}$ of Ch. 24) | Ch. 18, `@def-maic-ess` |
-| $\alpha,\ \boldsymbol{\beta}$ | matching-weight parameters, $w_i=\exp(\alpha+\boldsymbol{\beta}^\top\mathbf{x}_i)$; the exponential form is forced by the balance constraints (entropy balancing) | Ch. 18, `@def-entropy-balancing` |
+| $\alpha,\ \boldsymbol{\beta}$ | matching-weight parameters, $w_i=\exp(\alpha+\boldsymbol{\beta}^\top\mathbf{x}_i)$; the exponential form is the solution of the entropy-balancing problem | Ch. 18, `@def-entropy-balancing` |
 | $\hat\mu_t^{\mathrm{STC}}$ | simulated treatment comparison predicted mean under $t$ (the outcome model evaluated on the target population) | Ch. 19, `@def-stc-marginal` |
 | $C(u_1,\dots,u_d)$ | copula (a function that glues marginal distributions into a joint law) | Ch. 22, `@def-copula` |
 | $C_\Omega(\mathbf{u})=\Phi_\Omega\big(\Phi^{-1}(u_1),\dots,\Phi^{-1}(u_d)\big)$ | Gaussian copula with correlation matrix $\Omega$; the tractable default for correlating covariates in ML-NMR integration | Ch. 22, `@def-gaussian-copula` |
@@ -349,7 +349,7 @@ fixed link $g$, as in the chapter that defines them.
 
 | Term | One-sentence meaning | Defined in |
 |---|---|---|
-| Active classical axioms | The classical logical axioms, such as functional extensionality and the law of the excluded middle, that the Coq development assumes. | Ch. 30, `@def-active-axioms` |
+| Active classical axioms | The three classical axioms (propositional extensionality, dependent functional extensionality, and constructive indefinite description) that the Coq development inherits; excluded middle is derived from them. | Ch. 30, `@def-active-axioms` |
 | ADEMP framework | A protocol that specifies a simulation study by its Aims, Data-generating mechanisms, Estimands, Methods, and Performance measures. | Ch. 29, `@def-ademp` |
 | Aggregate-level model (ML-NMR) | The individual-level model integrated over a study's covariate distribution so that aggregate study arms can enter the likelihood. | Ch. 20, `@def-aggregate-model` |
 | Anchored and unanchored setups | The two evidence configurations in which the index and comparator studies either share a common treatment arm (anchored) or do not (unanchored). | Ch. 17, `@def-pat-setups` |
@@ -370,7 +370,7 @@ fixed link $g$, as in the chapter that defines them.
 | Characteristic polynomial | The polynomial $\det(A-\lambda I)$ whose roots are the eigenvalues of $A$. | Ch. 3, `@def-characteristic-polynomial` |
 | Cochran's $Q$ statistic | The inverse-variance-weighted sum of squared deviations of study estimates from their pooled value, the basis of heterogeneity tests. | Ch. 13, `@def-cochran-q-stat` |
 | Coefficient of determination | $R^2$, the fraction of total response variation explained by the regression. | Ch. 6, `@def-r-squared` |
-| Collapsibility and direct collapsibility | Whether the marginal effect equals the common conditional effect (collapsible) or always equals a covariate-weighted average of conditional effects (directly collapsible). | Ch. 11, `@def-collapsibility` |
+| Collapsibility and direct collapsibility | Whether the marginal effect equals the common conditional effect when that effect is constant (collapsible), or equals the covariate average of the conditional effects for every covariate distribution (directly collapsible). | Ch. 11, `@def-collapsibility` |
 | Collapsibility and non-collapsibility of an effect measure | Whether a measure's marginal value coincides with its conditional value when that conditional value is constant across strata. | Ch. 7, `@def-non-collapsibility` |
 | Comparator selection (aggregate-level) | Choosing, among candidate aggregate studies, the one whose covariate profile is closest to the target population. | Ch. 27, `@def-comparator-selection` |
 | Conditional average treatment effect | The covariate-conditional contrast $\tau(x)=\mu_1(x)-\mu_0(x)$. | Ch. 9, `@def-cate` |
@@ -394,7 +394,7 @@ fixed link $g$, as in the chapter that defines them.
 | Digital $(t,m,s)$-nets and the Sobol' sequence | Low-discrepancy point sets with guaranteed equidistribution across dyadic boxes. | Ch. 22, `@def-sobol-net` |
 | Dimension | The common cardinality shared by every basis of a vector space. | Ch. 1, `@def-dimension` |
 | Distance variants | The Manhattan, Minkowski, mean standardized-mean-difference, and Gower covariate distances. | Ch. 27, `@def-distance-variants` |
-| Doubling diagnostic for integration error | A check that bounds numerical integration error by comparing estimates computed at $N$ and at $2N$ nodes. | Ch. 24, `@def-integration-error-monitoring` |
+| Doubling diagnostic for integration error | A check that gauges numerical integration error by comparing estimates computed at $N$ and at $2N$ nodes (a rough proxy, not a bound). | Ch. 24, `@def-integration-error-monitoring` |
 | Ecological (aggregation) bias | The gap between the plug-in arm mean $g^{-1}(\eta(\bar x))$ and the covariate-averaged mean $\int g^{-1}(\eta(x))\,f(x)\,dx$. | Ch. 16, `@def-ecological-bias` |
 | Effect modifier | A covariate on which the conditional treatment effect depends, a property defined relative to a chosen scale. | Ch. 11, `@def-effect-modifier` |
 | Effective sample size | $\mathrm{ESS}=\left(\sum_i w_i\right)^2/\sum_i w_i^2$, the equivalent unweighted size of a weighted sample. | Ch. 18, `@def-maic-ess` |
@@ -404,7 +404,7 @@ fixed link $g$, as in the chapter that defines them.
 | Entropy-balancing problem | The convex program minimizing weight divergence from uniformity subject to covariate-balance constraints, whose solution is an exponential tilt. | Ch. 18, `@def-entropy-balancing` |
 | Estimator, bias, variance, mean squared error | A statistic used to target a parameter, together with its bias, variance, and mean squared error. | Ch. 5, `@def-estimator` |
 | Euclidean and standardized Euclidean distance | The ordinary and variance-scaled $\ell_2$ distances between covariate-mean vectors. | Ch. 27, `@def-euclidean-distance` |
-| E-value (indirect-comparison) | The smallest unreported-covariate association that could reduce an unanchored estimate to the null. | Ch. 28, `@def-itc-evalue` |
+| E-value (indirect-comparison) | The smallest across-population association of an unreported covariate, given its IPD-estimated outcome association, that could reduce an unanchored estimate to the null. | Ch. 28, `@def-itc-evalue` |
 | Exchangeability | The property that a sequence's joint law is invariant under permutation of its indices. | Ch. 8, `@def-exchangeability` |
 | Exponential dispersion family | Densities of the form $\exp\{(y\theta-b(\theta))/a(\phi)+c(y,\phi)\}$, the common template for the normal, binomial, and Poisson laws; $\theta$ is the natural parameter and $\phi$ the dispersion that scales the variance. | Ch. 7, `@def-exponential-family` |
 | Fisher information | The variance of the score, equivalently minus the expected Hessian of the log-likelihood. | Ch. 5, `@def-fisher-information` |
@@ -434,7 +434,7 @@ fixed link $g$, as in the chapter that defines them.
 | Link function | A monotone smooth map $g$ with $g(\mu)=\eta$ relating the mean to the linear predictor. | Ch. 7, `@def-link-function` |
 | M-estimator and estimating equation | A parameter value solving an estimating equation $\sum_i\psi(X_i;\theta)=\mathbf{0}$. | Ch. 5, `@def-m-estimator` |
 | Mahalanobis distance | The covariance-whitened distance $\sqrt{(x-y)^\top\Sigma^{-1}(x-y)}$. | Ch. 27, `@def-mahalanobis-distance` |
-| Marginal and average-conditional relative effects | The two population-level contrasts that diverge whenever the effect measure is non-collapsible. | Ch. 16, `@def-conditional-marginal-contrast` |
+| Marginal and average-conditional relative effects | The two population-level contrasts, which agree in every population exactly when the effect measure is directly collapsible. | Ch. 16, `@def-conditional-marginal-contrast` |
 | Marginal effect | The contrast of link-transformed population-mean outcomes, $g(\mathbb{E}[\mu_b(X)])-g(\mathbb{E}[\mu_a(X)])$. | Ch. 11, `@def-marginal-effect` |
 | Marginal likelihood and Bayes factor | The prior-averaged data density, and the ratio of two models' marginal likelihoods. | Ch. 8, `@def-marginal-likelihood` |
 | Marginal link-scale position | The link-transformed population-mean outcome of a single arm. | Ch. 14, `@def-marginal-link-position` |
@@ -467,7 +467,7 @@ fixed link $g$, as in the chapter that defines them.
 | Propensity score | The conditional treatment probability $e(x)=P(T=1\mid X=x)$, the coarsest balancing score. | Ch. 10, `@def-propensity-score` |
 | Proportional-odds model | An ordinal regression in which treatment shifts every cumulative logit by a common amount. | Ch. 25, `@def-proportional-odds` |
 | Quadratic form | The map $x\mapsto x^\top A x$ associated with a symmetric matrix $A$. | Ch. 3, `@def-quadratic-form` |
-| Quantitative bias analysis | The practice of quantifying how strong an unmeasured bias would have to be to overturn a study's conclusion. | Ch. 28, `@def-quantitative-bias-analysis` |
+| Quantitative bias analysis | Modeling a systematic bias through named bias parameters and inverting that model to obtain bias-corrected estimates. | Ch. 28, `@def-quantitative-bias-analysis` |
 | Random-effects meta-analysis model | A model with exchangeable study effects drawn from a distribution of heterogeneity variance $\tau^2$. | Ch. 13, `@def-random-effects-ma` |
 | Random variable and its law | A function on the sample space, measurable so that probabilities can attach to its values, together with the distribution it induces. | Ch. 4, `@def-random-variable` |
 | Rank and nullity | The dimension of the image and the dimension of the kernel of a map or matrix. | Ch. 1, `@def-rank` |
@@ -485,7 +485,7 @@ fixed link $g$, as in the chapter that defines them.
 | Scale alignment | Choosing the effect scale on which a transportability or invariance assumption actually holds. | Ch. 12, `@def-scale-alignment` |
 | Score function | The gradient of the log-likelihood with respect to the parameter. | Ch. 5, `@def-score` |
 | Shared effect modifier assumption (SEMA) | The assumption that the compared active treatments carry identical effect-modifier interactions, $\boldsymbol{\beta}_{2,A}=\boldsymbol{\beta}_{2,B}$. | Ch. 17, `@def-sema` |
-| Shared prognostic factor assumption (SPFA) | The assumption that covariate-outcome slopes coincide across treatments, which forces the absence of effect modification. | Ch. 26, `@def-spfa` |
+| Shared prognostic factor assumption (SPFA) | The assumption that covariate-outcome slopes coincide across treatments, which rules out effect modification of the contrast between them. | Ch. 26, `@def-spfa` |
 | Span | The set of all finite linear combinations of a collection of vectors. | Ch. 1, `@def-span` |
 | Stable unit treatment value assumption (SUTVA) | No interference between units and a single version of each treatment, giving consistency $Y=Y(T)$. | Ch. 9, `@def-sutva` |
 | Star discrepancy | The worst-case gap between the empirical and uniform measures over anchored boxes, the quasi-Monte Carlo accuracy criterion. | Ch. 22, `@def-star-discrepancy` |
@@ -496,13 +496,13 @@ fixed link $g$, as in the chapter that defines them.
 | Subspace | A nonempty subset of a vector space that is closed under addition and scalar multiplication. | Ch. 1, `@def-subspace` |
 | Survival function | $S(t)=P(T>t)$, the probability of surviving beyond time $t$. | Ch. 25, `@def-survival-function` |
 | Target-population marginal and conditional contrasts | The ML-NMR estimands obtained by integrating the fitted model over a chosen target population. | Ch. 23, `@def-mlnmr-target-contrast` |
-| Tipping point | The magnitude of bias at which an adjusted estimate crosses a decision threshold such as the null. | Ch. 28, `@def-tipping-point` |
+| Tipping point | The assumed comparator value of an unreported covariate at which the adjusted estimate crosses a decision threshold such as the null. | Ch. 28, `@def-tipping-point` |
 | Total-variation distance | The largest probability discrepancy two laws can assign any event, $\sup_A\lvert\mu(A)-\nu(A)\rvert$. | Ch. 21, `@def-total-variation` |
 | Transition kernel and stationary distribution | The one-step transition law of a Markov chain and the measure it leaves invariant. | Ch. 8, `@def-markov-kernel` |
 | Transitivity (anchored triangle) | The assumption that each of the three triangle relative effects takes a common value across the three trial populations. | Ch. 14, `@def-transitivity` |
 | Transportability | A between-population property: a target estimand is identified from source outcomes together with target covariates. | Ch. 12, `@def-transportability` |
 | Unanchored (naive single-arm) comparison | A comparison of active arms across studies that discards the shared comparator. | Ch. 14, `@def-unanchored-comparison` |
-| Unanchored disconnected two-study network | Two studies without a common comparator, linkable only under prognostic-factor assumptions. | Ch. 26, `@def-unanchored-network` |
+| Unanchored disconnected two-study network | Two studies without a common comparator, linkable only under conditional constancy of absolute effects together with an assumption such as SPFA. | Ch. 26, `@def-unanchored-network` |
 | Variance, covariance, and the covariance matrix | The second central moments of a single variable, of a pair, and of a random vector. | Ch. 4, `@def-variance-covariance` |
 | Wald, score, and likelihood-ratio statistics | The three asymptotically equivalent classical statistics for testing a parametric hypothesis. | Ch. 5, `@def-test-statistics` |
 | Wald test, Type I error rate, and power | The Wald rejection rule together with its rejection probabilities under the null and under an alternative. | Ch. 29, `@def-power-type1` |

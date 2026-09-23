@@ -54,12 +54,13 @@ performance measure on one indirect comparison, returned to at each step and wor
 an established interleukin-17 inhibitor $B$ for moderate-to-severe plaque psoriasis. No head-to-head trial
 exists; instead an index trial compares $A$ against ustekinumab $C$ with full individual patient data, while
 a published trial compares $B$ against the same ustekinumab $C$ but reports only arm means. The common
-comparator $C$ anchors the comparison (the *anchored* setting of Chapter 17). The endpoint is the reduction
-in the Psoriasis Area and Severity Index (PASI) score from baseline to week 16, measured in points, so the
+comparator $C$ anchors the comparison (the *anchored* setting of Chapter 17). The endpoint is the
+Psoriasis Area and Severity Index (PASI) score at week 16, measured in points (lower is better), so the
 natural scale is the identity (mean-difference) scale. Two baseline covariates matter: an effect modifier
 $x_1$ (baseline disease severity, which changes how large the treatment benefit is) and a purely prognostic
 covariate $x_2$ (age, which shifts outcomes but not the benefit). The target estimand is the marginal
-$A$-versus-$B$ mean difference in the comparator trial's population, $\theta=d_{AB(\mathcal{P}_{BC})}$. All
+$A$-versus-$B$ mean difference in the comparator trial's population, $\theta=d_{AB(\mathcal{P}_{BC})}=
+\bar\mu_{B(\mathcal{P}_{BC})}-\bar\mu_{A(\mathcal{P}_{BC})}$, the benefit of $A$ over $B$ in PASI points. All
 numbers used below are illustrative, chosen for arithmetic transparency, not taken from real trials.
 $\blacktriangleleft$
 :::
@@ -184,7 +185,7 @@ checklist has a concrete referent before we turn it into probability.
 | ADEMP component | The running psoriasis comparison |
 |---|---|
 | **Aims** | Quantify the bias and $95\%$ interval coverage of MAIC and of the naive Bucher comparison for the $A$-versus-$B$ PASI mean difference, as baseline-severity imbalance between the trials varies. |
-| **Data-generating mechanism** | Draw $n$ patients per arm; baseline severity $x_1$ and age $x_2$ from chosen distributions with a set between-trial imbalance; PASI reduction from a linear model with an $x_1$-by-treatment interaction; independent outcome noise. The $BC$ trial is then reduced to arm means, mimicking the published aggregate data. |
+| **Data-generating mechanism** | Draw $n$ patients per arm; baseline severity $x_1$ and age $x_2$ from chosen distributions with a set between-trial imbalance; week-16 PASI from a linear model with an $x_1$-by-treatment interaction; independent outcome noise. The $BC$ trial is then reduced to arm means, mimicking the published aggregate data. |
 | **Estimands** | $\theta=d_{AB(\mathcal{P}_{BC})}$, the marginal $A$-versus-$B$ mean difference in the $BC$ population, computed exactly from the known model (@sec-sim-example). |
 | **Methods** | MAIC (Chapter 18) and the naive Bucher comparison (@thm-bucher-unbiased), each returning an estimate $\hat\theta_n$, a standard error $\widehat{\mathrm{SE}}_n$, and a $95\%$ interval $I_n$. |
 | **Performance measures** | Bias, empirical and model-based standard error, mean squared error, and coverage, each with its Monte Carlo standard error. |
@@ -756,8 +757,8 @@ M-estimation target $\boldsymbol{\theta}^*$ of @def-m-estimator transported to t
 concrete instance fixes the idea: when a MAIC omits an imbalanced effect modifier of strength $\beta_1$ whose
 mean differs by $\Delta\bar x_1$ between the two trials, the omitted-covariate estimator no longer converges
 to the target $\theta$ but to a shifted value $\theta_{\mathrm{work}}\approx\theta+\beta_1\,\Delta\bar x_1$;
-the gap $\theta_{\mathrm{work}}-\theta$ is exactly the omitted-effect-modifier bias of @thm-failure-of-bucher
-and @thm-aggregation-bias. Two further symbols appear below. The sequence $\sigma_n>0$ is the estimator's
+the gap $\theta_{\mathrm{work}}-\theta$ is an omitted-effect-modifier bias of the kind quantified in
+@thm-failure-of-bucher. Two further symbols appear below. The sequence $\sigma_n>0$ is the estimator's
 *true* standard deviation at sample size $n$, a theoretical quantity the analyst never sees and which shrinks
 to $0$ as $n$ grows; $\widehat{\mathrm{SE}}_n$ is the *operational* standard error the method reports and can
 compute, and condition (C2) below says the two agree in the limit. The standardized bias
@@ -893,16 +894,17 @@ does not depend on $n$ while $\sigma_n\to 0$; then $b=\pm\infty$ and coverage co
 Suppose (C1) and (C2) hold and the working-model target $\theta_{\mathrm{work}}$ is a fixed constant with
 $\theta_{\mathrm{work}}\neq\theta$. Then $(\theta_{\mathrm{work}}-\theta)/\sigma_n\to\pm\infty$ as $\sigma_n\to 0$, so by
 @thm-coverage-misspecification the coverage of $\theta$ tends to $0$: a consistently misspecified method
-has asymptotic coverage zero, and its undercoverage *worsens* with increasing $n$.
+has asymptotic coverage zero, and its approximate coverage $h\big((\theta_{\mathrm{work}}-\theta)/\sigma_n\big)$
+*decreases* as $n$ grows.
 :::
 
 ::: {.proof}
 With $\theta_{\mathrm{work}}-\theta\neq 0$ a nonzero constant and $\sigma_n\downarrow 0$, the ratio
 $(\theta_{\mathrm{work}}-\theta)/\sigma_n$ diverges to $+\infty$ if $\theta_{\mathrm{work}}>\theta$ and to $-\infty$ if
 $\theta_{\mathrm{work}}<\theta$; either way $b=\pm\infty$ in (C3), and the second branch of @eq-sim-coverage-limit gives
-limiting coverage $0$. Monotone worsening follows because the half-width $z\,\widehat{\mathrm{SE}}_n\approx
-z\sigma_n$ shrinks while the centering error $|\hat\theta_n-\theta|$ stays near the fixed
-$|\theta_{\mathrm{work}}-\theta|$, so the fixed miss eventually exceeds any shrinking half-width. $\square$
+limiting coverage $0$. The approximate coverage $h(b_n)$ with $b_n=(\theta_{\mathrm{work}}-\theta)/\sigma_n$
+decreases as $n$ grows because $|b_n|$ increases as $\sigma_n$ shrinks and $h$ decreases in $|b|$
+(@lem-sim-coverage-unimodal). $\square$
 :::
 
 ::: {#cor-sim-correct-coverage}
@@ -1161,11 +1163,11 @@ worrying when it collapses to a small fraction, the regime of the no-extrapolati
 
 | Method (anchored) | Key assumption | Bias | Variance | Coverage, good overlap | Coverage, poor overlap |
 |---|---|---|---|---|---|
-| ML-NMR, all EMs | correct EM model, adequate overlap | low | lowest | near nominal | degrades gracefully |
-| STC, all EMs | correct outcome model | low | low | near nominal | can extrapolate |
-| MAIC, all EMs | adequate overlap | low | higher ($n/\mathrm{ESS}$) | near nominal | low and unstable |
+| ML-NMR, all EMs | correct outcome model | low | low | near nominal | valid only if the extrapolated model holds |
+| STC, all EMs | correct outcome model | low | low | near nominal | valid only if the extrapolated model holds |
+| MAIC, all EMs | comparator inside index support | low only under containment | higher ($n/\mathrm{ESS}$) | unstable standard errors | biased, cannot extrapolate |
 | MAIC, omitted EM | assumption violated | substantial | higher | below nominal, falls with $n$ | below nominal |
-| Naive Bucher | transitivity (EM balance) | largest under imbalance | low | collapses with $n$ | collapses with $n$ |
+| Naive Bucher | transitivity (EM balance) | substantial under imbalance | low | collapses with $n$ | collapses with $n$ |
 
 ::: {#prp-phillippo-robustness}
 ## Empirical robustness ordering of population-adjustment methods
@@ -1176,19 +1178,22 @@ omission of effect modifiers, the @phillippo2019thesis simulation study and its 
 the **anchored** comparison.
 
 1. **Multilevel network meta-regression with all effect modifiers** attains low bias and near-nominal
-coverage when the effect-modifier specification is correct and overlap is adequate; it is the most robust
-method studied. Its consistency is the aggregation theorem @thm-aggregation, and it avoids the
+coverage when the effect-modifier specification is correct and overlap is adequate, performing very
+similarly to STC throughout the thesis study. Its consistency is the aggregation theorem @thm-aggregation, and it avoids the
 ecological/aggregation bias @thm-aggregation-bias by integrating the individual-level model rather than
 matching means.
 
 2. **Simulated treatment comparison with all effect modifiers and a correctly specified outcome model**
 attains low bias comparable to multilevel network meta-regression for pairwise comparisons; under a correct
-linear model it is asymptotically equivalent to MAIC (@thm-maic-stc-equivalence), and it can interpolate
-where MAIC cannot.
+linear model it is asymptotically equivalent to MAIC (@thm-maic-stc-equivalence), and, like ML-NMR, it can
+extrapolate beyond the index covariate range where MAIC cannot, validly only if the outcome model holds
+there.
 
-3. **MAIC with all effect modifiers and adequate overlap** attains low bias, at the cost of somewhat higher
-variance than the model-based methods, the variance inflation being the $n/\mathrm{ESS}$ factor of
-@thm-maic-ess-bound and Chapter 18.
+3. **MAIC with all effect modifiers** removes the bias only when the comparator population lies within the
+index population's covariate support, and at the cost of higher variance than the model-based methods, the
+variance inflation being the $n/\mathrm{ESS}$ factor of @thm-maic-ess-bound and Chapter 18. In the thesis
+study it performed poorly otherwise, in some scenarios with more bias than the unadjusted comparison, and
+its bootstrap standard errors were unstable except at the largest sample sizes.
 
 4. **MAIC with all effect modifiers but poor overlap** has high variance and can be substantially biased,
 and may fail outright as the effective sample size collapses toward zero, the no-extrapolation limit
@@ -1200,25 +1205,25 @@ omitted modifier's interaction strength and its imbalance across populations; by
 is the transitivity failure @thm-failure-of-bucher and the ecological bias @thm-aggregation-bias seen
 through the performance measures.
 
-6. **The unadjusted Bucher comparison** exhibits the largest bias whenever effect modifiers are distributed
-differently across populations, being the $b=\pm\infty$ extreme of @thm-coverage-misspecification; it is
-unbiased only under transitivity (@thm-bucher-unbiased), which population adjustment exists to repair.
+6. **The unadjusted Bucher comparison** is biased whenever effect modifiers are distributed differently
+across populations, and, its bias being fixed, its coverage collapses as $n$ grows (the $b=\pm\infty$ case of
+@thm-coverage-misspecification); it is unbiased only under transitivity (@thm-bucher-unbiased), which population adjustment exists to repair.
 
 For the **unanchored** comparison, where no common comparator anchors the contrast (Chapters 17, 26), the
 ordering is shorter but the demands are stiffer.
 
-7. **Multilevel unanchored meta-regression under a correct shared-prognostic-factor assumption** (@def-sema,
-in its absolute form @def-conditional-constancy-absolute) attains near-nominal coverage and low bias. The
-residual bias concentrates in scenarios where strong effect modification acts in the index or target
-population.
+7. **Multilevel unanchored meta-regression under the shared prognostic factor assumption** (@def-spfa, with
+conditional constancy of absolute effects, @def-conditional-constancy-absolute) attains low bias and
+near-nominal coverage for the comparator-population estimand in all studied scenarios; for transported
+estimands this holds when the assumption holds, and bias grows with the strength of the effect modification
+that violates it.
 
-8. **The same method with the assumption relaxed by subgroup aggregate data** restores near-nominal coverage
-under any effect-modification strength, at the price of requiring that extra subgroup information.
+8. **The same method with the assumption relaxed by subgroup aggregate data** restores low bias and
+near-nominal coverage in the studied scenarios, at the price of requiring that extra subgroup information.
 
 9. **All unanchored methods remain far more demanding than their anchored counterparts**, because dropping
 the common comparator forfeits the cancellation that makes an anchored contrast robust. This is the content
-of @thm-unanchored-paic-consistency and of the insufficiency of the shared-effect-modifier assumption alone
-(@thm-sema-insufficient).
+of @thm-unanchored-paic-consistency and @prp-spfa-vs-sema.
 :::
 
 ::: {.remark}
@@ -1261,8 +1266,8 @@ We reuse the data-generating geometry of the worked MAIC example (@exm-maic-twoc
 ADEMP framework and pushed through the performance measures. Read concretely, this is the running
 plaque-psoriasis comparison of @sec-sim-intro: $A$ a new interleukin-23 inhibitor, $B$ an established
 comparator biologic, $C$ ustekinumab as the common anchor, the effect modifier $x_1$ baseline disease
-severity, the prognostic covariate $x_2$ age, and the outcome the reduction in PASI score at week 16 in
-points, so every number below is a PASI mean difference.
+severity, the prognostic covariate $x_2$ age, and the outcome the PASI score at week 16 in points (lower is
+better), so every number below is a PASI mean difference.
 
 **Aims (A).** Quantify, on the identity scale, the bias and ninety-five percent interval coverage of two
 methods for the target contrast $d_{AB(\mathcal{P}_{BC})}$: an adjusted method (MAIC or simulated treatment
@@ -1278,7 +1283,7 @@ $\sigma_n$.
 
 *Anatomy of one replication.* Concretely, one replication of this mechanism does the following. Draw $n$
 patients for the $A$ arm and $n$ for the $C$ arm of the index trial; for each patient draw baseline severity
-$x_1$ and age $x_2$ from the index-trial covariate distribution, then draw a PASI reduction from the linear
+$x_1$ and age $x_2$ from the index-trial covariate distribution, then draw a week-16 PASI score from the linear
 model, where the $A$-versus-$C$ conditional benefit is $4+x_1$ points plus mean-zero noise. Reduce the
 comparator trial to its reported means $\bar{\mathbf{x}}_{BC}=(0.5,0.5)$ and $d_{BC}=3.0$, mimicking the
 published aggregate data. Apply each method to this single dataset to obtain its triple
@@ -1427,7 +1432,7 @@ effect-modification, and effect-modifier-inclusion scenarios; the unanchored add
 @chandler2025mlumr. We have been careful to mark this result as empirical rather than proved, and to anchor
 each of its claims to a theorem established earlier, the consistency and equivalence results of Chapters 17
 to 20 for the favorable items and the limitation theorems @thm-failure-of-bucher, @thm-aggregation-bias,
-@thm-maic-no-extrapolation, @thm-sema-insufficient together with the coverage collapse
+@thm-maic-no-extrapolation, @prp-spfa-vs-sema together with the coverage collapse
 @cor-sim-fixed-bias-collapse for the unfavorable ones.
 
 Simulation theory connects to the quantitative bias analysis of Chapter 28 from the other direction: a

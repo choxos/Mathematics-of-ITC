@@ -59,8 +59,8 @@ $$
 and the parameters $(\alpha,\boldsymbol{\beta})$ are pinned down by the balance constraints. We derive this
 form from a Lagrangian and the Karush-Kuhn-Tucker (KKT) conditions (@thm-maic-exponential-weights),
 characterize exactly when finite weights exist via convex duality and the geometry of the covariate
-convex hull (@thm-maic-existence-uniqueness), and show that the same weights are the inverse
-probability-of-selection weights of a logistic trial-membership model (@thm-maic-logistic-ipw-equiv),
+convex hull (@thm-maic-existence-uniqueness), and show that the same weights are the inverse-odds
+weights of a logistic trial-membership model (@thm-maic-logistic-ipw-equiv),
 which places MAIC squarely inside the inverse-probability-weighting theory of Chapter 10
 (@thm-ipw-unbiased) and the transportability theory of Chapter 12 (@def-transportability).
 
@@ -77,9 +77,10 @@ whole procedure, weights and outcomes together, as an M-estimator with a sandwic
 (@thm-maic-bootstrap).
 
 Two consistency theorems sit at the center, one for each anchoring regime. Anchored MAIC
-(@thm-anchored-maic-consistency) is consistent for the target-population $A$-versus-$B$ contrast under
-conditional constancy of relative effects (@def-conditional-constancy-relative), the shared-effect-modifier
-assumption (@def-sema), balance of every imbalanced effect modifier, and overlap; it is the MAIC
+(@thm-anchored-maic-consistency) is consistent for the $A$-versus-$B$ contrast in the comparator
+population under conditional constancy (of relative effects on the identity scale,
+@def-conditional-constancy-relative; of the arm means themselves on other scales), balance of every
+imbalanced effect modifier, and overlap; it is the MAIC
 instance of the general anchored population-adjustment theorem of Chapter 17
 (@thm-anchored-paic-consistency). Unanchored MAIC (@thm-unanchored-maic-consistency) discards the
 comparator and is consistent only under the far stronger conditional constancy of *absolute* effects
@@ -93,8 +94,9 @@ catalogue.
 
 Throughout, $g$ is the link function (@def-link-function) on whose scale effects are reported and
 modeled, $\mu_t(\mathbf{x})=\mathbb{E}[Y(t)\mid\mathbf{X}=\mathbf{x}]$ is the conditional mean potential
-outcome under treatment $t$, and $\tau(\mathbf{x})=\mu_A(\mathbf{x})-\mu_C(\mathbf{x})$ is the conditional
-average treatment effect (CATE). The populations in play are $\mathcal{P}_{AC}$ (the IPD trial's
+outcome under treatment $t$, and $\tau(\mathbf{x})=\mu_C(\mathbf{x})-\mu_A(\mathbf{x})$ is the conditional
+average treatment effect (CATE) of $A$ versus $C$ on the identity scale ($\tau^{\mathrm{id}}_{AC}$ in the
+notation of Chapter 16), positive when $A$ lowers the outcome. The populations in play are $\mathcal{P}_{AC}$ (the IPD trial's
 population, with covariate density $f_{AC}$) and $\mathcal{P}_{BC}$ (the comparator trial's population,
 with density $f_{BC}$ and mean $\bar{\mathbf{x}}_{BC}$); for the unanchored development a general target
 $\mathcal{P}^{*}$ appears. We use the relative-effect notation $d_{ab(\mathcal{P})}$ of
@@ -200,11 +202,11 @@ Each severe patient now stands in for one and a half patients, each mild patient
 the weighted sample looks, on average, like the sicker $BC$ population. One checks the balance directly:
 the weighted mean severity is $\tfrac14(1.5+1.5-0.5-0.5)=\tfrac{2}{4}=0.5$, as required.
 
-**The exponential form appears on its own.** Write the two weights as $w(x)=e^{\alpha+\beta x}$. Then
+**The exponential form.** Write the two weights as $w(x)=e^{\alpha+\beta x}$. Then
 $w_{+}/w_{-}=e^{2\beta}=3$, so $\beta=\tfrac12\ln 3\approx 0.549$, and $w_{-}=e^{\alpha-\beta}=0.5$ gives
-$e^{\alpha}=0.5\sqrt3\approx 0.866$. Thus, with no assumption imposed beyond "balance the mean with the
-least lopsided weights," the weights came out *log-linear in the covariate*, $w(x)=e^{-0.144+0.549\,x}$.
-Section @sec-maic-weights explains why this exponential shape is forced, not chosen.
+$e^{\alpha}=0.5\sqrt3\approx 0.866$, so $w(x)=e^{-0.144+0.549\,x}$. With a covariate taking only two
+values any positive weights are log-linear in it; @sec-maic-weights shows that entropy balancing forces
+this exponential shape in general.
 
 **The precision cost.** The effective sample size (@def-maic-ess) is
 $$
@@ -288,7 +290,7 @@ features means matching a richer summary of the two populations, at a precision 
 @sec-maic-ess.
 
 Equation @eq-maic-moment-balance is a *system of constraints*, not a recipe: for $p<n-1$ it has an
-infinite affine family of nonnegative solutions whenever it has one at all. The next section selects a
+infinite family of nonnegative solutions whenever it has a strictly positive one. The next section selects a
 single solution. First, two points about which moments to balance, because the choice is where the
 scientific assumptions enter.
 
@@ -596,8 +598,8 @@ solution or a negative weight. $\blacktriangleleft$
 function $Q$ in @eq-maic-dual over $\boldsymbol{\beta}\in\mathbb{R}^p$ by Newton-Raphson, whose gradient
 @eq-maic-grad-q is the normalized covariate imbalance and whose Hessian @eq-maic-hess-q is the tilted
 covariance, both already assembled from the data. Convergence is fast because $Q$ is convex and, near the
-optimum, well approximated by a quadratic. Software such as the `maicChecks` and `MAIC` R packages
-minimizes the equivalent unnormalized objective $\widetilde{Q}(\boldsymbol{\beta})=\sum_i
+optimum, well approximated by a quadratic. Standard implementations, including the code of @phillippo2016tsd18,
+minimize the equivalent unnormalized objective $\widetilde{Q}(\boldsymbol{\beta})=\sum_i
 e^{\boldsymbol{\beta}^\top\boldsymbol{\Delta}_i}$, whose gradient $\sum_i\boldsymbol{\Delta}_i
 e^{\boldsymbol{\beta}^\top\boldsymbol{\Delta}_i}$ is the raw imbalance @eq-maic-balance-beta; $Q$ and
 $\widetilde{Q}=e^{Q}$ share their minimizer because $e^{(\cdot)}$ is increasing. $\blacktriangleleft$
@@ -617,7 +619,7 @@ This result, the central derivation of MAIC, corresponds to F.3 in the proof cat
 
 ## Existence and uniqueness via convex duality {#sec-maic-existence}
 
-Theorem @thm-maic-exponential-weights assumed a strictly positive feasible point. We now characterize
+@thm-maic-exponential-weights assumed a strictly positive feasible point. We now characterize
 exactly when one exists, in terms of where the target mean sits relative to the IPD covariate cloud. The
 characterization is purely geometric and is the precise mathematical content of "adequate overlap."
 
@@ -869,9 +871,9 @@ the weights cancels), with the density ratio @eq-maic-densityratio replaced by t
 weight @eq-maic-weights, is exactly @eq-maic-ht. This is the inverse-probability-weighting estimator of
 @thm-ipw-unbiased, transposed from "probability of treatment within a population" to "probability of
 selection into a population," which is the transportability weighting of @def-transportability and
-@thm-conditional-transportability. The selection weights play the role of the balancing score
-(@def-balancing-score): a function of $\mathbf{x}$ that, used as a weight, renders the index covariate
-distribution equal to the comparator's. $\square$
+@thm-conditional-transportability. The density ratio is a strictly decreasing function of the selection
+propensity $P(S=1\mid\mathbf{x})$, hence a balancing score for trial membership (@def-balancing-score);
+used as a weight, it renders the index covariate distribution equal to the comparator's. $\square$
 :::
 
 ::: {.remark}
@@ -882,10 +884,11 @@ individual labels from the $BC$ trial, only its reported moments, so it cannot w
 likelihood; instead it chooses $\boldsymbol{\beta}$ to make the *weighted index moments equal the reported
 comparator moments*, which is @eq-maic-balance-beta. The two criteria target the same population density
 ratio and coincide asymptotically when the log-odds is genuinely linear in $\mathbf{x}$; MAIC is thus the
-method-of-moments implementation of logistic IPW adapted to aggregate comparator data. Its consistency
-inherits the inverse-probability-weighting requirement that the weight model be correct, here that the
-density ratio is log-linear in the matched features, which is the same linearity condition that governed
-the choice of moments in @sec-maic-moment. $\blacktriangleleft$
+method-of-moments implementation of logistic IPW adapted to aggregate comparator data. Its weighted arm
+means are consistent if *either* the density ratio is log-linear in the matched features (the weight model
+is correct) *or* the arm means are affine in them, so that exact balance alone suffices
+(@sec-maic-moment); this double robustness of entropy balancing is proved by @zhao2017entropy.
+@thm-anchored-maic-consistency below uses the second route. $\blacktriangleleft$
 :::
 
 The equivalence, and the one place the two methods part company, is worth a side-by-side.
@@ -933,16 +936,14 @@ recipe recovers the true $A$-versus-$B$ effect *in the comparator population* $\
 population we could not re-analyze directly. But it does so only under a stack of assumptions, and a health
 researcher's real job is to know which of them are checkable and which are acts of faith. The next table is
 that map; the formal statement and proof follow, and the remark after the proof (@sec-maic-anchored, "Where
-each hypothesis is spent") revisits each assumption in prose. The one genuinely new idea in the assumption
-list is **shared effect modification** (SEMA, @def-sema): in plain terms, a covariate such as severity must
-bend the $A$-versus-$C$ effect in the *same way* it bends the $B$-versus-$C$ effect, so that the published
-$BC$ result can be read as the comparator-population $B$-versus-$C$ effect without our re-estimating it from
-$BC$'s (unavailable) patient data.
+each hypothesis is spent") revisits each assumption in prose. Because the target is the comparator population
+itself, the published $BC$ result needs no adjustment, and the shared effect modifier assumption
+(@def-sema) is not needed; it becomes necessary only when the target is some other population.
 
 | Assumption | Plain meaning | Checkable from the two trials? | What goes wrong if it fails |
 |---|---|---|---|
-| (i) Randomized index trial | the $A$ and $C$ arms are comparable without adjustment | Yes, it is a design fact | nothing, if the trial was truly randomized |
-| (ii) Conditional constancy + SEMA | the $A$-vs-$C$ effect is the same function of covariates in both trials, and modifiers act alike on $A$-vs-$C$ and $B$-vs-$C$ | No, untestable from two trials | the carried and published effects do not describe $\mathcal{P}_{BC}$; residual bias |
+| (i) Randomized trials | within each trial the arms are comparable without adjustment | Yes, it is a design fact | nothing, if the trials were truly randomized |
+| (ii) Conditional constancy | the $A$-vs-$C$ effect (on non-identity scales, each arm mean) is the same function of covariates in both trials | No, untestable from two trials | the reweighted $AC$ effect does not describe $\mathcal{P}_{BC}$; residual bias |
 | (iii) All imbalanced effect modifiers measured and balanced | every covariate that changes the $A$-vs-$C$ effect and differs between trials is in $\mathbf{x}$ and balanced | Partly: you can see imbalance, not prove completeness | leftover confounding-by-population, the Bucher failure MAIC was built to fix |
 | (iv) Overlap | the comparator mean lies inside the index covariate cloud | Yes, compare covariate ranges | weights diverge; estimator undefined or unstable |
 | (v) Right moments for the scale | first moments suffice on a linear scale; higher moments needed on nonlinear ones | Partly, from the link and the reported summaries | mismatch on nonlinear scales; ecological bias |
@@ -952,14 +953,15 @@ $BC$'s (unavailable) patient data.
 Fix a link scale $g$ and report the $A$-versus-$B$ contrast in the comparator population
 $\mathcal{P}_{BC}$. Assume:
 
-(i) *(Randomization.)* The index trial $AC$ is randomized, so within $\mathcal{P}_{AC}$,
-$\mathbb{E}[Y\mid T=t,\mathbf{X}=\mathbf{x}]=\mu_t(\mathbf{x})$ for $t\in\{A,C\}$.
+(i) *(Randomization.)* Both trials are randomized. Within $\mathcal{P}_{AC}$,
+$\mathbb{E}[Y\mid T=t,\mathbf{X}=\mathbf{x}]=\mu^{AC}_t(\mathbf{x})$ for $t\in\{A,C\}$, the index trial's
+conditional means; and $\hat d_{BC}^{\mathrm{AgD}}\xrightarrow{p}d_{BC(\mathcal{P}_{BC})}$, the
+$\mathcal{P}_{BC}$ marginal contrast.
 
-(ii) *(Conditional constancy of relative effects, @def-conditional-constancy-relative, with shared effect
-modification, @def-sema.)* The conditional $A$-versus-$C$ contrast on scale $g$ is the same function of
-$\mathbf{x}$ in $\mathcal{P}_{AC}$ and $\mathcal{P}_{BC}$, and the effect modifiers and their interaction
-coefficients are shared across $A$ and $B$ relative to $C$, so that $\hat d_{BC}^{\mathrm{AgD}}$ is
-consistent for the $\mathcal{P}_{BC}$ marginal contrast $d_{BC(\mathcal{P}_{BC})}$.
+(ii) *(Conditional constancy.)* If $g$ is the identity, the conditional $A$-versus-$C$ contrast
+$\mu^{AC}_C-\mu^{AC}_A$ is the same function of $\mathbf{x}$ in $\mathcal{P}_{BC}$
+(@def-conditional-constancy-relative). For any other $g$, the conditional arm means $\mu^{AC}_A,\mu^{AC}_C$
+are themselves the same in $\mathcal{P}_{BC}$ (@def-conditional-constancy-absolute for arms $A$ and $C$).
 
 (iii) *(Complete, balanced effect modifiers.)* Every covariate that modifies the $A$-versus-$C$ contrast
 on scale $g$ and is imbalanced between $\mathcal{P}_{AC}$ and $\mathcal{P}_{BC}$ is included in
@@ -969,18 +971,17 @@ $\mathbf{x}$ and balanced by the matched moments.
 finite positive weights exist (@thm-maic-existence-uniqueness), and the effective sample size grows
 without bound, $\mathrm{ESS}\to\infty$, as $n\to\infty$.
 
-(v) *(Sufficiency of the matched moments.)* The conditional means $\mu_A(\cdot),\mu_C(\cdot)$ entering the
-estimand are affine in the matched features (first moments for the identity scale; augmented with the
-balanced higher moments otherwise), so that weighted index means converge to $\mathcal{P}_{BC}$ marginal
-means.
+(v) *(Sufficiency of the matched moments.)* The conditional means $\mu^{AC}_A,\mu^{AC}_C$ are affine in the
+matched features (the covariates themselves when first moments are matched; the covariates and their
+squares or products when those moments are also matched).
 
 Then the anchored MAIC estimator @eq-maic-anchored-est is consistent for the target contrast,
 $$
 \hat d_{AB}^{\mathrm{MAIC,anch}}\;\xrightarrow{\ p\ }\;d_{AB(\mathcal{P}_{BC})}.
 $$
 This is *consistency*, not finite-sample unbiasedness: the weights are estimated from
-$\{\mathbf{x}_i\}$, so $\hat d_{AB}^{\mathrm{MAIC,anch}}$ carries an $O(1/n)$ finite-sample bias that
-vanishes in the limit. The reason for the bias is that the *same* patients are used twice, once to choose
+$\{\mathbf{x}_i\}$, so $\hat d_{AB}^{\mathrm{MAIC,anch}}$ is in general biased in finite samples, although
+the bias vanishes in the limit. The reason for the bias is that the *same* patients are used twice, once to choose
 the weights and once to average the outcomes, so a chance covariate imbalance in a finite sample nudges the
 weights and the weighted mean in correlated ways; as $n$ grows the fitted weights settle to their true
 values and the correlation washes out, which is why consistency survives even though exact unbiasedness
@@ -993,7 +994,7 @@ $w_i^{*}=\exp(\hat\alpha+\hat{\boldsymbol{\beta}}^\top\boldsymbol{\Delta}_i)$ ex
 positive, and by construction satisfy the moment constraint @eq-maic-moment-centered exactly, so the
 weighted index covariate mean equals $\bar{\mathbf{x}}_{BC}$ for every $n$.
 
-*Step 2 (the weighted arm mean targets the comparator marginal mean).* Consider arm $A$. By (i), for
+*Step 2 (the weighted arm mean targets the comparator marginal mean).* Consider arm $A$ and write $\mu_A$ for $\mu^{AC}_A$. By (i), for
 $T_i=A$ write $Y_i=\mu_A(\mathbf{x}_i)+\varepsilon_i$ with $\mathbb{E}[\varepsilon_i\mid\mathbf{x}_i,
 T_i=A]=0$ and $\operatorname{Var}(\varepsilon_i\mid\mathbf{x}_i,T_i=A)\le\sigma^2<\infty$. Then
 $$
@@ -1006,24 +1007,23 @@ $a_0+\mathbf{a}^\top\bar{\mathbf{x}}^{A}_{w}$, where $\bar{\mathbf{x}}^{A}_{w}$ 
 mean over arm $A$. Randomization (i) makes the covariate distribution in arm $A$ identical to the overall
 index covariate distribution, and the weights depend only on $\mathbf{x}$, so the within-arm weighted
 covariate mean converges to the overall weighted covariate mean, which by Step 1 equals
-$\bar{\mathbf{x}}_{BC}$; hence the signal term converges to $a_0+\mathbf{a}^\top\bar{\mathbf{x}}_{BC}$.
-By conditional constancy (ii) the function $\mu_A$ is the same in $\mathcal{P}_{BC}$, so
-$a_0+\mathbf{a}^\top\bar{\mathbf{x}}_{BC}=\mathbb{E}_{\mathcal{P}_{BC}}[\mu_A(\mathbf{X})]=
-\bar\mu_{A(\mathcal{P}_{BC})}$. The noise term has conditional mean zero and conditional variance bounded
+$\bar{\mathbf{x}}_{BC}$; hence the signal term converges to
+$a_0+\mathbf{a}^\top\bar{\mathbf{x}}_{BC}=\mathbb{E}_{\mathcal{P}_{BC}}[\mu^{AC}_A(\mathbf{X})]=:m^{AC}_A$,
+the index trial's conditional mean averaged over the comparator covariate distribution. The noise term has conditional mean zero and conditional variance bounded
 by $\sigma^2\sum_{i:T_i=A}(w_i^{*})^2/(\sum_{i:T_i=A}w_i^{*})^2=\sigma^2/\mathrm{ESS}_A$, which tends to
 zero by (iv); by Chebyshev's inequality the noise term converges to zero in probability. Therefore
-$\hat\mu_A^{\mathrm{MAIC}}\xrightarrow{p}\bar\mu_{A(\mathcal{P}_{BC})}$. The same argument gives
-$\hat\mu_C^{\mathrm{MAIC}}\xrightarrow{p}\bar\mu_{C(\mathcal{P}_{BC})}$.
+$\hat\mu_A^{\mathrm{MAIC}}\xrightarrow{p}m^{AC}_A$. The same argument gives
+$\hat\mu_C^{\mathrm{MAIC}}\xrightarrow{p}m^{AC}_C$.
 
 *Step 3 (the reweighted contrast).* The link $g$ is continuous, so by the continuous mapping theorem
-$$
-\hat d_{AC}^{\mathrm{MAIC}}=g(\hat\mu_C^{\mathrm{MAIC}})-g(\hat\mu_A^{\mathrm{MAIC}})
-\xrightarrow{p} g(\bar\mu_{C(\mathcal{P}_{BC})})-g(\bar\mu_{A(\mathcal{P}_{BC})})
-=d_{AC(\mathcal{P}_{BC})},
-$$
-the marginal $A$-versus-$C$ effect *in the comparator population*.
+$\hat d_{AC}^{\mathrm{MAIC}}=g(\hat\mu_C^{\mathrm{MAIC}})-g(\hat\mu_A^{\mathrm{MAIC}})\xrightarrow{p}
+g(m^{AC}_C)-g(m^{AC}_A)$. If $g$ is the identity this is
+$\int(\mu^{AC}_C-\mu^{AC}_A)f_{BC}=\int\tau^{\mathrm{id}}_{AC}f_{BC}=d_{AC(\mathcal{P}_{BC})}$ by (ii) and
+direct collapsibility (@prp-emcoll-rd-direct). For any other $g$, (ii) gives
+$m^{AC}_t=\bar\mu_{t(\mathcal{P}_{BC})}$, so again the limit is $d_{AC(\mathcal{P}_{BC})}$, the marginal
+$A$-versus-$C$ effect *in the comparator population*.
 
-*Step 4 (anchored subtraction in a single population).* By (ii) the comparator estimate satisfies
+*Step 4 (anchored subtraction in a single population).* By (i) the comparator estimate satisfies
 $\hat d_{BC}^{\mathrm{AgD}}\xrightarrow{p}d_{BC(\mathcal{P}_{BC})}$. Both surviving contrasts now live in
 the *same* population $\mathcal{P}_{BC}$, so the within-population additivity of relative effects
 (@lem-relative-effect-algebra, evaluated in $\mathcal{P}_{BC}$) gives
@@ -1032,35 +1032,25 @@ Slutsky's theorem yields
 $\hat d_{AB}^{\mathrm{MAIC,anch}}=\hat d_{AC}^{\mathrm{MAIC}}-\hat d_{BC}^{\mathrm{AgD}}
 \xrightarrow{p}d_{AB(\mathcal{P}_{BC})}$.
 
-*Non-collapsible scales.* For collapsible measures (the identity and log scales, @def-collapsibility)
-Step 4 is immediate. For non-collapsible measures (the log odds ratio, the log hazard ratio,
-@thm-noncollapsibility-or-hr) the marginal contrast is not the average of conditional contrasts, and the
-subtraction in Step 4 is licensed only under the scale-alignment conditions catalogued by the general
-anchored PAIC theorem (@thm-anchored-paic-consistency), which (ii) and (iii) supply; we invoke that
-theorem for the marginalization-then-subtraction step on such scales rather than reproving the
-collapsibility bookkeeping here. $\square$
+Step 4 holds on every scale, because both contrasts are marginal contrasts in the one population
+$\mathcal{P}_{BC}$. $\square$
 :::
 
 ::: {.remark}
-**What non-collapsibility demands, concretely.** Because most health-technology submissions report odds
-ratios or hazard ratios, the last step of the proof deserves to be spelled out, not just cited. On a
-collapsible scale (identity, log-risk) the marginal effect *is* the covariate-average of the conditional
-effects, so once MAIC has matched the covariate distribution the marginal $A$-versus-$C$ effect transports
-directly and the Bucher subtraction goes through. On a non-collapsible scale (log odds ratio, log hazard
-ratio) this is false: as @exm-maic-logit-moments showed, the marginal contrast depends on the covariate
-*spread* and on the baseline risk, not only on what conditional effect the patients carry. Two concrete
-consequences follow. First, matching the *mean* covariate does not by itself make two marginal odds ratios
-comparable; you must match enough of the covariate distribution that the two populations marginalize the
-same way, which is why higher moments matter here (@sec-maic-moment). Second, even after matching, the two
-marginal contrasts must be brought to a common baseline risk before they are subtracted; this is the
-"scale-alignment" content of @thm-anchored-paic-consistency, and in an anchored comparison it is the shared
-comparator $C$ together with SEMA (ii) that supplies the common baseline. The systematic fix that never
-needs this bookkeeping is to integrate an individual-level model over the target covariate distribution,
-which is multilevel network meta-regression (Chapter 20); MAIC instead leans on the anchor and the
-shared-modifier structure to keep the two marginal effects on speaking terms. The practical warning for a
-reader is blunt: a MAIC that balances covariate means and then differences two published odds ratios has
-*not* automatically produced a valid comparison unless the scale-alignment conditions hold.
-$\blacktriangleleft$
+**What non-collapsibility demands, concretely.** Most health-technology submissions report odds ratios
+or hazard ratios, so the scale split in (ii) matters. On the identity scale the study baseline cancels from
+every conditional contrast, so relative constancy suffices. On a non-collapsible scale the marginal
+contrast depends on the covariate *spread* and on the baseline risk, not only on the conditional effect
+(@exm-maic-logit-moments). Two consequences follow. First, matching the *mean* covariate does not make the
+reweighted arm means equal the comparator-population means; condition (v) then needs the higher moments
+that the arm means depend on (@sec-maic-moment). Second, relative constancy leaves the two trials free to
+have different baseline risks, and the reweighted $AC$ trial then delivers the $A$-versus-$C$ marginal odds
+ratio for the $\mathcal{P}_{BC}$ covariate mix at the $AC$ trial's baseline, which is not the
+$\mathcal{P}_{BC}$ marginal odds ratio (@thm-anchored-paic-consistency(c)); this is why (ii) asks the arm
+means themselves to transport. The systematic alternative is to integrate an individual-level model over
+the target covariate distribution, which is multilevel network meta-regression (Chapter 20). The practical
+warning is blunt: a MAIC that balances covariate means and then differences two published odds ratios has
+*not* automatically produced a valid comparison. $\blacktriangleleft$
 :::
 
 ::: {.remark}
@@ -1069,13 +1059,12 @@ finite and the noise average out; without it MAIC is undefined or unstable (@thm
 @thm-maic-ess-bound). Balance of every imbalanced effect modifier (iii) is what makes the reweighted
 contrast equal the comparator contrast; omitting an imbalanced modifier leaves residual confounding-by-
 population and asymptotic bias, exactly the Bucher failure of @thm-failure-of-bucher that MAIC was built
-to repair. Conditional constancy with shared modification (ii) is what licenses transporting $\mu_A$ to
-$\mathcal{P}_{BC}$ and identifying $\hat d_{BC}^{\mathrm{AgD}}$ with the $\mathcal{P}_{BC}$ contrast; it is
-the population-adjustment analogue of transitivity and the only assumption that is genuinely untestable
-from these two trials (@prp-testable-untestable-constancy). Sufficiency of the matched moments (v) is the
-linearity condition that makes first-moment matching enough; on nonlinear scales one matches more moments,
-and @thm-shared-em-identifiability records what is then identified. Randomization (i) supplies the
-within-trial unconfoundedness for free. $\blacktriangleleft$
+to repair. Conditional constancy (ii) is what licenses reading the reweighted $AC$ contrast as the
+$\mathcal{P}_{BC}$ contrast; it is the population-adjustment analogue of transitivity and the only
+assumption that is genuinely untestable from these two trials (@prp-testable-untestable-constancy).
+Sufficiency of the matched moments (v) is the linearity condition that makes moment matching enough.
+Randomization (i) supplies the within-trial unconfoundedness, and the consistency of the published $BC$
+contrast, for free. $\blacktriangleleft$
 :::
 
 This result corresponds to F.6 in the proof catalogue.
@@ -1086,9 +1075,11 @@ When the index and comparator trials share no common comparator, there is no anc
 MAIC must compare the absolute outcomes of $A$ and $B$ across populations directly. The estimator becomes
 $$
 \hat d_{AB}^{\mathrm{MAIC,unanch}}
-:=g(\hat\mu_A^{\mathrm{MAIC}})-g(\hat\mu_B^{\mathrm{MAIC}}),
+:=g(\hat\mu_B)-g(\hat\mu_A^{\mathrm{MAIC}}),
 $$ {#eq-maic-unanchored-est}
-where each weighted arm mean is transported to a common target population $\mathcal{P}^{*}$. The price of
+where $\hat\mu_A^{\mathrm{MAIC}}$ is the IPD arm reweighted to the target population $\mathcal{P}^{*}$, and
+$\hat\mu_B$ is the reported mean of the aggregate $B$ arm when $\mathcal{P}^{*}$ is its population (the
+usual case), or the reweighted analogue of $\hat\mu_A^{\mathrm{MAIC}}$ if $B$ also has IPD. The price of
 discarding the anchor is a far stronger and largely untestable assumption set; this is the MAIC instance
 of @thm-unanchored-paic-consistency.
 
@@ -1115,9 +1106,9 @@ comparator absorb the age effect by cancellation; the unanchored design has no s
 | | Anchored MAIC | Unanchored MAIC |
 |---|---|---|
 | Needs a common comparator $C$? | Yes | No |
-| Estimand built from | the *contrast* $\mu_A-\mu_C$ | the *absolute* means $\mu_A$ and $\mu_B$ |
+| Estimand built from | the *contrast* $\mu_C-\mu_A$ | the *absolute* means $\mu_A$ and $\mu_B$ |
 | Must balance | imbalanced *effect modifiers* | imbalanced effect modifiers *and* prognostic variables |
-| Key assumption | conditional constancy of *relative* effects, plus SEMA | conditional constancy of *absolute* effects |
+| Key assumption | conditional constancy of *relative* effects (of the arm means off the identity scale) | conditional constancy of *absolute* effects |
 | Checkable from the data? | partly (see the anchored table) | essentially not |
 | Verdict | preferred whenever an anchor exists | last resort, with heavy sensitivity analysis |
 
@@ -1142,7 +1133,7 @@ source, so finite positive weights exist and $\mathrm{ESS}\to\infty$.
 Then the unanchored MAIC estimator @eq-maic-unanchored-est is consistent for the target contrast,
 $$
 \hat d_{AB}^{\mathrm{MAIC,unanch}}\;\xrightarrow{\ p\ }\;d_{AB(\mathcal{P}^{*})}
-=g(\bar\mu_{A(\mathcal{P}^{*})})-g(\bar\mu_{B(\mathcal{P}^{*})}).
+=g(\bar\mu_{B(\mathcal{P}^{*})})-g(\bar\mu_{A(\mathcal{P}^{*})}).
 $$
 :::
 
@@ -1179,21 +1170,22 @@ comparator. There is no subtraction to cancel a prognostic variable, so the full
 function $\mu_A(\cdot)$, not merely the CATE $\tau(\cdot)$, must be transported, which is why (ii) demands
 prognostic variables and not only effect modifiers.
 
-*Step 4 (the other arm and the contrast).* The symmetric argument gives
-$\hat\mu_B^{\mathrm{MAIC}}\xrightarrow{p}\bar\mu_{B(\mathcal{P}^{*})}$. By the continuous mapping theorem,
+*Step 4 (the other arm and the contrast).* When $\mathcal{P}^{*}$ is the $B$ population, the reported arm
+mean $\hat\mu_B$ is consistent for $\bar\mu_{B(\mathcal{P}^{*})}$ directly; when $B$ also has IPD the
+symmetric argument gives the same limit. By the continuous mapping theorem,
 $$
-\hat d_{AB}^{\mathrm{MAIC,unanch}}=g(\hat\mu_A^{\mathrm{MAIC}})-g(\hat\mu_B^{\mathrm{MAIC}})
-\xrightarrow{p}g(\bar\mu_{A(\mathcal{P}^{*})})-g(\bar\mu_{B(\mathcal{P}^{*})})=d_{AB(\mathcal{P}^{*})}.
+\hat d_{AB}^{\mathrm{MAIC,unanch}}=g(\hat\mu_B)-g(\hat\mu_A^{\mathrm{MAIC}})
+\xrightarrow{p}g(\bar\mu_{B(\mathcal{P}^{*})})-g(\bar\mu_{A(\mathcal{P}^{*})})=d_{AB(\mathcal{P}^{*})}.
 \qquad\square
 $$
 :::
 
 ::: {.remark}
 **Why prognostic variables matter here but not in the anchored case.** In the anchored estimator the
-quantity that enters is the CATE $\tau(\mathbf{x})=\mu_A(\mathbf{x})-\mu_C(\mathbf{x})$. If $w$ is a
+quantity that enters is the CATE $\tau(\mathbf{x})=\mu_C(\mathbf{x})-\mu_A(\mathbf{x})$. If $w$ is a
 prognostic variable for both $A$ and $C$ that is *not* an effect modifier on the chosen scale, then it
 shifts $\mu_A(\mathbf{x},w)$ and $\mu_C(\mathbf{x},w)$ by the same amount, so it cancels in the
-difference: $\mu_A(\mathbf{x},w)-\mu_C(\mathbf{x},w)=\mu_A(\mathbf{x})-\mu_C(\mathbf{x})$, and omitting
+difference: $\mu_C(\mathbf{x},w)-\mu_A(\mathbf{x},w)=\mu_C(\mathbf{x})-\mu_A(\mathbf{x})$, and omitting
 $w$ from $\mathbf{x}$ does not bias the anchored estimate. In the unanchored estimator the quantity that
 enters is $\mu_A(\mathbf{x})$ *alone*. If $w$ is an omitted prognostic variable for $A$, then
 $\mu_A(\mathbf{x},w)$ depends on $w$, and integrating it against the source's $f(w\mid\mathbf{x})$ rather
@@ -1423,7 +1415,7 @@ This result corresponds to F.10 in the proof catalogue.
 
 *The one-line rule for practice.* Do not compute your standard errors as if the weights were known numbers.
 You chose the weights by fitting them to the very same patients whose outcomes you are now averaging, and
-pretending otherwise generally understates the uncertainty. The two honest options are the sandwich
+pretending otherwise misstates the uncertainty, in a direction that depends on the data. The two honest options are the sandwich
 variance developed here and the bootstrap of @sec-maic-bootstrap; the naive fixed-weight standard error is
 not one of them.
 
@@ -1513,9 +1505,11 @@ on both $\boldsymbol{\beta}$ and the means, since the weights $e^{\boldsymbol{\b
 block-triangular $A$ propagates the sampling uncertainty of $\hat{\boldsymbol{\beta}}$ into the variance
 of $(\hat\mu_A,\hat\mu_C)$ through the off-diagonal block. A naive analysis that treats the weights as
 fixed drops that off-diagonal block, that is, it pretends the balance block and the outcome blocks are
-uncoupled; it therefore generally *misstates* the variance. In typical MAIC applications the weight
-estimation adds positively correlated noise and the naive estimator is anticonservative; the sign is not
-universal, which is exactly why the full sandwich, not a fixed-weight shortcut, is needed.
+uncoupled; it therefore generally *misstates* the variance. Often the correction is negative: estimating
+the weights removes the part of the outcome variation explained by the balanced covariates, as for the
+calibration estimators of survey sampling (@deville1992), so fixed-weight standard errors tend to be
+conservative. The sign is not universal (@exr-maic-sandwich-vs-naive), which is exactly why the full
+sandwich, not a fixed-weight shortcut, is needed.
 $\blacktriangleleft$
 :::
 
@@ -1574,7 +1568,8 @@ directions generated by empirical processes.
 Second, given $\boldsymbol{\beta}$, the weighted arm means
 $\mu_t(F,\boldsymbol{\beta})=\int\mathbf{1}\{T=t\}e^{\boldsymbol{\beta}^\top(\mathbf{x}-\bar{\mathbf{x}}_{BC})}
 y\,dF\big/\int\mathbf{1}\{T=t\}e^{\boldsymbol{\beta}^\top(\mathbf{x}-\bar{\mathbf{x}}_{BC})}\,dF$ are ratios
-of integrals of bounded continuous transformations against $F$, hence Hadamard-differentiable in
+of integrals against $F$ of functions indexed smoothly by $\boldsymbol{\beta}$, which form a Donsker class
+under the finite second moments assumed in @thm-maic-sandwich-variance, hence Hadamard-differentiable in
 $(F,\boldsymbol{\beta})$ wherever the denominator is bounded away from zero (guaranteed by positivity of
 the weights, @thm-maic-exponential-weights). Third, the link $g$ and the subtraction are smooth maps of
 the means. The composition $\Psi$ of Hadamard-differentiable maps is Hadamard-differentiable by the chain
@@ -1778,7 +1773,7 @@ within the anchored and unanchored population-adjustment framework follow the th
 standard practical reference for which covariates to balance, the anchored-versus-unanchored decision, and
 the treatment of unanchored comparisons as a last resort. The maximum-entropy reading of covariate
 balancing, with its exponential-family solution and its convex dual, is the entropy-balancing method
-familiar from the causal-inference literature; the equivalence between entropy balancing and a calibrated
+of @hainmueller2012 in the causal-inference literature; the equivalence between entropy balancing and a calibrated
 logistic propensity model is a recurring theme there, and @thm-maic-logistic-ipw-equiv is its MAIC
 instance, connected to the inverse-probability-weighting theory of Chapter 10 (@thm-ipw-unbiased,
 @def-balancing-score) and the transportability theory of Chapter 12 (@def-transportability,
@@ -1839,9 +1834,9 @@ weight $1.5$ each and the two mild patients weight $0.5$ each. (a) In one senten
 $1.5$ means for a severe patient, in terms of how many target-population patients they stand in for.
 (b) Why are the severe patients upweighted rather than the mild ones, given that the comparator trial was
 sicker? (c) Recompute the effective sample size from these weights and state, in plain words, how many
-equally weighted patients this reweighted sample is worth. (d) Without recomputing anything, would
-balancing a *second* imbalanced covariate raise or lower the ESS, and which result of this chapter
-guarantees the direction?
+equally weighted patients this reweighted sample is worth. (d) Balancing a *second* imbalanced covariate
+adds a constraint. Explain why the minimized entropy objective cannot decrease, and why the ESS typically,
+though not necessarily, falls.
 :::
 
 ::: {#exr-maic-em-vs-pv}
@@ -1874,12 +1869,13 @@ target were $\bar x_{BC}=1.5$ instead.
 :::
 
 ::: {#exr-maic-secondmoment}
-**Balancing a variance.** *(Computation.)* Continue @exm-maic-twocov but now require, in addition to matching both means at
-$0.5$, that the weighted variance of $x_1$ equal a reported comparator value $s^2_{1,BC}=0.5$. Write the
-augmented feature map $\boldsymbol{\phi}(\mathbf{x})=(x_1,x_2,x_1^2)$ and the corresponding three balance
-equations, explain why the solution generally has $\beta_1\ne\beta_2$ once the squared term is added, and
-argue from @thm-maic-ess-bound why adding the second-moment constraint can only decrease (never increase)
-the effective sample size.
+**Balancing a variance.** *(Computation.)* Continue @exm-maic-twocov and suppose the comparator also
+reports the variance of $x_1$. Write the augmented feature map $\boldsymbol{\phi}(\mathbf{x})=(x_1,x_2,x_1^2)$
+and the three balance equations. (a) Show that, because $x_1^2=1$ for every index patient, the third
+equation holds automatically if the reported variance is $0.75$ and has no solution if it is $0.5$.
+(b) Explain why a variance constraint on a covariate that takes only two values carries no new
+information. (c) Show that adding any feasible balance constraint cannot decrease the minimized objective
+$H(\mathbf{w}^{*})$ of @eq-maic-entropy.
 :::
 
 ::: {#exr-maic-logit}
@@ -1919,9 +1915,10 @@ fails on the logit scale, connecting to the higher-moment discussion of @sec-mai
 **($\star$) Naive versus sandwich variance.** *(Challenge.)* Consider the stacked estimating equations @eq-maic-estfun for a
 single-arm weighted mean (drop the $C$ block). Write the $2\times 2$ block-triangular Jacobian $A$ in the
 scalar-covariate case, invert it explicitly, and show that the asymptotic variance of $\hat\mu_A$ has the
-fixed-weight term $\sigma^2/\mathrm{ESS}$ *plus* a correction attributable to estimating
+fixed-weight term (which reduces to $\sigma^2/\mathrm{ESS}$ when the conditional mean is constant) *plus*
+a correction attributable to estimating
 $\boldsymbol{\beta}$. Identify the data configuration in which the correction vanishes (so that the naive
 and sandwich variances agree) and interpret it: it is the case where the outcome is uncorrelated, within
 the weighting, with the balancing covariate. Relate your finding to the remark following
-@thm-maic-sandwich-variance on why fixed-weight standard errors are generally anticonservative.
+@thm-maic-sandwich-variance: when is the correction negative, and can it be positive?
 :::

@@ -34,9 +34,8 @@ no internal control, must borrow its entire comparator arm from an external popu
 which external study to borrow is the whole analysis. This chapter is about that prior choice: how to pick
 a comparator study before the population-adjustment machinery is switched on.
 
-The practical rule, described in the Bristol Compass blog on disconnected ML-NMR and implemented in the
-`uitc` diagnostic package (a full citation for both is forthcoming; see @sec-distance-notes), is
-disarmingly simple. Each candidate comparator study reports a vector of
+The practical rule, described in a Bristol Compass blog post on disconnected ML-NMR [@perren2024compass]
+and implemented in the `uitc` R package [@uitc], is disarmingly simple. Each candidate comparator study reports a vector of
 covariate summaries, typically baseline means; the index population reports its own; choose the candidate
 whose summaries lie **closest** to the index population on some distance between summary vectors. The
 content of the rule is entirely in the word "closest," because there is no single distance on
@@ -187,7 +186,7 @@ regimes the choice precedes, and conditions the credibility of, the adjustment t
 when every imbalanced prognostic variable and effect modifier is measured and balanced and the target
 covariate values lie inside the index covariate support (@thm-unanchored-paic-consistency, hypotheses
 (iii) and (iv)). Choosing a comparator with smaller covariate gaps makes both conditions easier to meet: a
-smaller gap means less reweighting, a higher effective sample size (@thm-maic-ess-bound), and a target
+smaller gap typically means less reweighting, a higher effective sample size (@thm-maic-ess-bound), and a target
 nearer the interior of the support, so finite stable weights are more likely to exist. The distance is a
 proxy for "how hard the bridge will be." It is not a proxy for "whether the bridge is valid," because the
 unmeasured and the nonlinear escape it entirely; that gap is the subject of @sec-distance-caveat. $\blacktriangleleft$
@@ -396,8 +395,8 @@ $B=\boldsymbol{\Sigma}^{1/2}$ of @thm-cov-psd. Moreover:
 1. If $\boldsymbol{\Sigma}=\operatorname{diag}(s_1^2,\dots,s_p^2)$ is diagonal, then $d_M$ reduces to the
 standardized Euclidean distance $d_{SE}$ with reference scales $s_\ell$.
 
-2. The whitened covariates $\mathbf{u}_j=B^{-1}\boldsymbol{\delta}_j$ have, under the model in which
-$\boldsymbol{\Sigma}$ is the true covariance, identity covariance: $\operatorname{Cov}(B^{-1}\mathbf{X})=
+2. If $\boldsymbol{\Sigma}$ is the covariance of the covariate vector $\mathbf{X}$, the whitened vector
+$B^{-1}\mathbf{X}$ has identity covariance: $\operatorname{Cov}(B^{-1}\mathbf{X})=
 B^{-1}\boldsymbol{\Sigma}B^{-\top}=I_p$.
 :::
 
@@ -740,12 +739,13 @@ the difference between the marginal effect over the comparator population $\math
 effect over the index population $\mathcal{P}_0$, where $\tau$ is the shared conditional contrast. Under
 conditional constancy this $B_j$ is the residual bias incurred by treating comparator $j$'s population as a
 stand-in for the index population, or equivalently the bias that remains if the covariate gap
-$\boldsymbol{\delta}_j$ is left unadjusted; it is the population-level quantity that the unanchored
-consistency theorem (@thm-unanchored-paic-consistency) requires to vanish.
+$\boldsymbol{\delta}_j$ is left unadjusted; it is the quantity that population adjustment
+(@thm-unanchored-paic-consistency) is designed to remove.
 
 ::: {.remark}
 **Reader translation of the two working assumptions.** Two phrases carry this whole section. *Conditional
-constancy* (@def-conditional-constancy-absolute) means the conditional contrast $\tau(\mathbf{x})$, the
+constancy* (@def-conditional-constancy-relative; in the unanchored case the stronger
+@def-conditional-constancy-absolute) means the conditional contrast $\tau(\mathbf{x})$, the
 treatment effect among patients whose covariates equal $\mathbf{x}$, is the **same function** of
 $\mathbf{x}$ in the index and comparator populations; what differs between the populations is only how many
 patients sit at each value of $\mathbf{x}$. If that holds, the sole thing a comparator's population changes
@@ -867,9 +867,9 @@ obstacle in the unanchored PAIC theorem @thm-unanchored-paic-consistency. That t
 estimand only when every imbalanced effect modifier and prognostic variable is balanced, so that no
 residual covariate gap survives; its necessity clause exhibits the bias as an integral that is nonzero
 exactly when an imbalanced covariate is omitted. Under the affine specialization
-$\tau(\mathbf{x})=\alpha+\boldsymbol{\beta}^\top\mathbf{x}$, which is hypothesis (v) "sufficiency of the
-matched moments" of @thm-anchored-maic-consistency and the affine-$\mu_t$ hypothesis of
-@thm-unanchored-paic-consistency, that integral collapses to the inner product
+$\tau(\mathbf{x})=\alpha+\boldsymbol{\beta}^\top\mathbf{x}$ (for instance affine conditional means on the
+identity scale, as in hypothesis (v) "sufficiency of the matched moments" of
+@thm-anchored-maic-consistency), that integral collapses to an inner product of the form
 @eq-distance-bias-linear, and @thm-distance-linear-bias-bound bounds it by the covariate-summary distance.
 Comparator selection therefore *bounds the very bias the consistency theorem assumes away*: a smaller
 distance means a smaller worst-case residual bias, under linearity. The qualifier "under linearity" is
@@ -893,20 +893,19 @@ the Mahalanobis bound uses $\|\boldsymbol{\beta}\|_{\boldsymbol{\Sigma}}=\sqrt{\
 $|B_Q|\le2.646(1.617)=4.28$. Both bounds dominate the exact biases, as they must. Now the honest lesson:
 the **standardized** winner $Q$ has the *smaller* true bias ($1.4$ against $3.0$), while the
 **Mahalanobis** winner $P$ has the *larger* true bias, so for this particular $\boldsymbol{\beta}$ the
-standardized distance was the faithful ranker and Mahalanobis was misled. Had $\boldsymbol{\beta}$ pointed
-along the high-variance, positively-correlated axis of $\boldsymbol{\Sigma}$, the verdict would flip and
-Mahalanobis would be faithful. Since $\boldsymbol{\beta}$ is unknown when the comparator is chosen, no
+standardized distance was the faithful ranker and Mahalanobis was misled. With slopes of opposite sign,
+for example $\boldsymbol{\beta}=(-0.1,\,0.5)$, the verdict flips: $B_P=1.0$ and $B_Q=-2.6$, and Mahalanobis
+is the faithful ranker. Since $\boldsymbol{\beta}$ is unknown when the comparator is chosen, no
 distance is guaranteed to rank by bias; this is exactly @prp-distance-diagnostic-not-validity, previewed
 here in arithmetic. $\blacktriangleleft$
 :::
 
 ::: {.remark}
-**Bias against variance: the effective-sample-size tradeoff.** A closer comparator is not automatically the
-better analysis, because comparator selection trades bias against variance, and the mean distance governs
-both. Under the linear bound, the mean distance caps the bias; and the same distance also controls the
-variance, because the subsequent unanchored MAIC reweights the index sample (size $n$) to match the
-comparator's means, and a larger standardized gap forces more extreme weights and hence a smaller effective
-sample size $\mathrm{ESS}=(\sum_i w_i)^2/\sum_i w_i^2$ (@thm-maic-ess-bound), inflating the variance by the
+**Bias against variance: the effective-sample-size tradeoff.** The gap $\boldsymbol{\delta}_j$ costs in two
+ways. Any part of it left unadjusted contributes bias, capped under linearity by the bounds above; the part
+that is matched costs precision, because the subsequent unanchored MAIC reweights the index sample (size
+$n$) to the comparator's means, and a larger standardized gap typically forces more extreme weights and
+hence a smaller effective sample size $\mathrm{ESS}=(\sum_i w_i)^2/\sum_i w_i^2$ (@thm-maic-ess-bound), inflating the variance by the
 factor $n/\mathrm{ESS}$. The schematic pattern, for an index study of $n=200$, is
 
 | candidate | $d_{SE}$ | typical weight extremity | illustrative $\mathrm{ESS}$ | variance inflation $n/\mathrm{ESS}$ |
@@ -918,11 +917,11 @@ factor $n/\mathrm{ESS}$. The schematic pattern, for an index study of $n=200$, i
 : How the mean distance drives the effective sample size after reweighting. The $\mathrm{ESS}$ column is illustrative: the true value depends on the index individual patient data, not on the means alone. {#tbl-distance-ess}
 
 Two consequences. First, in the linear case there is usually no dramatic conflict: the minimum-distance
-candidate tends to minimize both the bias bound and the reweighting variance at once. The genuine tension
-appears among candidates of *comparable* distance, where one breaks the tie by projected $\mathrm{ESS}$, and
-in the fact that a far comparator's variance can explode (bottom row) faster than a nearer comparator's bias
-bound grows, so a mean-squared-error view, $\mathrm{MSE}\approx \text{bias}^2+\text{variance}$, can prefer a
-slightly closer, higher-$\mathrm{ESS}$ candidate even when its bias bound is not the smallest. Second, and
+candidate tends to minimize both the residual-bias bound and the reweighting variance at once. The genuine
+tension appears among candidates of *comparable* distance, where one breaks the tie by projected
+$\mathrm{ESS}$, and in how many covariates to match: because a far comparator's variance can explode (bottom
+row), a mean-squared-error view, $\mathrm{MSE}\approx \text{bias}^2+\text{variance}$, can prefer leaving a
+weakly modifying covariate unmatched, accepting its bounded bias, over the variance cost of matching it. Second, and
 more important, the distance bounds bias only under linearity; a close, high-$\mathrm{ESS}$ comparator can
 still be badly biased through nonlinearity or unmeasured imbalance (@sec-distance-caveat). The defensible
 practice is to report distance and projected $\mathrm{ESS}$ together and to choose on the mean-squared-error
@@ -1213,9 +1212,9 @@ $$
 The standardized ranking is $A\prec D\prec B\prec C$, so standardized Euclidean distance selects
 **Study $A$**: the opposite winner from the raw distance. The reversal is intuitive. Study $A$'s
 $12$-year age gap dominates the raw distance, but in standard-deviation units it is only $1.2$ SD; Study
-$C$'s gaps are tiny in raw units (a $1$-year age gap, a $6$-unit biomarker gap) yet large when
-standardized ($0.9$ SD in sex, $1.5$ SD in biomarker), and the raw distance, blind to scale, mistakes
-$C$ for the closest.
+$C$'s age gap is only $1$ year, so it looks closest on the raw scale, which age dominates, yet its sex and
+biomarker gaps are large when standardized ($0.9$ and $1.5$ SD), and the raw distance, blind to scale,
+mistakes $C$ for the closest.
 
 **Mahalanobis (@eq-distance-mahalanobis).** With
 $\boldsymbol{\Sigma}^{-1}$ having entries $(\boldsymbol{\Sigma}^{-1})_{11}=\tfrac{1}{75}$,
@@ -1242,7 +1241,7 @@ moves separately and ranks it behind $A$.
 **Mean-SMD (@eq-distance-meansmd).** Averaging the absolute standardized gaps,
 $d_{\mathrm{SMD}}(A)=1.55/3=0.517$, $d_{\mathrm{SMD}}(B)=2.40/3=0.800$, $d_{\mathrm{SMD}}(C)=2.50/3=0.833$,
 $d_{\mathrm{SMD}}(D)=2.20/3=0.733$, giving the ranking $A\prec D\prec B\prec C$, the same as standardized
-Euclidean, as the $\ell_1$ and $\ell_2$ norms of a common standardized vector must often agree.
+Euclidean; the $\ell_1$ and $\ell_2$ rankings often agree, though they need not.
 
 The four criteria are collected below; each column's minimum is the selected study.
 
@@ -1266,8 +1265,9 @@ The exact-bias ranking $A\prec D\prec B\prec C$ coincides with the standardized 
 rankings, and the standardized winner $A$ is indeed the minimum-bias comparator. The raw Euclidean winner
 $C$ has the **largest** bias of the four, $4.0$; selecting by raw distance would have chosen the worst
 comparator, the concrete reversal promised by @prp-distance-scale-dependence. The Mahalanobis winner $D$
-has bias $3.2$, larger than $A$'s, because the contrast direction $\boldsymbol{\beta}$ is not aligned with
-the covariance geometry that Mahalanobis distance rewards.
+has bias $3.2$, larger than $A$'s: $D$'s gap points exactly in the worst-case direction
+$\boldsymbol{\Sigma}\boldsymbol{\beta}$ for this $\boldsymbol{\beta}$ (shown below), so its bias attains its
+Mahalanobis bound, while $A$'s bias is far below its own.
 
 The Cauchy-Schwarz bounds and their equality cases are worth seeing. The standardized bound
 $\|S\boldsymbol{\beta}\|_2\,d_{SE}=\sqrt6\,d_{SE}$ gives, for Study $B$,
@@ -1293,7 +1293,7 @@ one interpretation table.
 
 | Criterion | Winner | Why it wins | What an HTA analyst should conclude |
 |:--|:--:|:--|:--|
-| Raw Euclidean $d_E$ | $C$ | dominated by the large-unit biomarker gap; blind to scale | discard: the choice is an artifact of units (@prp-distance-scale-dependence) |
+| Raw Euclidean $d_E$ | $C$ | dominated by age, the covariate with the largest numerical scale, on which $C$ is closest | discard: the choice is an artifact of units (@prp-distance-scale-dependence) |
 | Standardized Euclidean $d_{SE}$ | $A$ | smallest gap in standard-deviation units, equal weight per covariate | defensible default; here it also happens to be the minimum-bias choice |
 | Mahalanobis $d_M$ | $D$ | $D$'s age-biomarker move follows the index correlation, so it is "cheap" | defensible when the correlation is trusted, but here *not* the minimum-bias choice |
 | Exact bias ($\boldsymbol{\beta}$ known) | $A$ | smallest $|\boldsymbol{\beta}^\top\boldsymbol{\delta}_j|$ | the truth for *this* $\boldsymbol{\beta}$, which is unknown at selection time |
@@ -1314,9 +1314,10 @@ sensitivity analysis rather than trusting a single number. $\blacktriangleleft$
 **The lesson of the example.** Three reputable distances selected three different comparators. Standardized
 Euclidean distance happened to rank by the true bias here because its implicit geometry, equal weight per
 standardized covariate, was closer to the contrast direction $S\boldsymbol{\beta}=(1,1,2)$ than the
-Mahalanobis geometry was. Had $\boldsymbol{\beta}$ pointed along the high-variance axis of
-$\boldsymbol{\Sigma}$, the Mahalanobis ranking would have been the faithful one. Since
-$\boldsymbol{\beta}$ is unknown at selection time, no distance is guaranteed to rank by bias; this is
+Mahalanobis geometry was. For other $\boldsymbol{\beta}$ the verdict can differ: by the equality cases of
+@thm-distance-linear-bias-bound, $d_{SE}$ ranks candidates by their worst-case bias over all
+$\boldsymbol{\beta}$ with $\|S\boldsymbol{\beta}\|_2\le1$, and $d_M$ over all $\boldsymbol{\beta}$ with
+$\boldsymbol{\beta}^\top\boldsymbol{\Sigma}\boldsymbol{\beta}\le1$. Since $\boldsymbol{\beta}$ is unknown at selection time, no distance is guaranteed to rank by bias; this is
 @prp-distance-diagnostic-not-validity made arithmetic. The defensible practice is to report the ranking
 under several distances, flag disagreement as a signal that the choice is geometry-dependent, and carry the
 ambiguity into the sensitivity analysis rather than trusting a single number. $\blacktriangleleft$
@@ -1362,16 +1363,15 @@ Aggregate-level covariate-distance matching is an extension beyond the populatio
 unanchored meta-regression of @chandler2025mlumr addresses and that the transportability reframing of
 @chandler2026transport places in estimand terms. The practical rule of selecting the candidate study
 minimizing a covariate-summary distance is described in the Bristol Compass blog on extending ML-NMR to
-disconnected networks, and the suite of distances studied here, standardized Euclidean (the default),
-Euclidean, Mahalanobis, Manhattan, Minkowski, Gower, and mean-absolute standardized-mean-difference, is the
-diagnostic toolkit implemented in the `uitc` R package; bibliographic entries for both the blog and the
-package are proposed in the chapter work log.
+disconnected networks [@perren2024compass], and the suite of distances studied here, standardized Euclidean
+(the default), Euclidean, Mahalanobis, Manhattan, Minkowski, Gower, and mean-absolute
+standardized-mean-difference, is the diagnostic toolkit implemented in the `uitc` R package [@uitc].
 
 The distances themselves are classical. The Mahalanobis distance and its whitening interpretation
-(@thm-mahalanobis-whitening) originate with Mahalanobis; its reduction to standardized Euclidean distance
+(@thm-mahalanobis-whitening) originate with @mahalanobis1936; its reduction to standardized Euclidean distance
 for diagonal covariance and its full affine invariance (@thm-distance-scale-invariance) are standard facts
 of multivariate analysis, here proved from @thm-cov-psd. The Gower distance for mixed continuous and
-binary data is due to Gower. Minkowski's inequality, invoked in @prp-distance-metric-properties for the
+binary data is due to @gower1971. Minkowski's inequality, invoked in @prp-distance-metric-properties for the
 general $\ell_q$ triangle inequality, is the standard named result; the orders $q\in\{1,2,\infty\}$ used in
 this book are proved directly there from the coordinatewise triangle inequality and Cauchy-Schwarz. The
 mean-SMD diagnostic and the $|z|>0.1$ rule of thumb are the covariate-balance conventions of the
@@ -1381,9 +1381,8 @@ The bias theory is the chapter's own contribution to the catalogue. The linear b
 @thm-distance-linear-bias-bound is the Cauchy-Schwarz inequality applied to the affine specialization of
 the unanchored transport bias of @thm-unanchored-paic-consistency, and it makes precise the sense in which
 comparator selection bounds the residual bias that the consistency theorem assumes away. The Lipschitz
-bound @thm-lipschitz-bias-bound is the elementary coupling side of Kantorovich-Rubinstein duality; a
-reference for the duality and for the Wasserstein distance is the optimal-transport literature (Villani),
-proposed in the work log. The lower bound @prp-distance-wasserstein-lower-bound, that the mean gap never
+bound @thm-lipschitz-bias-bound is the elementary coupling side of Kantorovich-Rubinstein duality; @villani2009 is a
+reference for the duality and for the Wasserstein distance. The lower bound @prp-distance-wasserstein-lower-bound, that the mean gap never
 exceeds the Wasserstein distance, uses the vector Jensen inequality @thm-jensen and is what makes the
 non-identification of @prp-distance-diagnostic-not-validity unavoidable rather than accidental: mean
 distance is a floor on distributional distance, never a ceiling. The reader who wants the residual and
@@ -1486,8 +1485,9 @@ constant $L=2$. State why the bound is not tight here and which feature of $\tau
 **(Interpretation) Distance against effective sample size.** Argue that, all else equal, a comparator with a larger
 standardized Euclidean distance from the index population requires more aggressive reweighting in a
 subsequent unanchored MAIC and hence a lower effective sample size. Using @thm-maic-ess-bound and the
-variance-inflation factor $n/\mathrm{ESS}$, explain why comparator selection trades bias (bounded by the
-distance under @thm-distance-linear-bias-bound) against variance (governed by the ESS), and sketch how this
+variance-inflation factor $n/\mathrm{ESS}$, explain why comparator selection trades bias (from any part of the gap
+left unadjusted, bounded under @thm-distance-linear-bias-bound) against variance (from the part that is
+matched, governed by the ESS), and sketch how this
 trade-off would enter a mean-squared-error criterion for choosing among candidates of comparable distance.
 Relate the trade-off to the simulation-study estimands of Chapter 29.
 :::

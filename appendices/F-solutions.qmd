@@ -621,15 +621,11 @@ onto the other), and the estimand and the variance are unchanged by the relabeli
 $\hat{\boldsymbol\beta}_V$ is the best linear unbiased estimator under $\operatorname{Cov}(\boldsymbol
 \varepsilon)=\sigma^2V$, generalizing @thm-ols-blue.
 
-This is the weighted least squares optimality on which the matching-adjusted estimator of Chapter 18 rests.
-Concretely: MAIC fits an outcome model on a reweighted sample, where the matching weights play the role of
-$V^{-1}$, downweighting individuals who are over-represented relative to the target population. The theorem
-says that, given those weights, the weighted fit is the minimum-variance unbiased estimator, so no other
-linear reweighting of the same data can do better. The practical consequence for a health technology
-assessment is that once the weights are fixed by the covariate-balancing step, there is nothing further to
-gain by tinkering with the estimator; the remaining efficiency question is entirely about the weights
-themselves (the effective sample size they induce), which is precisely why later chapters study weight
-variance rather than estimator choice. $\square$
+The optimality holds only because $V$ is the true error covariance. The matching-adjusted estimator of
+Chapter 18 also reweights patients, but its weights are chosen to balance covariates against a target
+population, not to invert an error covariance. Under homoskedastic errors such weights raise the variance
+above that of ordinary least squares; MAIC accepts this cost in order to change the estimand to the target
+population, and Chapter 18 measures the cost through the effective sample size. $\square$
 
 ### Solution to @exr-lr-general-hypothesis: General linear hypothesis equals the nested-model $F$ test
 
@@ -783,8 +779,8 @@ covariate mixes.
 increases (giving $\omega^{\mathrm M}>1$) but grows sub-linearly, $A(a)/a$ decreasing (giving
 $\omega^{\mathrm M}<\omega$).
 
-**Uses.** Jensen's inequality @thm-jensen and the covariance inequality for like-monotone functions (two
-functions that both increase in the same variable have nonnegative covariance).
+**Uses.** The covariance inequality for like-monotone functions (two functions that both increase in the
+same variable have nonnegative covariance).
 
 **Common mistake (non-collapsibility versus effect modification).** The attenuation proved here happens
 *even when the conditional odds ratio $\omega$ is identical in every stratum*, that is, with no effect
@@ -864,10 +860,7 @@ that is $\omega^{\mathrm M}<\omega$.
 Together $1<\omega^{\mathrm M}<\omega$: the marginal odds ratio lies strictly between the null and the
 conditional value, so the odds ratio is attenuated toward the null and is non-collapsible. The engine of the
 argument is the covariance inequality for like-monotone functions (both $w\mapsto w$ and $w\mapsto w/(1+aw)$
-increase in the baseline odds $w$), not any convexity of $a\mapsto a/(1+a)$; that map is in fact strictly
-concave for $a>0$, and it is precisely this concavity, fed through Jensen's inequality @thm-jensen to the
-risk written in odds coordinates, that delivers the same attenuation from the complementary marginal-risk
-viewpoint. Equality $\omega^{\mathrm M}=\omega$ would require $W$ degenerate, that is equal baseline risks,
+increase in the baseline odds $w$). Equality $\omega^{\mathrm M}=\omega$ would require $W$ degenerate, that is equal baseline risks,
 which is the agreement-iff-degenerate clause of @cor-emcoll-or-attenuation.
 
 For a health technology assessment the message is concrete: if a trial reports a conditional (adjusted) odds
@@ -964,16 +957,18 @@ exact dividing line.
 
 **(c) Meta-analytic reading.** Treating the $J\ge 3$ study-specific effect estimates as
 $\mathbf Y\sim\mathcal N_J(\boldsymbol\theta,\sigma^2 I)$, the James-Stein shrinkage pulls each study toward
-the common center and, by (b), strictly reduces total mean squared error relative to reporting the separate
-unpooled estimates. This is exactly the partial pooling of random-effects meta-analysis of Chapter 13: the
-random-effects model shrinks each study's estimate toward the pooled mean by an amount set by the estimated
-between-study variance, and the James-Stein result says that such shrinkage cannot hurt and typically helps
-the total mean squared error once there are at least three studies. The justification is frequentist and
+a fixed center (the origin in (b), or any prespecified point after recentering) and, by (b), strictly
+reduces total mean squared error relative to reporting the separate unpooled estimates. The partial pooling
+of random-effects meta-analysis (Chapter 13) shrinks each study's estimate toward the *estimated* pooled
+mean by an amount set by the estimated between-study variance; estimating the center spends one dimension,
+and the corresponding Efron-Morris estimator, with $J-3$ in place of $J-2$, dominates the raw estimates once
+there are at least four studies. Either way, such shrinkage cannot hurt and typically helps the total mean
+squared error. The justification is frequentist and
 prior-free: dominance holds for every $\boldsymbol\theta$, so the gain from borrowing strength across
 studies does not depend on adopting any subjective prior distribution for the effects. For an evidence
-synthesis this is reassurance that pooling three or more related estimates (three treatment contrasts in a
-network, three subgroup effects) is not merely a Bayesian convenience but improves accuracy under the
-sampling distribution alone. $\square$
+synthesis this is reassurance that pooling several related estimates (treatment contrasts in a network,
+subgroup effects) is not merely a Bayesian convenience but improves accuracy under the sampling distribution
+alone. $\square$
 
 ### Solution to @exr-reml-one-way: REML variance components in the balanced one-way model
 
@@ -1024,8 +1019,8 @@ $\theta_i\sim\mathcal N(0,\tau^2)$ and $\bar\varepsilon_{i\cdot}\sim\mathcal N(0
 $\bar y_{i\cdot}\sim\mathcal N(\mu,\tau^2+\sigma^2/n)$ independently across $i$. The between-group contrasts
 $\bar y_{i\cdot}-\bar y_{\cdot\cdot}$ are orthogonal to $\mathbf 1_{In}$ and to the within-group block, and
 $\sum_i(\bar y_{i\cdot}-\bar y_{\cdot\cdot})^2/(\tau^2+\sigma^2/n)\sim\chi^2_{I-1}$ as the centered sum of
-squares of $I$ independent normals. Multiplying through by $n$ turns $\tau^2+\sigma^2/n$ into $n\tau^2+\sigma^2$
-and $\sum_i(\bar y_{i\cdot}-\bar y_{\cdot\cdot})^2$ into $(I-1)\mathrm{MS}_{\mathrm B}/n\cdot n$, giving
+squares of $I$ independent normals. Since $\sum_i(\bar y_{i\cdot}-\bar y_{\cdot\cdot})^2=(I-1)\mathrm{MS}_{\mathrm B}/n$
+and $n(\tau^2+\sigma^2/n)=n\tau^2+\sigma^2$, this reads
 $(I-1)\mathrm{MS}_{\mathrm B}/(n\tau^2+\sigma^2)\sim\chi^2_{I-1}$ with
 $\mathbb E[\mathrm{MS}_{\mathrm B}]=n\tau^2+\sigma^2$. Because these two chi-square blocks are
 independent and together span the error-contrast space, the restricted log-likelihood separates and is
@@ -1176,16 +1171,14 @@ $$
 $$
 confirming $\mathbb E[sw]=1$.
 
-**(c)** The stabilized weight multiplies the raw weight $T/e(X)$ by the constant $p_1$ (and the control
-weight by $p_0$); rescaling by the marginal treatment probability brings the weights nearer to one, so they
-vary less around their common mean of $1$. Their reduced dispersion lowers the variance of the
-inverse-probability estimator while leaving its target unchanged, because the numerator and denominator of
-the Hajek-form estimand are scaled by the same constant. Here the *Hajek-form* estimator is the one that
-divides the weighted sum of outcomes by the weighted sum of weights (a self-normalizing ratio), rather than
-by the fixed sample size $n$; the latter, unnormalized version is the Horvitz-Thompson estimator. The two
-differ only by whether the weights are renormalized to sum to one, and it is precisely because the Hajek
-form renormalizes that scaling every weight by a common constant $p_1$ cancels top and bottom and leaves the
-point estimate untouched while shrinking the weight dispersion. $\square$
+**(c)** The stabilized treated weight is the raw weight $T/e(X)$ times the constant $p_1$, so
+$\operatorname{Var}(T\,p_1/e(X))=p_1^2\operatorname{Var}(T/e(X))$, smaller because $p_1<1$. The Hájek
+estimator divides the weighted sum of outcomes by the weighted sum of weights, so a common constant $p_1$
+cancels between numerator and denominator: the estimate of $\mathbb E[Y(1)]$, and hence its variance, is
+unchanged. (The Horvitz-Thompson estimator, which divides by $n$ instead, would be scaled by $p_1$ and would
+need the constant divided back out.) Stabilization therefore recenters the weights at one, which makes
+weight diagnostics interpretable, but improves precision only in marginal structural models whose weight
+numerators are not constant. $\square$
 
 ### Solution to @exr-eif-control: Efficient influence function and efficiency bound for the control mean
 
@@ -1409,9 +1402,9 @@ $0<\operatorname{logit}m_B-\operatorname{logit}m_C<c$.
 
 **(c) The gap grows with spread.** For a point mass at $p_0$, Jensen holds with equality and the gap
 $c-(\operatorname{logit}m_B-\operatorname{logit}m_C)$ is zero; for any non-degenerate law of $\mu_C(X)$ the
-strict concavity makes the Jensen inequality strict and the gap positive. The more dispersed $\mu_C(X)$ is,
-the larger the Jensen deficit $\varphi(\mathbb E[\mu_C])-\mathbb E[\varphi(\mu_C)]$, and so the larger the
-attenuation gap. Because this deficit depends on the distribution of $\mu_C(X)$, the marginal log odds
+strict concavity makes the Jensen inequality strict and the gap positive. A mean-preserving spread of
+$\mu_C(X)$ enlarges the Jensen deficit $\varphi(\mathbb E[\mu_C])-\mathbb E[\varphi(\mu_C)]$ (the definition
+of the concave order), and so the attenuation gap. Because this deficit depends on the distribution of $\mu_C(X)$, the marginal log odds
 ratio $\operatorname{logit}m_B-\operatorname{logit}m_C$ is population-dependent: it is not a property the
 treatments carry from one population to another.
 
@@ -1511,9 +1504,9 @@ its null expectation, $I^2=\max\{0,(Q-(k-1))/Q\}=\max\{0,-0.216\}=0$.
 **(c) DerSimonian-Laird.** The constant of @eq-expected-q is
 $$
 c=W-\frac{\sum_i w_i^2}{W}=21.3611-\frac{6.25^2+11.1111^2+4^2}{21.3611}
-=21.3611-\frac{178.5193}{21.3611}=21.3611-8.3563=13.0048 .
+=21.3611-\frac{178.5193}{21.3611}=21.3611-8.3572=13.0039 .
 $$
-Then $\hat\tau^2_{\mathrm{DL}}=\max\{0,(Q-(k-1))/c\}=\max\{0,(1.645-2)/13.0048\}=\max\{0,-0.0273\}=0$.
+Then $\hat\tau^2_{\mathrm{DL}}=\max\{0,(Q-(k-1))/c\}=\max\{0,(1.645-2)/13.0039\}=\max\{0,-0.0273\}=0$.
 
 **(d) Random-effects recomputation.** Because $\hat\tau^2_{\mathrm{DL}}=0$, the random-effects weights
 $\tilde w_i=1/(s_i^2+\hat\tau^2_{\mathrm{DL}})$ equal the fixed-effect weights, so the random-effects
@@ -1578,7 +1571,7 @@ this comparison.
 
 *Homoskedastic three-arm structure.* Let arms $A,B,C$ of a single trial have independent arm-level
 estimates $\hat y_A,\hat y_B,\hat y_C$, each of variance $\sigma^2$, with $C$ the shared comparator. Then
-$\hat d_{AC}=\hat y_A-\hat y_C$ and $\hat d_{BC}=\hat y_B-\hat y_C$, so
+$\hat d_{AC}=\hat y_C-\hat y_A$ and $\hat d_{BC}=\hat y_C-\hat y_B$ (the book's $d_{ac}=\eta_c-\eta_a$), so
 $$
 v_{AC}=v_{BC}=2\sigma^2,
 \qquad
@@ -1589,11 +1582,12 @@ $\rho=\sigma^2/\sqrt{(2\sigma^2)(2\sigma^2)}=\sigma^2/(2\sigma^2)=\tfrac12$. The
 $$
 \operatorname{Var}\bigl(\hat d_{AB}^{\,\mathrm{Bucher}}\bigr)=2\sigma^2+2\sigma^2-2\sigma^2=2\sigma^2,
 $$
-which equals $\operatorname{Var}(\hat y_A-\hat y_B)=\operatorname{Var}(\hat y_A)+\operatorname{Var}(\hat y_B)=2\sigma^2$,
-the variance of the direct within-trial $A$-versus-$B$ contrast. The shared-comparator correlation
-$\rho=\tfrac12$ is exactly the value derived for the homoskedastic random-effects network in
-@thm-re-nma-correlation, and it makes the Bucher subtraction recover the direct within-study contrast with
-no loss. $\square$
+which equals $\operatorname{Var}(\hat y_B-\hat y_A)=\operatorname{Var}(\hat y_A)+\operatorname{Var}(\hat y_B)=2\sigma^2$,
+the variance of the direct within-trial $A$-versus-$B$ contrast: indeed $\hat d_{AC}-\hat d_{BC}=\hat y_B-\hat
+y_A$ exactly, so the Bucher subtraction recovers the direct within-study contrast with no loss. The value
+$\tfrac12$ matches @thm-re-nma-correlation, but for a different reason: there it is the correlation of the
+random effects of two contrasts sharing an arm under a common heterogeneity variance; here it is the
+sampling correlation induced by the shared arm's estimation error. $\square$
 
 ### Solution to @exr-bucher-transitivity-bias: Effect-modifier imbalance breaks Bucher's transitivity
 
@@ -1825,8 +1819,10 @@ contraction of $\rho$. For a general link the $O(\sigma^2)$ correction depends o
 $\rho_1^2\psi''(m_1)/\psi'(m_1)-\rho_0^2\psi''(m_0)/\psi'(m_0)$ and its $\bar x$-derivative, which involve
 the levels $m_0,m_1$ and the slopes $\rho_0,\rho_1$ with both signs. A globally convex $g^{-1}$ fixes the
 sign of $\psi''$ but not the sign of the difference, so the correction can push the ecological slope either
-toward or away from zero depending on the configuration. Global convexity therefore does not guarantee
-attenuation toward zero, in contrast to the exact, configuration-free probit result. $\square$
+toward or away from zero depending on the configuration. The convex log link shows the correction can
+even vanish: there $\psi''/\psi'\equiv1$, the bracket is $\rho_1^2-\rho_0^2$, constant in $\bar x$, and the
+ecological slope equals $\beta_2$ exactly (@exr-limits-jensen-sign). Global convexity therefore does not
+guarantee attenuation toward zero, in contrast to the exact, configuration-free probit result. $\square$
 
 ## Chapter 17: Population Adjustment Theory
 
@@ -1890,36 +1886,37 @@ the same functions in every population. We compute the marginal odds ratio of $A
 covariate prevalence $\Pr(X=1)=p$ varies over $\{0.25,0.50,0.75\}$.
 
 **Marginal risks and log odds ratios.** Since $\mu_B$ is constant, $m_B(p)=0.30$ for all $p$, while
-$m_A(p)=(1-p)(0.20)+p(0.50)=0.20+0.30p$. The marginal log odds ratio is
-$\operatorname{logit}m_A(p)-\operatorname{logit}(0.30)$ with $\operatorname{logit}(0.30)=-0.847298$:
+$m_A(p)=(1-p)(0.20)+p(0.50)=0.20+0.30p$. The marginal log odds ratio of $A$ versus $B$ (that is, of $B$
+relative to $A$, as in @exm-pat-anchored) is $\operatorname{logit}(0.30)-\operatorname{logit}m_A(p)$ with
+$\operatorname{logit}(0.30)=-0.847298$:
 $$
 \begin{aligned}
-p=0.25:\ & m_A=0.275,\ \operatorname{logit}=-0.969401,\ \text{log OR}=-0.122103;\\
-p=0.50:\ & m_A=0.350,\ \operatorname{logit}=-0.619039,\ \text{log OR}=\phantom{-}0.228259;\\
-p=0.75:\ & m_A=0.425,\ \operatorname{logit}=-0.302280,\ \text{log OR}=\phantom{-}0.545018 .
+p=0.25:\ & m_A=0.275,\ \operatorname{logit}=-0.969401,\ \text{log OR}=\phantom{-}0.122103;\\
+p=0.50:\ & m_A=0.350,\ \operatorname{logit}=-0.619039,\ \text{log OR}=-0.228259;\\
+p=0.75:\ & m_A=0.425,\ \operatorname{logit}=-0.302280,\ \text{log OR}=-0.545017 .
 \end{aligned}
 $$
-The marginal log odds ratio changes across the three populations, from $-0.122$ to $+0.545$, even though
+The marginal log odds ratio changes across the three populations, from $+0.122$ to $-0.545$, even though
 the conditional risks (and therefore the conditional odds ratios at each $x$) are identical in all three:
 no conditional parameter has changed, only $\Pr(X=1)$.
 
 **Isolating the non-collapsibility component.** The population-standardized conditional log odds ratio is
 $\Delta^{\mathrm{Cond}}_{AB}(p)=(1-p)\,\delta(0)+p\,\delta(1)$ with
-$\delta(x)=\operatorname{logit}\mu_A(x)-\operatorname{logit}\mu_B(x)$, that is $\delta(0)=-0.538997$ and
-$\delta(1)=0.847298$:
+$\delta(x)=\operatorname{logit}\mu_B(x)-\operatorname{logit}\mu_A(x)$, that is $\delta(0)=0.538997$ and
+$\delta(1)=-0.847298$:
 $$
-\Delta^{\mathrm{Cond}}_{AB}(0.25)=-0.192423,\quad
-\Delta^{\mathrm{Cond}}_{AB}(0.50)=0.154151,\quad
-\Delta^{\mathrm{Cond}}_{AB}(0.75)=0.500724 .
+\Delta^{\mathrm{Cond}}_{AB}(0.25)=0.192423,\quad
+\Delta^{\mathrm{Cond}}_{AB}(0.50)=-0.154151,\quad
+\Delta^{\mathrm{Cond}}_{AB}(0.75)=-0.500724 .
 $$
 The difference between the marginal log odds ratio and this population-standardized conditional value is the
 non-collapsibility (Jensen) gap, "logit of the average minus average of the logit." Showing the subtraction
 at each prevalence,
 $$
 \begin{aligned}
-p=0.25:\ &-0.122103-(-0.192423)=0.070320,\\
-p=0.50:\ &\phantom{-}0.228259-\phantom{-}0.154151=0.074108,\\
-p=0.75:\ &\phantom{-}0.545018-\phantom{-}0.500724=0.044294.
+p=0.25:\ &\phantom{-}0.122103-0.192423=-0.070320,\\
+p=0.50:\ &-0.228259-(-0.154151)=-0.074108,\\
+p=0.75:\ &-0.545017-(-0.500724)=-0.044293.
 \end{aligned}
 $$
 This gap is a pure non-collapsibility effect: it is nonzero, and population-dependent, even though every
@@ -2034,9 +2031,10 @@ $$
 with $B=\mathbb E[\boldsymbol\psi\boldsymbol\psi^\top]$.
 
 **Fixed-weight term plus a correction.** Had $\beta$ been known, only $\psi_2$ would enter, giving the
-fixed-weight variance $B_{22}/(n\,a_{22}^2)$. With $\operatorname{Var}(Y\mid x)=\sigma^2$ this is
-$\sigma^2\mathbb E[e^{2\beta\Delta}]/(n\,\mathbb E[e^{\beta\Delta}]^2)=\sigma^2/\mathrm{ESS}$, the variance
-of a weighted mean with effective sample size $\mathrm{ESS}=(\sum_i w_i)^2/\sum_i w_i^2$. Estimating
+fixed-weight variance $B_{22}/(n\,a_{22}^2)=\mathbb E[e^{2\beta\Delta}(Y-\mu_A)^2]/(n\,\mathbb E[e^{\beta\Delta}]^2)$.
+When the conditional mean is constant and $\operatorname{Var}(Y\mid x)=\sigma^2$ this is
+$\sigma^2\mathbb E[e^{2\beta\Delta}]/(n\,\mathbb E[e^{\beta\Delta}]^2)$, the population form of
+$\sigma^2/\mathrm{ESS}$ with $\mathrm{ESS}=(\sum_i w_i)^2/\sum_i w_i^2$. Estimating
 $\beta$ adds the extra terms
 $$
 \frac{1}{n\,a_{22}^2}\Bigl[\frac{a_{21}^2}{a_{11}^2}B_{11}-2\frac{a_{21}}{a_{11}}B_{12}\Bigr],
@@ -2048,19 +2046,23 @@ the correction attributable to fitting the balancing parameter.
 (\mu(x)-\mu_A)]$, the weighted covariance between the balancing covariate $\Delta$ and the conditional
 outcome mean. It vanishes exactly when, within the weighting, the outcome is uncorrelated with the
 balancing covariate, that is when the covariate carries no prognostic information about the outcome under
-the weights. In that case the naive fixed-weight variance $\sigma^2/\mathrm{ESS}$ equals the sandwich
-variance. Generically $a_{21}\neq 0$, so the two differ; as the remark following @thm-maic-sandwich-variance
-notes, the off-diagonal coupling that the naive analysis drops is usually positively correlated noise, so
-fixed-weight standard errors are typically anticonservative, though the sign is not universal, which is why
-the full sandwich is required. $\square$
+the weights. In that case the fixed-weight variance equals the sandwich variance.
+
+**The sign of the correction.** Write $c=a_{21}/a_{11}$, the slope of $Y$ on $\Delta$ in least squares with
+weights $e^{\beta\Delta}$, and $c_2=B_{12}/B_{11}$, the same slope with weights $e^{2\beta\Delta}$. The
+correction is $B_{11}\,c\,(c-2c_2)/(n\,a_{22}^2)$. When the weights are not too uneven, $c\approx c_2$ and
+the correction is approximately $-B_{11}c^2/(n\,a_{22}^2)\le0$: estimating the weights removes the part of
+the outcome variation that the balancing covariate explains, as for calibration estimators, so the
+fixed-weight standard error is conservative. With very uneven weights $c$ can exceed $2c_2$ in magnitude
+and the correction becomes positive. Hence the sign is not universal, which is why the full sandwich is
+required. $\square$
 
 **Common mistake (naive versus sandwich MAIC variance).** It is tempting to report the standard error of a
-MAIC estimate as if the matching weights were fixed constants, giving the tidy formula $\sigma^2/\mathrm{ESS}$.
-That treats the estimated balancing parameter $\beta$ as known, dropping the correction term derived above.
-Because that term is usually of the anticonservative sign, the fixed-weight standard error tends to be too
-small, understating the uncertainty of an indirect comparison. For a health technology assessment the safe
-default is the sandwich (robust) standard error, or a bootstrap that resamples and re-estimates the weights;
-reporting $\sigma^2/\mathrm{ESS}$ alone can make a MAIC look more precise than it is.
+MAIC estimate as if the matching weights were fixed constants. That treats the estimated balancing
+parameter $\beta$ as known and drops the correction derived above, whose sign depends on the data: the
+fixed-weight standard error is often too large, but it can be too small when the weights are very uneven.
+For a health technology assessment the safe default is the sandwich (robust) standard error, or a
+bootstrap that resamples and re-estimates the weights.
 
 ## Chapter 19: Simulated Treatment Comparison
 
@@ -2075,16 +2077,17 @@ collapsible even though each arm separately carries a nonzero plug-in gap; the l
 
 Work under @exm-stc-loglink: $g=\log$, $g^{-1}(\eta)=e^{\eta}$, with $X\sim\mathcal N(\bar{\mathbf x}_{BC},
 \boldsymbol\Sigma_{BC})$ in the comparator population, control-arm slope $\boldsymbol\beta_1$ and active-arm
-slope $\boldsymbol\beta_1+\boldsymbol\beta_2$. The conditional plug-in STC effect is the link contrast at
-the mean, $d^{\mathrm{cond}}=\eta_A(\bar{\mathbf x}_{BC})-\eta_C(\bar{\mathbf x}_{BC})$. The marginal effect
-is $d^{\mathrm{marg}}=\log\mathbb E[e^{\eta_A(X)}]-\log\mathbb E[e^{\eta_C(X)}]$. By the Gaussian
+slope $\boldsymbol\beta_1+\boldsymbol\beta_2$. Work in the active-minus-reference orientation
+$\ell=-d$ of Chapter 19. The conditional plug-in STC effect is the link contrast at the mean,
+$\ell^{\mathrm{cond}}=\eta_A(\bar{\mathbf x}_{BC})-\eta_C(\bar{\mathbf x}_{BC})$, and the marginal effect
+is $\ell^{\mathrm{marg}}=\log\mathbb E[e^{\eta_A(X)}]-\log\mathbb E[e^{\eta_C(X)}]$. By the Gaussian
 moment generating function (Chapter 4),
 $$
 \mathbb E[e^{\eta_k(X)}]=\exp\!\Bigl(\eta_k(\bar{\mathbf x}_{BC})+\tfrac12\boldsymbol\beta_{(k)}^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_{(k)}\Bigr),
 $$
 with $\boldsymbol\beta_{(C)}=\boldsymbol\beta_1$ and $\boldsymbol\beta_{(A)}=\boldsymbol\beta_1+\boldsymbol\beta_2$. Hence
 $$
-d^{\mathrm{marg}}-d^{\mathrm{cond}}
+\ell^{\mathrm{marg}}-\ell^{\mathrm{cond}}
 =\tfrac12\boldsymbol\beta_{(A)}^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_{(A)}-\tfrac12\boldsymbol\beta_{(C)}^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_{(C)} .
 $$
 Expand the difference of quadratic forms with $\boldsymbol\beta_{(A)}=\boldsymbol\beta_1+\boldsymbol\beta_2$
@@ -2096,10 +2099,10 @@ $$
 $$
 Halving,
 $$
-d^{\mathrm{marg}}-d^{\mathrm{cond}}
-=\boldsymbol\beta_1^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_2+\tfrac12\boldsymbol\beta_2^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_2 .
+\ell^{\mathrm{marg}}-\ell^{\mathrm{cond}}=d^{\mathrm{cond}}-d^{\mathrm{marg}}
+=\boldsymbol\beta_1^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_2+\tfrac12\boldsymbol\beta_2^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_2 ,
 $$
-Therefore the conditional plug-in is unbiased for the marginal effect ($d^{\mathrm{cond}}=d^{\mathrm{marg}}$)
+as in @exm-stc-loglink. Therefore the conditional plug-in is unbiased for the marginal effect ($d^{\mathrm{cond}}=d^{\mathrm{marg}}$)
 if and only if
 $$
 \boldsymbol\beta_1^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_2+\tfrac12\boldsymbol\beta_2^\top\boldsymbol\Sigma_{BC}\boldsymbol\beta_2=0 .
@@ -2199,9 +2202,9 @@ $$
 which equals $\gamma_B+\beta_{2,B}\bar x_j=0.8+1.0(0.3)=1.10$ exactly. The integrated (ML-NMR) marginal log
 odds ratio is
 $$
-\operatorname{logit}(0.55087)-\operatorname{logit}(0.30152)=0.20420-(-0.84002)=1.04421,
+\operatorname{logit}(0.55087)-\operatorname{logit}(0.30152)=0.20417-(-0.84006)=1.04424,
 $$
-so the ecological bias of the contrast is $1.10-1.04421=+0.05579$.
+so the ecological bias of the contrast is $1.10-1.04424=+0.05576$.
 
 **(d) Effect of decreasing $q$.** Decreasing $q$ from $0.5$ to $0.3$ shifts both arms' mean linear
 predictors downward, since $\eta_k$ increases in $x$ and less weight falls on $x=1$: the reference arm has
@@ -2530,7 +2533,7 @@ population with no extrapolation, the no-extrapolation regime of Chapter 18, in 
 
 ### Solution to @exr-comp-rhat-floor: The algebraic floor of the potential scale reduction factor
 
-This Chapter 24 exercise shows that the split-$\widehat R$ convergence diagnostic has a hard lower bound
+This Chapter 24 exercise shows that the $\widehat R$ convergence diagnostic has a hard lower bound
 $\sqrt{(N-1)/N}$ set by the number of iterations, is centered at $1$ at convergence, and is pushed above $1$
 by autocorrelation-inflated between-chain variance.
 
@@ -2689,23 +2692,25 @@ This Chapter 25 exercise shows that the restricted mean survival time (RMST) con
 each population yet differs across populations with different covariate mixes, so collapsibility does not
 imply transportability.
 
-**Uses.** The RMST collapsibility theorem @thm-rmst-collapsible and the shared-hazard (SEMA) assumption.
+**Uses.** The RMST collapsibility theorem @thm-rmst-collapsible and conditional constancy of relative
+effects on the log-hazard scale.
 
 Two populations $\mathcal P,\mathcal P^{*}$ share the binary covariate $X$ but have prevalences $q\neq q^{*}$,
 with the exponential proportional-hazards model of @exm-genlik-survival: conditional control hazard
-$\lambda_x$ and treated hazard $\psi\lambda_x$, shared across populations (SEMA on the log-hazard scale).
+$\lambda_x$ and treated hazard $\psi\lambda_x$, shared across populations (conditional constancy on the
+log-hazard scale, with a common baseline).
 The conditional RMST at horizon $\tau$ is $\operatorname{RMST}_t(\tau\mid x)=(1-e^{-\lambda_x^{(t)}\tau})/\lambda_x^{(t)}$
 with $\lambda_x^{(C)}=\lambda_x$, $\lambda_x^{(A)}=\psi\lambda_x$.
 
 **Collapsibility within a population.** By @thm-rmst-collapsible the marginal RMST contrast is the
-covariate average of the conditional contrasts, $\Delta\!\operatorname{RMST}_{AC}(\tau\mid\mathcal P)=\mathbb E_{X\sim\mathcal P}[d(X)]$
+covariate average of the conditional contrasts, $\Delta\!\operatorname{RMST}_{CA}(\tau\mid\mathcal P)=\mathbb E_{X\sim\mathcal P}[d(X)]$
 with $d(x)=\operatorname{RMST}_A(\tau\mid x)-\operatorname{RMST}_C(\tau\mid x)$. For binary $X$ this is
 $(1-q)d(0)+q\,d(1)$ in $\mathcal P$.
 
 **Difference between populations.** Since the conditional contrasts $d(0),d(1)$ are the same functions in
 both populations (shared hazards),
 $$
-\Delta\!\operatorname{RMST}_{AC}(\tau\mid\mathcal P)-\Delta\!\operatorname{RMST}_{AC}(\tau\mid\mathcal P^{*})
+\Delta\!\operatorname{RMST}_{CA}(\tau\mid\mathcal P)-\Delta\!\operatorname{RMST}_{CA}(\tau\mid\mathcal P^{*})
 =\bigl[(1-q)d(0)+q\,d(1)\bigr]-\bigl[(1-q^{*})d(0)+q^{*}d(1)\bigr]
 =(q-q^{*})\bigl[d(1)-d(0)\bigr].
 $$
@@ -2762,7 +2767,7 @@ $$
 \Theta_B(-1.3)=0.6(0.21417)+0.4(0.37754)=0.27952,\qquad
 \Theta_B(-1.2)=0.6(0.23148)+0.4(0.40131)=0.29941 .
 $$
-Since $\Theta_B(-1.3)<0.30<\Theta_B(-1.19)=0.30144$, linear interpolation between $-1.20$ and $-1.19$ places
+Since $\Theta_B(-1.20)<0.30<\Theta_B(-1.19)=0.30144$, linear interpolation between $-1.20$ and $-1.19$ places
 the root at $\alpha_B\approx-1.20$ (to two decimals; more precisely $\alpha_B\approx-1.197$).
 
 **Comparator-population marginal response.** By construction $\Theta_B(\alpha_B)=0.30$, so the
@@ -2826,7 +2831,7 @@ $$
 which differ by $(0.5-0.3)(d(1)-d(0))=0.2(0.01387)=0.00277$ years. So the RMST contrast is collapsible
 within each population yet differs between the two populations: collapsibility does not imply
 transportability. By contrast the conditional log hazard ratio of $A$ versus $B$ is the single number
-$\log(\lambda_B/\lambda_A)=\log(0.15/0.10)=\log 1.5$ in every population, covariate-free and time-invariant.
+$\log(\lambda_A/\lambda_B)=\log(0.10/0.15)=-\log 1.5$ in every population, covariate-free and time-invariant.
 This is @thm-mlumr-tte(e): an unanchored ML-UMR analysis can report the population-specific RMST contrast at
 any target $\pi^{*}$, but only the conditional log hazard ratio is a single population-free scalar. $\square$
 
@@ -2843,7 +2848,7 @@ reverse rankings, because it discards the off-diagonal covariance.
 
 Let the covariates be reparameterized by an invertible affine map $\mathbf x\mapsto A\mathbf x+\mathbf c$,
 with the covariance transformed accordingly to $A\boldsymbol\Sigma A^\top$. A gap between two means
-$\boldsymbol\delta=\bar{\mathbf x}_0-\bar{\mathbf x}_j$ transforms to $A\boldsymbol\delta$ (the constant
+$\boldsymbol\delta=\bar{\mathbf x}_j-\bar{\mathbf x}_0$ transforms to $A\boldsymbol\delta$ (the constant
 $\mathbf c$ cancels in the difference). The Mahalanobis distance (@def-mahalanobis-distance) becomes
 $$
 d_M^2=(A\boldsymbol\delta)^\top(A\boldsymbol\Sigma A^\top)^{-1}(A\boldsymbol\delta)
@@ -2934,8 +2939,8 @@ higher moments that a residual bias survives. $\square$
 ### Solution to @exr-qba-itc-evalue-star: The E-value for an indirect comparison, and when it is infinite
 
 This Chapter 28 exercise recomputes the sensitivity curve and E-value for an indirect comparison under a
-stronger unreported covariate, and shows the E-value can be infinite, a certificate that no single-covariate
-imbalance can explain away the observed effect.
+stronger unreported covariate, and shows when the infinite value, a certificate that no single-covariate
+imbalance can explain away the observed effect, is and is not available.
 
 **Strategy.** The adjusted effect is linear in the unreported covariate's mean, $\Delta(m)=K+\beta_U m$; the
 whole analysis rests on the constant $K$, which is a Gaussian-MGF integral of the log-linear model. Derive
@@ -2966,14 +2971,17 @@ $$
 that is $K=-1.0+0.4+0.02+0.32+0.75502=0.49502$. The sensitivity curve is
 $\Delta(m)=K+\beta_U m=0.49502-0.8m$, so the adjusted effect at the IPD value is
 $\Delta(2.0)=0.49502-1.6=-1.10498$. The observed bias factor is
-$\mathrm{BF}_{\mathrm{obs}}=\exp(|\Delta(2.0)|)=\exp(1.10498)=3.0192$, and the outcome association is
-$\mathrm{RR}_{UD}=\exp(|\beta_U|)=\exp(0.8)=2.2255$.
+$\mathrm{BF}_{\mathrm{obs}}=\exp(|\Delta(2.0)|)=\exp(1.10498)=3.0192$, and the per-liter risk ratio is
+$\exp(|\beta_U|)=\exp(0.8)=2.2255$.
 
-**(b) The E-value.** By @prp-itc-evalue the indirect-comparison E-value is finite only when
-$1<\mathrm{BF}_{\mathrm{obs}}<\mathrm{RR}_{UD}$. Here $\mathrm{RR}_{UD}=2.2255<3.0192=\mathrm{BF}_{\mathrm{obs}}$,
-so $\mathrm{RR}_{UD}\le\mathrm{BF}_{\mathrm{obs}}$ and $E_{\mathrm{ITC}}=+\infty$: no across-arm imbalance of
-the single covariate, however extreme, can manufacture a bias factor as large as the observed one, given
-that the outcome association is pinned at $\mathrm{RR}_{UD}=2.2255$. This is a robustness certificate. As a
+**(b) The E-value.** The per-liter risk ratio $2.2255$ is below $\mathrm{BF}_{\mathrm{obs}}=3.0192$, so
+reading it as $\mathrm{RR}_{UD}$ would place us in the third case of @def-itc-evalue and declare
+$E_{\mathrm{ITC}}=+\infty$. That certificate would be false: the sensitivity curve crosses the null at
+$m^{\dagger}=K/|\beta_U|=0.49502/0.8=0.619$ liters, so a comparator mean $1.38$ liters below the IPD value
+reverses the conclusion. In @eq-qba-sensitivity-params, $\mathrm{RR}_{UD}$ is the ratio of risks between the
+*extreme* levels of $U$; for continuous, unbounded $\mathrm{FEV}_1$ it is $+\infty$, and @eq-qba-itc-evalue
+gives $E_{\mathrm{ITC}}=\mathrm{BF}_{\mathrm{obs}}=3.0192$, the $y\to\infty$ limit of
+@cor-itc-evalue-monotone. The certificate is available only for a binary or bounded covariate. As a
 check of the finite formula on the artificial pair $\mathrm{BF}_{\mathrm{obs}}=1.5$, $\mathrm{RR}_{UD}=2.5$
 (where $1<1.5<2.5$),
 $$
@@ -3151,13 +3159,13 @@ smaller-set estimator achieves the lower mean squared error exactly when its bia
 by the variance saved through the larger effective sample size.
 
 **(c) Relation to ESS and the identity scale.** Balancing the additional covariate $x_2$ adds a moment
-constraint to the weights, which by @thm-maic-ess-bound can only lower the effective sample size,
-$\mathrm{ESS}_2\le\mathrm{ESS}_1$, raising the variance; this is the variance cost on the right-hand side of
+constraint to the weights, which typically lowers the effective sample size (the exercise assumes
+$\mathrm{ESS}_2<\mathrm{ESS}_1$; @thm-maic-ess-bound caps both at $n$), raising the variance; this is the variance cost on the right-hand side of
 the condition. The trade-off in (b) is the bias-variance balance of the remark following
 @lem-sim-mse-empirical-identity: balancing a covariate is worthwhile only when the bias it removes exceeds
 the variance it costs. On the identity scale a purely prognostic covariate carries no bias, $\beta=0$,
 because it cancels in the contrast (it shifts both arms equally); then the condition $\beta^2=0<\sigma^2 n(\cdots)$
-holds automatically, so balancing $x_2$ removes no bias while strictly lowering the effective sample size,
+holds automatically, so balancing $x_2$ removes no bias while lowering the effective sample size,
 and it can only hurt. $\square$
 
 ## Chapter 30: Machine-Checked Foundations: The Coq Formalization
@@ -3249,10 +3257,9 @@ estimator is consistent," even though it compiles.
 
 **The structural defense.** The development's stated policy, recorded in `MAIC.v` and `STC.v`, is to refuse
 `True`-valued assumption definitions and instead make every modeling assumption a visible, abstract named
-premise that appears in the theorem's own statement (@sec-coq-boundary). Because such a premise is a
-genuine, non-trivial `Prop` that the conclusion actually consumes, a vacuous proof is impossible: the
-theorem cannot be discharged without using the assumption, and a human reading the statement can confirm
-that the premise says what the book says. Making each assumption a load-bearing visible premise is the
+premise that appears in the theorem's own statement (@sec-coq-boundary). Because such a premise is an
+opaque `Prop`, it cannot be unfolded to `True`: whatever the proof takes from it must come through its
+stated content, and a human reading the statement can confirm that the premise says what the book says. Making each assumption a load-bearing visible premise is the
 structural guard against the placeholder trap, since it converts the unprovable question "is this the
 intended theorem?" into the checkable question "is this premise the intended assumption?", which a reader
 can answer by inspection. $\square$

@@ -44,8 +44,8 @@ that names a single network-wide contrast per treatment, and we prove they descr
 exactly on the subspace where the consistency equations hold (@thm-parameterization-equivalence). We
 prove that the network contrasts are identifiable if and only if the treatment graph is connected, by
 computing the rank of the design matrix through the rank of a graph incidence matrix
-(@thm-fe-nma-identifiability). We derive the characteristic one-half correlation between two contrasts
-that share an arm in a multi-arm trial, and we show that the one-half is not an arbitrary modeling choice
+(@thm-fe-nma-identifiability). We derive the characteristic one-half correlation between the random effects of two
+contrasts that share an arm in a multi-arm trial, and we show that the one-half is not an arbitrary modeling choice
 but the unique value that makes the heterogeneity variance independent of which arm is called the
 baseline (@thm-re-nma-correlation). We prove the algebraic closure of the consistency equations
 (@thm-consistency-closure), which says that the $\binom{K}{2}$ pairwise contrasts of a $K$-treatment
@@ -81,7 +81,7 @@ A health technology assessment compares three treatments for a single condition:
 - treatment $3$ = **Drug B**.
 
 Four randomized trials are available. Each reports a relative effect on the log-odds scale (a log odds
-ratio); a positive value means the second-named treatment raises the odds of a good outcome.
+ratio); a positive value of "X vs Y" means X raises the odds of a good outcome relative to Y.
 
 | Study $j$ | Arms | Design | Comparison(s) it reports |
 |---|---|---|---|
@@ -223,10 +223,10 @@ placebo vs Drug A, placebo vs Drug B, *and* Drug A vs Drug B. The graph definiti
 $A_j-1=2$ edges: after we name one arm the study baseline (here placebo), we keep the $2$ contrasts *to
 that baseline* and treat the third pairwise comparison, Drug A vs Drug B, as their difference. This is no
 loss of information. The omitted contrast is recovered exactly by subtraction,
-$\delta_{\text{A vs B}}=\delta_{\text{placebo vs B}}-\delta_{\text{placebo vs A}}$, and it is *correlated*
+$\delta_{4,23}=\delta_{4,13}-\delta_{4,12}$, and it is *correlated*
 with the two kept contrasts because all three share the placebo arm. Keeping $A_j-1$ independent contrasts
 rather than all $\binom{A_j}{2}$ pairwise comparisons is what keeps the rows of the design linearly
-independent; carrying their correlation, computed in @thm-re-nma-correlation, is what keeps the standard
+independent; carrying their correlation, computed in @sec-nma-random, is what keeps the standard
 errors honest. $\blacktriangleleft$
 :::
 
@@ -258,15 +258,15 @@ are the $N$ arms. An equivalent *contrast-based* form, used for estimation and i
 $y_{j,\,t_{j,1}k}=\hat\theta_{jk}-\hat\theta_{j,t_{j,1}}$. In large samples each contrast estimate is
 approximately normal about the true contrast by the delta method (@thm-delta-method), and two contrasts
 that share the baseline arm of a multi-arm study are correlated because the shared arm's sampling error
-enters both; @thm-re-nma-correlation computes that correlation. Passing from the arm-based to the
+enters both; @sec-nma-random computes that correlation. Passing from the arm-based to the
 contrast-based likelihood is exactly the elimination of the per-study baselines $\mu_j$, which appear in
 each study's arms alike and cancel in within-study differences. Concretely, in a two-arm study with
 baseline arm $1$, the two arm means are $\theta_{j1}=\mu_j$ and $\theta_{j2}=\mu_j+\delta_{j,12}$;
 subtracting the baseline arm removes $\mu_j$ and leaves the contrast $\delta_{j,12}=\theta_{j2}-\theta_{j1}$.
 The recipe is the same in general: (i) start from the $N$ arms; (ii) in each study pick a baseline arm
 $t_{j,1}$; (iii) subtract that arm's estimate from the others; (iv) keep the resulting $A_j-1$ within-study
-contrasts; (v) carry their covariance, which within a multi-arm study has the shared-arm correlation of
-@thm-re-nma-correlation. Steps (i) to (iv) turn $N$ arm observations into $C$ contrast observations by
+contrasts; (v) carry their covariance: within a multi-arm study any two contrasts have covariance equal to
+the sampling variance of the shared baseline arm (@sec-nma-random). Steps (i) to (iv) turn $N$ arm observations into $C$ contrast observations by
 discarding the $J$ baselines; step (v) is the price of that convenience. We develop both views and prove
 the identifiability theory on the arm-based design, where the baselines are explicit. $\blacktriangleleft$
 :::
@@ -577,7 +577,7 @@ coordinate systems.
 | level of study $j$ | $\mu_j^{\mathrm{BS}}$ (free) | $\mu_j$ (free) |
 | study-$j$ contrast of $k$ vs its baseline | $\delta_{j,\,t_{j,1}k}$ (free) | $d_k-d_{t_{j,1}}$ (forced by @eq-nma-consistency-constraint) |
 | free parameters in $\mathbb R^N$ | $N$ | $J+K-1$ |
-| surplus, where inconsistency can appear | $C-(K-1)$ | $0$ |
+| surplus, where data can depart from consistency | $C-(K-1)$ | $0$ |
 
 ::: {#thm-parameterization-equivalence}
 ## Equivalence on the consistency-constrained subspace
@@ -662,15 +662,16 @@ difference of the two parameter counts established in @def-baseline-shift-param 
 $\mathcal S_{\mathrm{cons}}\subseteq\mathbb R^N$ used here and the contrast-family space
 $\mathcal D_{\mathrm{cons}}$ of @thm-consistency-closure both encode consistency, but they live in
 different spaces, one of arm means and one of pairwise contrasts; do not conflate them. When the network
-has only two-arm studies and no
-repeated comparisons, $C=K-1$ and the two parameterizations have the same count; baseline-shift and
-reference-treatment are then merely two coordinate systems on the same space. The surplus $C-(K-1)$ is
-strictly positive exactly when some treatments are compared more than once, either by a multi-arm study,
-which contributes $A_j-1>1$ contrasts, or by several studies sharing a treatment pair. In those cases the
-baseline-shift form has genuinely more names than parameters, and the consistency constraints
+is a tree (connected, with no cycle and no repeated edge), $C=K-1$ and the two parameterizations have the
+same count; baseline-shift and reference-treatment are then merely two coordinate systems on the same
+space. Since a connected graph with $K$ vertices and $C$ edges has cycle rank $C-(K-1)$, the surplus is
+strictly positive exactly when $G$ contains a cycle: either the same pair of treatments is compared in more
+than one study (parallel edges), or comparisons from different studies close a loop. A single multi-arm
+study does not by itself create surplus, since its $A_j-1$ edges all leave the one baseline. When the
+surplus is positive the baseline-shift form has genuinely more names than parameters, and the consistency constraints
 @eq-nma-consistency-constraint, automatic under reference-treatment, become substantive equalities that
-the data can contradict. That possibility of contradiction is inconsistency, and @sec-nma-nodesplit makes
-it testable. The reference-treatment parameterization is, in this sense, the minimal description of a
+the data can contradict. Across parallel edges a contradiction is heterogeneity; around a loop of
+distinct comparisons it is inconsistency, which @sec-nma-nodesplit makes testable. The reference-treatment parameterization is, in this sense, the minimal description of a
 consistent network. $\blacktriangleleft$
 :::
 
@@ -762,8 +763,8 @@ non-identifiable. $\square$
 trial comparisons, the fixed-effect NMA can estimate all relative effects, direct or indirect. If it
 cannot, the missing cross-cluster contrasts are lost to statistics entirely; no amount of clever pooling
 recovers them. The only remedies are to find a trial that bridges the gap, or to bring in an external
-assumption that supplies the missing link, which is the business of the population-adjustment methods of
-Part V. $\blacktriangleleft$
+assumption that supplies the missing link, which is the business of the unanchored population-adjustment
+methods of Parts IV and V. $\blacktriangleleft$
 :::
 
 ::: {.remark}
@@ -785,17 +786,19 @@ from the identifiable parameters, but within each connected component the analys
 restricting to a component with $K_i$ treatments and its studies gives a connected subnetwork whose
 $K_i-1$ contrasts are identifiable. A disconnected network is therefore not useless; it is several
 separate networks, and no indirect comparison can bridge them without an external assumption. Bridging
-disconnected components is exactly the task that unanchored population adjustment confronts in Part V,
+disconnected components is exactly the task that unanchored population adjustment confronts in Parts IV
+and V,
 where the missing edge is supplied by modeling absolute outcomes rather than contrasts. $\blacktriangleleft$
 :::
 
 ## Random-effects NMA and the one-half correlation {#sec-nma-random}
 
 The single most actionable warning in this chapter lives in this section: a three-arm trial is not two
-independent two-arm trials. Its within-trial contrasts share an arm, so their sampling errors are
-correlated; treating them as independent, a genuinely common mistake in practice, produces wrong standard
-errors. Below we derive that correlation and show it is not an arbitrary modeling choice but a forced
-value.
+independent two-arm trials. Its within-trial contrasts share an arm, so both their sampling errors and
+their random effects are correlated; treating them as independent, a genuinely common mistake in practice,
+produces wrong standard errors. Below we derive the random-effects correlation and show that its value,
+one half, is forced rather than chosen; the remark after @thm-re-nma-correlation computes the sampling
+correlation.
 
 One caution before we start. Random effects model *heterogeneity*, the scatter of study-level effects
 around shared network effects; they do not repair *inconsistency*, the disagreement of direct and indirect
@@ -1033,8 +1036,8 @@ network estimate of $d_{AB}$ is the inverse-variance blend @eq-nma-pooling of th
 indirect estimates the node-split compares, so a strong inconsistency means the pooled estimate
 averages two genuinely discordant numbers and should not be trusted without explanation. A global check
 compares, by the deviance information criterion of @def-dic, the consistency model against an
-inconsistency model that frees all loops, the unrelated-mean-effects model; a large drop in fit on
-freeing the loops is network-level inconsistency. The detailed bias calculation behind a transitivity
+inconsistency model that frees all loops, the unrelated-mean-effects model; a markedly lower DIC for the
+unrelated-mean-effects model is evidence of network-level inconsistency. The detailed bias calculation behind a transitivity
 failure, and its interaction with non-collapsibility (@def-non-collapsibility) and ecological bias
 (@def-ecological-bias), is the subject of Chapter 16 (@thm-failure-of-bucher). $\blacktriangleleft$
 :::
@@ -1137,11 +1140,13 @@ constant within every study, varying only between studies, then within-study dif
 $\mathbf x^\top\boldsymbol\beta_1$ from the baseline $\mu_j$, and $\boldsymbol\beta_1$ is identified only
 from study-level aggregates, confounded with the baseline; this is the seed of ecological bias
 (@def-ecological-bias). A treatment that appears in only one study with degenerate covariate variation
-has an unidentified interaction $\boldsymbol\beta_{2,k}$. And if the interactions are *not* shared, each
-study carrying its own $\boldsymbol\beta_{2,k}^{(j)}$, the parameter count grows by a factor of order $J$
-and small networks cannot support estimation; the shared-effect-modifier assumption is then a necessity,
-not a convenience, and is the load-bearing assumption of the multilevel network meta-regression of
-Part V. $\blacktriangleleft$
+has an unidentified interaction $\boldsymbol\beta_{2,k}$. And if the interactions are *not* shared across
+studies, each study carrying its own $\boldsymbol\beta_{2,k}^{(j)}$, within-study differencing identifies
+only the interaction differences among the treatments that study compares, and nothing links them to
+other studies or to a target population. Assumption (i) is therefore load-bearing; it is the conditional
+constancy that the multilevel network meta-regression of Part V inherits. It should not be confused with
+the shared effect modifier assumption (@def-sema), which equates interactions across *treatments*.
+$\blacktriangleleft$
 :::
 
 ## Residual deviance and the deviance information criterion {#sec-nma-deviance}
@@ -1288,8 +1293,8 @@ by a single three-arm trial: the "extra arm" that creates a multi-arm correlatio
 ## A three-treatment network with one multi-arm trial
 The three treatments are those of @exm-nma-running: $1$ = placebo (reference), $2$ = Drug A, and $3$ =
 Drug B. Four studies report log odds-ratio contrasts on the logit scale, with arm precisions equal within
-each study so that multi-arm contrast estimates carry the correlation $\tfrac12$ of
-@thm-re-nma-correlation.
+each study so that multi-arm contrast estimates have sampling correlation $\tfrac12$ (the remark after
+@thm-re-nma-correlation).
 
 | Study | Arms | Contrast(s) reported | Estimate | Variance |
 |---|---|---|---|---|
@@ -1388,7 +1393,7 @@ $$
 \qquad
 \operatorname{Var}(\hat\omega_{23})=0.20+0.10=0.30,
 $$
-by @prp-node-split-test, giving $\widehat{\operatorname{SE}}=0.5477$ and
+because the two streams are independent (the argument of @prp-node-split-test), giving $\widehat{\operatorname{SE}}=0.5477$ and
 $z=-0.30/0.5477=-0.55$, a two-sided $p$-value of about $0.58$: no evidence of inconsistency, though the
 test is underpowered, as the large standard error warns. As a check on @prp-network-contrast-pooling, the
 inverse-variance blend of direct ($0.1$, precision $5$) and indirect ($0.4$, precision $10$) is
@@ -1468,9 +1473,8 @@ building on the indirect comparison of @bucher1997 (Chapter 14) and the random-e
 @dersimonian1986 (Chapter 13). The reference-treatment decomposition @eq-nma-rt is Eq. (1.7c) of
 @phillippo2019thesis; the corrected statement of the parameterization equivalence
 (@thm-parameterization-equivalence), as an isomorphism onto the consistency-constrained subspace rather
-than a square change of basis, follows the proof catalogue's amendment to that footnote, and is needed
-precisely because multi-arm trials and repeated comparisons make the baseline-shift count $N$ exceed the
-reference-treatment count $J+K-1$.
+than a square change of basis, is needed because the baseline-shift count $N$ exceeds the
+reference-treatment count $J+K-1$ whenever the treatment graph contains a cycle.
 
 The identifiability theorem (@thm-fe-nma-identifiability) is folklore in the NMA literature, usually
 stated as "the network must be connected"; the formulation here as the rank of the design matrix, reduced
@@ -1484,16 +1488,16 @@ in @thm-fe-nma-identifiability, is Aitken's theorem, here routed through the Gau
 (@thm-ols-blue) of Chapter 6.
 
 The one-half contrast correlation (@thm-re-nma-correlation) is the homoscedastic multi-arm covariance of
-Lu and Ades; the symmetry characterization (@lem-half-correlation-forced), that one half is the unique
+@lu2004; the symmetry characterization (@lem-half-correlation-forced), that one half is the unique
 correlation making the heterogeneity variance independent of the baseline choice, sharpens the usual
 presentation, which exhibits the value without showing it is forced. Node-splitting (@def-node-splitting,
-@prp-node-split-test) is due to Dias and colleagues and is presented in @dias2018nma; the framing as a
+@prp-node-split-test) is due to @dias2010 and is presented in @dias2018nma; the framing as a
 released consistency equation, and the connection to the inverse-variance blend
 (@prp-network-contrast-pooling), make the test's mean-zero null and its power limitations transparent. The
-deviance information criterion (@def-dic, @prp-dic-pd) is due to Spiegelhalter and colleagues; the
+deviance information criterion (@def-dic, @prp-dic-pd) is due to @spiegelhalter2002; the
 trace identity for $p_D$ is standard, and its use for model comparison in network meta-analysis is
 described in @dias2018nma. The individual-patient-data network meta-regression
-(@thm-ipd-nmr-identifiability) and its dependence on shared effect modifiers, connectedness, and
+(@thm-ipd-nmr-identifiability) and its dependence on interactions shared across studies, connectedness, and
 within-study covariate variation is the foundation of the multilevel network meta-regression of
 @phillippo2020mlnmr and is discussed in the indirect-comparison guidance of @phillippo2016tsd18.
 

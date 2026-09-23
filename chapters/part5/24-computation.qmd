@@ -150,16 +150,16 @@ $$
 $$
 with the convention $\gamma_k=0$ and $\boldsymbol\beta_{2,k}=\mathbf 0$ on the reference arm, study
 baselines $\mu_{AB},\mu_{BC}$, prognostic effects $\boldsymbol\beta_1$, a treatment main effect
-$\gamma_k$, and age-and-severity effect modifiers $\boldsymbol\beta_{2,k}$. Because $B$ appears in both
-studies, its relative effect is treated as *exchangeable* across studies with a random-effects
-heterogeneity scale $\tau$ (the NMA layer of @def-random-effects-ma).
+$\gamma_k$, and age-and-severity effect modifiers $\boldsymbol\beta_{2,k}$. The study-level relative effects
+are given a random-effects distribution with heterogeneity scale $\tau$ (the NMA layer of
+@def-random-effects-ma).
 
 *Why this network stresses every diagnostic.* It has exactly **one study per contrast**. That single
 fact drives the whole chapter:
 
-- $\tau$ is estimated from a single pair of contrasts, so it is **weakly identified**; its posterior
-  reaches toward $0$, which is the funnel of @sec-comp-param, so the fit needs the non-centered
-  parameterization.
+- No contrast is replicated, so the likelihood carries essentially no information about $\tau$: its
+  posterior is close to its prior and reaches toward $0$, which is the funnel of @sec-comp-param, so the fit
+  needs the non-centered parameterization and a carefully justified prior on $\tau$.
 - The **aggregate** study $BC$ contributes to the likelihood only through an integral of the
   individual-level response over its covariate distribution, a two-dimensional integral over age and
   severity that must be done by QMC (@sec-comp-integration).
@@ -292,8 +292,9 @@ A=\begin{pmatrix} 1-\tfrac12\epsilon^2\omega^2 & \epsilon \\[2pt]
 -\epsilon\omega^2\big(1-\tfrac14\epsilon^2\omega^2\big) & 1-\tfrac12\epsilon^2\omega^2 \end{pmatrix},
 \qquad \det A=1 .
 $$ {#eq-comp-leapfrog-matrix}
-The iterates $A^n$ remain bounded (the integrator is *stable*) if and only if $\epsilon\omega\le 2$; for
-$\epsilon\omega>2$ they grow geometrically, and the simulated trajectory diverges.
+The iterates $A^n$ remain bounded (the integrator is *stable*) if and only if $\epsilon\omega<2$; for
+$\epsilon\omega>2$ they grow geometrically, and at $\epsilon\omega=2$ linearly, so the simulated trajectory
+diverges.
 :::
 
 ::: {.proof}
@@ -315,7 +316,7 @@ $\det A=1$ they have modulus $1$; the powers $A^n$ are then conjugate to a rotat
 $s>2$ the discriminant is positive, the eigenvalues are real with product $1$, so one exceeds $1$ in
 modulus and $A^n$ grows like that eigenvalue to the $n$; the trajectory diverges. At $s=2$ the matrix has a
 defective double eigenvalue $-1$ and $\|A^n\|$ grows linearly. Hence stability holds exactly for
-$\epsilon\omega\le 2$. $\square$
+$\epsilon\omega<2$. $\square$
 :::
 
 The frequency $\omega$ in @lem-comp-leapfrog-stability is $\sqrt{U''(x)}$, the square root of the local
@@ -409,8 +410,9 @@ $\blacktriangleleft$
 :::
 
 ::: {.remark}
-**The funnel in ML-NMR.** In ML-NMR the effects $\theta_j$ are study baselines $\mu_j$ and random
-treatment contrasts $\delta_{j,1k}$ (the random-effects NMA layer, @def-random-effects-ma). Networks with
+**The funnel in ML-NMR.** In ML-NMR the effects $\theta_j$ are the random treatment contrasts
+$\delta_{j,1k}$ (the random-effects NMA layer, @def-random-effects-ma), and the study baselines $\mu_j$ when
+they too are given a random-effects distribution (by default they are fixed effects). Networks with
 few studies per contrast, the norm in health-technology-assessment submissions, sit squarely in the
 prior-dominated regime, where @thm-comp-param prescribes the non-centered form. The reference software
 implements the non-centered parameterization by default for exactly this reason; the diagnostic signature
@@ -573,10 +575,9 @@ Now $v_N=\mathrm{Var}(\bar\theta^{(m)})=\frac{\sigma^2}{N}\big(1+2\sum_{k=1}^{N-
 by the variance-of-the-mean identity @prp-comp-acf-variance (proved independently in @sec-comp-ess,
 using nothing from this section, so there is no circular dependence), so
 $Nv_N=\sigma^2\big(1+2\sum_{k=1}^{N-1}(1-\tfrac kN)\rho_k\big)\ge
-\sigma^2$ whenever every $\rho_k\ge 0$; the gap @eq-comp-gap is therefore non-negative, and since
-$\widehat V$ and $W$ are non-negative this gives $\mathbb E[\widehat V]\ge\mathbb E[W]$, so $\widehat R$ is
-centered at or above $1$. For the limit, ergodicity makes $v_N\to 0$, so $\mathbb E[\widehat V]=\sigma^2$
-forces $\mathbb E[W]=\sigma^2-\frac{N-1}{N}^{-1}\!\cdots\to\sigma^2$ as well (equivalently, the gap
+\sigma^2$ whenever every $\rho_k\ge 0$; the gap @eq-comp-gap is therefore non-negative, which gives
+$\mathbb E[\widehat V]\ge\mathbb E[W]$, so $\widehat R$ is centered at or above $1$. For the limit,
+ergodicity makes $v_N\to 0$, so $\mathbb E[W]=\frac{N}{N-1}(\sigma^2-v_N)\to\sigma^2$ as well (equivalently, the gap
 @eq-comp-gap is $\frac{\sigma^2\cdot 2\sum_k(1-k/N)\rho_k}{N-1}\to 0$ because the bracket converges to the
 finite constant $\sum_k\rho_k$); both $\widehat V$ and $W$ converge to $\sigma^2$ and their ratio to $1$.
 
@@ -619,8 +620,9 @@ threshold is $\widehat R\le 1.01$ for every reported quantity. Two refinements a
 $\widehat R$* divides each chain into two halves and treats them as separate chains, so that within-chain
 non-stationarity (a slow trend) inflates the between-chain term and is detected; and *rank-normalized*
 $\widehat R$ applies the statistic to the normal scores of the pooled ranks, which makes it well defined
-for heavy-tailed or infinite-variance targets where $\sigma^2$ in @thm-gelman-rubin would not exist. Both
-are due to a modern reassessment of the diagnostic and are the defaults in current software.
+for heavy-tailed or infinite-variance targets where $\sigma^2$ in @thm-gelman-rubin would not exist. The
+rank-normalized version and the $1.01$ threshold are due to @vehtari2021rhat, and both refinements are the
+defaults in current software.
 $\blacktriangleleft$
 :::
 
@@ -1106,9 +1108,11 @@ p_{\mathrm{WAIC}}=\sum_i v_i\approx\operatorname{tr}\!\Big(\mathrm{Var}(\boldsym
 \sum_i\nabla\ell_i\nabla\ell_i^\top\Big)=\operatorname{tr}\!\big(\mathcal J\,\mathrm{Var}(\boldsymbol\xi
 \mid\mathbf y)\big)+o(1),
 $$
-because the outer-product (empirical Fisher) information $\sum_i\nabla\ell_i\nabla\ell_i^\top$ agrees with
-the observed information $\mathcal J$ to leading order near the mode, where the score $\sum_i\nabla\ell_i$
-vanishes. Hence $p_{\mathrm{WAIC}}=p_D+o(1)$ and, combined with Part 1, $\mathrm{DIC}=\mathrm{WAIC}+o(1)=
+because, when the model is correctly specified, the outer-product information $\sum_i\nabla\ell_i
+\nabla\ell_i^\top$ agrees with the observed information $\mathcal J$ to leading order (the
+information-matrix equality of Chapter 5). Under misspecification the two differ, and $p_{\mathrm{WAIC}}$
+then estimates the robust penalty $\operatorname{tr}(\mathcal J^{-1}\sum_i\nabla\ell_i\nabla\ell_i^\top)$
+rather than $p_D$; the statement of part 2 is for the correctly specified case. Hence $p_{\mathrm{WAIC}}=p_D+o(1)$ and, combined with Part 1, $\mathrm{DIC}=\mathrm{WAIC}+o(1)=
 \mathrm{LOO}+o(1)$.
 
 *Part 3.* $\mathrm{WAIC}$ and $\widehat{\mathrm{elpd}}_{\mathrm{loo}}$ are built only from the numbers
@@ -1268,9 +1272,10 @@ $\widehat k=0.8$ for the aggregate $BC$ arm and $\widehat k<0.5$ everywhere else
 as @thm-comp-psis-reliability licenses. As a *computational* warning, $0.8$ exceeds the $0.7$ alarm, so
 the PSIS-LOO contribution of that arm is unreliable and should be recomputed by actually refitting
 without it. As a *substantive* signal, it says the $d_{BC}$ contrast, and therefore the indirect $d_{AC}$
-that depends on it, rests heavily on this one study: the estimate is one study away from changing. The
-correct response is a robustness analysis, refit without $BC$ and report how far $d_{AC}$ moves, which is
-precisely the kind of sensitivity check an HTA reviewer demands of a two-study network. A high $\widehat
+that depends on it, rests heavily on this one study. Here the flagged unit is one of the only two arms that
+inform $C$, so leaving it out makes $d_{AC}$ unidentifiable: the high $\widehat k$ simply records that the
+indirect comparison rests on this study, and the appropriate robustness analysis varies that study's
+inputs (its reconstructed covariate distribution, its outcome model) rather than deleting it. A high $\widehat
 k$ is thus not only a caution about a number; it is the diagnostic pointing at the study your conclusion
 leans on.
 $\blacktriangleleft$
@@ -1360,7 +1365,7 @@ running network with the age effect modifier included. Every column is a diagnos
 
 | Parameter | mean | sd | bulk $N_{\mathrm{eff}}$ | tail $N_{\mathrm{eff}}$ | $\widehat R$ |
 |---|---|---|---|---|---|
-| $d_{AC}$ (A vs C, log-odds) | $-0.42$ | $0.28$ | $2100$ | $1850$ | $1.001$ |
+| $d_{AC}$ ($C$ vs $A$, log-odds) | $-0.42$ | $0.28$ | $2100$ | $1850$ | $1.001$ |
 | $d_{AB}$ | $-0.55$ | $0.19$ | $3200$ | $2900$ | $1.000$ |
 | $d_{BC}$ | $0.13$ | $0.21$ | $2600$ | $2400$ | $1.001$ |
 | $\boldsymbol\beta_{2,\text{age}}$ | $-0.08$ | $0.11$ | $1900$ | $1700$ | $1.002$ |
@@ -1368,8 +1373,8 @@ running network with the age effect modifier included. Every column is a diagnos
 | $\tau$ | $0.31$ | $0.24$ | $90$ | $140$ | $1.08$ |
 
 Read it top to bottom. The contrasts and the effect modifier are healthy: $\widehat R=1.00$, several
-thousand effective draws, so the reported $d_{AC}=-0.42$ (an odds ratio of about $0.66$ for $A$ versus
-$C$) is stable and precise. The last row is the failure the whole chapter anticipates: $\tau$ has
+thousand effective draws, so the reported $d_{AC}=-0.42$ (an odds ratio of about $0.66$ for $C$ versus
+$A$) is stable and precise. The last row is the failure the whole chapter anticipates: $\tau$ has
 $\widehat R=1.08\gg 1.01$ and only $90$ bulk effective draws, the signature of a residual funnel in a
 one-study-per-contrast network. Reported alongside, say, "14 divergent transitions, all at $\tau<0.1$,"
 the diagnosis is unambiguous. The fix is not to publish $d_{AC}$ with a caveat; it is to refit under the
@@ -1494,7 +1499,7 @@ integral whose evaluation is at stake is the subject of Chapter 20 (@thm-aggrega
 result D.14, introduced for network meta-analysis in Chapter 15.
 
 The centered-versus-non-centered analysis and the funnel pathology it addresses are standard in the
-Hamiltonian Monte Carlo literature; the leapfrog stability threshold $\epsilon\omega\le 2$
+Hamiltonian Monte Carlo literature; the leapfrog stability threshold $\epsilon\omega<2$
 (@lem-comp-leapfrog-stability) is the linear-stability analysis of the Stormer-Verlet integrator, and the
 funnel as the canonical hierarchical-model trap is due to Neal. The implementation of HMC and the No-U-Turn
 Sampler used by the reference ML-NMR software, including the automatic step-size and mass-matrix
@@ -1506,7 +1511,7 @@ reassessment of Vehtari and coauthors, who also introduced the bulk/tail effecti
 @sec-comp-ess. The variance-of-the-mean identity @eq-comp-var-mean and the integrated autocorrelation time
 are classical time-series facts (see, for example, the MCMC standard-error literature of Geyer). The
 predictive-criterion framework, elpd as the target and lppd as its optimistic in-sample estimate, is due to
-Watanabe (WAIC) and to the cross-validation synthesis of Vehtari, Gelman, and Gabra; the exact
+Watanabe (WAIC) and to the cross-validation synthesis of Vehtari, Gelman, and Gabry; the exact
 leave-one-out importance identity @eq-comp-loo-identity and the Pareto-smoothing algorithm with its
 $\widehat k$ diagnostic (@def-psis-loo, @thm-comp-psis-reliability) are from the PSIS-LOO papers of that
 group, and the generalized-Pareto moment characterization @lem-comp-gpd-moments is elementary extreme-value

@@ -71,8 +71,8 @@ $X=1$ for biologic-experienced patients and $X=0$ for biologic-naive patients. P
 disease harder to control, so it raises the failure risk under the comparator $C$ and under biologic $B$
 by the same amount, leaving the $B$-versus-$C$ benefit unchanged; but biologic $A$ acts through a pathway
 unaffected by prior exposure, so its failure risk stays flat and its advantage over $C$ is *larger* in
-experienced patients. Prior exposure is therefore an **effect modifier** of $A$ versus $C$ but not of $B$
-versus $C$. The stratum-specific failure risks are
+experienced patients. On the risk-difference scale, prior exposure is therefore an **effect modifier** of
+$A$ versus $C$ but not of $B$ versus $C$. The stratum-specific failure risks are
 
 | stratum $x$ | $\mu_A(x)$ | $\mu_B(x)$ | $\mu_C(x)$ |
 |---|---|---|---|
@@ -96,7 +96,7 @@ sign of the answer.
 assessment (for example a NICE appraisal, @phillippo2016tsd18) can recommend the inferior drug: patients
 may be denied the better biologic, or a payer may fund one that is in truth no better. The bias below is
 not academic; it can flip a reimbursement decision. This is why NICE Technical Support Document 18
-(@phillippo2016tsd18) requires an indirect comparison to justify its constancy assumption before the
+(@phillippo2016tsd18) asks an indirect comparison to justify its constancy assumption before the
 estimate is trusted. $\blacktriangleleft$
 :::
 
@@ -105,11 +105,13 @@ estimate is trusted. $\blacktriangleleft$
 needed.
 
 - **Contrast**: a difference of two treatments on a chosen scale, for example a risk difference or a log
-  odds ratio. Throughout, "$a$ versus $b$", and the symbols $d_{ab}$ and $\tau_{ab}$, mean $b$ *relative
-  to* $a$: $\tau^g_{ab}(x)=g(\mu_b(x))-g(\mu_a(x))$.
+  odds ratio. The symbols $d_{ab}$ and $\tau_{ab}$ measure $b$ *relative to* $a$,
+  $\tau^g_{ab}(x)=g(\mu_b(x))-g(\mu_a(x))$, as in [Notation](/notation.qmd). To keep the prose short we
+  name a contrast by its subscripts in order: "the $A$-versus-$C$ contrast" is $\tau_{AC}$, the effect of
+  $C$ relative to $A$.
 - **Anchored comparison**: an indirect $A$-versus-$B$ comparison in which both drugs are joined through a
   shared comparator $C$ (Chapter 14). The alternative, an **unanchored** comparison of absolute arm
-  outcomes, is Chapter 26.
+  outcomes, is treated in Chapters 17 to 19 and 26.
 - **Effect modifier versus prognostic variable**: an effect modifier changes the *size of a contrast*
   across its levels; a purely prognostic variable shifts *both arms equally* and leaves the contrast
   unchanged (Chapter 11). This distinction is the most reused idea in the chapter.
@@ -191,9 +193,9 @@ With the notation of @def-conditional-marginal-contrast:
    conditional means.
 2. More generally, if the effect measure based on $g$ is **directly collapsible** over $X$ in the sense of
    @def-collapsibility, then $d_{ab(\mathcal P)}=\tilde d_{ab(\mathcal P)}$ for every $\mathcal P$.
-3. If $g$ is non-collapsible (the logit or log-hazard scale, @def-non-collapsibility,
-   @thm-noncollapsibility-or-hr), the two differ in general; their difference is the non-collapsibility
-   gap, a Jensen gap (@thm-jensen) for the nonlinear link.
+3. If the measure is not directly collapsible (the log risk ratio, and the non-collapsible log odds and
+   log hazard ratios of @def-non-collapsibility and @thm-noncollapsibility-or-hr), the two differ in
+   general; their difference is a Jensen gap (@thm-jensen) for the nonlinear link.
 :::
 
 ::: {.proof}
@@ -219,7 +221,7 @@ error that we isolate in @sec-limits-surcharge. For the first half of the chapte
 collapsible scale, where @prp-limits-collapse-link lets us use $d_{ab(\mathcal P)}$ and
 $\tilde d_{ab(\mathcal P)}$ interchangeably and the algebra is exact; the identity scale is the running
 example. The non-collapsible case, where the two relative effects come apart, returns in
-@sec-limits-ecological as a second and independent source of bias. The pointwise additivity (sometimes
+@sec-limits-surcharge and, as ecological bias, in @sec-limits-ecological. The pointwise additivity (sometimes
 called conditional additivity) that powers Bucher's subtraction holds for the conditional contrasts
 pointwise.
 
@@ -229,7 +231,7 @@ For treatments $A,B,C$ and every covariate value $x$,
 $$
 \tau^g_{AB}(x) \;=\; \tau^g_{AC}(x)-\tau^g_{BC}(x).
 $$ {#eq-limits-cond-additivity}
-Consequently, on a directly collapsible scale, $\tilde d_{AB(\mathcal P)}=\tilde d_{AC(\mathcal P)}-\tilde d_{BC(\mathcal P)}$ in every population $\mathcal P$.
+Consequently, on every scale, $\tilde d_{AB(\mathcal P)}=\tilde d_{AC(\mathcal P)}-\tilde d_{BC(\mathcal P)}$ in every population $\mathcal P$.
 :::
 
 ::: {.proof}
@@ -261,10 +263,10 @@ requires, and it is what we will show fails. The second is **conditional constan
 scale $g$**: there is a single function $\tau^g_{ab}(\cdot)$ such that, in every population in play, the
 conditional contrast at covariate value $x$ equals $\tau^g_{ab}(x)$. Conditional constancy says the
 per-stratum effect transports; it is the assumption that an individual-level effect estimated in one trial
-is the same biological quantity in another population with the same within-stratum structure. In the
-trial-methodology literature this is the **shared effect modifier assumption (SEMA)** of @phillippo2016tsd18;
-"conditional constancy" is its estimand-level statement, and the two say the same thing. It is developed in
-full as the anchored-adjustment assumption in Chapter 17. The point of the failure analysis is that
+is the same biological quantity in another population with the same within-stratum structure. NICE TSD
+18 (@phillippo2016tsd18) calls it conditional constancy of relative effects, and Chapter 17 develops it as
+the assumption of anchored population adjustment. It is distinct from the shared effect modifier
+assumption (@def-sema), which equates the interactions of different active treatments. The point of the failure analysis is that
 conditional constancy can hold while marginal constancy fails, and the gap between them is governed
 entirely by the covariate distributions.
 
@@ -273,7 +275,7 @@ The distinction is easiest to hold onto as a table.
 | Assumption | What it says | Needed by Bucher? | Can fail while the other holds? |
 |---|---|---|---|
 | Marginal constancy (transitivity, @def-transitivity) | the *trial-reported* effect $d_{ab(\mathcal P_j)}$ is one number across populations | yes: this is the hypothesis of @thm-bucher-unbiased | yes: it fails whenever an effect modifier is imbalanced |
-| Conditional constancy (SEMA, @phillippo2016tsd18) | the *per-stratum* contrast $\tau^g_{ab}(x)$ is one function across populations | no | yes: it can hold even when marginal constancy fails |
+| Conditional constancy (@phillippo2016tsd18) | the *per-stratum* contrast $\tau^g_{ab}(x)$ is one function across populations | no | yes: it can hold even when marginal constancy fails |
 
 Clinically: the biology of a treatment effect within, say, each prior-exposure stratum may transport
 perfectly (conditional constancy), yet the trial-level average still changes if one trial enrolled mostly
@@ -300,14 +302,11 @@ $d_{ab(\mathcal P_i)}=\tilde d_{ab(\mathcal P_i)}=\int\tau^g_{ab}(x)f_i(x)\,dx$.
 $\tau^g_{ab}\equiv c$ then $\int c\,f_i(x)\,dx=c\int f_i=c$ for either density, since a density integrates
 to one; the two marginal effects equal the common value $c$. For (2), effect modification means
 (@def-effect-modifier) there are points $x_1,x_2$ in the support with $\tau^g_{ab}(x_1)\neq\tau^g_{ab}(x_2)$.
-If the support is discrete, take the two-point masses $f_1=\delta_{x_1}$ and $f_2=\delta_{x_2}$ directly;
-then $d_{ab(\mathcal P_1)}=\tau^g_{ab}(x_1)\neq\tau^g_{ab}(x_2)=d_{ab(\mathcal P_2)}$ exactly, with no limit
-needed. If the covariate is continuous, take a sequence of admissible densities $f_1^{(n)}$ concentrating
-on shrinking neighborhoods of $x_1$; since $\tau^g_{ab}$ is bounded on the common support and continuous at
-$x_1$, dominated convergence gives $\int\tau^g_{ab}\,f_1^{(n)}\to\tau^g_{ab}(x_1)$, and likewise
-$\int\tau^g_{ab}\,f_2^{(n)}\to\tau^g_{ab}(x_2)$. For $n$ large enough the two marginal effects lie within
-any prescribed tolerance of the unequal numbers $\tau^g_{ab}(x_1)$ and $\tau^g_{ab}(x_2)$, hence are
-themselves unequal, so the two marginal effects differ. $\square$
+Take the point masses $f_1=\delta_{x_1}$ and $f_2=\delta_{x_2}$; then
+$d_{ab(\mathcal P_1)}=\tau^g_{ab}(x_1)\neq\tau^g_{ab}(x_2)=d_{ab(\mathcal P_2)}$. If one insists on
+Lebesgue densities and $\tau^g_{ab}$ is continuous at $x_1$ and $x_2$, uniform densities on small enough
+balls around $x_1$ and $x_2$ give marginal effects within any prescribed tolerance of these two unequal
+numbers, hence unequal. $\square$
 :::
 
 *Reader translation.* Part (1) is the formal statement that purely prognostic covariates do not threaten
@@ -437,9 +436,9 @@ which is @eq-limits-bias.
 For (1), suppose first that $\tau^g_{tC}\equiv c$ is constant. Then
 $b_{tC}=c\int[f_{tC}(x)-f_{*}(x)]\,dx=c\,(1-1)=0$, since each density integrates to one; this holds for any
 pair of distributions. Conversely suppose $\tau^g_{tC}$ is not constant, so there are support points
-$x_1,x_2$ with $\tau^g_{tC}(x_1)\neq\tau^g_{tC}(x_2)$. Choosing $f_{tC}$ concentrated near $x_2$ and $f_{*}$
-near $x_1$ (point masses if the support is discrete) gives
-$b_{tC}\to\tau^g_{tC}(x_2)-\tau^g_{tC}(x_1)\neq 0$, so the term does not vanish for all pairs. Hence
+$x_1,x_2$ with $\tau^g_{tC}(x_1)\neq\tau^g_{tC}(x_2)$. Choosing $f_{tC}$ and $f_{*}$ as the point masses at $x_2$ and $x_1$ (or,
+as in @lem-limits-em-breaks-transitivity, as densities concentrated near them) gives
+$b_{tC}=\tau^g_{tC}(x_2)-\tau^g_{tC}(x_1)\neq 0$, so the term does not vanish for all pairs. Hence
 $b_{tC}\equiv 0$ over all distribution pairs if and only if $\tau^g_{tC}$ is constant, i.e. $X$ is not an
 effect modifier for $t$ versus $C$. The final clause of (1) is the case where both contrasts are constant,
 so $b_{AC}=b_{BC}=0$ identically.
@@ -454,9 +453,8 @@ This is result E.3 of the proof catalogue, and @prp-limits-binary-bias is its tw
 transparent reading. Each term $b_{tC}$ is the difference between the trial-population mean of the
 conditional contrast and its target-population mean; it is a covariance-like quantity, the inner product of
 the effect-modification function $\tau^g_{tC}$ with the signed measure $f_{tC}-f_{*}$. Physically, a
-positive $b_{AC}$ says trial $AC$ *over-represents the strata where $A$'s advantage is large* relative to
-the target: it sampled too many high-contrast patients, so its reported $A$-versus-$C$ effect overshoots
-the target average. The bias is large when the contrast varies steeply over $x$ (strong effect
+positive $b_{AC}$ says trial $AC$ *over-represents the strata where $\tau^g_{AC}$ is large* relative to
+the target, so its reported $A$-versus-$C$ effect overshoots the target average. The bias is large when the contrast varies steeply over $x$ (strong effect
 modification) and when the trial and target distributions are far apart (strong imbalance), and it is
 exactly zero when either factor is absent. The cure is now legible in the formula: replace $f_{tC}$ by
 $f_{*}$, that is, reweight or re-regress each trial's conditional contrast to the target covariate
@@ -534,9 +532,9 @@ b_{BC}=0.15\cdot\bigl([(1-p_{BC})-(1-p_{*})]+[p_{BC}-p_{*}]\bigr)=0.15\cdot 0=0,
 $$
 the second vanishing because $\tau_{BC}$ is constant, exactly @thm-failure-of-bucher(1). The total
 $b_{AC}-b_{BC}=-0.06-0=-0.06$ reproduces the bias, and matches the binary formula
-$s_{AC}(p_{AC}-p_{*})=0.20\cdot(-0.3)$ of @prp-limits-binary-bias. Note that $B$ versus $C$ is the more
-imbalanced contrast, $p_{BC}=0.8$ against $p_{*}=0.5$, yet it contributes nothing, because $X$ does not
-modify it; all the bias comes from $A$ versus $C$, which is only modestly imbalanced but is modified.
+$s_{AC}(p_{AC}-p_{*})=0.20\cdot(-0.3)$ of @prp-limits-binary-bias. Note that the $B$-versus-$C$ trial is
+exactly as imbalanced as the $A$-versus-$C$ trial, $|p_{BC}-p_{*}|=|p_{AC}-p_{*}|=0.3$, yet it contributes
+nothing, because $X$ does not modify $B$ versus $C$; all the bias comes from the modified contrast.
 
 **The cure.** Reweighting the modified contrast to the target distribution replaces $p_{AC}$ by $p_{*}$:
 $\int\tau_{AC}f_{*}=0.5(0.10)+0.5(0.30)=0.20$, and then $0.20-0.15=0.05$ recovers the target exactly. That
@@ -574,7 +572,8 @@ content of `anchored_PV_cancellation` in the Coq development: if the contrast $\
 on the model scale is constant in $w$, it equals its value at any other $w'$. Now write $f_{tC}$ and
 $f_{*}$ as joint densities of $(X_{\mathrm{EM}},W)$. Because $\tau^g_{tC}$ does not depend on $w$, we may
 interchange the order of integration and integrate out $W$ first; this interchange is Fubini's theorem,
-valid because $\tau^g_{tC}$ is bounded on the support and the densities are integrable. Integrating each
+valid because $\tau^g_{tC}$ is integrable against each density, as the definition of @eq-limits-bias
+already requires. Integrating each
 density's $W$-slice down to its $X_{\mathrm{EM}}$-marginal $f^{\mathrm{EM}}(x_{\mathrm{EM}})=\int f(x_{\mathrm{EM}},w)\,dw$,
 $$
 b_{tC}=\int\tau^g_{tC}(x_{\mathrm{EM}})\Bigl[\int\bigl(f_{tC}(x_{\mathrm{EM}},w)-f_{*}(x_{\mathrm{EM}},w)\bigr)\,dw\Bigr]dx_{\mathrm{EM}}
@@ -588,8 +587,8 @@ imbalance confined to $W$ has integrated away and contributes nothing. $\square$
 comparisons." It is the precise reason an anchored adjustment need balance only the effect modifiers, a
 fact that Chapter 17 turns into the central anchored-consistency theorem and that makes anchored methods
 far less data-hungry than unanchored ones. The cancellation is purely a property of the contrast; it has
-no analogue when one compares absolute arm outcomes, which is why unanchored comparison (Chapter 26) must
-control prognostic variables too.
+no analogue when one compares absolute arm outcomes, which is why unanchored comparison (Chapters 17 to 19
+and 26) must control prognostic variables too.
 
 ::: {.remark}
 **Warning: the standard error cannot see this bias.** The bias @eq-limits-bias is a deterministic
@@ -624,14 +623,14 @@ everyone knows odds ratios "behave strangely."
 
 ::: {.remark}
 **The non-collapsibility surcharge.** @thm-failure-of-bucher is exact for the average-conditional estimand
-@eq-limits-target on any scale, and on a directly collapsible scale (identity, log risk ratio) it is also
+@eq-limits-target on any scale, and on a directly collapsible scale (the identity) it is also
 the exact bias of the marginal contrast a trial reports, by @prp-limits-collapse-link. On a non-collapsible
 scale, such as the log odds ratio, the trial's reported marginal contrast $d_{tC(\mathcal P_j)}$ is not the
 average-conditional $\tilde d_{tC(\mathcal P_j)}$, and a second discrepancy, the non-collapsibility gap, is
 added to @eq-limits-bias. That second gap is itself a Jensen gap for the nonlinear link. We illustrate it
 numerically just below, and the same mechanism reappears as ecological bias in @sec-limits-ecological. The
-two effects compound: an imbalanced effect modifier biases the indirect comparison, and a nonlinear link
-distorts what each trial reports in the first place. $\blacktriangleleft$
+two effects add, and need not act in the same direction: an imbalanced effect modifier biases the indirect
+comparison, and a nonlinear link distorts what each trial reports in the first place. $\blacktriangleleft$
 :::
 
 **A numeric illustration in its purest form.** Take a single trial, a treatment versus a control, and a
@@ -659,7 +658,7 @@ In a real anchored odds-ratio comparison the two effects add: each trial's repor
 ratio already differs from its average-conditional log odds ratio by a non-collapsibility gap (this
 illustration), and then the imbalance of effect modifiers biases the subtraction (@eq-limits-bias).
 @exr-limits-logit-compound asks you to compute both for the psoriasis network of @exm-limits-bucher-rd and
-confirm that the total discrepancy exceeds the $-0.06$ of the risk-difference analysis.
+to separate them.
 
 ## Aggregate meta-regression and ecological bias {#sec-limits-ecological}
 
@@ -710,7 +709,7 @@ $$
 $$ {#eq-limits-jensen-gap}
 If $g^{-1}$ is convex the left side is the larger; if $g^{-1}$ is concave the right side is the larger; if
 $g^{-1}$ is affine on the range of $\eta_t$, the two are equal for every $f$. When $g^{-1}$ is strictly
-convex or strictly concave on that range and $X$ is non-degenerate, the inequality is strict.
+convex or strictly concave on that range and $\eta_t(X)$ is non-degenerate, the inequality is strict.
 :::
 
 ::: {.proof}
@@ -972,10 +971,10 @@ $$
 \bigl[\Phi^{-1}(\bar\mu_{1j})-\Phi^{-1}(\bar\mu_{0j})\bigr]-\tilde d_{10(\mathcal P_j)}
 =\bigl[\Phi^{-1}(\bar\mu_{1j})-\mathbb E_{f_j}\eta_1\bigr]-\bigl[\Phi^{-1}(\bar\mu_{0j})-\mathbb E_{f_j}\eta_0\bigr],
 $$
-and each bracket is, up to sign, the arm-level gap between $g$ applied to the aggregate mean and the
-average of $g$ applied pointwise, that is the arm-level Jensen gap of @lem-limits-aggregation-jensen and
-the non-collapsibility gap of @def-non-collapsibility for that arm. The contrast-level gap is their
-difference, and since it equals $(c-\gamma)+(b_2-\beta_2)\bar x_j$, its slope in $\bar x_j$ is exactly the
+and, since $\mathbb E_{f_j}\eta_t=\eta_t(\bar x_j)=g(g^{-1}(\eta_t(\bar x_j)))$, each bracket equals
+$g(\bar\mu_{tj})-g(g^{-1}(\eta_t(\bar x_j)))$: the arm-level ecological bias @eq-ecological-bias of
+@lem-limits-aggregation-jensen carried to the link scale. The contrast-level gap, which is the
+non-collapsibility gap of @def-non-collapsibility, is their difference, and since it equals $(c-\gamma)+(b_2-\beta_2)\bar x_j$, its slope in $\bar x_j$ is exactly the
 coefficient-level ecological bias $b_2-\beta_2$ of @eq-limits-coef-eb. $\square$
 :::
 
@@ -1036,9 +1035,10 @@ re-expressing each trial's conditional contrast as an average against the *targe
 $f_{*}$ rather than the trial's own. Two ingredients are needed to perform that re-expression: the
 conditional contrast function $\tau^g_{tC}(\cdot)$, which is the effect-modification structure of the
 treatment, and the target distribution $f_{*}$. The ecological-bias theorem (@thm-ecological-norecovery)
-says that the first ingredient cannot be recovered from aggregate data alone, because aggregating a
-nonlinear link over a covariate distribution destroys exactly the within-trial information that pins down
-the interaction slope $\beta_2$. The remedy must therefore (i) estimate $\tau^g_{tC}(\cdot)$, and in
+says that the first ingredient cannot in general be recovered from aggregate data alone, because
+aggregating a nonlinear link over a covariate distribution mixes the interaction slope $\beta_2$ with
+within-trial moments that the summaries do not report (the log link with normal covariates is a notable
+exception, @exr-limits-jensen-sign). The remedy must therefore (i) estimate $\tau^g_{tC}(\cdot)$, and in
 particular its effect-modification slope, from individual patient data in at least one trial, and (ii)
 integrate the resulting individual model over the target covariate distribution, never substituting the
 target mean into the individual model, since by @lem-limits-aggregation-jensen that substitution is itself
@@ -1061,13 +1061,17 @@ data it needs.
 
 - **Matching-adjusted indirect comparison** (Chapter 18) reweights the IPD trial's individuals so that
   their weighted covariate moments match the aggregate trial's, then forms the contrast on the reweighted
-  sample. The weights perform the integration against $f_{*}$ implicitly; the effective sample size
+  sample. The weights stand in for the density ratio of the target to the IPD population, which suffices
+when the conditional contrast is linear in the matched covariate moments (Chapter 18); the effective
+sample size
   (@thm-cauchy-schwarz-exp, the Cauchy-Schwarz bound on $(\sum w_i)^2/\sum w_i^2$) measures how much
   precision the reweighting costs. *Data needed:* IPD in one study and aggregate covariate moments in the
   target.
 - **Simulated treatment comparison** (Chapter 19) fits the conditional outcome model $\mu_t(\cdot)$ on the
-  IPD trial and then evaluates it at the aggregate trial's covariate distribution, integrating the model
-  rather than plugging in the mean, which is the correct response to @lem-limits-aggregation-jensen. *Data
+  IPD trial and predicts in the aggregate trial's population. Its original form plugs the covariate mean
+  into the model, which @lem-limits-aggregation-jensen shows is biased under a nonlinear link; its
+  marginal form integrates the model over the target covariate distribution, which is the correct
+  response. *Data
   needed:* an IPD-fitted outcome model plus the target covariate summaries or distribution.
 - **Multilevel network meta-regression** (Chapter 20) writes the aggregate likelihood as the exact
   integral of the individual model over the within-study covariate distribution, $\bar\mu_{tj}=\int g^{-1}(\eta_t(x))f_j(x)\,dx$,
@@ -1096,11 +1100,11 @@ mechanism that only imbalanced effect modifiers, not prognostic variables, bias 
 (@cor-limits-pv-no-bias) is the anchored-cancellation result whose algebraic core is machine-checked in the
 Coq development as `anchored_PV_cancellation` in `theories/EffectModifiers.v`; the same file's
 `not_EM_does_not_imply_not_PV` underwrites the EM-versus-PV distinction of @thm-emcoll-em-pv-distinct used
-here. The identification of conditional constancy with the shared effect modifier assumption of
-@phillippo2016tsd18 is the bridge from the book's estimand language to the trial-methodology literature.
+here. Conditional constancy of relative effects is the name used by @phillippo2016tsd18 for the assumption of
+anchored population adjustment.
 
-Ecological bias is the classical ecological fallacy of @phillippo2020mlnmr in the indirect-comparison
-setting; the closed-form probit shrinkage @eq-limits-b2 is the Gaussian-integration identity that makes
+Ecological bias is the classical ecological fallacy of @robinson1950, analyzed in the indirect-comparison
+setting by @phillippo2020mlnmr; the closed-form probit shrinkage @eq-limits-b2 is the Gaussian-integration identity that makes
 multilevel network meta-regression analytically tractable for the probit link, and the general statement
 that aggregating a nonlinear link is not the link of the aggregate is the motivation for ML-NMR's
 integration step. The Gaussian probit integral @eq-limits-probit-integral is classical; the proof by an
@@ -1112,14 +1116,7 @@ requirement of a population-adjusted comparison. The definition of ecological bi
 is given here for the book; it specializes the epidemiological notion to the affine-linear-predictor
 setting used throughout Parts IV and V.
 
-The chapter owns the slugs `thm-failure-of-bucher` (catalogue E.3) and `def-ecological-bias` (new). The
-pedagogical additions of this revision introduce the running example @exm-limits-psoriasis, the
-binary-covariate special case @prp-limits-binary-bias with @eq-limits-binary-bias, the coefficient-level
-ecological bias @eq-limits-coef-eb, and the unifying @prp-limits-eco-noncollapse; none renames an existing
-label. The symbols $\tilde d_{ab(\mathcal P)}$ (average-conditional effect) and
-$\Delta^{\mathrm{Cond},g}_{AB}(\mathcal P^{*})$ (target average-conditional contrast) are used as in
-@def-conditional-marginal-contrast and @eq-limits-target; they are proposed additions to the notation
-chapter. The worked examples are self-contained and hand-verifiable; the probit example doubles as the
+The worked examples are self-contained and hand-verifiable; the probit example doubles as the
 simplest exact instance of the integral that Chapter 20 computes numerically in general.
 
 ## Exercises {#sec-limits-exercises}
@@ -1137,8 +1134,8 @@ modified by prior exposure; (b) without computing the full bias, use the binary 
 :::
 
 ::: {#exr-limits-interpret-se}
-**(Interpretation.) A narrow interval is not a safe interval.** A colleague reports an indirect
-$A$-versus-$B$ odds ratio of $1.08$ with a $95\%$ confidence interval of $(1.02,1.14)$ and concludes that
+**(Interpretation.) A narrow interval is not a safe interval.** For an unfavorable outcome, a colleague
+reports an indirect $A$-versus-$B$ odds ratio (odds on $B$ over odds on $A$) of $1.08$ with a $95\%$ confidence interval of $(1.02,1.14)$ and concludes that
 $B$ is worse than $A$. Explain, citing the mechanism of @thm-failure-of-bucher and the warning that the
 standard error is silent, why this narrow interval does not establish that the point estimate is unbiased.
 Name the one thing you would inspect to judge the risk of bias, and explain why, in the minimal anchored
@@ -1165,33 +1162,36 @@ $\sigma^2\to0$ recovers $\beta_2$ and why that limit is unattainable in any real
 
 ::: {#exr-limits-jensen-sign}
 **(Computation.) Sign of the aggregation gap.** For the log link, $g(\mu)=\log\mu$ and
-$g^{-1}(\eta)=e^{\eta}$, show that the arm-level ecological bias @eq-ecological-bias is always negative (the
-plug-in arm mean understates the aggregate mean) for any non-degenerate covariate, and compute it exactly
-when $\eta_t(X)$ is normal with mean $m$ and variance $v$. (Hint: $\mathbb E[e^{\eta}]=e^{m+v/2}$ by the
-lognormal mean; compare with $e^{m}$.) Relate the multiplicative factor $e^{v/2}$ to the shrinkage factor
-of @eq-limits-b2.
+$g^{-1}(\eta)=e^{\eta}$, show that the arm-level ecological bias @eq-ecological-bias is negative (the
+plug-in arm mean understates the aggregate mean) whenever $\eta_t(X)$ is non-degenerate, and compute it
+exactly when $\eta_t(X)$ is normal with mean $m$ and variance $v$. (Hint: $\mathbb E[e^{\eta}]=e^{m+v/2}$ by
+the lognormal mean; compare with $e^{m}$.) Then take $\eta_t(x)=a_t+\rho_t x$ and
+$X\sim\mathcal N(\bar x_j,\sigma^2)$ as in @thm-ecological-norecovery, and show that the aggregate log
+contrast $\log\bar\mu_{1j}-\log\bar\mu_{0j}$ has slope exactly $\beta_2=\rho_1-\rho_0$ in $\bar x_j$: unlike
+the probit, the log link shifts the intercept by $(\rho_1^2-\rho_0^2)\sigma^2/2$ but does not attenuate the
+slope.
 :::
 
 ::: {#exr-limits-zero-bias-trap}
-**(Interpretation and proof.) A nonzero imbalance with zero bias.** Construct conditional contrasts
-$\tau_{AC}(\cdot)$ on a binary covariate and prevalences $p_{AC}\neq p_{*}$ such that $X$ is a genuine
-effect modifier of $A$ versus $C$ yet the contribution $b_{AC}$ in @eq-limits-bias is exactly zero. (Hint:
-by @eq-limits-binary-bias, $b_{AC}=s_{AC}(p_{AC}-p_{*})$; a jump $s_{AC}\neq0$ can still give $b_{AC}=0$
-only if the prevalence difference vanishes, so revisit the hint: instead make the two population *means* of
-$\tau_{AC}$ coincide by a different route, using a covariate with more than two levels.) Explain why this
-does not contradict @thm-failure-of-bucher(2), and connect your example to the distinction between a
-class-wise and a contrast-wise necessity statement.
+**(Interpretation and proof.) A nonzero imbalance with zero bias.** (a) Using @eq-limits-binary-bias,
+show that for a binary effect modifier the contribution $b_{AC}$ in @eq-limits-bias is zero only if
+$p_{AC}=p_{*}$. (b) For a three-level covariate $X\in\{0,1,2\}$, construct conditional contrasts
+$\tau_{AC}(\cdot)$ that genuinely vary and distributions $f_{AC}\neq f_{*}$ with $b_{AC}=0$. (c) Explain
+why this does not contradict @thm-failure-of-bucher(2), which asserts only that *some* pair of
+distributions gives a nonzero bias.
 :::
 
 ::: {#exr-limits-logit-compound}
 **(Challenge.) Compounding with non-collapsibility.** Reconsider @exm-limits-bucher-rd but report the
 comparison on the logit (log odds-ratio) scale instead of the risk-difference scale, using the same stratum
 risks. Compute each trial's *marginal* log odds-ratio
-$d_{tC(\mathcal P_j)}=\operatorname{logit}(\bar\mu_t)-\operatorname{logit}(\bar\mu_C)$ from the marginalized
+$d_{tC(\mathcal P_j)}=\operatorname{logit}(\bar\mu_C)-\operatorname{logit}(\bar\mu_t)$ from the marginalized
 arm risks, the resulting Bucher estimand, and the target *average-conditional* log odds-ratio. Show that the
-total discrepancy now exceeds the $-0.06$ of the risk-difference analysis, and identify the two additive
-sources, the differential-effect-modification bias of @eq-limits-bias and the non-collapsibility gap of
-@prp-limits-collapse-link(3). (Hint: compute the marginalized arm risks first, for example
+total discrepancy is about $-0.197$ on the log-odds scale, and split it exactly into the
+effect-modification bias of @eq-limits-bias (about $-0.217$; note that on this scale $X$ also modifies $B$
+versus $C$) and the difference of the two trials' non-collapsibility gaps
+$d_{tC(\mathcal P_{tC})}-\tilde d_{tC(\mathcal P_{tC})}$ of @prp-limits-collapse-link(3) (about
+$+0.021$). (Hint: compute the marginalized arm risks first, for example
 $\bar\mu_C=(1-p)\mu_C(0)+p\,\mu_C(1)$ in each trial, then take logits; the surcharge illustration of
 @sec-limits-surcharge is the same computation in miniature.)
 :::

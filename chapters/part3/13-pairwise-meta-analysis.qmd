@@ -52,10 +52,11 @@ too narrow when the trials are few.
 hazard ratio itself; it is the *logarithm* of one, or a raw mean difference. There are two reasons, one
 statistical and one mathematical. Statistically, a log odds ratio is far closer to normally distributed,
 and its confidence interval far more symmetric, than the odds ratio itself, so the Gaussian machinery
-below is trustworthy on the log scale and not on the ratio scale. Mathematically, the odds ratio and
-hazard ratio are *non-collapsible*: the population-average ratio is not the average of subgroup ratios,
-so averaging ratios directly does not even estimate a well-defined effect (@def-collapsibility,
-@thm-noncollapsibility-or-hr). Throughout the chapter $\theta$ is a *contrast* on the linear-predictor
+below is trustworthy on the log scale and not on the ratio scale. Mathematically, contrasts on the log
+scale add along a chain of comparisons ($\log$ of a product of ratios is a sum), which is what the
+indirect and network methods of Chapters 14 and 15 require. (A separate issue, taken up in Chapter 11, is
+that odds ratios and hazard ratios are non-collapsible, so each trial's log odds ratio is tied to that
+trial's population; @def-collapsibility, @thm-noncollapsibility-or-hr.) Throughout the chapter $\theta$ is a *contrast* on the linear-predictor
 scale (the "link scale"); the word contrast simply means a difference of two effects, here two linear
 predictors. Keep in mind that the pooled $\theta$ inherits whatever scale the inputs were on, and that
 this choice of scale is exactly what the later ITC chapters must respect.
@@ -501,8 +502,8 @@ $c$ depends only on the known weights, a fact we exploit repeatedly below.
 ## The $I^2$ statistic {#sec-ma-isquared}
 
 Cochran's $Q$ has a defect as a description of heterogeneity: its size grows with the number of studies,
-so a large $Q$ may reflect many studies rather than severe heterogeneity. Higgins and Thompson proposed
-a scale-free and dimension-free summary.
+so a large $Q$ may reflect many studies rather than severe heterogeneity. @higgins2002 proposed a
+scale-free and dimension-free summary.
 
 **From detection to description to estimation.** The next three sections form one arc, and it helps to
 name the three roles up front. $Q$ answers yes or no; $I^2$ puts the answer on a $0$ to $100\%$ scale
@@ -609,7 +610,7 @@ the one on which the later ITC methods hinge.
 | Weight for trial $i$ | $w_i = 1/s_i^2$ | $\tilde w_i = 1/(s_i^2 + \tau^2)$ |
 | Meaning of the summary | the effect, estimated more precisely | the average effect across the population of trial settings |
 | When heterogeneity is large | untenable; interval too narrow | weights flatten, interval widens honestly |
-| Why it matters for ITC | licenses transitivity: one effect transports | forces the question *which population's* effect (Chapters 12, 15) |
+| Why it matters for ITC | assumes the effect is the same in every trial population, the within-comparison analogue of transitivity (Chapter 14) | forces the question *which population's* effect (Chapters 12, 15) |
 
 The mathematical content of the right-hand column is one sentence: adding $\tau^2$ to every $s_i^2$
 shrinks the weights toward equality, so a single dominant precise trial no longer controls the pooled
@@ -1002,8 +1003,8 @@ so Hartung-Knapp rescales the Wald variance by the data-driven factor $q$ and wi
 $z$ to $t_{k-1}$. When the random-effects model fits, $q \approx 1$ and the adjustment is mild for large
 $k$; for small $k$ the wider $t$ quantile restores coverage that the Wald interval loses. The factor $q$
 can fall below $1$, occasionally yielding a Hartung-Knapp interval narrower than the Wald interval; a
-common conservative safeguard takes $\max\{1, q\}$. The method is recommended whenever $k \le 10$
-(@dias2018nma). $\blacktriangleleft$
+common conservative safeguard takes $\max\{1, q\}$. Simulation studies (@inthout2014) support using it
+routinely when trials are few. $\blacktriangleleft$
 :::
 
 ::: {.remark}
@@ -1192,8 +1193,8 @@ hence $k - 2$ degrees of freedom. $\square$
 
 ::: {.remark}
 The identity (ii) is the conceptual content of the test. A nonzero intercept $\alpha$ means the effect
-estimate $\hat\theta_i$ varies systematically with its standard error $s_i$: large, imprecise studies
-sit at a different effect level than small, precise ones, which is exactly funnel asymmetry. The weighted
+estimate $\hat\theta_i$ varies systematically with its standard error $s_i$: small, imprecise studies
+sit at a different effect level than large, precise ones, which is exactly funnel asymmetry. The weighted
 intercept $\hat\beta$, the extrapolation of the effect to $s_i = 0$ (infinite precision), is the
 "precision-effect test" estimate of the bias-adjusted effect. Egger's test has low power for $k < 10$
 studies and conflates genuine small-study reporting effects with ordinary between-study heterogeneity,
@@ -1316,15 +1317,13 @@ method-of-moments heterogeneity estimator @eq-dl is from @dersimonian1986; we sh
 asymptotic statement by proving exact unbiasedness of the untruncated estimator (@thm-dersimonian-laird),
 which holds under second moments alone.
 
-Several attributions rely on sources not yet in the bibliography, listed with full data in the work log
-for the orchestrator to merge: Higgins and Thompson (2002) for $H^2$ and $I^2$ (@def-i-squared,
-@prp-i2-interpretation); Hartung (1999), Hartung and Knapp (2001), and Sidik and Jonkman (2002) for the
-$t$ adjustment (@thm-hartung-knapp), with IntHout et al. (2014) for its small-$k$ recommendation;
-Viechtbauer (2005) and the `metafor` package (Viechtbauer 2010) for the REML estimating equation and its
-iterative solution (@thm-reml-tau2); Egger et al. (1997) for the regression test (@thm-egger), with
-Sterne and Egger and the PET-PEESE literature for the complements noted there; Gelman (2006) for
-half-normal and half-$t$ priors on $\tau$; and Veroniki et al. (2016) for the modern comparison of
-$\tau^2$ estimators.
+Further sources: @higgins2002 for $H^2$ and $I^2$ (@def-i-squared, @prp-i2-interpretation);
+@hartung1999, @hartung2001, and @sidik2002 for the $t$ adjustment (@thm-hartung-knapp), with
+@inthout2014 for its small-$k$ performance; @viechtbauer2005 and the `metafor` package
+(@viechtbauer2010) for the REML estimating equation and its iterative solution (@thm-reml-tau2);
+@egger1997 for the regression test (@thm-egger), with @sterne2001 and @stanley2014 (PET-PEESE) for the
+complements noted there; @gelman2006 for half-normal and half-$t$ priors on $\tau$; and @veroniki2016
+for a modern comparison of $\tau^2$ estimators.
 
 The proofs lean on Part I: the Gauss-Markov theorem and the linear-model machinery (@thm-ols-blue,
 @def-linear-model, @thm-ttest, @thm-sigma2-unbiased, @thm-rss-chisq, @lem-mvn-affine-closure) carry the

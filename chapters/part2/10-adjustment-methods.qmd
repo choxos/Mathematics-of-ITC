@@ -48,7 +48,9 @@ the within-study engine of every population-adjusted indirect comparison studied
 later in this book. Matching-adjusted indirect comparison (MAIC) is a weighting
 method in the IPW family; simulated treatment comparison (STC) is a
 standardization method in the outcome-regression family; and multilevel network
-meta-regression (ML-NMR) plays the role of the combined, doubly robust estimator.
+meta-regression (ML-NMR) is also an outcome-regression method, fitted across a
+network and integrated over each target population. None of the three is doubly
+robust.
 Mastering the four estimators here is therefore mastering the mathematical core
 of population adjustment. The development follows @rosenbaum1983 for the
 propensity score and @hernan2020whatif for the estimators, and corresponds to
@@ -553,9 +555,10 @@ possible covariate information while still removing confounding.
 matching method in the book. It says you may replace a thirty-variable balancing
 problem with a one-variable one, matching or weighting on the single number
 $e(X)$ instead of on all of $X$, without giving up the removal of measured
-confounding. MAIC rests on exactly this idea: it never balances covariates one at
-a time; it builds weights from a single score and balances the summary. Part (2),
-"coarsest," is what guarantees this scalar is enough rather than a lossy shortcut.
+confounding. MAIC rests on the same idea: its weight $w(x)=\exp(\alpha+\boldsymbol\beta^\top x)$
+is a function of a single scalar score, the log odds of belonging to the target
+population rather than the IPD trial (Chapter 18). Part (2), "coarsest," is what
+guarantees this scalar is enough rather than a lossy shortcut.
 
 The balancing property concerns only $(X,T)$. The result that powers adjustment
 is that balancing transfers ignorability from $X$ to the score: if treatment is
@@ -751,9 +754,10 @@ $\hat e$ is the same phenomenon the overlap discussion below quantifies.
 ### Stabilized weights {#sec-adj-stabilized}
 
 The raw Horvitz-Thompson estimator divides by $\hat e(X_i)$, which can be tiny,
-producing a few enormous weights and a large variance. A first repair multiplies
-the weights by a constant, the marginal treatment probability, which leaves the
-estimand unchanged but rescales the weights to average one.
+producing a few enormous weights and a large variance. Stabilization multiplies
+each arm's weights by a constant, the marginal probability of that arm, so that
+the weights average one; an estimator normalized by its weight total (the Hájek
+form below) is unchanged by the constant.
 
 ::: {#lem-stabilized-weights}
 ## Stabilized and normalized weights
@@ -795,16 +799,17 @@ by side.
 | Scheme | Treated weight | Mean weight | Finite-sample variance | Used in practice? |
 |:---|:---|:---:|:---|:---:|
 | Raw (Horvitz-Thompson) | $T/\hat e(X)$ | $1$ at truth | largest; a few tiny $\hat e$ dominate | rarely alone |
-| Stabilized | $T\,\hat p_1/\hat e(X)$ | $1$ | smaller; rescaled by $\hat p_1=\widehat{P(T=1)}$ | in marginal structural models |
-| Hájek (normalized) | $T/\hat e(X)$, then divide the estimator by $\sum_i T_i/\hat e(X_i)$ | $1$ by construction | smallest; self-correcting denominator | yes, the default and the MAIC form |
+| Stabilized | $T\,\hat p_1/\hat e(X)$ | $1$ | unchanged once normalized; the constant $\hat p_1=\widehat{P(T=1)}$ cancels | in marginal structural models with non-constant numerators |
+| Hájek (normalized) | $T/\hat e(X)$, then divide the estimator by $\sum_i T_i/\hat e(X_i)$ | $1$ by construction | usually smaller than raw; self-correcting denominator | yes, the default and the MAIC form |
 
-: Raw, stabilized, and Hájek (normalized) weights. All three leave the IPW estimand unchanged; they differ only in finite-sample variance. {#tbl-adj-weights}
+: Raw, stabilized, and Hájek (normalized) weights. Raw and Hájek weights target the same estimand with different finite-sample variance; stabilizing by a constant recenters the weights at one and changes nothing once the estimator is normalized. {#tbl-adj-weights}
 
 *Reader translation.* All three rows estimate the *same* quantity, the treated
 mean $\psi_1$; they differ only in how noisy the estimate is in a finite sample.
 Raw weights can be dominated by one patient with a tiny $\hat e$. Stabilized
-weights multiply by the marginal treatment probability, shrinking the spread
-without touching the target. The Hájek estimator divides by the sample sum of the
+weights multiply each arm by a constant, which recenters the weights at one; in a
+normalized estimator the constant cancels, and stabilization pays off only in
+marginal structural models whose weight numerators vary with treatment or time. The Hájek estimator divides by the sample sum of the
 weights, so if the weights happen to come out large by chance the denominator
 grows to match and cancels the accident. That self-correction is why the Hájek
 form is the practical default.
@@ -814,10 +819,12 @@ the method a health researcher runs. MAIC is IPW with two specializations: the
 propensity model is reparametrized as
 $w(x)=\exp(\alpha+\boldsymbol{\beta}^\top x)$, an unnormalized weight rather than a
 fitted logistic probability, and the weights are normalized to the Hájek form so
-they average one. Everything proved here, unbiasedness of the reweighted mean and
-the overlap penalty below, transfers verbatim to MAIC; the MAIC chapter only adds
-a recipe for choosing $\alpha$ and $\boldsymbol{\beta}$ by matching covariate
-moments to the target population.
+they average one. The role of "treated versus control" is played by "target
+population versus IPD trial": the weight estimates the odds of target-population
+membership, not the inverse probability of treatment. With that substitution the
+identities proved here (unbiasedness of the reweighted mean, the overlap penalty
+below) have exact MAIC analogues, which Chapter 18 proves together with the
+moment-matching recipe that chooses $\alpha$ and $\boldsymbol{\beta}$.
 
 ### Variance and the cost of poor overlap {#sec-adj-overlap}
 
@@ -1011,8 +1018,8 @@ is licensed by @thm-ps-sufficiency: pairs with equal propensity scores are
 exchangeable in treatment, so their outcome difference is an unbiased CATE
 estimate at that score. One-to-one propensity matching of treated to control
 units targets the treatment effect on the treated rather than the ATE, because it
-reweights toward the treated covariate distribution; this distinction returns in
-the anchored-versus-unanchored discussion of population adjustment.
+reweights toward the treated covariate distribution; this choice of target
+population returns in every population-adjustment method.
 :::
 
 ### The estimand depends on whom you average over: ATE versus ATT {#sec-adj-att}
@@ -1046,13 +1053,15 @@ company.
 indirect-comparison literature. Choosing between @eq-adj-att and
 @eq-adj-ate-target, that is, choosing which distribution $dP(x)$ sits inside the
 average, is a choice of target population dressed in estimand language. When later
-chapters debate which population a MAIC or an STC estimates, and split anchored
-from unanchored comparisons, they are debating exactly this choice.
+chapters debate which population a MAIC or an STC estimates (the aggregate-data
+trial's, the IPD trial's, or a decision population), they are debating exactly this
+choice. It is a different distinction from anchored versus unanchored, which asks
+whether the two trials share a common comparator arm.
 
 *From standardization to STC.* STC is this estimator with the outcome regression
 fit on the trial that has individual patient data and its predictions averaged
-over the aggregate covariate summary of the comparator trial; the ATE-versus-ATT
-choice above is what becomes the anchored-versus-unanchored choice there.
+over the covariate distribution of the aggregate-data trial; the choice of
+averaging distribution above is what fixes the population STC reports in.
 
 ## Augmented IPW and double robustness {#sec-adj-aipw}
 
@@ -1183,9 +1192,8 @@ $\psi_1^{\mathrm{AIPW}}=\psi_1=\mathbb{E}[Y(1)]$. The control and contrast
 statements follow by symmetry and linearity. $\square$
 :::
 
-*Why this matters.* @thm-aipw-double-robust is the reason AIPW, and its network
-descendant ML-NMR, are the estimators of choice when one is unsure which model to
-trust. In an indirect comparison you rarely know whether the treatment-selection
+*Why this matters.* @thm-aipw-double-robust is the reason AIPW is the estimator
+of choice within a study when one is unsure which model to trust. In an indirect comparison you rarely know whether the treatment-selection
 model or the outcome model is the better specified; double robustness says you do
 not have to choose, because being right about *either* one suffices. That is the
 precise content of the "insurance property" promised in the introduction: one
@@ -1234,7 +1242,7 @@ $(e,m_1)$ is zero, and likewise with respect to $m_1^\ast$, so first-order
 nuisance error does not propagate to first-order error in the estimate. This
 "rate double robustness" lets one plug in slowly converging machine-learning fits
 for $\hat e,\hat m_1$ and still obtain a $\sqrt n$-consistent, asymptotically
-normal $\hat\tau^{\mathrm{AIPW}}$. Exercise @exr-neyman-orthogonality asks for the
+normal $\hat\tau^{\mathrm{AIPW}}$. @exr-neyman-orthogonality asks for the
 derivative computation.
 :::
 
@@ -1255,22 +1263,19 @@ and asymptotically normal as long as the *product* of the two convergence rates
 beats $1/\sqrt n$.
 
 *A practitioner's question, answered.* Do MAIC, STC, and ML-NMR need cross-fitting
-(sample splitting) in practice? For the classical implementations, no: MAIC and
-STC fit low-dimensional parametric nuisances (a logistic weight model, a linear or
-generalized linear outcome model), for which the technical Donsker-type conditions
-hold and orthogonality already delivers valid inference without splitting.
-Cross-fitting becomes relevant only if one deliberately swaps in high-complexity
-machine-learning nuisances, the regime the orthogonality theory was built for;
-ML-NMR's Bayesian fit sidesteps the issue by propagating nuisance uncertainty
-through the posterior.
+(sample splitting) in practice? For the classical implementations, no. MAIC and
+STC fit low-dimensional parametric models (a log-linear weight model, a linear or
+generalized linear outcome model), for which the standard M-estimation theory of
+Chapter 5 already delivers valid inference; ML-NMR is a Bayesian parametric model.
+Cross-fitting becomes relevant only if one swaps in high-complexity
+machine-learning nuisances inside an orthogonal estimator such as AIPW, the regime
+the orthogonality theory was built for.
 
-*From AIPW to ML-NMR (a preview).* Read forward, AIPW is the template for ML-NMR.
-ML-NMR fits an outcome regression surface across a network of studies and
-integrates it over each target population's covariate distribution; the sense in
-which it inherits AIPW's doubly robust "insurance" is made precise only in the
-ML-NMR chapters, so take the analogy here as a signpost, not a finished theorem.
-The efficiency ceiling of the next section, however, is shared by all of them:
-MAIC, STC, and ML-NMR each face the same variance floor set by overlap.
+*A caution on the variance floor.* The efficiency bound of the next section holds
+for estimators that assume no more than (A). A method that imposes a parametric
+outcome model, as STC and ML-NMR do, can report a smaller variance than that
+bound, but only by extrapolating through the model into regions of poor overlap;
+the bound then measures what the data alone can support.
 
 ## The efficient influence function and the variance bound {#sec-adj-eif}
 
@@ -1618,9 +1623,11 @@ Run the four calculations on this table.
 - **G-computation.** For every patient $\hat m_1(X_i)-\hat m_0(X_i)=1$, so the
   average is $\hat\tau^{\mathrm{OR}}=1.0$.
 - **Effective sample size.** The treated weights are $\{5,1.67,1.67,1.67\}$, so
-  $(\sum w)^2/\sum w^2=10^2/(25+3\cdot 1.67^2)\approx 100/33.3=3.0$: three
-  patients' worth of information out of the ten, a $30\%$ effective fraction that
-  matches the population $1/\mathbb{E}[1/e(X)]=0.30$ computed earlier. The lone
+  $(\sum w)^2/\sum w^2=10^2/(25+3\cdot 1.67^2)\approx 100/33.3=3.0$: about three
+  patients' worth of information from the four treated patients. Relative to the
+  whole sample of ten this is $30\%$, matching the population fraction
+  $1/\mathbb{E}[1/e(X)]=0.30$ of @prp-ipw-variance, which is also measured against
+  the whole sample. The lone
   tiny propensity $\hat e(0)=0.2$ is what shrinks it.
 
 A caution the finite table makes vivid: these numbers landed on $\tau=1$ exactly
@@ -1720,9 +1727,10 @@ Let $sw=T\,p_1/e(X)+(1-T)\,p_0/(1-e(X))$ with $p_1=P(T=1)$, $p_0=P(T=0)$. (a)
 Show $\mathbb{E}[sw\mid X]=p_1+p_0=1$ pointwise in $X$, hence $\mathbb{E}[sw]=1$.
 (b) In the population of @exm-adjustment-worked, compute the four stabilized
 weight values (one per $(T,x)$ cell) and verify directly that their
-$P$-weighted average is $1$. (c) Explain in one sentence why stabilized weights
-have smaller variance than the raw weights $T/e(X)$ while leaving the IPW estimand
-unchanged.
+$P$-weighted average is $1$. (c) Show that
+$\operatorname{Var}(T\,p_1/e(X))=p_1^2\operatorname{Var}(T/e(X))$, and explain in one
+sentence why this smaller spread nonetheless leaves the Hájek estimate of
+$\mathbb{E}[Y(1)]$ unchanged.
 :::
 
 ::: {#exr-balancing-functions}

@@ -582,10 +582,10 @@ $\mathbb{E}[m(X)]=\mathbb{E}Y$. Summing gives @eq-total-variance. $\square$
 
 ::: {.remark}
 **Why this matters.** The law of total variance splits the variability of an outcome into a part *within*
-covariate strata and a part *between* them. For a hospital's monthly count of deaths it separates
-within-ward chance fluctuation from genuine between-ward differences in patient risk; the mixed-count
-likelihoods of Part V use exactly this split to attach the right variance to an aggregate event count,
-rather than the too-small variance a single binomial would suggest.
+covariate strata and a part *between* them. For a binary outcome with individual risk $p(X)$ it reads
+$\bar p(1-\bar p)=\mathbb{E}[p(X)(1-p(X))]+\mathrm{Var}(p(X))$ with $\bar p=\mathbb{E}[p(X)]$: the
+between-patient spread of risk is the gap between the binomial variance and the smaller Poisson binomial
+variance of an event count whose individual risks are fixed (@def-poisson-binomial, Chapter 21).
 :::
 
 ## Independence and conditional independence {#sec-independence}
@@ -677,7 +677,8 @@ $X,Y,Z,W$:
 - **(G2) Decomposition:** $X\perp (Y,W)\mid Z\Rightarrow X\perp Y\mid Z$.
 - **(G3) Weak union:** $X\perp (Y,W)\mid Z\Rightarrow X\perp Y\mid (Z,W)$.
 - **(G4) Contraction:** $\bigl(X\perp Y\mid Z\bigr)\wedge\bigl(X\perp W\mid (Z,Y)\bigr)\Rightarrow X\perp (Y,W)\mid Z$.
-- **(G5) Intersection:** if the joint density of $(X,Y,Z,W)$ is strictly positive on its support, then
+- **(G5) Intersection:** if the joint density of $(X,Y,Z,W)$ is strictly positive on the product of the
+  marginal supports (every combination of values has positive density), then
   $\bigl(X\perp Y\mid (Z,W)\bigr)\wedge\bigl(X\perp W\mid (Z,Y)\bigr)\Rightarrow X\perp (Y,W)\mid Z$.
 
 [machine-checked: `theories/ConditionalIndep.v`, Lemmas `cond_indep_symmetry`,
@@ -730,9 +731,9 @@ $$
 where we recognized $\mathbb{E}[g(Y)\,\mathbb{E}[k(W)\mid Z,Y]\mid Z]=\mathbb{E}[g(Y)k(W)\mid Z]$ by the
 tower property. Since $f,g,k$ were arbitrary bounded measurable functions, $X\perp(Y,W)\mid Z$.
 
-**(G5)** Under strict positivity of the joint density the proof factors the density logarithmically and
-is given in @hernan2020whatif (technical points) and, in full, in Pearl's development of graphical
-models; we cite it rather than reproduce the density bookkeeping. $\square$
+**(G5)** Under strict positivity of the joint density the proof manipulates ratios of conditional
+densities; it is given in @pearl1988, Chapter 3, and we cite it rather than reproduce the density
+bookkeeping. $\square$
 :::
 
 ::: {.remark}
@@ -746,16 +747,15 @@ variables.
 :::
 
 This is result A.6. The first four axioms hold with no further assumption; only intersection requires
-positivity, which in the indirect-comparison setting is exactly the overlap condition that the target
-covariate density be positive wherever the source density is.
+positivity.
 
 ::: {.remark}
 **Why this matters.** These rules are the symbolic engine behind covariate adjustment. The
 propensity-score reduction of Chapter 10, that adjusting for the scalar propensity score suffices whenever
 adjusting for the full covariate vector suffices, is a chain of weak union and contraction applied to
-$T\perp (Y(0),Y(1))\mid X$. The positivity hypothesis on (G5) is the same overlap condition that
-population-adjusted indirect comparison requires: the target covariate density must be positive wherever
-the source density is, or the adjustment is not identified.
+$T\perp (Y(0),Y(1))\mid X$. Positivity conditions of a related kind return in Part II as overlap: to
+carry an effect from a source population to a target, the source covariate density must be positive
+wherever the target density is.
 :::
 
 ## Two fundamental inequalities {#sec-inequalities}
@@ -1711,7 +1711,7 @@ the degenerate case via @lem-normal-uncorrelated-independent and @thm-mvn-condit
 ::: {#exr-graphoid-counterexample}
 ## The need for positivity (starred)
 $\star$ The intersection axiom (G5) of @thm-graphoid-axioms can fail without the positivity hypothesis.
-Construct a joint distribution of binary $(X,Y,Z,W)$, for instance one in which $X=Y$ deterministically
-and $W$ is degenerate, such that $X\perp Y\mid(Z,W)$ and $X\perp W\mid(Z,Y)$ both hold but
+Construct a joint distribution of binary $(X,Y,Z,W)$, for instance one in which $X=Y=W$ are copies of a
+single fair coin and $Z$ is constant, such that $X\perp Y\mid(Z,W)$ and $X\perp W\mid(Z,Y)$ both hold but
 $X\perp(Y,W)\mid Z$ fails. Explain precisely which step of a positivity-based proof breaks down.
 :::

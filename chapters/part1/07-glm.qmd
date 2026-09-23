@@ -378,7 +378,7 @@ and $b''(\theta)=e^\theta=\lambda$, so $V(\mu)=\mu$ and $\mathrm{Var}(Y)=\mu$: v
 
 **Gamma.** For $Y$ gamma with mean $\mu$ and shape $\nu$, density
 $\frac{1}{\Gamma(\nu)}(\nu/\mu)^\nu y^{\nu-1}e^{-\nu y/\mu}$, write the exponent as
-$\frac{y(-1/\mu)+\log\mu}{1/\nu}+(\nu-1)\log y+\nu\log\nu-\log\Gamma(\nu)$. Set $\theta=-1/\mu<0$, so
+$\frac{y(-1/\mu)-\log\mu}{1/\nu}+(\nu-1)\log y+\nu\log\nu-\log\Gamma(\nu)$. Set $\theta=-1/\mu<0$, so
 $b(\theta)=-\log(-\theta)=\log\mu$, $\phi=1/\nu$, $w=1$. Then $b'(\theta)=-1/\theta=\mu$ and
 $b''(\theta)=1/\theta^2=\mu^2$, giving $V(\mu)=\mu^2$ and $\mathrm{Var}(Y)=\mu^2/\nu$: constant
 coefficient of variation. $\blacktriangleleft$
@@ -440,8 +440,11 @@ until then it can be read as "smooth enough." Among all links for a given EDF, o
 The **canonical link** (or natural link) of an EDF is $g_{\mathrm{c}}=(b')^{-1}=\theta(\cdot)$, the
 inverse of the mean map of @thm-glm-mean-variance. It is a valid link function: $b'$ is a strictly
 increasing $C^1$ bijection from $\mathrm{int}\,\Theta$ onto $\mathcal M$ by @thm-glm-mean-variance, so
-$\theta(\cdot)=g_{\mathrm c}$ is a strictly increasing $C^1$ bijection from $\mathcal M$ onto
-$\mathrm{int}\,\Theta$, and it is $C^2$ because $b'$ is $C^2$ with nonvanishing derivative $b''>0$.
+$\theta(\cdot)=g_{\mathrm c}$ is a strictly increasing bijection from $\mathcal M$ onto
+$\mathrm{int}\,\Theta$. It is $C^2$: by @eq-edf-cgf, $b(\theta+t\,a(\phi))=b(\theta)+a(\phi)K_Y(t)$ and
+$K_Y$ is infinitely differentiable near $0$ (@thm-mgf-moments), so $b$ is infinitely differentiable on
+$\mathrm{int}\,\Theta$, and the inverse function theorem applied to $b'$ (with $b''>0$) makes
+$\theta(\cdot)$ infinitely differentiable.
 $\blacktriangleleft$
 :::
 
@@ -475,7 +478,7 @@ the workhorses on which network meta-analysis is built.
 Reading the canonical-link column of the table in @sec-edf confirms the familiar choices: the identity
 link for the normal, the **logit** link $g(\mu)=\log\frac{\mu}{1-\mu}$ for the Bernoulli and binomial,
 the **log** link $g(\mu)=\log\mu$ for the Poisson, and the reciprocal link $-1/\mu$ for the gamma. The
-canonical link is not mandatory, and @sec-links below introduces the probit and complementary log-log
+canonical link is not mandatory, and @sec-other-links below introduces the probit and complementary log-log
 links for binary data, but it confers the analytic and computational simplifications proved in
 @sec-glm-estimation.
 
@@ -1026,7 +1029,9 @@ order: the saturated model, the deviance itself, its nonnegativity, and finally 
 ## Saturated model
 The **saturated model** for responses $y_1,\dots,y_n$ is the GLM with one free mean parameter per
 observation, fitted at $\tilde\mu_i=y_i$ for every $i$, with natural parameter
-$\tilde\theta_i=\theta(y_i)$. It attains the largest log-likelihood achievable by any model in the family
+$\tilde\theta_i=\theta(y_i)$. (When $y_i$ lies on the boundary of $\mathcal M$, such as an observed
+proportion $0$ or $1$ or a count $0$, $\tilde\theta_i$ is infinite and the terms below are defined by
+their limits, with the convention $0\log 0=0$.) It attains the largest log-likelihood achievable by any model in the family
 for the given data, because each term $y_i\theta_i-b(\theta_i)$ in @eq-glm-loglik is maximized over
 $\theta_i$ where its derivative vanishes, $\frac{d}{d\theta_i}\bigl[y_i\theta_i-b(\theta_i)\bigr]=y_i-b'(\theta_i)=0$,
 that is at $b'(\theta_i)=y_i$, i.e. at $\theta_i=\tilde\theta_i$. $\blacktriangleleft$
@@ -1159,7 +1164,7 @@ $\square$
 
 ::: {.remark}
 ## Reading an analysis-of-deviance table
-Theorem @thm-deviance-test licenses the standard workflow: fit a sequence of nested models, tabulate
+@thm-deviance-test licenses the standard workflow: fit a sequence of nested models, tabulate
 their residual deviances, and test each added term by referring the drop in deviance to a chi-square (or
 $F$) distribution on the added degrees of freedom. This is the GLM counterpart of the analysis-of-variance
 $F$-test used for the linear model of Chapter 6: the drop in deviance plays the role of the extra
@@ -1305,9 +1310,8 @@ so the odds ratio is non-collapsible, proving the negative half of @def-non-coll
 odds ratio is *attenuated* toward the null value $1$ relative to the conditional odds ratio $3.5$. This
 direction is not an accident of the chosen numbers: whenever the conditional odds ratio exceeds $1$ and
 the baseline risks genuinely differ across strata, the marginal odds ratio falls strictly between $1$ and
-the conditional value, so it is always pulled toward the null. The general statement, and its proof from
-the convexity of the logit (Jensen's inequality, @thm-jensen), are the content of the starred
-@exr-glm-noncollapse; the mechanism is unpacked in the remark just below. $\blacktriangleleft$
+the conditional value, so it is always pulled toward the null. The general statement and its proof are
+the content of the starred @exr-glm-noncollapse; the mechanism is unpacked in the remark just below. $\blacktriangleleft$
 :::
 
 ::: {.remark}
@@ -1330,23 +1334,22 @@ $\blacktriangleleft$
 ### The hazard ratio, and why this seeds later chapters
 
 The same mechanism afflicts the hazard ratio of survival analysis. A precise treatment requires the
-survival function and the proportional-hazards model, which we develop later, but the statement and its
-cause can be recorded now. If the cause-specific hazard under treatment $t$ in stratum $x$ is
+survival function and the proportional-hazards model, but the statement and its cause can be recorded
+now. If the hazard under treatment $t$ in stratum $x$ is a constant
 $h_t(x)$ with a constant conditional hazard ratio $h_1(x)/h_0(x)\equiv r$, the *marginal* hazard ratio,
 formed from the population-averaged survival functions $\bar S_t(u)=\mathbb E_X[\exp(-\int_0^u h_t(x)\,ds)]$,
 is in general not equal to $r$ and moreover drifts with time $u$. The reason is again a nonlinear
 averaging: survival is an exponential functional of the integrated hazard, and the population average of
 an exponential is not the exponential of the average. Concretely, writing the integrated hazard
 $H_t(x,u)=\int_0^u h_t(x)\,ds$, Jensen's inequality (@thm-jensen) applied to the strictly convex map
-$v\mapsto e^{-v}$ gives
+$v\mapsto e^{-v}$ gives, whenever $H_t(X,u)$ is not almost surely constant,
 $$
 \bar S_t(u)=\mathbb E_X\!\bigl[e^{-H_t(X,u)}\bigr]\;>\;e^{-\mathbb E_X[H_t(X,u)]},
 $$
 so the population survival curve is not the survival curve of the average patient, and the marginal hazard
 $-\tfrac{d}{du}\log\bar S_t(u)$ it induces is not $r$ times any baseline hazard. This subsection is only a
-conceptual preview: the survival function, the integrated hazard, and the proportional-hazards model are
-developed in later chapters, and the full non-collapsibility proof for the hazard ratio is deferred to
-that machinery (flagged again in @sec-glm-notes). Thus the hazard ratio, like the odds ratio, is
+conceptual preview; the non-collapsibility of the hazard ratio is proved with an explicit example in
+Chapter 11 (@sec-emcoll-noncollapse). Thus the hazard ratio, like the odds ratio, is
 non-collapsible; this is exactly why the cloglog GLM of @sec-other-links, which encodes a conditional
 proportional-hazards model, cannot be read marginally without care.
 
@@ -1469,8 +1472,8 @@ mean-difference (identity-link) effect, @prp-collapsibility-rd-rr, has a machine
 the Coq development at `theories/STC.v`, `Lemma STC_collapse_linear`, which proves marginal equals
 conditional for linear models from linearity of expectation alone; the proof there isolates exactly the
 property that the nonlinear logit lacks. The non-collapsibility of the hazard ratio is stated here and
-proved in full once the survival machinery is available; this is the one result of the chapter left as a
-forward reference rather than proved in place.
+proved in Chapter 11 (@sec-emcoll-noncollapse); it is the one result of the chapter left as a forward
+reference rather than proved in place.
 
 ## Exercises {#sec-glm-exercises}
 
@@ -1565,8 +1568,10 @@ $\mu_0(0)\neq\mu_0(1)$. (a) Construct a numerical example, different from @exm-n
 which the marginal odds ratio is strictly between $1$ and $\omega$. (b) Prove in general that, under the
 no-confounding identity of @sec-noncollapsibility and with $\omega>1$ and genuinely unequal baseline
 risks, the marginal odds ratio lies strictly between $1$ and the conditional odds ratio $\omega$;
-conclude that the odds ratio is attenuated toward the null. (Hint: write the marginal odds ratio as a
-function of $\pi$ and use the strict convexity of the logistic transform, i.e. @thm-jensen.)
+conclude that the odds ratio is attenuated toward the null. (Hint: with $W$ the baseline odds
+$\mu_0(X)/(1-\mu_0(X))$, write the marginal odds under an odds multiplier $a$ as
+$A(a)=\mathbb E[aW/(1+aW)]/\mathbb E[1/(1+aW)]$, so the marginal odds ratio is $A(\omega)/A(1)$; show
+that $A$ is strictly increasing and that $A(a)/a$ is strictly decreasing.)
 :::
 
 ::: {#exr-glm-wald-or}

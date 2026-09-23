@@ -165,9 +165,9 @@ chapter requires you to manipulate these objects by hand.
   *Fubini's* theorems are the guarantees that we may swap the order of a double integral (Tonelli for
   nonnegative integrands, Fubini once absolute integrability is checked). *Disintegration* is the formal
   name for "conditional density": it is what makes $p(x,y) = p(x \mid y)\,p(y)$ rigorous in general.
-- A *martingale* (used once, in the de Finetti converse) is a running average or running total that, on
-  average, neither grows nor shrinks given the past; such sequences converge under mild conditions, which
-  is why an empirical frequency settles down to a limit.
+- A *martingale* (used once, in the de Finetti converse) is a sequence whose expected next value, given
+  the information so far, equals its current value; bounded martingales converge, which is why an empirical
+  frequency settles down to a limit.
 - The *kernel* of a density is its shape as a function of the unknown, dropping any constant that does
   not depend on the unknown. Two densities with the same kernel are the same distribution, because the
   constant is forced by the requirement that the density integrate to $1$. We use this constantly:
@@ -230,11 +230,11 @@ from @lem-iid-mixture-exchangeable with $f(x \mid \theta) = \theta^x (1-\theta)^
 of @eq-definetti depends on $(x_1, \dots, x_n)$ only through $s$, which is permutation-invariant. The
 converse, that every infinitely exchangeable binary law admits the representation @eq-definetti with a
 unique mixing measure $\Pi$, is the substantive half of the theorem; it is proved by showing that the
-empirical frequencies $\frac{1}{n}\sum_{i\le n} X_i$ form a bounded martingale (a running average that,
-given the past, neither drifts up nor down) and therefore converge almost surely to a limit $\Theta$
-whose distribution is the required $\Pi$; the hidden parameter is thus literally the long-run frequency
-of successes, and the finite-dimensional probabilities match @eq-definetti in the limit. We cite this converse to the standard literature
-(Hewitt and Savage 1955; see the work log) rather than reproduce its measure-theoretic apparatus here.
+empirical frequencies $\frac{1}{n}\sum_{i\le n} X_i$ form a bounded reverse martingale (a martingale run
+backward in $n$, with respect to the $\sigma$-algebras of events symmetric in the first $n$ variables) and
+therefore converge almost surely to a limit $\Theta$ whose distribution is the required $\Pi$; the hidden
+parameter is thus literally the long-run frequency of successes. We cite this converse
+(@definetti1937; @hewitt1955) rather than reproduce its measure-theoretic apparatus here.
 $\square$
 :::
 
@@ -336,7 +336,7 @@ $\mu$ is the population mean effect, and $\tau^2$ is the between-study variance 
 heterogeneity. The distinction between the two ways of reading $\theta_j$ is the distinction between
 fixed and random effects.
 
-The same five objects, read in the language of the running example of @exm-three-trials-early, are the
+The same six objects, read in the language of the running example of @exm-three-trials-early, are the
 following.
 
 | Object | Symbol | Trial 1 value | Reading |
@@ -456,14 +456,14 @@ chapter.
 ::: {#thm-bayes}
 ## Bayes' theorem (densities)
 Let $\boldsymbol\xi$ take values in a measurable space $(\Xi, \mathcal{G})$ with prior density
-$\pi(\boldsymbol\xi)$ with respect to a $\sigma$-finite dominating measure $\mu$, and let the data
+$\pi(\boldsymbol\xi)$ with respect to a $\sigma$-finite dominating measure $\kappa$, and let the data
 $\mathbf y$ take values in $(\mathcal{Y}, \mathcal{B})$ with conditional density $p(\mathbf y \mid
 \boldsymbol\xi)$ with respect to a $\sigma$-finite measure $\nu$. Define the *marginal likelihood*
 $$
-p(\mathbf y) = \int_{\Xi} p(\mathbf y \mid \boldsymbol\xi)\, \pi(\boldsymbol\xi) \, d\mu(\boldsymbol\xi).
+p(\mathbf y) = \int_{\Xi} p(\mathbf y \mid \boldsymbol\xi)\, \pi(\boldsymbol\xi) \, d\kappa(\boldsymbol\xi).
 $$
 Then for every $\mathbf y$ with $p(\mathbf y) > 0$, a version of the posterior density of
-$\boldsymbol\xi$ given $\mathbf y$ (with respect to $\mu$) is
+$\boldsymbol\xi$ given $\mathbf y$ (with respect to $\kappa$) is
 $$
 \pi(\boldsymbol\xi \mid \mathbf y) = \frac{p(\mathbf y \mid \boldsymbol\xi)\, \pi(\boldsymbol\xi)}{p(\mathbf y)}.
 $$ {#eq-bayes}
@@ -471,29 +471,29 @@ $$ {#eq-bayes}
 
 ::: {.proof}
 By construction the pair $(\boldsymbol\xi, \mathbf y)$ has joint density $p(\boldsymbol\xi, \mathbf y) =
-p(\mathbf y \mid \boldsymbol\xi)\,\pi(\boldsymbol\xi)$ with respect to the product measure $\mu \otimes
+p(\mathbf y \mid \boldsymbol\xi)\,\pi(\boldsymbol\xi)$ with respect to the product measure $\kappa \otimes
 \nu$; the existence of these densities is the Radon-Nikodym theorem applied to the assumed dominated
 families. The marginal density of $\mathbf y$ is $p(\mathbf y) = \int_\Xi p(\boldsymbol\xi, \mathbf y)\,
-d\mu(\boldsymbol\xi)$, by Tonelli's theorem applied to the nonnegative integrand. Fix $\mathbf y$ with
+d\kappa(\boldsymbol\xi)$, by Tonelli's theorem applied to the nonnegative integrand. Fix $\mathbf y$ with
 $p(\mathbf y) > 0$ and let $g$ denote the right side of @eq-bayes, a nonnegative function of
-$\boldsymbol\xi$ with $\int_\Xi g\, d\mu = p(\mathbf y)/p(\mathbf y) = 1$, hence a probability density
-with respect to $\mu$. To see that $g(\cdot \mid \mathbf y)$ is a version of the conditional density, we
+$\boldsymbol\xi$ with $\int_\Xi g\, d\kappa = p(\mathbf y)/p(\mathbf y) = 1$, hence a probability density
+with respect to $\kappa$. To see that $g(\cdot \mid \mathbf y)$ is a version of the conditional density, we
 verify the defining disintegration property: for every bounded measurable $h: \Xi \to \mathbb{R}$ and
 every $B \in \mathcal{B}$,
 $$
 \mathbb{E}\!\left[h(\boldsymbol\xi)\,\mathbf 1_B(\mathbf y)\right]
-= \int_B \left( \int_\Xi h(\boldsymbol\xi)\, g(\boldsymbol\xi \mid \mathbf y)\, d\mu(\boldsymbol\xi) \right) p(\mathbf y)\, d\nu(\mathbf y).
+= \int_B \left( \int_\Xi h(\boldsymbol\xi)\, g(\boldsymbol\xi \mid \mathbf y)\, d\kappa(\boldsymbol\xi) \right) p(\mathbf y)\, d\nu(\mathbf y).
 $$
 Indeed, writing the left side through the joint density and substituting $p(\boldsymbol\xi, \mathbf y) =
 g(\boldsymbol\xi \mid \mathbf y)\, p(\mathbf y)$,
 $$
 \mathbb{E}\!\left[h(\boldsymbol\xi)\,\mathbf 1_B(\mathbf y)\right]
-= \int_B \int_\Xi h(\boldsymbol\xi)\, p(\boldsymbol\xi, \mathbf y)\, d\mu(\boldsymbol\xi)\, d\nu(\mathbf y)
-= \int_B \int_\Xi h(\boldsymbol\xi)\, g(\boldsymbol\xi \mid \mathbf y)\, p(\mathbf y)\, d\mu(\boldsymbol\xi)\, d\nu(\mathbf y),
+= \int_B \int_\Xi h(\boldsymbol\xi)\, p(\boldsymbol\xi, \mathbf y)\, d\kappa(\boldsymbol\xi)\, d\nu(\mathbf y)
+= \int_B \int_\Xi h(\boldsymbol\xi)\, g(\boldsymbol\xi \mid \mathbf y)\, p(\mathbf y)\, d\kappa(\boldsymbol\xi)\, d\nu(\mathbf y),
 $$
-which is the asserted identity by Fubini's theorem (the integrand is $\nu \otimes \mu$-integrable since
+which is the asserted identity by Fubini's theorem (the integrand is $\nu \otimes \kappa$-integrable since
 $h$ is bounded and $p(\boldsymbol\xi,\mathbf y)$ integrates to $1$). The disintegration identity
-characterizes the conditional density up to $\mu$-null sets, so $g(\cdot \mid \mathbf y) =
+characterizes the conditional density up to $\kappa$-null sets, so $g(\cdot \mid \mathbf y) =
 \pi(\cdot \mid \mathbf y)$ is the posterior density. $\square$
 :::
 
@@ -812,20 +812,24 @@ $$
 :::
 
 ::: {.proof}
-Write $\varphi(z) = (2\pi\sigma^2)^{-1/2}\exp(-(z - \theta)^2/(2\sigma^2))$ for the density of $Z$. It
-satisfies the identity $\varphi'(z) = -\frac{z - \theta}{\sigma^2}\varphi(z)$, equivalently $(z -
-\theta)\varphi(z) = -\sigma^2 \varphi'(z)$. Hence
+Write $\varphi(z) = (2\pi\sigma^2)^{-1/2}\exp(-(z - \theta)^2/(2\sigma^2))$ for the density of $Z$. Since
+$\varphi'(z) = -\frac{z - \theta}{\sigma^2}\varphi(z)$, for every $t$
 $$
-\mathbb{E}\bigl[(Z - \theta) h(Z)\bigr] = \int_{-\infty}^{\infty} h(z)(z - \theta)\varphi(z)\, dz
-= -\sigma^2 \int_{-\infty}^{\infty} h(z)\varphi'(z)\, dz.
+\int_t^{\infty}(z-\theta)\varphi(z)\,dz = \sigma^2\varphi(t) = -\int_{-\infty}^{t}(z-\theta)\varphi(z)\,dz .
 $$
-Integrating by parts, and using that $h(z)\varphi(z) \to 0$ as $z \to \pm\infty$ (which holds because
-$\mathbb{E}|h'(Z)| < \infty$ forces $h$ to grow slower than the Gaussian tail decays),
+Absolute continuity gives $h(z)-h(\theta)=\int_\theta^z h'(t)\,dt$. For $z>\theta$, Tonelli's theorem
+applied to $|h'(t)|(z-\theta)\varphi(z)$ on $\{\theta<t<z\}$ shows the double integral below converges
+absolutely (its value is $\sigma^2\int_\theta^\infty|h'(t)|\varphi(t)\,dt\le\sigma^2\,\mathbb E|h'(Z)|$), so
+Fubini's theorem allows the swap
 $$
--\sigma^2 \int_{-\infty}^{\infty} h(z)\varphi'(z)\, dz
-= -\sigma^2\Bigl[ h(z)\varphi(z)\Bigr]_{-\infty}^{\infty} + \sigma^2 \int_{-\infty}^{\infty} h'(z)\varphi(z)\, dz
-= \sigma^2\, \mathbb{E}\bigl[h'(Z)\bigr]. \qquad \square
+\int_\theta^\infty (z-\theta)\bigl(h(z)-h(\theta)\bigr)\varphi(z)\,dz
+=\int_\theta^\infty h'(t)\int_t^\infty (z-\theta)\varphi(z)\,dz\,dt
+=\sigma^2\int_\theta^\infty h'(t)\varphi(t)\,dt .
 $$
+The same computation on $z<\theta$, with $h(z)-h(\theta)=-\int_z^\theta h'(t)\,dt$, gives
+$\sigma^2\int_{-\infty}^\theta h'(t)\varphi(t)\,dt$. Adding,
+$\mathbb E[(Z-\theta)(h(Z)-h(\theta))]=\sigma^2\,\mathbb E[h'(Z)]$, and in particular $(Z-\theta)h(Z)$ is
+integrable. Since $\mathbb E[(Z-\theta)h(\theta)]=0$, the lemma follows. $\square$
 :::
 
 ::: {#thm-james-stein}
@@ -892,19 +896,20 @@ The James-Stein estimator is exactly the shrinkage estimator @eq-shrinkage with 
 $\mu = 0$ and the shrinkage factor $B = (J - 2)\sigma^2/\|\mathbf Y\|^2$ estimated from the data rather
 than supplied by a prior. Writing $\hat B = (J - 2)\sigma^2/\|\mathbf Y\|^2$ as an estimate of $B =
 \sigma^2/(\sigma^2 + \tau^2)$ is precisely the empirical-Bayes recipe of @sec-reml-eb: the marginal
-variance of each $Y_i$ is $\sigma^2 + \tau^2$, so $\|\mathbf Y\|^2/(J - 2)$ is (almost) an unbiased
-estimate of $\sigma^2 + \tau^2$ and $\hat B$ estimates $B$. Stein's paradox is thus the statement that
+variance of each $Y_i$ is $\sigma^2 + \tau^2$, so $\|\mathbf Y\|^2/(\sigma^2+\tau^2)\sim\chi^2_J$, and
+since $\mathbb E[1/\chi^2_J]=1/(J-2)$ for $J\ge 3$, $\hat B$ is exactly unbiased for $B$. Stein's paradox is thus the statement that
 hierarchical shrinkage helps even when no genuine prior is believed, provided one estimates three or
 more means at once; this is the deepest justification for the partial pooling of meta-analysis.
 
 **Why this matters.** If you are reluctant to place a prior on the between-study variance $\tau^2$,
 James-Stein still licenses pooling. With three or more study effects, shrinking every raw estimate toward
-a common center has strictly smaller total mean squared error than reporting the raw estimates,
-*whatever* the true effects are, and with no prior at all. That is the frequentist permission slip for
+a fixed, prespecified center has strictly smaller total mean squared error than reporting the raw
+estimates, *whatever* the true effects are, and with no prior at all; shrinking toward the estimated grand
+mean, as meta-analysis does, spends one dimension on that mean and dominates from four effects on (factor
+$J-3$ in place of $J-2$). That is the frequentist permission slip for
 borrowing strength: partial pooling is not merely a Bayesian taste but a provable improvement, which is
 why it is the default even for analysts who never write down a hyperprior. The
-result is due to Stein and to James and Stein (1961), with the empirical-Bayes reading due to Efron and
-Morris (1975); see the work log for the bibliography. $\blacktriangleleft$
+result is due to @stein1956 and @james1961, with the empirical-Bayes reading due to @efron1975. $\blacktriangleleft$
 :::
 
 ## Variance components: REML and empirical Bayes {#sec-reml-eb}
@@ -1028,8 +1033,8 @@ $$
 with $\hat{\boldsymbol\beta} = (\mathbf X^\top \mathbf V^{-1}\mathbf X)^{-1}\mathbf X^\top \mathbf
 V^{-1}\mathbf y$ the generalized least squares estimator; the extra log-determinant term, absent from
 ordinary maximum likelihood, is the penalty for estimating $\boldsymbol\beta$. REML is the default for
-variance-component estimation in mixed models and in meta-analysis software (Patterson and Thompson
-1971; Harville 1977; @dias2018nma). $\blacktriangleleft$
+variance-component estimation in mixed models and in meta-analysis software (@patterson1971;
+@harville1977; @dias2018nma). $\blacktriangleleft$
 :::
 
 It is worth instantiating this general formula on the meta-analysis model itself, since that is the case
@@ -1141,7 +1146,7 @@ enforces $\tau^2 \ge 0$. $\square$
 
 The truncation at $0$ is exactly why a random-effects analysis sometimes collapses to complete pooling:
 when the studies agree more closely than their standard errors alone would predict, $Q < J - 1$, the
-numerator is negative, and $\hat\tau^2_{\mathrm{DL}} = 0$, so every $B_j \to 1$ and the estimates fuse at
+numerator is negative, and $\hat\tau^2_{\mathrm{DL}} = 0$, so every $B_j = 1$ and the estimates fuse at
 the common mean $\bar y_w$.
 
 ::: {.remark}
@@ -1202,10 +1207,10 @@ observation look like, given everything we have learned?" by averaging the sampl
 posterior, so it carries both the natural variability of data and our remaining uncertainty about the
 parameters. This is exactly the shape of an indirect-comparison target estimand. A population-adjusted
 effect asks what a treatment contrast would be in a *new* target population, one we did not run a trial
-in; predicting that effect means drawing parameters from the posterior and pushing them through the
-target population's covariate distribution, which is a posterior predictive computation. So the marginal
-effect reported in Part V is not a single plug-in number but a posterior predictive quantity, and its
-credible interval inherits parameter uncertainty through this very integral. (Corresponds to L.4 in the
+in; computing it means drawing parameters from the posterior and averaging each draw over the target
+population's covariate distribution, the same draw-by-draw recipe as above but without adding the noise of
+new outcomes. So the marginal effect reported in Part V is not a single plug-in number but the posterior
+of a derived quantity, and its credible interval inherits parameter uncertainty in exactly this way. (Corresponds to L.4 in the
 proof catalogue.) $\blacktriangleleft$
 :::
 
@@ -1384,10 +1389,10 @@ applicable to the unnormalized posterior. Second, stationarity alone does not gu
 average $\frac1N \sum_{t=1}^N g(\boldsymbol\xi^{(t)})$ converges to $\mathbb{E}_\pi[g]$; that requires
 the chain to be $\pi$-irreducible (it can reach any set of positive $\pi$-measure) and aperiodic, under
 which a law of large numbers for Markov chains gives almost-sure convergence of ergodic averages and a
-central limit theorem governs the Monte Carlo error. We state this ergodic theorem as a cited result
-(Tierney 1994; see the work log) and use it to justify Monte Carlo estimation; its proof belongs to the
-general theory of Harris-recurrent chains. The original symmetric-proposal algorithm is due to
-Metropolis et al. (1953) and the general asymmetric form to Hastings (1970). (Corresponds to the
+central limit theorem (under further conditions such as geometric ergodicity) governs the Monte Carlo
+error. We state this ergodic theorem as a cited result (@tierney1994) and use it to justify Monte Carlo
+estimation; its proof belongs to the general theory of Harris-recurrent chains. The original
+symmetric-proposal algorithm is due to @metropolis1953 and the general asymmetric form to @hastings1970. (Corresponds to the
 Metropolis-Hastings content of L.3 in the proof catalogue.) $\blacktriangleleft$
 :::
 
@@ -1537,22 +1542,23 @@ Gaussian momentum returns $\pi(\boldsymbol\xi \mid \mathbf y)$. $\square$
 
 ::: {.remark}
 HMC still requires the user to choose the trajectory length $L$ and step size $\epsilon$. The
-*No-U-Turn Sampler* (NUTS) of Hoffman and Gelman (2014) eliminates the choice of $L$ by building the
+*No-U-Turn Sampler* (NUTS) of @hoffman2014nuts eliminates the choice of $L$ by building the
 leapfrog trajectory forward and backward in time, doubling its length until it begins to double back on
 itself (formally, until the running trajectory would make a "U-turn," detected when the momentum becomes
 anti-aligned with the position displacement), then selecting the next state from the trajectory by a
 slice or multinomial rule that preserves detailed balance. The step size $\epsilon$ is tuned during a
 warmup phase by dual averaging to hit a target acceptance rate near $0.8$, and the mass matrix $M$ is
 adapted to the posterior covariance. NUTS is the default in Stan (@carpenter2017stan) and underlies the
-multilevel models of Part V; the geometric foundations are surveyed by Betancourt (2017) and Neal
-(2011). A hierarchical-model caution connects back to this chapter, and it is the single most common practical
+multilevel models of Part V; the geometric foundations are surveyed by @betancourt2017 and
+@neal2011hmc. A hierarchical-model caution connects back to this chapter, and it is the single most common practical
 failure in Bayesian meta-analysis. In the centered parameterization $\theta_j \sim \mathcal{N}(\mu,
 \tau^2)$, the joint posterior of $(\theta_j, \log\tau)$ has a *funnel* geometry: when $\tau$ is large the
 study effects $\theta_j$ are free to spread out, but when $\tau$ is small they are squeezed into a narrow
 neck around $\mu$. Picture a funnel or a trumpet bell, wide at the top and pinched at the bottom. A single
 leapfrog step size cannot fit both regions at once; a step tuned for the wide mouth overshoots the narrow
 neck, the simulated energy blows up, and the proposal is rejected as a *divergent transition*. The sampler
-then silently fails to explore small $\tau$, biasing $\hat\tau^2$ upward and understating heterogeneity.
+then silently fails to explore small $\tau$, biasing the posterior for $\tau$ upward and so overstating
+heterogeneity.
 The remedy is the *non-centered parameterization* $\theta_j = \mu + \tau\,\tilde\theta_j$ with
 $\tilde\theta_j \sim \mathcal{N}(0, 1)$, which factors the dependence out so that the geometry the sampler
 actually traverses is a fixed unit Gaussian regardless of $\tau$; this is the standard fix and the reason
@@ -1763,11 +1769,10 @@ linear-algebra prerequisites are the four fundamental subspaces and rank-nullity
 and positive definiteness and quadratic forms (@thm-pd-characterization, @def-quadratic-form), all from
 @strang2016; the multivariate normal facts (@thm-mvn-linear, @thm-mvn-conditional, @prp-mvn-density,
 @def-conditional-independence) are from Chapter 4, and the variance-component and generalized
-least squares background from @bingham2010regression. Several attributions rely on sources not yet in the
-bibliography (de Finetti and Hewitt-Savage for @thm-de-finetti; James-Stein and Efron-Morris for
-@thm-james-stein; Patterson-Thompson and Harville for REML; Metropolis et al., Hastings, and Tierney for
-@sec-mcmc; Hoffman-Gelman, Neal, and Betancourt for @sec-hmc); these are listed with full bibliographic
-data in the work log for the orchestrator to merge.
+least squares background from @bingham2010regression. The primary sources are @definetti1937 and
+@hewitt1955 for @thm-de-finetti; @stein1956, @james1961, and @efron1975 for @thm-james-stein;
+@patterson1971 and @harville1977 for REML; @metropolis1953, @hastings1970, and @tierney1994 for
+@sec-mcmc; and @hoffman2014nuts, @neal2011hmc, and @betancourt2017 for @sec-hmc.
 
 No result in this chapter carries a machine-checked tag. The companion Coq development formalizes the
 identification and algebraic content of the indirect-comparison methods, not Bayesian inference: there

@@ -24,9 +24,8 @@ If you run meta-analyses in R or Stan, a fair first question is why you would sp
 installing a proof assistant to read files you will never execute in an analysis. The payoff is specific
 to indirect comparison. Every method in this book rests on assumptions that are easy to state in prose
 and easy to lose in prose: constancy of relative effects for a Bucher comparison (@def-transitivity),
-positivity and conditional exchangeability for weighting (@def-positivity, @def-ignorability), the
-absence of effect modification on the scale that would otherwise bias an unanchored comparison
-(@def-effect-modifier). In a machine-checked proof these assumptions cannot be smuggled into a sentence:
+positivity and conditional exchangeability for weighting (@def-positivity, @def-ignorability), and the
+balance of effect modifiers that an anchored comparison needs (@def-effect-modifier). In a machine-checked proof these assumptions cannot be smuggled into a sentence:
 each one appears as a named `Hypothesis` that the final theorem carries in its statement, and the proof
 will not close if the algebra leans on an assumption that was never declared. Three concrete guarantees
 follow.
@@ -34,9 +33,9 @@ follow.
 - **Assumptions are auditable.** You can read exactly which premises a result needs, in one place, and
   you can query the proof mechanically for the foundational axioms it rests on (@sec-coqread-assumptions).
 - **The algebra cannot be fudged.** The subtraction that cancels the common comparator in Bucher
-  (@thm-bucher-unbiased), the exponential tilt defining the MAIC weights (@thm-maic-exponential-weights),
-  and the effective-sample-size bound (@thm-maic-ess-bound) are each checked symbol by symbol by a small
-  trusted program, so a sign error or a dropped term cannot slip through.
+  (@thm-bucher-unbiased), the positivity of the exponential-tilt MAIC weights (the weight form of
+  @thm-maic-exponential-weights; its duality derivation is paper-only), and the effective-sample-size bound
+  (@thm-maic-ess-bound) are each checked symbol by symbol by a small trusted program, so a sign error or a dropped term cannot slip through.
 - **The certificate is reproducible.** Anyone can rebuild the development and re-verify every tagged
   theorem on their own machine; the check is a command you run, not a claim you accept.
 
@@ -566,7 +565,7 @@ for the Bucher example (@sec-coqread-bucher); read those rows first and treat th
 
 | Notation | Meaning | First pass? |
 |---|---|---|
-| `R : realType` | `R` is a mathcomp *structure* for the real numbers (formally a real-closed field); read it as $\mathbb{R}$. It is a structured type rather than a bare set, so generic ring and field lemmas apply to it automatically | Bucher |
+| `R : realType` | `R` is a mathcomp *structure* for the real numbers (formally a complete, archimedean, real-closed field); read it as $\mathbb{R}$. It is a structured type rather than a bare set, so generic ring and field lemmas apply to it automatically | Bucher |
 | `Local Open Scope ring_scope` | read `+ - * / 0 1` as ring operations on `R` | Bucher |
 | `fun omega => e` | Coq's *lambda* notation: the anonymous function mapping `omega` to `e`; here, a random variable as a map on the sample space | Bucher |
 | `GRing.addrK`, `GRing.mul1r`, `GRing.mulN1r` | ring lemmas $x+y-y=x$; $1\cdot x=x$; $(-1)\cdot x=-x$. The names abbreviate *add-right-cancel*, *mul-1-right*, *mul-N1-right*; learning the scheme lets you decode new names | Bucher |
@@ -600,9 +599,9 @@ populations (transitivity). The file's symbols are the pieces of this picture:
 
 | Coq symbol | Meaning in the trial network |
 |---|---|
-| `d_AC` | population relative effect of $A$ versus $C$ (the target of the $AC$ trial) |
-| `d_BC` | population relative effect of $B$ versus $C$ (the target of the $BC$ trial) |
-| `d_AB` | population relative effect of $A$ versus $B$ (the indirect target) |
+| `d_AC` | population relative effect $d_{AC}$, the effect of $C$ relative to $A$ (the target of the $AC$ trial) |
+| `d_BC` | population relative effect $d_{BC}$, the effect of $C$ relative to $B$ (the target of the $BC$ trial) |
+| `d_AB` | population relative effect $d_{AB}$, the effect of $B$ relative to $A$ (the indirect target; the file's comment reads "effect of B vs A") |
 | `d_AC_hat`, `d_BC_hat` | the trials' *estimators* of `d_AC` and `d_BC` (random variables) |
 | `E` | expectation; `E d_AC_hat = d_AC` says the $AC$ estimator is unbiased for its target |
 | `transitivity` | the assumption $d_{AC} = d_{AB} + d_{BC}$, equivalently $d_{AB} = d_{AC} - d_{BC}$ |

@@ -300,9 +300,9 @@ $$
 ::: {.remark}
 **What "order $2k$" buys, and what it cannot.** The single-interval constant @eq-qmc-gauss-error decays
 super-exponentially in $k$: by Stirling's approximation
-$\dfrac{2^{2k+1}(k!)^{4}}{(2k+1)[(2k)!]^{3}}\sim\dfrac{\pi}{4^{2k}\,(2k)!}$ up to lower-order factors, so for
-an analytic integrand whose derivatives satisfy $|f^{(2k)}|\le (2k)!\,R^{-2k}$ (radius of convergence
-$R>1$) the error falls like $R^{-2k}$, geometric in the number of nodes. This is the spectral accuracy that
+$\dfrac{2^{2k+1}(k!)^{4}}{(2k+1)[(2k)!]^{3}}\sim\dfrac{\pi}{4^{k}\,(2k)!}$ (for $k=1$ the exact value is
+$\tfrac13$), so for an analytic integrand whose derivatives satisfy $|f^{(2k)}|\le (2k)!\,R^{-2k}$ (radius
+of convergence $R>1$) the error falls like $(2R)^{-2k}$, geometric in the number of nodes. This is the spectral accuracy that
 makes a handful of Gauss nodes integrate a smooth one-dimensional function to machine precision. The
 composite reading of Part 3, error $O(h^{2k})$ at fixed $k$, is the form quoted in the catalogue; it is the
 relevant one when the integrand has limited smoothness and one refines the mesh rather than raising the
@@ -315,33 +315,33 @@ factor per axis. The accuracy per axis is inherited, but the node count is not.
 
 ::: {#cor-tensor-quadrature-curse}
 ## The curse of dimensionality for product quadrature
-Let $f\in C^{2k}([-1,1]^{d})$ with all pure $2k$-th order partial derivatives bounded. The tensor-product
-Gauss-Legendre rule with $k$ nodes per axis uses $N=k^{d}$ function evaluations and has error
+Let $f\in C^{2k}([-1,1]^{d})$ with all pure $2k$-th order partial derivatives bounded. Split each axis
+into $m$ panels of width $h=2/m$ and take the tensor product of the composite $k$-node Gauss-Legendre rules
+of @thm-quadrature-error(3). This rule uses $N=(mk)^{d}$ function evaluations and, as $m\to\infty$ with $k$
+fixed, has error
 $$
-\Big|\int_{[-1,1]^{d}} f-\sum_{i_1=1}^{k}\cdots\sum_{i_d=1}^{k} w_{i_1}\cdots w_{i_d}\,
-f(x_{i_1},\dots,x_{i_d})\Big|=O\!\big(k^{-2k}\big)=O\!\big(N^{-2k/d}\big).
+\Big|\int_{[-1,1]^{d}} f-Q^{\otimes d}[f]\Big|=O\!\big(h^{2k}\big)=O\!\big(N^{-2k/d}\big).
 $$
-For fixed per-axis budget $k$, the exponent $2k/d$ of $N$ degrades with the dimension $d$; equivalently, to
-hold the error at a tolerance $\epsilon$ the cost grows like $N=k^{d}$, exponentially in $d$.
+The exponent $2k/d$ of $N$ degrades with the dimension $d$; equivalently, to hold the error at a tolerance
+$\epsilon$ the cost $N$ grows exponentially in $d$.
 :::
 
 ::: {.proof}
-Write the cube integral as an iterated integral and apply @thm-quadrature-error one axis at a time.
-Holding $x_2,\dots,x_d$ fixed, the one-dimensional rule in $x_1$ incurs error bounded by
-$E_k\sup|\partial_1^{2k} f|$, where $E_k=\frac{2^{2k+1}(k!)^4}{(2k+1)[(2k)!]^3}$ is the single-interval
-constant; integrating that bound over the remaining axes and then quadrating them in turn, the total error
-is at most $E_k\sum_{m=1}^{d}\sup|\partial_m^{2k} f|\cdot 2^{d-1}$, a finite multiple of $E_k=O(k^{-2k})$;
-the factor $2^{d-1}$ is the product of the interval lengths accumulated as each already-quadrated axis
-contributes its width $2$ to the bound. Writing the node count as $N=k^{d}$, so that $k=N^{1/d}$, the error
-$O(k^{-2k})$ becomes $O(N^{-2k/d})$. $\square$
+Write $I_i$ for integration and $Q_i$ for the composite rule in coordinate $i$, so the error is
+$I_1\cdots I_d f-Q_1\cdots Q_d f=\sum_{i=1}^{d}Q_1\cdots Q_{i-1}(I_i-Q_i)I_{i+1}\cdots I_d f$ (a telescoping
+sum). In the $i$-th term, @thm-quadrature-error(3) bounds $|(I_i-Q_i)g|$ by $2C_kh^{2k}\sup|\partial_i^{2k}f|$
+for every slice $g$ of $f$ in coordinate $i$; the remaining integrals have length $2$ per axis, and the
+remaining rules have positive weights summing to $2$ per axis, so each term is at most
+$2^{d-1}\cdot 2C_kh^{2k}\sup|\partial_i^{2k}f|$. Summing over $i$ gives error $O(h^{2k})$, and since
+$N=(mk)^{d}=(2k/h)^{d}$ we have $h=2kN^{-1/d}$, so the error is $O(N^{-2k/d})$. $\square$
 :::
 
 The exponent $2k/d$ tells the whole story, and it is worth reading carefully because it is easy to
-misread. With $k$ held fixed, $-2k/d$ is a constant, so refining a product grid does not improve the rate
-with $N$; and raising $k$ to sharpen the per-axis accuracy is self-defeating, because it also multiplies the
-node count $N=k^{d}$. In one dimension a five-node rule ($k=5$) integrates a smooth function with error
-$O(N^{-10})$, spectacular; in ten dimensions the same per-axis rule needs $N=5^{10}\approx 10^{7}$ nodes
-just to place five points on each axis, and reaching error $O(N^{-1})$ is all one can hope for. To make the
+misread. With $k$ held fixed, refining a product grid improves the error only like $N^{-2k/d}$; and raising $k$ to
+sharpen the per-axis accuracy multiplies the node count by $k^{d}$. In one dimension a composite five-node
+rule ($k=5$) integrates a smooth function with error $O(N^{-10})$, spectacular; in ten dimensions the same
+per-axis rule needs $N=5^{10}\approx 10^{7}$ nodes just to place five points on each axis, and its error
+improves only like $N^{-1}$. To make the
 threshold concrete, return to the running example (@exm-qmc-psoriasis). Three covariates at five nodes each
 is $5^{3}=125$ nodes, which sounds harmless. But this integral is not evaluated once. It is evaluated once
 per AgD arm; a plaque-psoriasis network may carry a dozen AgD arms; and the whole set of integrals is
@@ -659,16 +659,23 @@ $N$-versus-$N/2$ comparison into a practical convergence check). $\blacktriangle
 
 ::: {.remark}
 **When the integrand misbehaves.** The bound @eq-qmc-kh is only as good as $V_{\mathrm{HK}}(f)$ is finite,
-and there are two ways the ML-NMR pullback integrand $\psi$ of @eq-qmc-pullback can have infinite
-Hardy-Krause variation. The first is a discrete covariate margin. If covariate $i$ is binary or ordinal,
-its inverse distribution function $F_{j,i}^{-1}$ is a step function, so $\psi$ jumps across the coordinate
-hyperplanes where the step occurs; a function with a jump transverse to an axis has infinite Vitali
-variation on the faces it crosses, and the smooth QMC rate @eq-qmc-kh need not hold. The second is an
-unbounded integrand, for instance a log link with $\eta$ unbounded on the support, where $g^{-1}=\exp$
-grows without bound. For continuous margins and a bounded smooth link such as the logit, $\psi$ is smooth
-and bounded and $V_{\mathrm{HK}}(\psi)$ is finite. For discrete margins, randomized QMC, in which the
-deterministic net is randomly scrambled (Owen, 1998), recovers near-optimal rates, but in a probabilistic
-rather than a deterministic Koksma-Hlawka sense. $\blacktriangleleft$
+and the ML-NMR pullback integrand $\psi$ of @eq-qmc-pullback can have infinite Hardy-Krause variation in
+three ways. The first is a discrete covariate margin. If covariate $i$ is binary or ordinal, its inverse
+distribution function $F_{j,i}^{-1}$ is a step function, so $\psi$ jumps. A jump along a coordinate
+hyperplane keeps the variation finite, but once the copula correlates the discrete covariate with others
+the jump surface is tilted, and a jump across a surface not aligned with the axes has infinite
+Hardy-Krause variation (@exm-qmc-discrete-jump). The second is an unbounded integrand, for instance a log
+link with $\eta$ unbounded on the support, where $g^{-1}=\exp$ grows without bound. The third is subtler
+and affects even the logit: with unbounded (for example normal) margins in $d\ge2$ dimensions, the map
+$\Phi^{-1}$ inside $T$ has derivatives that blow up at the faces of the cube, and the mixed derivative of
+$\psi$ is then not integrable. For instance, with two independent standard normal covariates and
+$\eta=a+bz_1+cz_2$, the Vitali variation is
+$\int_{\mathbb R^2}|bc\,\mathrm{expit}''(a+bz_1+cz_2)|\,dz_1dz_2=\infty$, since the integrand is constant
+along the lines $bz_1+cz_2=\text{const}$. For such integrands the Koksma-Hlawka bound is vacuous, and the
+near-$1/N$ behavior seen in practice is justified instead by boundary-growth analyses, which give an error
+of order $N^{-1+\varepsilon}$ for every $\varepsilon>0$ when the points keep away from the boundary of the
+cube (@owen2006halton), or by randomized QMC, in which the deterministic net is randomly scrambled (Owen,
+1998), with probabilistic rather than deterministic guarantees. $\blacktriangleleft$
 :::
 
 ::: {#exm-qmc-discrete-jump}
@@ -712,9 +719,9 @@ average converges fast), **nested** (the first $N/2$ points are a subset of the 
 node count reuses all previous work and lets the $N$-versus-$N/2$ convergence check of @sec-qmc-example
 compare like with like), and **cheap to generate** (each point is a handful of bitwise operations). Two
 further practical reasons pick Sobol' over the other classical low-discrepancy families (Halton, Faure,
-Niederreiter): Joe and Kuo (2008) published well-tested direction numbers up to dimension $21{,}200$, far
-beyond any ML-NMR need, and those tables ship inside the software (`multinma`, and the Stan and `qrng`
-libraries it builds on), so the covariate nodes are reproducible across machines. The construction below is
+Niederreiter): Joe and Kuo (2008) published well-tested direction numbers up to dimension $21{,}201$, far
+beyond any ML-NMR need, and standard software ships such tables (`multinma` draws its points with the
+`randtoolbox` R package), so the covariate nodes are reproducible across machines. The construction below is
 optional reading; a user who trusts the software can take the four properties above and skip to
 @sec-qmc-pit.
 
@@ -1093,10 +1100,12 @@ keeping them apart is essential.
 | Spearman rank correlation | correlation of the covariate ranks (quantiles) | yes: unchanged by any monotone remargining |
 | Tail dependence | tendency to be jointly extreme in the tails | always zero for a Gaussian copula |
 
-The safe practice is to specify $\boldsymbol{\Omega}$ from the rank correlations of the IPD covariates (which
-survive the transform), or to accept a mild misspecification and use the reported Pearson values as an
-approximation, understanding that the realized covariate correlations after non-normal margins will be
-somewhat attenuated. @exr-qmc-gaussian-copula-cov makes this attenuation quantitative. $\blacktriangleleft$
+The safe practice is to convert. For continuous margins the Spearman correlation $\rho^{S}$ of two covariates
+equals that of their latent normals, and a normal pair with Spearman correlation $\rho^{S}$ has Pearson
+correlation $2\sin(\pi\rho^{S}/6)$, so setting $\Omega_{ik}=2\sin(\pi\rho^{S}_{ik}/6)$ from the IPD rank
+correlations reproduces them; `multinma` applies such adjustments by default. Pasting in the reported
+Pearson values instead is a mild misspecification, and the realized covariate correlations after non-normal
+margins will be somewhat attenuated. @exr-qmc-gaussian-copula-cov makes this attenuation quantitative. $\blacktriangleleft$
 :::
 
 ::: {.remark}
@@ -1187,8 +1196,10 @@ $$
 \big|\widehat\theta_{\bullet jk}^{(N)}-\theta_{\bullet jk}\big|\le V_{\mathrm{HK}}(\psi)\,D_N^{*}(P_N).
 $$ {#eq-qmc-pipeline-error}
 With $P_N$ a Sobol' net (@def-sobol-net), $D_N^{*}(P_N)=O((\log N)^{d}/N)$, so the integration error is
-$O\big(V_{\mathrm{HK}}(\psi)(\log N)^{d}/N\big)$. For continuous margins and a bounded smooth link such as
-the logit, $V_{\mathrm{HK}}(\psi)<\infty$ and the rate holds.
+$O\big(V_{\mathrm{HK}}(\psi)(\log N)^{d}/N\big)$. Finite variation holds for $d=1$ with a continuous margin
+and a bounded monotone integrand (then $V_{\mathrm{HK}}(\psi)\le 1$), but not automatically for $d\ge2$
+with unbounded margins, where the bound can be vacuous (the remark "When the integrand misbehaves" in
+@sec-qmc-koksma).
 :::
 
 ::: {.proof}
@@ -1216,16 +1227,17 @@ with the point set $P_N$: the left-hand side of @eq-qmc-kh is exactly
 $|\widehat\theta_{\bullet jk}^{(N)}-\theta_{\bullet jk}|$ by @eq-qmc-pipeline-pullback, giving
 @eq-qmc-pipeline-error. The Sobol' discrepancy rate is @def-sobol-net. For continuous margins each
 $F_{j,i}^{-1}$ is continuous and the composed map $T$ is continuous; for the logit link $g^{-1}=\mathrm{expit}$
-is smooth and bounded into $(0,1)$ and $\eta_{jk}$ is affine, so $\psi=\mathrm{expit}\circ\eta_{jk}\circ T$
-is smooth and bounded, hence of bounded Hardy-Krause variation, and @eq-qmc-pipeline-error attains the
-stated rate. $\square$
+is smooth and bounded into $(0,1)$, so $\psi$ is continuous and bounded; whether its Hardy-Krause
+variation is finite depends on the margins and the dimension, as the final sentence of Part 2 records.
+$\square$
 :::
 
 ::: {.remark}
 **Why this matters: the capstone of the chapter.** @thm-hypercube-integration is the whole chapter in one
 statement. It takes the only thing an AgD study gives us, marginal summaries and a borrowed correlation, and
-delivers the one thing ML-NMR needs, the aggregate response probability $\theta_{\bullet jk}$, with a
-deterministic error that shrinks at nearly the $1/N$ rate. Every earlier section is a component: the
+delivers the one thing ML-NMR needs, the aggregate response probability $\theta_{\bullet jk}$, with an
+error that shrinks at nearly the $1/N$ rate: deterministically when $V_{\mathrm{HK}}(\psi)$ is finite, and
+by the boundary-growth argument otherwise. Every earlier section is a component: the
 inverse-CDF transform is step 5, the Gaussian copula is steps 2 to 4, Sobol' nets are step 1, and
 Koksma-Hlawka is the error bound @eq-qmc-pipeline-error. The payoff for indirect comparison is direct: this
 $\theta_{\bullet jk}$, contrasted across arms, is the relative effect the network estimates, so a trustworthy
@@ -1263,17 +1275,17 @@ for any link, including the logit for which no closed form exists (@thm-logit-no
 pipeline computes the target-population estimand integral (@thm-target-population-integral of Chapter 23) by
 substituting the target population's margins and correlation for the study's, which is what lets ML-NMR
 report a contrast in a population represented by neither trial. It carries over verbatim to the unanchored
-extension of Chapter 26. The pipeline is reliable up to $d\approx 20$ covariates with standard Sobol'
-direction tables; beyond that, randomized (scrambled) Sobol' nets or vine copulas are used. $\blacktriangleleft$
+extension of Chapter 26. Randomized (scrambled) Sobol' nets supply error bars when the deterministic guarantee is
+vacuous, and vine or $t$ copulas replace the Gaussian copula when its dependence structure is inadequate. $\blacktriangleleft$
 :::
 
 ::: {.remark}
 **Practical guidance: how to choose $N$ and read the diagnostic.** In an applied analysis the number of
 nodes $N$ is not chosen from the Koksma-Hlawka constant, which is unknown, but by a doubling check.
 Compute the aggregate mean at $N$ and at $N/2$ nodes; because the Sobol' net is nested, the $N/2$ points are
-a subset of the $N$ points and the gap $|\widehat\theta^{(N)}-\widehat\theta^{(N/2)}|$ is a conservative
-proxy for the remaining integration error (if the estimate has stopped moving as points are added, it has
-converged). Double $N$ until this gap falls well below the scale that matters, then stop. What scale
+a subset of the $N$ points and the gap $|\widehat\theta^{(N)}-\widehat\theta^{(N/2)}|$ is a rough proxy for
+the remaining integration error: when the error halves at each doubling the gap is about the size of the
+error at $N$ (in @exm-qmc-logit it slightly understates it), so a margin of safety is prudent. Double $N$ until this gap falls well below the scale that matters, then stop. What scale
 matters? The integration error should be small *relative to the posterior uncertainty* in the same quantity:
 there is no value in pinning $\theta_{\bullet jk}$ to five decimals when the posterior credible interval for
 the corresponding response rate is $0.1$ wide, and conversely an error of $0.005$ on the probability scale
@@ -1282,9 +1294,9 @@ cost-effectiveness threshold. The workable rule is: the integration error should
 smaller than both the posterior standard deviation of the estimand and the smallest decision-relevant
 difference in the target contrast. Chapter 24 formalizes this comparison, monitoring the integration error
 against the Markov chain Monte Carlo error so that neither source dominates
-(@def-integration-error-monitoring). Defaults in `multinma` (typically $N$ in the hundreds to low thousands
-per study) are calibrated to clear this bar for smooth links in moderate dimension; a discrete or skewed
-covariate, or a near-threshold decision, warrants raising $N$ and rechecking the gap. $\blacktriangleleft$
+(@def-integration-error-monitoring). The `multinma` default is $N=64$ nodes per study, to be checked by this
+kind of comparison; a discrete or skewed covariate, or a near-threshold decision, warrants raising $N$ and
+rechecking the gap. $\blacktriangleleft$
 :::
 
 ## A worked example: a logit aggregate mean by quasi-Monte Carlo {#sec-qmc-example}
@@ -1537,8 +1549,8 @@ by one, versus appending one point to a sequence.)
 $F$. Verify directly that @thm-inverse-cdf(1) holds, that is $F^{-1}(U)\sim\mathrm{Ber}(0.3)$ for
 $U\sim\mathrm{Unif}(0,1)$, by computing $F^{-1}(u)$ for $u\in(0,1)$. Then show that $F(X)$ takes only two
 values and is not uniform, confirming the failure of @thm-inverse-cdf(2) for discrete margins. Explain in
-one sentence how this produces a jump in the pipeline integrand $\psi$ of @thm-hypercube-integration and
-why that threatens the Koksma-Hlawka rate.
+one sentence how this produces a jump in the pipeline integrand $\psi$ of @thm-hypercube-integration, and
+why the jump threatens the Koksma-Hlawka rate once the copula correlates this covariate with another.
 :::
 
 ::: {#exr-qmc-gaussian-copula-cov}

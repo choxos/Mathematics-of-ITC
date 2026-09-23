@@ -48,7 +48,7 @@ functions in this appendix.
 | Function or object | Section | Feeds (chapter, result) | What it does for the average |
 |---|---|---|---|
 | Normal MGF | @sec-sf-mgf | Chapter 20, @thm-log-link-mgf (catalogue H.6) | gives the log-link average in exact closed form |
-| Error function $\operatorname{erf}$, $\operatorname{erfc}$ | @sec-sf-erf | Chapter 22, @thm-hypercube-integration and @thm-inverse-cdf | how software actually computes $\Phi$ and $\Phi^{-1}$ for every Sobol' node |
+| Error function $\operatorname{erf}$, $\operatorname{erfc}$ | @sec-sf-erf | Chapter 22, @thm-hypercube-integration and @thm-inverse-cdf | the special-function form of $\Phi$ and $\Phi^{-1}$ applied at every Sobol' node |
 | Owen's $T$ | @sec-sf-owen | Chapter 20 probit aggregation @prp-agg-probit-closed-form | supplies the probit second moment $\mathbb{E}[\Phi(\eta)^2]$ |
 | One- and two-probit approximation | @sec-sf-probit-logit | Chapter 22 logit aggregation @thm-logit-no-closed-form | a fast explicit approximation to the logit average |
 | Radical inverse, Sobol' construction | @sec-sf-sobol | Chapters 22 and 25, @thm-hypercube-integration | builds the low-discrepancy points for the general numerical average |
@@ -215,13 +215,14 @@ explicit. $\blacktriangleleft$
 ## The error function {#sec-sf-erf}
 
 The normal distribution function has no elementary antiderivative, so numerical analysis works with a
-rescaled, standardized version of it called the error function. Software computes $\Phi$ and $\Phi^{-1}$
-through $\operatorname{erf}$ and $\operatorname{erf}^{-1}$, and the series and asymptotic expansions of the
-error function are the practical tools for evaluating tail probabilities and normal quantiles.
+rescaled, standardized version of it called the error function. Numerical libraries evaluate $\Phi$ and
+$\Phi^{-1}$ by rational approximations of $\operatorname{erf}$-type functions, and the series and asymptotic
+expansions of the error function are the practical tools for evaluating tail probabilities and normal
+quantiles.
 
 This is not decorative. In the Chapter 22 integration pipeline every Sobol' node is a point $u\in(0,1)$ that
 must be pushed onto the covariate scale through the normal quantile $\Phi^{-1}(u)$ (the inverse-CDF transform
-of @thm-inverse-cdf), and $\Phi^{-1}$ is computed as $\sqrt{2}\,\operatorname{erf}^{-1}(2u-1)$. Every normal
+of @thm-inverse-cdf), which equals $\sqrt{2}\,\operatorname{erf}^{-1}(2u-1)$. Every normal
 probability the fitted model reports, including the small tail probabilities that arise for rare events, is
 computed as an $\operatorname{erf}$ or $\operatorname{erfc}$ value. Stable evaluation of these functions is
 therefore part of what makes the integration numerically reliable, which is why they earn a section of their
@@ -741,7 +742,7 @@ for which $\mathbb{E}[\Phi(a+bZ)]=\Phi(a/\sqrt{1+b^{2}})$. This is @eq-sf-one-pr
 ::: {.remark}
 **Accuracy and an alternative constant.** The slope-matched one-probit approximation
 $\mathrm{expit}(z)\approx\Phi(\sqrt{\pi/8}\,z)$ has maximum absolute error $0.0177$ over all $z$, attained
-in the shoulders near $|z|\approx 2$. If instead one minimizes the maximum error over $z$ rather than
+in the shoulders near $|z|\approx 2.8$. If instead one minimizes the maximum error over $z$ rather than
 matching the slope, the optimal constant is $\kappa^{\star}\approx 0.5876$, with maximum error $0.0095$;
 this $\kappa^\star$ is the value tabulated in the logistic-versus-normal literature. The slope-matched
 $\kappa=\sqrt{\pi/8}$ is the natural choice for aggregation because it makes the approximation exact to
@@ -811,9 +812,9 @@ an error of $+0.0027$. The two-probit aggregate @eq-sf-two-probit-aggregate give
 $$
 J(0.5,1)\approx 0.7371\,\Phi\!\Big(\tfrac{0.5191\cdot0.5}{\sqrt{1+0.2695}}\Big)
 +0.2629\,\Phi\!\Big(\tfrac{0.9282\cdot0.5}{\sqrt{1+0.8616}}\Big)
-=0.7371\,\Phi(0.23035)+0.2629\,\Phi(0.34020)=0.6022,
+=0.7371\,\Phi(0.23036)+0.2629\,\Phi(0.34015)=0.6021,
 $$
-an error of $+0.0002$, an order of magnitude smaller and indistinguishable from the QMC reference at the
+an error of $+0.0001$, an order of magnitude smaller and indistinguishable from the QMC reference at the
 precision a health technology assessment reports. The two-probit closed form thus reproduces, with two
 evaluations of $\Phi$, the integral that @sec-qmc-example computes with a Sobol' net. $\blacktriangleleft$
 :::
@@ -825,7 +826,7 @@ averaging. The error that actually matters for a fitted model is the error in th
 integrating over the covariate distribution, and it is typically smaller, because the pointwise overshoots
 and undershoots partly cancel under the average. The worked example makes this concrete: the one-probit
 pointwise maximum is $0.0177$, yet the one-probit aggregate error at $J(0.5,1)$ is only $0.0027$, and the
-two-probit aggregate error is $0.0002$. One caveat runs the other way. The matching is done at the center
+two-probit aggregate error is $0.0001$. One caveat runs the other way. The matching is done at the center
 $z=0$, so the approximation is at its best for event probabilities near $\tfrac12$ and least accurate in the
 shoulders, which is worth remembering when the linear predictor sits far in a tail. $\blacktriangleleft$
 :::
@@ -844,8 +845,8 @@ distribution, and the honest way to compute a $d$-dimensional average with no cl
 and average the integrand. Independent random points (plain Monte Carlo) give a root-mean-square error of
 order $N^{-1/2}$ in the number of points $N$ (@thm-mc-rmse): to halve the error you must quadruple the
 sample. Sobol' points are chosen deterministically to be spread out rather than random, and they achieve an
-error of order $(\log N)^{d}/N$ (@thm-hypercube-integration), which for a fixed dimension beats $N^{-1/2}$ for
-all large $N$. In the low dimensions typical once ML-NMR reduces to a handful of effect-modifying covariates,
+error of order $(\log N)^{d}/N$ for integrands of bounded Hardy-Krause variation
+(@thm-hypercube-integration), which for a fixed dimension beats $N^{-1/2}$ for all large $N$. In the low dimensions typical once ML-NMR reduces to a handful of effect-modifying covariates,
 this is often an order-of-magnitude gain at the same $N$, which is why the model integrates with Sobol'
 points and not random ones.
 
@@ -912,8 +913,8 @@ $c\,b^{m-d}\le r<(c+1)b^{m-d}$. Since @eq-sf-radical-net places exactly one poin
 endpoint $r/b^{m}$, the interval contains exactly $b^{m-d}$ points, which is $b^{t}$ with $t=0$; this is the
 defining property of a $(0,m,1)$-net (@def-sobol-net). For the star discrepancy, the local discrepancy
 $\Delta_N(u)=\frac1N\#\{n:\varphi_b(n)<u\}-u$ of the grid $\{r/N\}$ satisfies, for
-$u\in\big(\tfrac{j}{N},\tfrac{j+1}{N}\big]$, $\#\{r/N<u\}=j+1$ or $j$ depending on whether $u$ exceeds the
-right cell endpoint, so $|\Delta_N(u)|\le 1/N$, attained as $u\uparrow (j+1)/N$; hence
+$u\in\big(\tfrac{j}{N},\tfrac{j+1}{N}\big]$, $\#\{r/N<u\}=j+1$ (the points $0,\tfrac1N,\dots,\tfrac jN$), so
+$\Delta_N(u)=\tfrac{j+1}{N}-u\in\big[0,\tfrac1N\big)$, approaching $\tfrac1N$ as $u\downarrow j/N$; hence
 $D_N^{*}=\sup_u|\Delta_N(u)|=1/N$ (@def-star-discrepancy). $\square$
 :::
 
@@ -1023,7 +1024,8 @@ polynomial recurrence of @eq-qmc-sobol-point guarantees full rank within each si
 tabulated initial direction numbers of Joe and Kuo (2008) optimize the joint two-dimensional projections.
 The whole apparatus serves the one purpose of @thm-hypercube-integration: a point set whose star
 discrepancy attains $O((\log N)^{d}/N)$, so that the Koksma-Hlawka bound @thm-koksma-hlawka delivers
-near-$1/N$ integration error for the aggregation integral. The same guarantee carries over unchanged when the
+near-$1/N$ integration error for the aggregation integral whenever the pulled-back integrand has finite
+Hardy-Krause variation (Chapter 22 records when it does not). The same statement carries over when the
 integrand is a survival or ordinal likelihood kernel rather than a mean, which is the setting of Chapter 25:
 the points and the bound do not know what they are integrating. $\blacktriangleleft$
 :::
@@ -1037,7 +1039,8 @@ this is $\{\tfrac18,\tfrac28,\tfrac38,\tfrac48,\tfrac58,\tfrac68,\tfrac78\}$, th
 matching the worked Sobol' example of @sec-qmc-sobol. Its star discrepancy is $D_7^{*}=\tfrac18$: the
 largest gap between the empirical fraction $\frac1N\#\{\varphi_2(n)<u\}$ and $u$ occurs as $u\uparrow k/8$,
 where the fraction is $\frac{k-1}{7}$ against the volume $\frac{k}{8}$, and the maximum of
-$\big|\frac{k}{8}-\frac{k-1}{7}\big|$ over $k=1,\dots,7$ is $\tfrac18$ at $k=7$. This is close to $1/N$ and
+$\big|\frac{k}{8}-\frac{k-1}{7}\big|$ over $k=1,\dots,7$ is $\tfrac18$ at $k=1$ (the same value is approached
+as $u\downarrow\tfrac78$, where the fraction is $1$ against $\tfrac78$). This is close to $1/N$ and
 far below the $1/\sqrt7\approx 0.38$ typical of seven independent uniform draws, the discrepancy gap that
 @prp-radical-inverse-net explains and that drives the QMC error advantage of @thm-hypercube-integration.
 $\blacktriangleleft$
@@ -1067,8 +1070,8 @@ same device used there.
 The probit approximations to the logistic function have a long history in psychometrics and in the
 logistic-versus-probit literature. The slope-matched constant $\kappa=\sqrt{\pi/8}$ of
 @thm-probit-logit-approximation is the one quoted in @thm-logit-no-closed-form; the maximum-error-optimal
-constant $\kappa^\star\approx 0.5876$ noted in the remark is from the approximation literature (Page,
-*Journal of Statistical Computation and Simulation* 1977). The scale-mixture viewpoint underlying the
+constant $\kappa^\star\approx 0.5876=1/1.702$ noted in the remark is the scaling constant of item response
+theory, usually attributed to Haley (1952). The scale-mixture viewpoint underlying the
 two-probit construction @prp-two-probit-logit, that the logistic distribution is a Gaussian scale mixture
 and that a two-point quadrature of the mixing law yields a sum of two probits, follows Monahan and
 Stefanski (in *Handbook of the Logistic Distribution*, 1992); the coefficients @eq-sf-two-probit-coeffs are

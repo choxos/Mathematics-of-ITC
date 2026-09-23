@@ -47,21 +47,22 @@ we return to at every step.
 **A running example: an indirect comparison for an assessment body.** Suppose a health technology
 assessment (HTA) body must compare two drugs, $A$ and $B$, for a binary bad outcome such as disease
 relapse, and no head-to-head trial exists. Two trials share a common comparator $C$ (standard care):
-Trial 1 compares $A$ against $C$, and Trial 2 compares $B$ against $C$. On the log-odds-ratio scale
-Trial 1 reports $\hat d_{AC} = -0.80$ and Trial 2 reports $\hat d_{BC} = -0.50$ (a negative value means
-lower odds of relapse, hence a better drug). Trial 2 supplies individual patient data (IPD); Trial 1 is
+Trial 1 compares $A$ against $C$, and Trial 2 compares $B$ against $C$. On the log-odds-ratio scale, in
+the book's convention that $d_{ac}=\eta_c-\eta_a$ is the effect of $c$ relative to $a$, Trial 1 reports
+$\hat d_{AC} = 0.80$ and Trial 2 reports $\hat d_{BC} = 0.50$: the log-odds of relapse under standard care
+exceed those under either drug, so both drugs beat $C$. Trial 2 supplies individual patient data (IPD); Trial 1 is
 published only as aggregate summaries, and its patients are older and sicker, so before comparing we
 reweight Trial 2's patients to match Trial 1's covariate profile, a matching-adjusted indirect comparison
-(MAIC). To keep the arithmetic in view, take Trial 2 to have four patients whose matching weights come out
-$(2,1,1,0)$; the fourth patient, whose covariate profile lies outside Trial 1's range, receives weight
-zero. This example reappears in the Bucher comparison of @sec-coq-twin and the worked example of
+(MAIC). To keep the arithmetic in view, take Trial 2 to have four patients whose matching weights come out,
+after rounding, $(2,1,1,0)$; the fourth patient, whose covariate profile is far from Trial 1's, receives a
+weight that rounds to zero (MAIC weights are strictly positive, `maic_weight_pos`). This example reappears in the Bucher comparison of @sec-coq-twin and the worked example of
 @sec-coq-worked.
 
 Three numbers now carry the decision, and each is a result the companion Coq development machine-checks.
 
-- **The indirect contrast** $d_{AB} = \hat d_{AC} - \hat d_{BC} = -0.80 - (-0.50) = -0.30$, Bucher's
-subtraction (@thm-bucher-unbiased): $A$ lowers the log-odds of relapse by $0.30$ relative to $B$, an odds
-ratio of $e^{-0.30} \approx 0.74$.
+- **The indirect contrast** $d_{AB} = \hat d_{AC} - \hat d_{BC} = 0.80 - 0.50 = 0.30$, Bucher's
+subtraction (@thm-bucher-unbiased): the log-odds of relapse under $B$ exceed those under $A$ by $0.30$, so
+$A$ is better, with an odds ratio of $A$ versus $B$ of $e^{-0.30} \approx 0.74$.
 - **The effective sample size** of the reweighted Trial 2, $\mathrm{ESS} \le n$ (@thm-maic-ess-bound):
 the four patients carry the information of at most four, and with weights $(2,1,1,0)$ only
 $\mathrm{ESS} = 4^2/6 = 8/3 \approx 2.67$; the matched evidence is worth under three patients.
@@ -71,8 +72,9 @@ stays valid if either the weighting model or the outcome model is correct.
 Here is the point of formalization, made concrete on these numbers. A proof assistant *can* rule out a
 class of mistakes.
 
-- A **sign slip.** Writing $\hat d_{BC} - \hat d_{AC} = +0.30$ instead of $-0.30$ reports an odds ratio
-of $1.35$ and flips the recommendation from "$A$ is better" to "$B$ is better." Bucher's subtraction is a
+- A **sign slip.** Writing $\hat d_{BC} - \hat d_{AC} = -0.30$ instead of $+0.30$ reports an odds ratio of
+$A$ versus $B$ of $e^{0.30}\approx1.35$ and flips the recommendation from "$A$ is better" to "$B$ is
+better." Bucher's subtraction is a
 single line of algebra, and one flipped sign changes the clinical conclusion. The Coq theorem
 `bucher_unbiased` fixes the orientation once and for all.
 - A **vacuous safeguard.** If the ESS bound were stated with a hypothesis that secretly already contained
@@ -82,7 +84,7 @@ the conclusion, it would compile as "true" and mean nothing; the development's d
 Equally, a proof assistant *cannot* rule out the judgments that matter most to a clinician: whether Trial
 1 and Trial 2 populations are exchangeable, whether the covariates that drive relapse were measured,
 whether the log-odds scale is the intended one, or whether the analysis code that produced
-$\hat d_{AC} = -0.80$ was run correctly. Those are scientific and statistical questions; no proof
+$\hat d_{AC} = 0.80$ was run correctly. Those are scientific and statistical questions; no proof
 assistant touches them.
 
 So the honest headline for a health researcher is this. **You do not need to run Coq.** You need to know
@@ -237,13 +239,13 @@ every later section is an instance of it.
 
 ::: {#exm-coq-bucher-numeric}
 ## Bucher's subtraction with numbers
-In the running example $\hat d_{AC} = -0.80$ and $\hat d_{BC} = -0.50$ on the log-odds-ratio scale, so the
-theorem gives $d_{AB} = d_{AC} - d_{BC} = -0.80 - (-0.50) = -0.30$: drug $A$ lowers the log-odds of relapse
-relative to drug $B$, an indirect odds ratio of $e^{-0.30} \approx 0.74$. The reversed subtraction
-$d_{BC} - d_{AC} = +0.30$ would report an odds ratio of $e^{0.30} \approx 1.35$ and recommend $B$; the two
-conclusions differ by exactly the sign the theorem pins down. What the kernel certifies is that
-$\hat d_{AC} - \hat d_{BC}$, and not its negation, is unbiased for $d_{AB}$; the value $-0.30$ is then
-plain arithmetic. $\blacktriangleleft$
+In the running example $\hat d_{AC} = 0.80$ and $\hat d_{BC} = 0.50$ on the log-odds-ratio scale, so the
+theorem gives $d_{AB} = d_{AC} - d_{BC} = 0.80 - 0.50 = 0.30$: the log-odds of relapse under $B$ exceed
+those under $A$, an indirect odds ratio of $A$ versus $B$ of $e^{-0.30} \approx 0.74$. The reversed
+subtraction $d_{BC} - d_{AC} = -0.30$ would report that odds ratio as $e^{0.30} \approx 1.35$ and recommend
+$B$; the two conclusions differ by exactly the sign the theorem pins down. What the kernel certifies is
+that $\hat d_{AC} - \hat d_{BC}$, and not its negation, is unbiased for $d_{AB}$, the effect of $B$
+relative to $A$ as `Bucher.v` defines it; the value $0.30$ is then plain arithmetic. $\blacktriangleleft$
 :::
 
 ## What a proof assistant guarantees, and what it does not {#sec-coq-guarantees}
@@ -782,7 +784,7 @@ the column as *how much of the result the machine carries*, never as *how good t
 | @thm-bucher-unbiased | `Bucher.v` | `bucher_unbiased` | F (algebra over abstract linear `E`; transitivity and unbiasedness explicit) |
 | @thm-ipw-unbiased | `IPWEstimator.v` | `mu1_IPW_unbiased`, `ATE_IPW_unbiased` | P (consistency conversion checked; tower premise named, B.7) |
 | @thm-aipw-double-robust | `DoublyRobust.v` | `double_robustness`, `ATE_AIPW_double_robust` | F cancellation (`AIPW1_pointwise`) + genuine case split; residual premises named (B.9) |
-| @thm-maic-ess-bound | `MAIC.v` | `ESS_upper_bound` | F (no premise beyond the active axioms) |
+| @thm-maic-ess-bound | `MAIC.v` | `ESS_upper_bound` | F for the inequality (no premise beyond the active axioms); the equality case is paper-only |
 | @thm-maic-exponential-weights | `MAIC.v` | `maic_weight_fn`, `maic_weight_pos` | P (weight form and positivity formalized; KKT and duality are paper-only, F.3) |
 | @thm-stc-noncollapsibility-counterexample | `STC.v` | `STC_collapse_linear` | complement F (the collapsible linear direction is proved; the nonlinear counterexample is paper-only) |
 | @thm-maic-stc-equivalence | `Comparison.v` | `methods_agree_when_correct` | S (abstract "agree when both correct"; the linear-model equivalence is paper-only) |
@@ -875,8 +877,8 @@ arithmetic step here is an instance of the inequality the kernel certified. $\bl
 
 For the running example this is the difference between counting patients and counting *information*. Trial
 2's four patients, after matching to Trial 1, carry an effective sample size of $8/3 \approx 2.67$, and the
-fourth patient, with weight zero, contributes nothing at all: her covariate profile lay outside Trial 1's
-range, so matching could not place her in the target population. Uneven weights are the signature of poor
+fourth patient, with a weight near zero, contributes almost nothing: that patient's covariate profile is far
+from Trial 1's, so matching gives it almost no role in the target population. Uneven weights are the signature of poor
 overlap between the two trials; poor overlap means less effective information, which means a larger
 variance inflation factor $n/\mathrm{ESS} = 3/2$, which means a wider interval on the transported effect and
 a less stable population adjustment. The bound $\mathrm{ESS} \le n$ is thus no technicality: it is the

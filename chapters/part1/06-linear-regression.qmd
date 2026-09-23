@@ -38,8 +38,8 @@ moments of the errors, not their shape (@thm-ols-blue).
 (iii) **Maximum likelihood estimator, MLE.** Under Gaussian errors, least squares is the coefficient
 value that makes the observed data most probable (@thm-ols-mle-normal).
 
-(iv) **Uniformly minimum-variance unbiased estimator, UMVU (Cramér-Rao).** Under Gaussian errors, least
-squares beats every unbiased estimator, even nonlinear ones (@cor-ols-efficient-normal).
+(iv) **Uniformly minimum-variance unbiased estimator, UMVU (Cramér-Rao).** Under Gaussian errors, no
+unbiased estimator, linear or not, has smaller variance than least squares (@cor-ols-efficient-normal).
 
 These are four genuinely different statements: (i) is geometric, (ii) ranges over linear estimators
 assuming only two moments, (iii) is likelihood-based, and (iv) ranges over all unbiased estimators. That
@@ -525,11 +525,11 @@ hence $M\mathbf{X}=\mathbf{X}-H\mathbf{X}=0$. Transposing and using symmetry giv
 $\mathbf{X}^\top H=\mathbf{X}^\top$ and $\mathbf{X}^\top M=0$.
 
 (4) A symmetric idempotent matrix is the orthogonal projection onto its column space
-(@def-projection-matrix). By (3), $\mathcal{C}(\mathbf{X})\subseteq\mathcal{C}(H)$; conversely every
+(@thm-projection-matrix-characterization). By (3), $\mathcal{C}(\mathbf{X})\subseteq\mathcal{C}(H)$; conversely every
 column of $H$ is $\mathbf{X}$ times a vector, so $\mathcal{C}(H)\subseteq\mathcal{C}(\mathbf{X})$; thus
-$\mathcal{C}(H)=\mathcal{C}(\mathbf{X})$ and $H=P_{\mathcal{C}(\mathbf{X})}$. Since
-$M\mathbf{v}=\mathbf{v}$ exactly when $H\mathbf{v}=\mathbf{0}$, that is when
-$\mathbf{v}\in\mathcal{C}(\mathbf{X})^\perp$, and $M=P^{\perp}_{\mathcal{C}(\mathbf{X})}$. The identity
+$\mathcal{C}(H)=\mathcal{C}(\mathbf{X})$ and $H=P_{\mathcal{C}(\mathbf{X})}$. Then
+$M=I_n-H=P^{\perp}_{\mathcal{C}(\mathbf{X})}$ is the orthogonal projection onto
+$\mathcal{C}(\mathbf{X})^\perp$ (@lem-projection-linear). The identity
 $\mathcal{C}(\mathbf{X})^\perp=\mathcal{N}(\mathbf{X}^\top)$ is the fundamental theorem of the four
 subspaces (@thm-four-subspaces).
 
@@ -701,10 +701,11 @@ $\tilde{\boldsymbol{\beta}}=A\mathbf{y}=\hat{\boldsymbol{\beta}}$. $\square$
 
 **Why this matters (ITC).** In plain terms, when you fit `lm(y ~ x)` and read off the standard errors,
 Gauss-Markov says you are getting the best you can do among linear unbiased estimators using only the
-two assumptions G1 and G2, with no appeal to normality. The result also travels: matching-adjusted
-indirect comparison (Chapter 18) replaces $\mathbf{X}^\top\mathbf{X}$ with a *weighted* version, and the
-same Gauss-Markov logic, applied to the weighted (generalized least squares) estimator of
-@exr-lr-gm-weighted, is what certifies that the reweighted estimator is optimal under its own assumptions.
+two assumptions G1 and G2, with no appeal to normality. A caution for later: weighted least squares is
+optimal only when the weights invert the error covariance (@exr-lr-gm-weighted). Matching-adjusted
+indirect comparison (Chapter 18) also weights patients, but its weights balance covariates against a
+target population; they change the estimand and cost precision, so Gauss-Markov optimality does not
+transfer to it.
 
 ::: {.remark}
 The proof uses only G1 and G2. Normality (G3) is not needed for Gauss-Markov optimality. The price of
@@ -1537,7 +1538,7 @@ $\hat{\boldsymbol{\beta}}^{+}$ is the unique minimum-norm minimizer. $\square$
 **Why this matters (ITC).** Estimability is the linear-algebra skeleton of identification in indirect
 comparison. A network of trials defines a design on the treatment contrasts, and which contrasts the
 network can estimate is exactly the estimability question of part (2). We return to it for network
-meta-analysis and population adjustment in Part III.
+meta-analysis in Part III.
 
 ::: {.remark}
 In the full-rank case $q=p$ the null space is trivial, every functional is estimable, the affine
@@ -1648,8 +1649,8 @@ holds. This is why the divisor is $n-p=3$ and the reference distribution has $3$
 
 **Tying it back.** The same arithmetic, with the treatment-and-baseline design of @exm-lr-running in place
 of a single severity column, is what an analyst runs on individual patient data before transporting the
-fit to another population. Every population-adjustment method of Parts IV and V rests on exactly this
-pipeline: fit a regression, read its coefficients and their uncertainty, and evaluate the fitted model at
+fit to another population. The regression-based population-adjustment methods (simulated treatment
+comparison in Part IV, multilevel network meta-regression in Part V) rest on exactly this pipeline: fit a regression, read its coefficients and their uncertainty, and evaluate the fitted model at
 a new covariate distribution.
 
 ## Notes and references {#sec-lr-notes}
@@ -1748,9 +1749,9 @@ weighted estimator $\hat{\boldsymbol{\beta}}_V=(\mathbf{X}^\top V^{-1}\mathbf{X}
 V^{-1}\mathbf{y}$. Prove it is unbiased with covariance $\sigma^2(\mathbf{X}^\top V^{-1}\mathbf{X})^{-1}$,
 and that it is the best linear unbiased estimator under the new assumption, generalizing @thm-ols-blue.
 (Hint: factor $V^{-1}=W^\top W$ via the spectral theorem (@thm-spectral-theorem) and transform to
-$\tilde{\mathbf{y}}=W\mathbf{y}$, reducing to the ordinary case.) This generalization is the bridge to
-population adjustment: the matching-adjusted estimator of Chapter 18 is a weighted least squares of
-exactly this kind, and the conclusion here is what tells us it is optimal under its own assumptions.
+$\tilde{\mathbf{y}}=W\mathbf{y}$, reducing to the ordinary case.) Note the scope: the optimality needs the
+weights to be the inverse error covariance. The matching-adjusted estimator of Chapter 18 is also a
+weighted estimator, but its weights balance covariates, so this result does not make it optimal.
 :::
 
 ::: {#exr-lr-general-hypothesis}

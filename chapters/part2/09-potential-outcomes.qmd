@@ -433,9 +433,10 @@ It helps to see the four estimands side by side, together with where each surfac
 | Effect on the controls | $\tau_{\mathrm{C}}$ | Effect among patients who received control | The mirror image; appears in some transport arguments |
 | Conditional effect | $\tau(x)$ | Effect within covariate stratum $X=x$ | The building block that carries effect modification across populations |
 
-For orientation: most population-adjustment methods in this book, MAIC and STC in Part IV and ML-NMR in
-Part V, target a *marginal* treatment effect (an ATE-type estimand) in a specified target population, on a
-stated effect scale. The CATE is the object that makes such transport possible, because it is what changes
+For orientation: the population-adjustment methods in this book (MAIC and STC in Part IV, ML-NMR in
+Part V) are judged against an effect in a specified target population, on a stated effect scale, and the
+usual target is a *marginal* (ATE-type) effect; Chapters 17 and 19 show when a method delivers a
+conditional effect instead. The CATE is the object that makes such transport possible, because it is what changes
 across populations when effect modifiers are distributed differently. The three population-level averages
 are tied together by the proportion treated.
 
@@ -905,8 +906,8 @@ Hence $P(T=1)=P(T=0)=0.5$, and the within-arm covariate distributions are
 $$
 P(X=1\mid T=1)=\frac{0.375}{0.5}=0.75,\qquad P(X=1\mid T=0)=\frac{0.125}{0.5}=0.25.
 $$
-The treated arm is covariate-shifted toward the high-risk stratum, the control arm toward the low-risk
-stratum. Using consistency, $\mathbb{E}[Y\mid T=1]=\mathbb{E}[Y(1)\mid T=1]$ and
+The treated arm is covariate-shifted toward the favorable stratum, the control arm toward the
+poor-baseline stratum. Using consistency, $\mathbb{E}[Y\mid T=1]=\mathbb{E}[Y(1)\mid T=1]$ and
 $\mathbb{E}[Y\mid T=0]=\mathbb{E}[Y(0)\mid T=0]$:
 $$
 \begin{aligned}
@@ -935,7 +936,7 @@ $$
 \Delta_{\mathrm{naive}}=\tau_{\mathrm{T}}+\text{selection bias}=4+5=9.0 .
 $$
 The entire discrepancy between the naive contrast and the ATE is the $5.0$ of selection bias, created
-because the treated would have had worse untreated outcomes (mean $17.5$) than the controls did (mean
+because the treated would have had better untreated outcomes (mean $17.5$) than the controls did (mean
 $12.5$), purely through the covariate imbalance the propensity score induces.
 
 **Standardization recovers the truth.** The adjustment formula reweights the stratum-specific contrasts by
@@ -952,7 +953,7 @@ The example exhibits the chapter in miniature. The same observed data $(X,T,Y)$ 
 selection-bias term the decomposition isolates. Notice that ATE, ATT, and CATE all equal $4$ here, because
 the effect is constant on the collapsible identity scale; had we measured the effect as an odds ratio the
 marginal and conditional effects would have parted ways even with no confounding, which is the separate
-phenomenon of @def-non-collapsibility and the subject of @def-collapsibility in the next chapter. It is
+phenomenon of @def-non-collapsibility and the subject of @def-collapsibility in Chapter 11. It is
 worth separating two things this example might otherwise blur. The covariate $X$ here is a *prognostic
 variable* (it predicts the outcome) that is *also a confounder* (it steers treatment), and that is why the
 within-study effect is biased. In an indirect comparison the usual villain is different: it is an *effect
@@ -983,9 +984,9 @@ $C$ we exploit a shared anchor: the common treatment $A$. The structure is small
 |---|---|---|---|
 | $AB$ | $A$ vs $B$ | $d_{AB}$, the effect of $B$ vs $A$ in study $AB$'s population | supplies the $A$-vs-$B$ contrast |
 | $AC$ | $A$ vs $C$ | $d_{AC}$, the effect of $C$ vs $A$ in study $AC$'s population | supplies the $A$-vs-$C$ contrast |
-| target | $B$ vs $C$ | $d_{BC}=d_{AB}-d_{AC}$, valid only if both refer to a *common* population | the quantity we actually want |
+| target | $B$ vs $C$ | $d_{BC}=d_{AC}-d_{AB}$ (the effect of $C$ vs $B$), valid only if both refer to a *common* population | the quantity we actually want |
 
-The subtraction $d_{BC}=d_{AB}-d_{AC}$ is the indirect (Bucher) comparison of Chapter 14. It is honest only
+The subtraction $d_{BC}=d_{AC}-d_{AB}$ is the indirect (Bucher) comparison of Chapter 14. It is honest only
 when the two within-study effects live in, or can be transported to, a *common* population; otherwise we are
 subtracting effects defined in two different worlds. Transport across populations is governed by the very
 two assumptions of this chapter, now read *between* studies rather than within one. Positivity becomes
@@ -1009,10 +1010,9 @@ Bucher comparison, network meta-analysis, MAIC, STC, and ML-NMR that indirect co
 
 ## Notes and references {#sec-po-notes}
 
-The potential-outcomes model is due to @hernan2020whatif's lineage of Neyman, in the 1923 randomization
-analysis of agricultural experiments, and Rubin, who in 1974 extended it to observational studies and named
-the counterfactual framework; Holland's 1986 article crystallized the "fundamental problem of causal
-inference" used in @thm-fundamental-problem. Our treatment follows @hernan2020whatif throughout, with the
+The potential-outcomes model is due to Neyman, in the 1923 randomization analysis of agricultural
+experiments (@neyman1923), and Rubin, who extended it to observational studies (@rubin1974); @holland1986
+named the "fundamental problem of causal inference" used in @thm-fundamental-problem. Our treatment follows @hernan2020whatif throughout, with the
 strong-ignorability formulation and the central role of the propensity score from @rosenbaum1983. The
 adjustment formula @eq-ate-identification is the simplest instance of Robins's g-formula (@robins1986); the
 letter "g" stands for *generalized*, since the same construction generalizes to sequences of treatments
@@ -1044,9 +1044,7 @@ abstract expectation operators, exactly as the pen-and-paper proofs here invoke 
 @cor-total-expectation, @thm-graphoid-axioms, and @def-conditional-independence from Chapter 4; the proofs
 in this chapter supply the measure-theoretic justifications the Coq statements take as inputs.
 
-The attributions to Neyman (1923, translated 1990), Rubin (1974), and Holland (1986) rely on sources not
-yet in the bibliography; they are listed with full bibliographic data in the work log for the orchestrator
-to merge. The worked example @exm-confounding-gformula is original to this text.
+The worked example @exm-confounding-gformula is original to this text.
 
 ## Exercises {#sec-po-exercises}
 

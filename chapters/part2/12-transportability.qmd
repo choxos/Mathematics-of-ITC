@@ -310,8 +310,7 @@ the relative effect across the trial populations. When does it hold?
 ::: {#thm-direct-transportability}
 ## Sufficient conditions for direct transportability
 Assume the structural invariance of @def-transport-invariance, and let $\mathcal P_1,\mathcal P_2$ be two
-populations whose covariate supports both contain the support of the conditional effect's dependence. The
-marginal relative effect $d_{ab}$ of @eq-transport-marg-effect is directly transportable from
+populations. The marginal relative effect $d_{ab}$ of @eq-transport-marg-effect is directly transportable from
 $\mathcal P_1$ to $\mathcal P_2$, that is $d_{ab(\mathcal P_1)}=d_{ab(\mathcal P_2)}$, under either of the
 following sufficient conditions.
 
@@ -319,8 +318,7 @@ following sufficient conditions.
 
 (b) **Constant conditional effect on a collapsible scale.** The conditional relative effect is constant in
 the covariates, $d_{ab}(x)=c$ for all $x$, and the effect measure is collapsible on scale $g$ in the sense
-of @def-collapsibility, namely the marginal effect is a weighted average, with weights integrating to one,
-of the stratum-specific conditional effects.
+of @def-collapsibility.
 :::
 
 ::: {.proof}
@@ -330,18 +328,11 @@ because $\mu_t$ is the same function in both populations by invariance @eq-trans
 Applying the link $g$ and differencing, $d_{ab(\mathcal P_1)}=g(m_b(\mathcal P_1))-g(m_a(\mathcal P_1))
 =g(m_b(\mathcal P_2))-g(m_a(\mathcal P_2))=d_{ab(\mathcal P_2)}$.
 
-For (b): collapsibility on scale $g$ (@def-collapsibility) provides, for each population $\mathcal P$,
-nonnegative weights $w_{\mathcal P}(x)$ with $\int w_{\mathcal P}(x)\,dx=1$ such that the marginal effect is
-the weighted average of the conditional effects,
-$$
-d_{ab(\mathcal P)}\;=\;\int_{\mathcal X} d_{ab}(x)\,w_{\mathcal P}(x)\,dx .
-$$
-This is established for the relevant scales in @lem-collapsible-scales below. Substituting the hypothesis
-$d_{ab}(x)=c$,
-$$
-d_{ab(\mathcal P)}\;=\;\int_{\mathcal X} c\,w_{\mathcal P}(x)\,dx\;=\;c\int_{\mathcal X} w_{\mathcal P}(x)\,dx\;=\;c,
-$$
-for every population $\mathcal P$. In particular $d_{ab(\mathcal P_1)}=c=d_{ab(\mathcal P_2)}$. $\square$
+For (b): by @def-collapsibility, a conditional effect that is the constant $c$ has marginal effect $c$
+for every covariate distribution, so $d_{ab(\mathcal P_1)}=c=d_{ab(\mathcal P_2)}$. For the identity and log
+scales @lem-collapsible-scales below makes this explicit: there are nonnegative weights
+$w_{\mathcal P}(x)$ integrating to one with $d_{ab(\mathcal P)}=\int d_{ab}(x)\,w_{\mathcal P}(x)\,dx$ (on
+the log scale, for the risk ratio itself), and a weighted average of the constant $c$ is $c$. $\square$
 :::
 
 **Why this matters.** Condition (a) is the silent premise of every *unadjusted* indirect comparison and of
@@ -362,8 +353,8 @@ populations, or if the measure is *not* collapsible, direct transportability can
 ## Touching numbers early: an identity-scale effect transports
 Take the two trial populations of @exm-transport-running, $f_{AB}$ with $P(X=1)=0.1$ and $f_{AC}$ with
 $P(X=1)=0.9$, a continuous outcome, and a treatment $B$ that adds a constant $3$ units to the mean at every
-covariate value, so the conditional effect is $d_{BC}(x)=3$ at both $x$ (a constant conditional effect on
-the identity scale). Condition (b) of @thm-direct-transportability applies, because the identity scale is
+covariate value relative to $C$, so the conditional effect of $B$ versus $C$ is
+$d_{CB}(x)=\mu_B(x)-\mu_C(x)=3$ at both $x$ (a constant conditional effect on the identity scale). Condition (b) of @thm-direct-transportability applies, because the identity scale is
 collapsible. Check it in one line: whatever the covariate frequencies, the marginal mean difference is
 $\mathbb E_{\mathcal P}[\mu_B(X)-\mu_C(X)]=\mathbb E_{\mathcal P}[3]=3$, the same in $f_{AB}$, in $f_{AC}$,
 and in $\mathcal P^{*}$. The full arithmetic with specific means is @sec-worked-continuous. Contrast it with
@@ -552,7 +543,7 @@ w(0)=\frac{f_{\mathcal P^{*}}(0)}{f_{\mathcal P}(0)}=\frac{0.4}{0.7}=0.571,
 $$
 so a source patient with $X=1$, twice as common in the target, counts double, while an $X=0$ patient counts
 a little over half. As a check the weights average to one in the source: $0.7(0.571)+0.3(2)=0.4+0.6=1$.
-Exercise @exr-transport-gformula-weights runs the full re-weighting identity on this setup.
+@exr-transport-gformula-weights runs the full re-weighting identity on this setup.
 
 ::: {.remark}
 ## Normalized weights
@@ -611,7 +602,8 @@ $$
 \;+\;
 \underbrace{\big(d_{BC(AC)}-\hat d_{BC(AC)}\big)}_{\text{Step 1: estimation/misspecification error}} .
 $$ {#eq-two-step-bias}
-The Step 1 term vanishes in expectation under correct specification and overlap. The Step 2 term vanishes
+The Step 1 term tends to zero in probability under correct specification, overlap, and a consistent
+estimator. The Step 2 term vanishes
 **if and only if** $d_{BC}$ is directly transportable from $f_{AC}$ to $\mathcal P^{*}$ in the sense of
 @thm-direct-transportability.
 :::
@@ -648,7 +640,7 @@ $d_{BC(\mathcal P^{*})}-\hat d_{BC(AC)}=(d_{BC(\mathcal P^{*})}-d_{BC(AC)})+(d_{
 which is @eq-two-step-bias. The second bracket is the deviation of the estimator from its estimand, the
 ordinary Step 1 error from finite samples and from any misspecification of $\mu_t(\cdot)$ or of the
 weights; under correct specification, overlap, and the consistency of the weighting or regression
-estimator it has mean zero. $\square$
+estimator it tends to zero in probability. $\square$
 :::
 
 The decomposition @eq-two-step-bias is the moral of the chapter in one line. The literature on MAIC and STC
@@ -664,9 +656,9 @@ HTA uses most.
 
 **Why Step 1 vanishes but Step 2 need not.** The Step 1 term $d_{BC(AC)}-\hat d_{BC(AC)}$ is ordinary
 estimation error: if the outcome model or the weights are correctly specified, the comparator support
-overlaps the index support (condition (iv)), and the estimator is consistent (Chapters 18 to 20), then
-$\hat d_{BC(AC)}$ converges to $d_{BC(AC)}$ and the term has mean zero. It is the term the MAIC and STC
-literature studies in detail. The Step 2 term is not estimation error at all; it is a mismatch of
+overlaps the index support (condition (iv)), and the estimator is consistent, then
+$\hat d_{BC(AC)}$ converges to $d_{BC(AC)}$ (Chapters 18 to 23), and the term is asymptotically
+negligible. It is the term the MAIC and STC literature studies in detail. The Step 2 term is not estimation error at all; it is a mismatch of
 *estimands*, the gap between the comparator population and the decision population, and no quantity of data
 from trials $AB$ and $AC$ can shrink it. Only knowledge of the decision population's covariate distribution,
 together with a transport argument, can.
@@ -865,13 +857,13 @@ Consider the anchored model @eq-transport-nmr under structural invariance. Suppo
 (iii) the effect measure is **collapsible** on scale $g$ (@def-collapsibility, @lem-collapsible-scales),
 for instance the mean difference on the identity scale or the log risk ratio on the log scale.
 
-Then the conditional active versus active contrast is constant, $d_{BC}(x)=\gamma_B-\gamma_C$ for all $x$,
+Then the conditional active versus active contrast is constant, $d_{CB}(x)=\gamma_B-\gamma_C$ for all $x$,
 and the marginal active versus active effect is directly transportable across all populations:
 $$
-d_{BC(\mathcal P)}=\gamma_B-\gamma_C\qquad\text{for every population }\mathcal P .
+d_{CB(\mathcal P)}=\gamma_B-\gamma_C\qquad\text{for every population }\mathcal P .
 $$ {#eq-collapsible-transport}
-In particular the Step 2 gap of @thm-two-step-transport closes, and the pairwise PAIC estimand
-$d_{BC(AC)}$ equals the decision-relevant estimand $d_{BC(\mathcal P^{*})}$.
+In particular the Step 2 gap of @thm-two-step-transport closes: the pairwise PAIC estimand
+$d_{BC(AC)}=-d_{CB(AC)}$ equals the decision-relevant estimand $d_{BC(\mathcal P^{*})}$.
 :::
 
 ::: {.proof}
@@ -879,13 +871,13 @@ By scale alignment (ii) the reported and model scales coincide, so the condition
 scale is the linear-predictor contrast, which by SEMA (i) and the cancellation of
 @thm-scale-alignment(i) equals the constant $\gamma_B-\gamma_C$:
 $$
-d_{BC}(x)=g(\mu_B(x))-g(\mu_C(x))=\eta_B(x)-\eta_C(x)=\gamma_B-\gamma_C\quad\text{for all }x.
+d_{CB}(x)=g(\mu_B(x))-g(\mu_C(x))=\eta_B(x)-\eta_C(x)=\gamma_B-\gamma_C\quad\text{for all }x.
 $$
 Now apply @thm-direct-transportability(b): the conditional effect is the constant $c=\gamma_B-\gamma_C$ and
 the measure is collapsible (iii), so the marginal effect equals $c$ in every population,
-$d_{BC(\mathcal P)}=\gamma_B-\gamma_C$, which is @eq-collapsible-transport. Since this holds for every
-population, in particular $d_{BC(AC)}=\gamma_B-\gamma_C=d_{BC(\mathcal P^{*})}$, so the Step 2 gap
-$d_{BC(\mathcal P^{*})}-d_{BC(AC)}$ of @eq-two-step-bias is zero. $\square$
+$d_{CB(\mathcal P)}=\gamma_B-\gamma_C$, which is @eq-collapsible-transport. Since this holds for every
+population, in particular $d_{CB(AC)}=\gamma_B-\gamma_C=d_{CB(\mathcal P^{*})}$; since
+$d_{BC}=-d_{CB}$, the Step 2 gap $d_{BC(\mathcal P^{*})}-d_{BC(AC)}$ of @eq-two-step-bias is zero. $\square$
 :::
 
 **Why this matters.** This is the rigorous form of the folklore "a shared effect modifier makes relative
@@ -906,11 +898,11 @@ fewer hypothesis.
 ## Direct transportability of the conditional contrast
 Under hypotheses (i) SEMA and (ii) scale alignment of @thm-collapsible-transport, but *without* requiring
 collapsibility, the population-average conditional active versus active effect is directly transportable:
-$\mathbb E_{X\sim\mathcal P}[d_{BC}(X)]=\gamma_B-\gamma_C$ for every population $\mathcal P$.
+$\mathbb E_{X\sim\mathcal P}[d_{CB}(X)]=\gamma_B-\gamma_C$ for every population $\mathcal P$.
 :::
 
 ::: {.proof}
-By @thm-scale-alignment(i) the conditional contrast $d_{BC}(x)=\gamma_B-\gamma_C$ is constant in $x$ under
+By @thm-scale-alignment(i) the conditional contrast $d_{CB}(x)=\gamma_B-\gamma_C$ is constant in $x$ under
 SEMA and alignment. Its population average is the average of a constant,
 $\mathbb E_{X\sim\mathcal P}[\gamma_B-\gamma_C]=\gamma_B-\gamma_C$, the same in every population. No
 collapsibility property of the scale is used, because the population-average conditional effect averages
@@ -936,19 +928,20 @@ For a non-collapsible measure the cancellation of @thm-collapsible-transport hap
 scale but does not survive the passage to the margin, because marginalization and the link do not commute.
 The result is that the marginal odds ratio, even with SEMA and alignment in force and the conditional odds
 ratio held perfectly constant, drifts with the covariate distribution. This is catalogue result N.11, the
-insufficiency of SEMA, and it rests on the strict convexity that defines non-collapsibility.
+insufficiency of SEMA, and for the odds ratio it rests on the strict concavity of the map that adds a
+constant on the logit scale.
 
 ::: {#thm-sema-insufficient}
 ## SEMA and alignment are sufficient if and only if the measure is collapsible
 Consider the anchored model @eq-transport-nmr under SEMA @eq-transport-sema and scale alignment
 $h=g$, so that the conditional active versus active contrast is the constant $c=\gamma_B-\gamma_C$
-(@thm-scale-alignment(i)). The marginal active versus active effect $d_{BC(\mathcal P)}$ is directly
+(@thm-scale-alignment(i)). The marginal active versus active effect $d_{CB(\mathcal P)}$ is directly
 transportable across all populations **if and only if** the effect measure is collapsible on scale $g$.
 
 In particular, for the odds ratio (logit link) and the hazard ratio (log-hazard link), which are
 non-collapsible (@thm-noncollapsibility-or-hr), the marginal effect is **not** directly transportable under
 SEMA and alignment: there exist populations $\mathcal P_1\ne\mathcal P_2$ with
-$d_{BC(\mathcal P_1)}\ne d_{BC(\mathcal P_2)}$. Concretely, when the conditional log odds ratio is the
+$d_{CB(\mathcal P_1)}\ne d_{CB(\mathcal P_2)}$. Concretely, when the conditional log odds ratio is the
 nonzero constant $c$ and the reference risk $\mu_C(X)$ is non-degenerate, the marginal log odds ratio is
 strictly attenuated,
 $$
@@ -966,7 +959,7 @@ strict inequality using Jensen's inequality.
 
 ::: {.proof}
 *Sufficiency (collapsible $\Rightarrow$ transportable).* This is @thm-collapsible-transport: with the
-conditional contrast constant at $c$ and the measure collapsible, $d_{BC(\mathcal P)}=c$ for every
+conditional contrast constant at $c$ and the measure collapsible, $d_{CB(\mathcal P)}=c$ for every
 $\mathcal P$.
 
 *Necessity (non-collapsible $\Rightarrow$ not transportable), shown for the odds ratio.* Work on the logit
@@ -999,10 +992,13 @@ Finally, the marginal log odds ratio depends on the covariate distribution. Take
 at a single covariate value $x_0$: then $\mu_C(X)=\mu_C(x_0)$ is constant, Jensen holds with equality, and
 $\mathrm{logit}\,m_B-\mathrm{logit}\,m_C=c$. Take $\mathcal P_2$ any non-degenerate distribution of
 $\mu_C(X)$: then the strict inequality gives $\mathrm{logit}\,m_B-\mathrm{logit}\,m_C<c$. Hence
-$d_{BC(\mathcal P_1)}=c\ne d_{BC(\mathcal P_2)}$, so $d_{BC}$ is not directly transportable, proving
-necessity for the odds ratio. The hazard ratio is non-collapsible by the same mechanism, with the
-mixture-of-survival argument of @thm-noncollapsibility-or-hr playing the role of strict Jensen; we do not
-repeat it. $\square$
+$d_{CB(\mathcal P_1)}=c\ne d_{CB(\mathcal P_2)}$, so $d_{CB}$ is not directly transportable, proving
+necessity for the odds ratio. For a general non-collapsible scale the same two-population argument
+applies: by @def-collapsibility there are stratum means with a constant conditional effect $c$ whose
+marginal effect differs from $c$, and these are realized in @eq-transport-nmr by the prognostic term
+$x^\top\boldsymbol\beta_1$ (with a rich enough covariate), while a population degenerate at one covariate
+value has marginal effect $c$. For the hazard ratio the explicit instance is
+@thm-noncollapsibility-or-hr(b). $\square$
 :::
 
 **Why this matters.** This is why two HTA submissions built on the very same trials can report different
@@ -1087,18 +1083,18 @@ Let the outcome be continuous with an identity-link model and a binary effect mo
 means under the comparator $C$ equal to $\mu_C(0)=2$, $\mu_C(1)=7$, and a constant active versus active
 benefit of $\gamma_B-\gamma_C=3$ on the identity scale, so $\mu_B(x)=\mu_C(x)+3$, giving $\mu_B(0)=5$,
 $\mu_B(1)=10$. SEMA holds because the active versus active contrast carries no interaction; the conditional
-mean difference is $d_{BC}(x)=\mu_B(x)-\mu_C(x)=3$ for both $x$. The identity scale is aligned and
+mean difference is $d_{CB}(x)=\mu_B(x)-\mu_C(x)=3$ for both $x$. The identity scale is aligned and
 collapsible, so @thm-collapsible-transport predicts the marginal mean difference equals $3$ in every
 population. Verify by hand. In $\mathcal P_1$,
 $$
-m_C(\mathcal P_1)=0.9(2)+0.1(7)=2.5,\quad m_B(\mathcal P_1)=0.9(5)+0.1(10)=5.5,\quad d_{BC(\mathcal P_1)}=5.5-2.5=3.
+m_C(\mathcal P_1)=0.9(2)+0.1(7)=2.5,\quad m_B(\mathcal P_1)=0.9(5)+0.1(10)=5.5,\quad d_{CB(\mathcal P_1)}=5.5-2.5=3.
 $$
 In $\mathcal P_2$,
 $$
-m_C(\mathcal P_2)=0.1(2)+0.9(7)=6.5,\quad m_B(\mathcal P_2)=0.1(5)+0.9(10)=9.5,\quad d_{BC(\mathcal P_2)}=9.5-6.5=3.
+m_C(\mathcal P_2)=0.1(2)+0.9(7)=6.5,\quad m_B(\mathcal P_2)=0.1(5)+0.9(10)=9.5,\quad d_{CB(\mathcal P_2)}=9.5-6.5=3.
 $$
 The marginal mean difference is $3$ in both populations, as it must be, since
-$d_{BC(\mathcal P)}=\mathbb E_{\mathcal P}[\mu_B(X)-\mu_C(X)]=\mathbb E_{\mathcal P}[3]=3$ for any covariate
+$d_{CB(\mathcal P)}=\mathbb E_{\mathcal P}[\mu_B(X)-\mu_C(X)]=\mathbb E_{\mathcal P}[3]=3$ for any covariate
 distribution. The collapsible aligned measure transports.
 
 **What a researcher would report.** The mean difference is $3$ units, and it is the *same* $3$ in the index
@@ -1126,7 +1122,7 @@ m_B(\mathcal P_1)=0.9(0.268941)+0.1(0.993307)=0.341378.
 $$
 The marginal log odds ratio is
 $$
-d_{BC(\mathcal P_1)}=\mathrm{logit}(0.341378)-\mathrm{logit}(0.137941)=(-0.65716)-(-1.83250)=1.17534,
+d_{CB(\mathcal P_1)}=\mathrm{logit}(0.341378)-\mathrm{logit}(0.137941)=(-0.65716)-(-1.83250)=1.17534,
 $$
 a marginal odds ratio of $e^{1.17534}=3.239$. In $\mathcal P_2$, $P(X=1)=0.9$:
 $$
@@ -1134,7 +1130,7 @@ m_C(\mathcal P_2)=0.1(0.047426)+0.9(0.952574)=0.862060,\qquad
 m_B(\mathcal P_2)=0.1(0.268941)+0.9(0.993307)=0.920871,
 $$
 $$
-d_{BC(\mathcal P_2)}=\mathrm{logit}(0.920871)-\mathrm{logit}(0.862060)=2.45423-1.83250=0.62173,
+d_{CB(\mathcal P_2)}=\mathrm{logit}(0.920871)-\mathrm{logit}(0.862060)=2.45423-1.83250=0.62173,
 $$
 a marginal odds ratio of $e^{0.62173}=1.862$. The conditional odds ratio is $7.389$ in both populations,
 yet the marginal odds ratio is $3.24$ in $\mathcal P_1$ and $1.86$ in $\mathcal P_2$. SEMA holds, the scale
@@ -1192,7 +1188,7 @@ $$
 $$
 The conditional RMST difference is therefore
 $$
-d_{BC}(0)=1.573877-1.264241=0.309636,\qquad d_{BC}(1)=0.864665-0.490842=0.373823,
+d_{CB}(0)=1.573877-1.264241=0.309636,\qquad d_{CB}(1)=0.864665-0.490842=0.373823,
 $$
 *not constant in $x$*, even though the conditional hazard ratio is the constant $0.5$. This is exactly
 @thm-scale-alignment(ii): the nonlinear map from log-hazard to RMST refuses to cancel the covariate, which
@@ -1201,8 +1197,8 @@ difference varies in $x$, the marginal RMST difference depends on the population
 collapsible, so the marginal is the population-average of the conditional (each marginal RMST is the average
 of the conditional survival curves integrated, by Fubini), and we average:
 $$
-d_{BC(\mathcal P_1)}=0.9(0.309636)+0.1(0.373823)=0.316055,\qquad
-d_{BC(\mathcal P_2)}=0.1(0.309636)+0.9(0.373823)=0.367404.
+d_{CB(\mathcal P_1)}=0.9(0.309636)+0.1(0.373823)=0.316055,\qquad
+d_{CB(\mathcal P_2)}=0.1(0.309636)+0.9(0.373823)=0.367404.
 $$
 The marginal RMST difference is $0.316$ in $\mathcal P_1$ and $0.367$ in $\mathcal P_2$: a collapsible
 measure that still fails to transport, because the misaligned scale has manufactured effect modification on
@@ -1249,9 +1245,9 @@ effect modification is the subject of @thm-failure-of-bucher and the ecological 
 in Chapter 16. The shared effect modifier assumption itself is developed as part of the population
 adjustment theory of Chapter 17; here it is used as a stated structural condition, @eq-transport-sema, and
 the methods that operationalize the transport g-formula, MAIC, STC, and ML-NMR, are the subjects of
-Chapters 18 to 23. The current NICE Decision Support Unit and EU joint guidance that treat SEMA as
-sufficient for transport are documented in @phillippo2016tsd18; @thm-sema-insufficient is the precise sense
-in which that treatment is incomplete for non-collapsible marginal effects, and @phillippo2020mlnmr is the
+Chapters 18 to 23. The NICE Decision Support Unit guidance (@phillippo2016tsd18) treats the shared effect
+modifier assumption as licensing transport of an anchored relative effect; @thm-sema-insufficient is the
+precise sense in which that treatment is incomplete for non-collapsible marginal effects, and @phillippo2020mlnmr is the
 modeling framework that makes the target population, and hence the Step 2 transport, explicit.
 
 **Machine-checked status.** In one sentence for readers outside formal methods: none of this chapter's own
@@ -1317,8 +1313,8 @@ requires here and what goes wrong if $P_{\mathcal P}(X=1)=0$.
 **(Interpretation) The two sponsors.** Two sponsors each compare $B$ versus $C$ anchored on $A$, using comparator trials with
 covariate distributions $f_{AC}^{(1)}$ and $f_{AC}^{(2)}$ that differ. The conditional log odds ratio of $B$
 versus $C$ is the constant $c=0.7$ (SEMA and alignment hold). Using @thm-two-step-transport and
-@thm-sema-insufficient, explain why the two sponsors' marginal log odds ratios $d_{BC(AC^{(1)})}$ and
-$d_{BC(AC^{(2)})}$ can differ, identify which of the two bias terms in @eq-two-step-bias is responsible, and
+@thm-sema-insufficient, explain why the two sponsors' marginal log odds ratios $d_{CB(AC^{(1)})}$ and
+$d_{CB(AC^{(2)})}$ can differ, identify which of the two bias terms in @eq-two-step-bias is responsible, and
 state what additional information would be needed to transport either estimate to a third, decision-relevant
 population.
 :::
@@ -1357,9 +1353,10 @@ occurs even though the risk difference is a collapsible measure.
 :::
 
 ::: {#exr-transport-rmst-baseline}
-**(Proof) RMST transport under an RMST-scale assumption.** The last row of @prp-transport-table claims that an RMST
-difference transports if SEMA is imposed on the RMST (time) scale rather than the log-hazard scale.
-(a) State precisely what "RMST-scale SEMA" means for the conditional RMST difference $d_{BC}(x)$.
+**(Proof) RMST transport under an RMST-scale assumption.** The row "RMST difference (RMST-scale SEMA)" of
+@prp-transport-table claims that an RMST difference transports if SEMA is imposed on the RMST (time) scale
+rather than the log-hazard scale.
+(a) State precisely what "RMST-scale SEMA" means for the conditional RMST difference $d_{CB}(x)$.
 (b) Prove that under it the marginal RMST difference is directly transportable, citing
 @thm-collapsible-transport and the collapsibility of the RMST difference. (c) Explain why this structural
 assumption is restrictive in practice: what would have to be true of the baseline hazard and the covariate

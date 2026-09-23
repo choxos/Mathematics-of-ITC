@@ -29,7 +29,7 @@ eigenvalue or a singular value of some matrix.
   provide.
 - The *matrix square root*, also constructed here, whitens correlated data: it turns a general
   covariance into the identity. This is the algebraic backbone of standardization, of the Mahalanobis
-  distance used by the matching and distance methods of Part V, and of the Gaussian-copula
+  distance used by the distance-matching methods of Part VI, and of the Gaussian-copula
   constructions used for numerical integration.
 
 We develop the theory in dependency order. We begin with eigenvalues, eigenvectors, the characteristic
@@ -50,19 +50,18 @@ check by hand.
 ::: {#exm-la3-contrast-covariance}
 ## Two correlated treatment-effect estimates
 
-Two trials share a common comparator $A$. The first reports the log odds ratio of treatment $B$ versus
-$A$, with estimate $\hat y_{AB}$; the second reports the log odds ratio of $C$ versus $A$, with estimate
-$\hat y_{AC}$. When the two relative effects are estimated together in a network, the estimates are
-correlated. Suppose their joint covariance matrix, in convenient units chosen to keep the arithmetic
-clean, is
+A three-arm trial randomizes patients to $A$, $B$, and $C$. It reports the log odds ratio of $B$ versus
+$A$, with estimate $\hat y_{AB}$, and of $C$ versus $A$, with estimate $\hat y_{AC}$. Both estimates use
+the same $A$ arm, so they are positively correlated. Suppose their joint covariance matrix, in convenient
+units chosen to keep the arithmetic clean, is
 $$
 \boldsymbol{\Sigma}=\mathrm{Cov}\!\begin{pmatrix}\hat y_{AB}\\ \hat y_{AC}\end{pmatrix}
 =\begin{pmatrix} 2 & 1\\ 1 & 2\end{pmatrix}.
 $$
-The Bucher indirect comparison of $C$ versus $B$ is the contrast
-$\hat d_{BC}=\hat y_{AB}-\hat y_{AC}$, which is $\mathbf{a}^\top(\hat y_{AB},\hat y_{AC})^\top$ for the
+The comparison of $B$ versus $C$ through the common arm $A$ is the contrast
+$\hat d_{CB}=\hat y_{AB}-\hat y_{AC}$, which is $\mathbf{a}^\top(\hat y_{AB},\hat y_{AC})^\top$ for the
 contrast vector $\mathbf{a}=(1,-1)^\top$. Everything an indirect comparison cares about, namely the
-uncertainty of $\hat d_{BC}$ and the directions of large and small uncertainty in
+uncertainty of $\hat d_{CB}$ and the directions of large and small uncertainty in
 $(\hat y_{AB},\hat y_{AC})$, will turn out to be an eigenvalue, an eigenvector, or a quadratic form of
 this one matrix $\boldsymbol{\Sigma}$. $\blacktriangleleft$
 :::
@@ -80,14 +79,14 @@ to it; nothing here needs to be understood yet.
 |---|---|---|
 | eigenvalue $\lambda_i$ | a scaling factor of the matrix | variance along a principal axis of an estimator |
 | eigenvector $\mathbf{q}_i$ | a direction the matrix only scales | a principal direction of uncertainty or of covariate variation |
-| quadratic form $\mathbf{a}^\top\boldsymbol{\Sigma}\mathbf{a}$ | a weighted sum of squares | the variance of a contrast such as the indirect estimate $\hat d_{BC}$ |
+| quadratic form $\mathbf{a}^\top\boldsymbol{\Sigma}\mathbf{a}$ | a weighted sum of squares | the variance of a contrast such as the indirect estimate $\hat d_{CB}$ |
 | positive definite $A\succ 0$ | every direction has positive value | every contrast has strictly positive variance; normal equations have a unique solution |
 | spectral decomposition $A=Q\Lambda Q^\top$ | rotation to independent axes | principal component analysis of a covariance matrix |
 | singular value $\sigma_i$ | a stretching factor of a rectangular matrix | how well the data support a model direction |
 | SVD $A=U\Sigma V^\top$ | rotate, stretch, rotate | structure theorem for a design matrix |
 | condition number $\sigma_1/\sigma_r$ | ratio of largest to smallest stretch | how much collinearity inflates the variance of $\hat{\boldsymbol{\beta}}$ |
 | pseudoinverse $A^{+}$ | best stand-in for an inverse | solves least squares when the design is collinear or rank-deficient |
-| matrix square root $A^{1/2}$ | a symmetric square root | whitening and the Mahalanobis distance of Part V |
+| matrix square root $A^{1/2}$ | a symmetric square root | whitening and the Mahalanobis distance of Part VI |
 
 ### Which results are core and which are deeper support
 
@@ -247,7 +246,7 @@ $$
 ::: {.proof}
 Write $g=\dim E_{\lambda_0}\ge 1$ and choose a basis $\mathbf{v}_1,\dots,\mathbf{v}_g$ of $E_{\lambda_0}$.
 Extend it to a basis $\mathbf{v}_1,\dots,\mathbf{v}_n$ of $\mathbb{C}^n$ (every linearly independent
-set extends to a basis; see @def-basis and @strang2016) and assemble the columns into an invertible
+set extends to a basis, @lem-basis-extension) and assemble the columns into an invertible
 matrix $S=[\mathbf{v}_1\ \cdots\ \mathbf{v}_n]$. Because $A\mathbf{v}_i=\lambda_0\mathbf{v}_i$ for
 $i\le g$, the matrix $S^{-1}AS$ is block upper triangular,
 $$
@@ -402,7 +401,7 @@ Two scalar summaries of a matrix, the trace $\mathrm{tr}(A)=\sum_i a_{ii}$ and t
 $\det(A)$, turn out to be the simplest symmetric functions of the eigenvalues. These two numbers are not
 idle curiosities for a statistician. For a covariance matrix the trace is the *total variance* (the sum
 of the variances along the principal axes), and the determinant is the *generalized variance*, which is
-the squared volume of the confidence ellipsoid. The results below say both are read directly off the
+proportional to the squared volume of the confidence ellipsoid. The results below say both are read directly off the
 eigenvalues, which is exactly why principal component analysis can speak of the share of total variance
 "explained" by each axis. We first record a small but heavily used fact.
 
@@ -665,15 +664,14 @@ eigenspace.
 
 ::: {.proof}
 Each $P_i$ is symmetric and idempotent, $P_i^2=\mathbf{q}_i(\mathbf{q}_i^\top\mathbf{q}_i)
-\mathbf{q}_i^\top=P_i$, so by the projection theorem (@thm-projection-theorem) and the
-orthonormal-basis formula for an orthogonal projection matrix (@def-projection-matrix) it is exactly the
+\mathbf{q}_i^\top=P_i$, so by the
+orthonormal-basis formula for an orthogonal projection matrix (@prp-projection-from-onb) it is exactly the
 orthogonal projection onto $\mathrm{span}\{\mathbf{q}_i\}$. Summing the rank-one expansion
 @eq-spectral-decomposition gives $A=\sum_i\lambda_i P_i$. Grouping the terms with a common eigenvalue
 $\lambda$, the corresponding $\mathbf{q}_i$ span $E_\lambda$ and their rank-one projections add to
 $P_{E_\lambda}$, yielding the grouped form. Distinct eigenspaces are orthogonal by
 @lem-sym-orthogonal-eigenvectors, and since the $n$ eigenvectors form a basis, every vector decomposes
-uniquely across the eigenspaces. (In the language of @sec-la3-spectral, this last property is summarized
-by saying the eigenspaces form a **direct sum** equal to $\mathbb{R}^n$, written with the direct-sum
+uniquely across the eigenspaces. (This last property says the eigenspaces form a **direct sum** equal to $\mathbb{R}^n$, written with the direct-sum
 symbol as $\mathbb{R}^n=\bigoplus_\lambda E_\lambda$: a direct sum is a sum of subspaces in which each
 vector has exactly one decomposition.) $\square$
 :::
@@ -756,7 +754,7 @@ $$
 =\begin{pmatrix}1&-1\end{pmatrix}\begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}1\\-1\end{pmatrix}
 =2-1-1+2=2,
 $$
-which is the variance of the indirect comparison $\hat d_{BC}=\hat y_{AB}-\hat y_{AC}$. Quadratic forms
+which is the variance of the indirect comparison $\hat d_{CB}=\hat y_{AB}-\hat y_{AC}$. Quadratic forms
 are how every variance in this book is computed.
 
 From now on the matrix of a quadratic form is symmetric. Definiteness classifies a symmetric matrix by
@@ -919,8 +917,8 @@ positive, and a dimension count will force these two subspaces to share a nonzer
 contradiction. For nonzero $\mathbf{x}=c_1\mathbf{q}_1+c_2\mathbf{q}_2\in U$, orthonormality gives
 $\mathbf{x}^\top A\mathbf{x}=\lambda_1 c_1^2+\lambda_2 c_2^2<0$. For nonzero $\mathbf{x}=(\mathbf{z}^\top,0)^\top\in V$,
 we have $\mathbf{z}\ne\mathbf{0}$ and $\mathbf{x}^\top A\mathbf{x}=\mathbf{z}^\top A_{n-1}\mathbf{z}>0$
-because $A_{n-1}\succ 0$. Now $\dim U=2$ and $\dim V=n-1$, so by the dimension formula for subspaces
-(@thm-rank-nullity),
+because $A_{n-1}\succ 0$. Now $\dim U=2$ and $\dim V=n-1$, so by the dimension formula
+$\dim(U\cap V)=\dim U+\dim V-\dim(U+V)$ (@exr-la1-dim-sum) with $\dim(U+V)\le n$,
 $$
 \dim(U\cap V)\ge \dim U+\dim V-n = 2+(n-1)-n = 1 .
 $$
@@ -947,7 +945,7 @@ prove that it is unique among symmetric positive semidefinite roots. Why would a
 square root of a matrix? Because $\boldsymbol{\Sigma}^{1/2}$ is the tool that *whitens* correlated data:
 applying $\boldsymbol{\Sigma}^{-1/2}$ to a random vector with covariance $\boldsymbol{\Sigma}$ turns its
 covariance into the identity, removing all correlation and unequal scaling. That same root defines the
-Mahalanobis distance used by the matching methods of Part V. We construct it here and cash out both uses
+Mahalanobis distance used by the distance-matching methods of Part VI. We construct it here and cash out both uses
 in @sec-la3-covariance.
 
 ::: {#prp-matrix-square-root}
@@ -1117,8 +1115,8 @@ $\max_{\mathbf{0}\ne\mathbf{x}\in S_0}R_A(\mathbf{x})\le\lambda_k$, so the minim
 $S$ is at most $\lambda_k$.
 
 *Lower bound.* Let $S$ be any $k$-dimensional subspace and let $T=\mathrm{span}\{\mathbf{q}_k,
-\mathbf{q}_{k+1},\dots,\mathbf{q}_n\}$, of dimension $n-k+1$. By the dimension formula
-(@thm-rank-nullity),
+\mathbf{q}_{k+1},\dots,\mathbf{q}_n\}$, of dimension $n-k+1$. By the dimension formula of
+@exr-la1-dim-sum,
 $$
 \dim(S\cap T)\ge\dim S+\dim T-n=k+(n-k+1)-n=1,
 $$
@@ -1425,8 +1423,8 @@ $$
 With $A=U\Sigma V^\top$, write $U_r=[\mathbf{u}_1\ \cdots\ \mathbf{u}_r]$ for the first $r$ left singular
 vectors. From the proof of @prp-pseudoinverse-penrose, $AA^{+}=U\,\mathrm{diag}(I_r,\mathbf{0})\,U^\top=
 U_rU_r^\top$. The columns of $U_r$ are orthonormal and, by the remark after @thm-svd, form a basis of
-$\mathcal{C}(A)$. By the projection theorem (@thm-projection-theorem) and the orthonormal-basis formula
-for a projection matrix (@def-projection-matrix), $U_rU_r^\top$ is exactly the orthogonal projection
+$\mathcal{C}(A)$. By the orthonormal-basis formula
+for a projection matrix (@prp-projection-from-onb), $U_rU_r^\top$ is exactly the orthogonal projection
 onto $\mathrm{span}\{\mathbf{u}_1,\dots,\mathbf{u}_r\}=\mathcal{C}(A)$. The same argument applied to
 $A^{+}A=V_rV_r^\top$ identifies it with the orthogonal projection onto
 $\mathrm{span}\{\mathbf{v}_1,\dots,\mathbf{v}_r\}=\mathcal{C}(A^\top)$.
@@ -1503,8 +1501,8 @@ positive semidefinite square root, and when $\boldsymbol{\Sigma}\succ 0$ the whi
 $\mathbf{Z}=\boldsymbol{\Sigma}^{-1/2}(\mathbf{X}-\boldsymbol{\mu})$ has covariance
 $\boldsymbol{\Sigma}^{-1/2}\boldsymbol{\Sigma}\,\boldsymbol{\Sigma}^{-1/2}=I_n$. The induced norm
 $\|\mathbf{x}\|_{\boldsymbol{\Sigma}^{-1}}=\sqrt{\mathbf{x}^\top\boldsymbol{\Sigma}^{-1}\mathbf{x}}$ is
-the Mahalanobis distance that the matching methods of Part V use to compare covariate profiles across
-studies. In words, it is the standardized distance that accounts for correlation and unequal variances:
+the Mahalanobis distance that the distance-matching methods of Part VI use to compare covariate profiles
+across studies. In words, it is the standardized distance that accounts for correlation and unequal variances:
 two covariate profiles that differ by one raw unit count as far apart along directions in which the study
 has little variation, and close along directions in which it has a lot. Whitening makes this precise,
 since $\|\mathbf{x}\|_{\boldsymbol{\Sigma}^{-1}}=\|\boldsymbol{\Sigma}^{-1/2}\mathbf{x}\|_2$ is ordinary
@@ -1569,10 +1567,10 @@ $(A^{1/2})^2=\begin{pmatrix}a^2+b^2 & 2ab\\ 2ab & a^2+b^2\end{pmatrix}=\begin{pm
 *Indirect-comparison reading.* Now read these numbers as facts about the two correlated estimates
 $(\hat y_{AB},\hat y_{AC})$ with covariance $A=\boldsymbol{\Sigma}$. The two estimates have correlation
 $\boldsymbol{\Sigma}_{12}/\sqrt{\boldsymbol{\Sigma}_{11}\boldsymbol{\Sigma}_{22}}=1/2$. The variance of
-the Bucher indirect comparison $\hat d_{BC}=\hat y_{AB}-\hat y_{AC}$ is the quadratic form along the
+the indirect comparison $\hat d_{CB}=\hat y_{AB}-\hat y_{AC}$ is the quadratic form along the
 contrast $\mathbf{a}=(1,-1)^\top$,
 $$
-\mathrm{Var}(\hat d_{BC})=\mathbf{a}^\top\boldsymbol{\Sigma}\mathbf{a}
+\mathrm{Var}(\hat d_{CB})=\mathbf{a}^\top\boldsymbol{\Sigma}\mathbf{a}
 =\begin{pmatrix}1&-1\end{pmatrix}\begin{pmatrix}2&1\\1&2\end{pmatrix}\begin{pmatrix}1\\-1\end{pmatrix}=2 .
 $$
 The two eigenpairs are the principal axes of uncertainty: the high-variance axis $\mathbf{q}_3=(1,1)/
@@ -1649,7 +1647,7 @@ whose formalized theorems live at the causal and statistical layer rather than a
 factorizations; accordingly, none of the results here carries a machine-checked tag. The downstream uses
 foreshadowed in @sec-la3-covariance, namely the positive semidefiniteness of covariance matrices and the
 Mahalanobis distance, reappear in the probability chapter and in the distance-matching methods of
-Part V.
+Part VI.
 
 ## Exercises {#sec-la3-exercises}
 
@@ -1669,14 +1667,14 @@ $\mathbf{a}=(1,-1)^\top$? You should not need to compute a determinant.
 ::: {#exr-la3-contrast-variance}
 ## Interpretation: covariance of two log-odds-ratio estimates
 
-(Interpretation and computation.) Two trials sharing comparator $A$ give log-odds-ratio estimates with
-covariance matrix
+(Interpretation and computation.) A three-arm trial gives the log-odds-ratio estimates of $B$ versus $A$ and
+$C$ versus $A$ with covariance matrix
 $$
 \boldsymbol{\Sigma}=\begin{pmatrix}0.05 & 0.02\\ 0.02 & 0.05\end{pmatrix}
 $$
 (in convenient units). (a) Compute the correlation between the two estimates. (b) Using the quadratic
 form $\mathbf{a}^\top\boldsymbol{\Sigma}\mathbf{a}$ with $\mathbf{a}=(1,-1)^\top$, find the variance and
-the standard error of the indirect comparison $\hat d_{BC}=\hat y_{AB}-\hat y_{AC}$. (c) Confirm
+the standard error of the contrast $\hat d_{CB}=\hat y_{AB}-\hat y_{AC}$. (c) Confirm
 $\boldsymbol{\Sigma}\succ 0$ with Sylvester's criterion (@thm-sylvester-criterion). (d) Find the
 eigenvalues and eigenvectors, and state in one sentence which direction in the
 $(\hat y_{AB},\hat y_{AC})$ plane is the most uncertain and which is the least.

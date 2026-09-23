@@ -68,14 +68,15 @@ $p_i=\operatorname{expit}(\eta(x_i))$ depends on that patient's covariates, is n
 over all $\binom{n}{y}$ subsets of size $y$ and is hopeless to evaluate directly for the sample sizes of a
 real trial. We derive its structure cleanly through the probability generating function
 (@thm-poisson-binomial-pgf), and then face the practical need for a tractable surrogate. Two classical
-surrogates answer that need, and they are genuinely different, a point the early ML-NMR literature was
-careful to separate and we are careful to keep separate here. **Le Cam's approximation** replaces the
+surrogates answer that need, and they are genuinely different; the ML-NMR literature attributes both to Le
+Cam (@phillippo2019thesis, Section 4.2.1), and we keep them separate here. **Le Cam's approximation** replaces the
 Poisson binomial by a Poisson with matched mean and controls the total-variation error by the elegant
 bound $\sum_i p_i^2$; we give the full coupling proof (@thm-le-cam-tv), one of the few places in Part V
 where a sharp inequality, rather than a numerical recipe, carries the argument. The **adjusted
 two-parameter binomial** instead matches the first two moments exactly, producing a binomial whose count
 is automatically bounded above by its sample size and whose dispersion is correct (@thm-adjusted-binomial);
-it is the surrogate used in practice for binary ML-NMR. We close with a fully worked example that computes
+it is the two-parameter binomial likelihood offered by ML-NMR software alongside the default integrated
+binomial. We close with a fully worked example that computes
 an aggregate binary likelihood three ways, by integration to a marginal binomial, by the exact Poisson
 binomial, and by the adjusted binomial, with the Le Cam Poisson alongside for contrast, and shows by hand
 which is faithful and which is not.
@@ -186,7 +187,7 @@ $f_j$. $\blacktriangleleft$
 :::
 
 ::: {.remark}
-**Why this is not the end of the story.** Proposition @prp-marginal-binomial is exact, requires no
+**Why this is not the end of the story.** @prp-marginal-binomial is exact, requires no
 approximation, and is the binary aggregate likelihood of the original ML-NMR (@phillippo2020mlnmr): compute
 $\theta_\bullet$ by numerical integration (Chapter 22) and treat the reported events as
 $\mathrm{Bin}(n,\theta_\bullet)$. Its one assumption is that the $n$ patients are an exchangeable sample
@@ -804,14 +805,14 @@ refinement, valid for unequal risks, of the limit theorem proved in Chapter 4. $
 
 ::: {.remark}
 **Sharpness, refinements, and when the bound is useful.** The bound @eq-lecam-bound is of the right order:
-Barbour and Hall (1984) proved the sharper estimate
+@barbour1984 proved the sharper estimate
 $\|\mathrm{PoBin}(\mathbf p)-\mathrm{Poi}(\lambda)\|_{\mathrm{TV}}\le\min(1,\lambda^{-1})\sum_i p_i^2$
 together with a matching lower bound of the same form up to a universal constant, via Stein's method for
-Poisson approximation (the operator approach pioneered by Chen in 1975). The factor $\min(1,\lambda^{-1})$
+Poisson approximation (the operator approach pioneered by @chen1975). The factor $\min(1,\lambda^{-1})$
 shows that the approximation improves when the events are spread over a large expected count. Physically,
 events spread over a larger expected count $\lambda$ dilute each event's share of the error, so the
-per-event total $\sum_i p_i^2$ is discounted by $\lambda^{-1}$; for $\lambda>1$ the refined bound reduces
-to the average risk $\bar p$ itself. The practical
+per-event total $\sum_i p_i^2$ is discounted by $\lambda^{-1}$; for $\lambda>1$ the refined bound is $\sum_i p_i^2/\sum_i p_i$, the
+risk-weighted average risk, which equals $\bar p$ when the risks are equal. The practical
 lesson for ML-NMR is sobering: with $n=100$ patients at an average risk $\bar p=0.3$, one has
 $\sum_i p_i^2\approx n\bar p^2=9$ and even the refined bound $\min(1,1/30)\cdot 9=0.3$ is large, so the
 Poisson surrogate is a poor approximation to a binary aggregate at the moderate risks typical of clinical
@@ -829,8 +830,8 @@ average risks. The refined bound equals the average risk $\bar p$ in every row w
 events ($\bar p\lesssim 0.05$) put the Poisson surrogate within a usefully small distance of the truth.
 {#tbl-lecam-regime}
 
-The Poisson approximation earns its place only when both $\lambda$ and the individual $p_i$ are
-small, the rare-event regime. For the common case of moderate risks and moderate sample sizes, the
+The Poisson approximation earns its place only when the individual $p_i$ are small, the rare-event
+regime; by the refined bound the expected count $\lambda$ may then be large. For the common case of moderate risks and moderate sample sizes, the
 moment-matched binomial of @sec-adjusted is the better tool, precisely because it respects the upper bound
 $Y_\bullet\le n$ that the Poisson, with its unbounded support, violates. $\blacktriangleleft$
 :::
@@ -937,7 +938,7 @@ The contrast with the Poisson approximation is instructive and the two should ne
 Cam Poisson has a total-variation guarantee but the wrong variance (a Poisson has variance equal to its
 mean $\lambda$, whereas the Poisson binomial has the smaller variance $\lambda-\nu$) and unbounded support;
 the adjusted binomial has the right first two moments and the correct bounded support $\{0,\dots,N^{*}\}$
-but no distance guarantee. They serve different regimes: the Poisson when $\lambda$ and the $p_i$ are
+but no distance guarantee. They serve different regimes: the Poisson when the $p_i$ are
 small, the adjusted binomial when the sample size is moderate and the natural bound $Y_\bullet\le n$ on the
 count is the feature that matters. In inference terms, choosing the wrong surrogate mis-scales the
 likelihood: the Le Cam Poisson, with variance $\lambda>\lambda-\nu$, makes the observed count look *less*
@@ -963,10 +964,10 @@ close to $n$, so $y\le N^{*}$ holds comfortably; when it does not, the exact int
 @eq-integrated-binomial (integer $n$, full support $\{0,\dots,n\}$) is the safe fallback, which is one
 reason implementations that anticipate occasional extreme counts prefer it.
 
-This is the adjusted-binomial
-aggregate likelihood used for binary outcomes in @phillippo2020mlnmr and in the thesis @phillippo2019thesis
-(its psoriasis case study), where the per-node event probabilities produced by the integration pipeline of
-Chapter 22 are summarized by their two moments $\lambda$ and $\nu$ and fed to @eq-adjbin-solution. Because
+This is the two-parameter binomial approximation of @phillippo2019thesis (Section 4.2.1, Equation 4.6),
+available in ML-NMR software alongside the default integrated binomial: the per-node event probabilities
+produced by the integration pipeline of Chapter 22 are summarized by their two moments $\lambda$ and $\nu$
+and fed to @eq-adjbin-solution. Because
 $N^{*}\le n$, the adjusted binomial automatically reports less information than $n$ independent equal-risk
 trials would, the count-likelihood echo of the effective-sample-size deflation that weighting methods pay
 (@thm-maic-ess-bound). $\blacktriangleleft$
@@ -1155,14 +1156,13 @@ introduces the generating function (@def-pgf) as the integer-valued counterpart 
 function of Chapter 4 (@def-mgf). The intractability of the exact mass function, with its $\binom{n}{y}$
 subset terms, motivates the two approximations. Le Cam's total-variation bound (@thm-le-cam-tv) is from
 @lecam1960; the coupling proof given here is self-contained, building on the coupling inequality
-(@lem-coupling-inequality) and an explicit single-pair coupling of a Bernoulli with a Poisson, and uses the
-author's own @lem-poisson-convolution to identify the summed Poisson coupling. The sharper bound
+(@lem-coupling-inequality) and an explicit single-pair coupling of a Bernoulli with a Poisson, and uses
+@lem-poisson-convolution to identify the summed Poisson coupling. The sharper bound
 $\min(1,\lambda^{-1})\sum_i p_i^2$, with a matching lower bound establishing that the order is correct, is
-due to Barbour and Hall (1984) and is most cleanly obtained by Stein's method for Poisson approximation, the
-operator technique introduced by Chen (1975) and developed at length by Barbour, Holst, and Janson (1992);
-these three sources are not in the book's bibliography and are recorded in the work log as proposed
-additions. The adjusted two-parameter binomial obtained by moment matching (@thm-adjusted-binomial) is the
-binary aggregate likelihood of @phillippo2020mlnmr and @phillippo2019thesis (Equation 4.6 of the thesis);
+due to @barbour1984 and is most cleanly obtained by Stein's method for Poisson approximation, the
+operator technique introduced by @chen1975 and developed at length by @barbour1992. The adjusted
+two-parameter binomial obtained by moment matching (@thm-adjusted-binomial) is the two-parameter binomial
+approximation of @phillippo2019thesis (Equation 4.6);
 its effective sample size $N^{*}=(\sum_i p_i)^2/\sum_i p_i^2$ is the same Cauchy-Schwarz functional as the
 weighting effective sample size of Chapter 18 (@thm-maic-ess-bound), a pleasing recurrence of the same
 inequality in a different guise.

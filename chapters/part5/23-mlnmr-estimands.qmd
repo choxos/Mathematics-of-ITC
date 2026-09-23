@@ -232,7 +232,7 @@ scale, while @eq-mlnmr-est-cond contrasts on the link scale *then* integrates. $
 :::
 
 ::: {.remark}
-**Integrate then contrast, versus contrast then integrate.** @def-mlnmr-target-contrast defines two numbers a reader can easily assume are the same. The *marginal* contrast @eq-mlnmr-est-marg averages each arm's outcome over the population *first* and contrasts the two averages *after*: it is what you get by comparing population-level event rates. The *conditional* contrast @eq-mlnmr-est-cond contrasts the two arms at each covariate value *first* and averages the per-patient contrasts *after*: it is the typical patient-level effect. On a collapsible scale these coincide; on a non-collapsible scale they are genuinely different quantities with different data requirements, which is why the distinction is worth naming before it bites in part (c). In regulatory language this is the same marginal versus conditional estimand choice that ICH E9(R1) forces every analysis to declare. $\blacktriangleleft$
+**Integrate then contrast, versus contrast then integrate.** @def-mlnmr-target-contrast defines two numbers a reader can easily assume are the same. The *marginal* contrast @eq-mlnmr-est-marg averages each arm's outcome over the population *first* and contrasts the two averages *after*: it is what you get by comparing population-level event rates. The *conditional* contrast @eq-mlnmr-est-cond contrasts the two arms at each covariate value *first* and averages the per-patient contrasts *after*: it is the typical patient-level effect. On a directly collapsible scale these coincide; on a non-collapsible scale they are genuinely different quantities with different data requirements, which is why the distinction is worth naming before it bites in part (c). In the estimand language of ICH E9(R1) it is part of the population-level summary an analysis must define. $\blacktriangleleft$
 :::
 
 The main result of this section identifies these estimands, gives the integral form, exhibits when the two coincide and when they part, and pins down exactly which target inputs each one needs. It rests on one import from Chapter 17. The **transport g-formula** (@thm-target-population-estimand) said, in words: to get a treatment's mean outcome in a target population, average its *conditional* mean outcome function over the target's covariate distribution. ML-NMR supplies the one missing piece, the conditional mean function itself, as the fitted surface $\mu_t^{*}(x)=g^{-1}(\eta^{\,*}_t(x))$; the theorem below is that substitution made explicit.
@@ -262,8 +262,8 @@ $$ {#eq-mlnmr-est-cond-mean}
 so it depends on $\mathcal P^{*}$ only through the covariate mean $\bar x_{*}$, and not at all on the
 baseline $\mu_{*}$ or on the prognostic effects $\boldsymbol\beta_1$.
 
-**(c) Collapsibility dichotomy for the marginal contrast.** If $g$ is collapsible (the identity scale,
-@thm-identity-link-exact, or more generally a scale on which marginalization commutes with the
+**(c) Collapsibility dichotomy for the marginal contrast.** If $g$ is directly collapsible (the identity
+scale, @thm-identity-link-exact, or more generally a scale on which marginalization commutes with the
 contrast), then $\Delta_{ab}(\mathcal P^{*})=\Delta^{\mathrm{Cond}}_{ab}(\mathcal P^{*})$ and the
 marginal contrast also depends on $\mathcal P^{*}$ only through $\bar x_{*}$. If $g$ is non-collapsible
 (logit, log-hazard, @def-non-collapsibility), then in general
@@ -282,7 +282,7 @@ and the conditional contrast is read off from @eq-mlnmr-est-cond-mean.
 **(a).** By @lem-mlnmr-surface-transport the conditional mean functions $\mu_t^{*}(x)=g^{-1}(\eta^{\,*}_t(x))$
 are determined by the identified network coefficients and the identified baseline $\mu_{*}$; in
 particular they are fixed functions of $x$ once the baseline is fixed, and are the correct conditional
-means in $\mathcal P^{*}$ by the correct-specification hypothesis. Theorem @thm-target-population-estimand
+means in $\mathcal P^{*}$ by the correct-specification hypothesis. @thm-target-population-estimand
 identifies, for any fixed function $\varphi$ of $x$, the target expectation $\int\varphi(x)f_{*}(x)\,dx$
 by the transport g-formula. Applying it to $\varphi=\mu_b^{*}$ and $\varphi=\mu_a^{*}$ yields the two
 target arm means $\bar\theta_b(\mathcal P^{*})$ and $\bar\theta_a(\mathcal P^{*})$; transforming by $g$
@@ -353,16 +353,16 @@ Two practical tables collect what the theorem demands of an analyst. @tbl-mlnmr-
 | Scale $g$ | Collapsible? | Marginal contrast is | Needs target baseline $\mu_{*}$? | Needs full $f_{*}$ or just $\bar x_{*}$? |
 |---|---|---|---|---|
 | identity (risk difference) | yes | risk or mean difference | no | $\bar x_{*}$ only |
-| log (risk ratio, rate ratio) | no in general | marginal log risk or rate ratio | yes | full $f_{*}$ |
+| log (risk ratio, rate ratio) | collapsible, not directly | marginal log risk or rate ratio | no: $e^{\mu_{*}}$ cancels | full $f_{*}$ if $\boldsymbol\beta_{2,k}$ differ, else nothing |
 | logit (odds ratio) | no | marginal log odds ratio | yes | full $f_{*}$ |
 | log-hazard (hazard ratio) | no | marginal log hazard ratio | yes | full $f_{*}$ |
 
-: How @thm-target-population-integral reads on each scale. On a collapsible scale the target baseline cancels and only the covariate mean matters; on a non-collapsible scale the whole target distribution and its baseline risk enter. {#tbl-mlnmr-scales}
+: How @thm-target-population-integral reads on each scale. On the identity scale the target baseline cancels and only the covariate mean matters; on the log scale the baseline cancels but the whole target distribution enters under effect modification; on a non-collapsible scale the whole target distribution and its baseline risk enter. {#tbl-mlnmr-scales}
 
 | Estimand | Target mean $\bar x_{*}$ | Full target distribution $f_{*}$ | Target baseline $\mu_{*}$ | Fitted interactions $\boldsymbol\beta_{2,k}$ |
 |---|---|---|---|---|
 | conditional contrast (any scale) | required | not needed | not needed | required |
-| marginal contrast, collapsible scale | required | not needed | not needed | required |
+| marginal contrast, identity scale | required | not needed | not needed | required |
 | marginal contrast, non-collapsible scale | subsumed | required | required | required |
 
 : Inputs required to compute a target-population contrast. The blank baseline entries are what "the baseline cancels" means in practice. {#tbl-mlnmr-inputs}
@@ -376,7 +376,7 @@ Two practical tables collect what the theorem demands of an analyst. @tbl-mlnmr-
 :::
 
 ::: {.remark}
-**The math behind a regulatory debate.** Part (c) is not an academic curiosity. Regulators and health technology bodies, through ICH E9(R1) and the estimand-based reading of health technology assessment in @chandler2026transport, require an analysis to declare whether its target effect is *marginal* (population-averaged) or *conditional* (patient-level), precisely because the two disagree on a non-collapsible scale and transport by different rules. A conditional log odds ratio under SEMA is a single number good for every population (@eq-mlnmr-est-2study-cond); a marginal odds ratio must be recomputed, with a baseline, for each target. @thm-target-population-integral is the theorem underneath that requirement. $\blacktriangleleft$
+**The math behind a regulatory debate.** Part (c) is not an academic curiosity. ICH E9(R1) asks an analysis to define its estimand, including the population-level summary, and the estimand-based reading of health technology assessment in @chandler2026transport makes explicit whether the target effect is *marginal* (population-averaged) or *conditional* (patient-level), precisely because the two disagree on a non-collapsible scale and transport by different rules. A conditional log odds ratio under SEMA is a single number good for every population (@eq-mlnmr-est-2study-cond); a marginal odds ratio must be recomputed, with a baseline, for each target. @thm-target-population-integral is the theorem underneath that requirement. $\blacktriangleleft$
 :::
 
 ## A monotonicity lemma for aggregate means {#sec-mlnmr-est-monotone}
@@ -390,22 +390,20 @@ shift. This is the workhorse of both @thm-mlnmr-identifiability-2study and @thm-
 ## Strict monotonicity of an aggregate mean in a scalar shift
 Let $g^{-1}:\mathbb R\to(\ell,u)$ be continuous and strictly increasing (as the inverse of any strictly
 monotone link is), let $f$ be a probability density on $\mathcal X$, and let $h:\mathcal X\to\mathbb R$
-be measurable with $\int g^{-1}(c_0+h(x))f(x)\,dx$ finite for some $c_0$. Define
+be measurable with $g^{-1}(c+h(\cdot))$ $f$-integrable for every $c$. Define
 $$
 \Theta(c)\;:=\;\int_{\mathcal X} g^{-1}\!\big(c+h(x)\big)\,f(x)\,dx ,\qquad c\in\mathbb R .
 $$
-Then $\Theta$ is finite for every $c$, continuous, and strictly increasing, hence injective. If
+Then $\Theta$ is continuous and strictly increasing, hence injective. If
 $g^{-1}(z)\to\ell$ as $z\to-\infty$ and $g^{-1}(z)\to u$ as $z\to+\infty$, then the range of $\Theta$ is
 the open interval $(\ell,u)$. Consequently, for any observed value $\theta^{\mathrm{obs}}\in(\ell,u)$ the
 equation $\Theta(c)=\theta^{\mathrm{obs}}$ has a unique solution $c$.
 :::
 
 ::: {.proof}
-*Finiteness.* Fix $c$. Since $g^{-1}$ is increasing and bounded between $\ell$ and $u$, for $c\ge c_0$ we
-have $g^{-1}(c_0+h(x))\le g^{-1}(c+h(x))<u$, and for $c<c_0$ we have $\ell<g^{-1}(c+h(x))\le g^{-1}(c_0+h(x))$.
-In either case the integrand lies between the $f$-integrable function $g^{-1}(c_0+h(\cdot))$ and a finite
-constant ($u$ or $\ell$ when the limits exist; otherwise the one-sided monotone bound together with
-finiteness of $\Theta(c_0)$ controls the integral on the relevant side), so $\Theta(c)$ is finite. We spell out the two regimes this compresses. If the range is bounded above ($u<\infty$, as for the logit link with $u=1$), then for $c>c_0$ the integrand is below the constant $u$ and $\Theta(c)$ is finite outright, and the only work is the side $c<c_0$, dominated by $g^{-1}(c_0+h(\cdot))$. If the range is unbounded above ($u=+\infty$, as for the log link), the side $c<c_0$ is dominated as before, and the side $c>c_0$ is controlled by the multiplicative envelope the log link makes exact, $g^{-1}(c+h(x))=e^{\,c-c_0}g^{-1}(c_0+h(x))$, giving $\Theta(c)=e^{\,c-c_0}\Theta(c_0)<\infty$; this is the place where the standing assumption that $\Theta(c_0)$ is finite, a moment condition on $f$, does the work.
+*When the integrability hypothesis holds.* For a bounded inverse link (logit, probit, complementary
+log-log) it is automatic. For the log link, $g^{-1}(c+h)=e^{\,c-c_0}g^{-1}(c_0+h)$, so integrability at one
+$c_0$ gives it at every $c$; for the identity link it is integrability of $h$.
 
 *Strict monotonicity.* Let $c_1<c_2$. For every $x$, strict monotonicity of $g^{-1}$ gives
 $g^{-1}(c_1+h(x))<g^{-1}(c_2+h(x))$, a strict pointwise inequality. The difference
@@ -415,7 +413,7 @@ therefore injective.
 
 *Continuity and range.* As $c\to c'$, $g^{-1}(c+h(x))\to g^{-1}(c'+h(x))$ pointwise by continuity of
 $g^{-1}$, and for $c$ in a bounded neighborhood of $c'$ the integrands are dominated by
-$|g^{-1}(c'+1+h)|+|g^{-1}(c'-1+h)|$, which is integrable by the finiteness already shown; dominated
+$|g^{-1}(c'+1+h)|+|g^{-1}(c'-1+h)|$, which is integrable by hypothesis; dominated
 convergence gives $\Theta(c)\to\Theta(c')$, so $\Theta$ is continuous. Under the stated limits, monotone
 convergence gives $\Theta(c)\to\ell$ as $c\to-\infty$ and $\Theta(c)\to u$ as $c\to+\infty$; a continuous
 strictly increasing function with these limits has range exactly $(\ell,u)$. Injectivity then makes the
@@ -576,16 +574,17 @@ $(\gamma_B,\boldsymbol\beta_{2,B})$ only through the single scalar equation
 $\Theta_B(\gamma_B,\boldsymbol\beta_{2,B})=\theta_{\bullet,BC,B}$, whose solution set is a
 $p$-dimensional manifold. Along this manifold:
 
-1. The aggregate $B$-versus-$C$ comparison evaluated *in the comparator population* $\mathcal P_{BC}$ is
-constant (it is the observed datum), so the target contrast $\Delta_{BA}(\mathcal P_{BC})$ is identified.
+1. The aggregate $B$-arm mean in the comparator population $\mathcal P_{BC}$ is constant along the
+manifold (it is the observed datum), so the marginal target contrast $\Delta_{BA}(\mathcal P_{BC})$, with
+the comparator's own baseline $\mu_{BC}$, is identified.
 
-2. For a generic target $\mathcal P^{*}\neq\mathcal P_{BC}$ the target contrast
+2. For a generic target $\mathcal P^{*}\neq\mathcal P_{BC}$ the marginal target contrast
 $\Delta_{BA}(\mathcal P^{*})$ is *not* constant along the manifold; hence it is not identified.
 
 Concretely, for a single binary effect modifier $X\in\{0,1\}$ with $\Pr_{BC}(X=1)=q$, there exist two
 parameter pairs $(\gamma_B,\boldsymbol\beta_{2,B})\neq(\gamma_B',\boldsymbol\beta_{2,B}')$ producing the
-*identical* AgD data yet different conditional $A$-versus-$B$ contrasts at any target mean
-$\bar x_{*}\neq q$.
+*identical* AgD data yet different conditional $A$-versus-$B$ contrasts at every target mean $\bar x_{*}$
+except at most one.
 :::
 
 ::: {.proof}
@@ -620,12 +619,16 @@ $$
 \big(\gamma_B'-\gamma_B\big)+\big(\beta_2-\beta_2'\big)\,\bar x_{*}.
 $$
 This is an affine function of $\bar x_{*}$ with nonzero slope $\beta_2-\beta_2'$, so it vanishes for at
-most one value of $\bar x_{*}$. That single value is $\bar x_{*}=q$: differentiating
+most one value of $\bar x_{*}$, and for every other target mean the two observationally identical pairs give
+different conditional contrasts. That value is not $q$ in general: differentiating
 @eq-mlnmr-est-binary-agd along the manifold gives $d\gamma_B/d\beta_2=-q\,\dot g_1/[(1-q)\dot g_0+q\dot g_1]$,
-where $\dot g_0:=(g^{-1})'(s_0+\gamma_B)>0$ and $\dot g_1:=(g^{-1})'(s_1+\gamma_B+\beta_2)>0$ are the derivatives of $g^{-1}$ evaluated at the $X=0$ and $X=1$ linear predictors of the AgD $B$ arm, and substituting shows the
-contrast difference is stationary in the manifold parameter exactly at $\bar x_{*}=q$. Hence for every
-target mean $\bar x_{*}\neq q$ the two observationally identical parameter pairs give different conditional
-contrasts, and the marginal contrast inherits the non-identification through @eq-mlnmr-est-marg. $\square$
+where $\dot g_0:=(g^{-1})'(s_0+\gamma_B)>0$ and $\dot g_1:=(g^{-1})'(s_1+\gamma_B+\beta_2)>0$, so the
+infinitesimal version of the root is $q\,\dot g_1/[(1-q)\dot g_0+q\dot g_1]$, which equals $q$ only when
+$\dot g_0=\dot g_1$, as on the identity link. On a nonlinear link, therefore, even the conditional contrast
+at the AgD mix is unidentified; what the data pin in $\mathcal P_{BC}$ is the marginal contrast of
+statement 1. For statement 2, the marginal $B$-arm mean in a target $\mathcal P^{*}$ with a different
+covariate distribution integrates $g^{-1}(\mu_{*}+\gamma_B+(\beta_1+\beta_2)x)$ against a different law, so
+it moves along the manifold for all but exceptional targets. $\square$
 :::
 
 ::: {#exm-mlnmr-sema-fail}
@@ -648,7 +651,7 @@ They are observationally identical in the AgD trial. Yet the conditional $A$-ver
 
 : Same aggregate data, two transported answers. {#tbl-mlnmr-semafail}
 
-The two answers are closest near the AgD mix, where they must nearly agree on the aggregate the data fixed, and separate as the target moves away. Only the AgD trial's own aggregate is pinned, which is why the comparison is trustworthy at $\mathcal P_{BC}$ and nowhere else. $\blacktriangleleft$
+The two conditional answers already differ at the AgD mix ($0.500$ versus $0.528$), because the data pin only the *marginal* $B$-arm bleeding rate in $\mathcal P_{BC}$, not a conditional contrast; they coincide only at $\bar x_{*}\approx 0.54$ and separate as the target moves away. What is identified is the marginal comparison in $\mathcal P_{BC}$ itself (@prp-mlnmr-sema-necessary, statement 1). $\blacktriangleleft$
 :::
 
 ::: {.remark}
@@ -856,8 +859,9 @@ IPD-NMR likelihood of @thm-ipd-nmr-identifiability.
 **(c) MAIC (estimand and limit).** In the anchored triangle of @sec-mlnmr-est-2study under SEMA, with
 target $\mathcal P^{*}=\mathcal P_{BC}$ the comparator population, the ML-NMR target contrast
 $\Delta_{BA}(\mathcal P_{BC})$ and the anchored MAIC estimator target the *same* estimand
-$d_{BA(\mathcal P_{BC})}$; under the affine-mean (linear-surface, first-moment) conditions of
-@thm-anchored-maic-consistency the two estimators have the same probability limit.
+$d_{BA(\mathcal P_{BC})}$ (MAIC reports it in the orientation $d_{AB(\mathcal P_{BC})}=-d_{BA(\mathcal P_{BC})}$);
+on the identity link, under the affine-mean conditions of @thm-anchored-maic-consistency, the two
+estimators have the same probability limit.
 
 **(d) STC (exact functional identity).** The ML-NMR aggregation integral @eq-mlnmr-est-aggmean, applied
 to the IPD-fitted linear predictor and a target covariate distribution, is identically the marginal STC
@@ -898,18 +902,17 @@ $\Delta_{BA}(\mathcal P_{BC})=g(\bar\theta_A(\mathcal P_{BC}))-g(\bar\theta_B(\m
 $\bar\theta_t(\mathcal P_{BC})=\int g^{-1}(\eta^{BC}_t(x))f_{BC}(x)\,dx$ is the arm-$t$ mean integrated
 over the comparator distribution. This is, by definition, the marginal $A$-versus-$B$ effect in
 $\mathcal P_{BC}$, namely $d_{BA(\mathcal P_{BC})}$. The anchored MAIC estimator of
-@thm-anchored-maic-consistency is consistent for the same target $d_{BA(\mathcal P_{BC})}$ under its
-hypotheses (conditional constancy of relative effects, SEMA, balance of every imbalanced effect modifier,
-overlap). Hence both methods target $d_{BA(\mathcal P_{BC})}$. For the coincidence of limits under a
-linear surface, note that MAIC's arm mean is the weighted IPD average
+@thm-anchored-maic-consistency is consistent for the same target (in the orientation $d_{AB}=-d_{BA}$) under
+its hypotheses (conditional constancy, balance of every imbalanced effect modifier, overlap). For the
+coincidence of limits on the identity link, note that MAIC's arm mean is the weighted IPD average
 $\hat\mu_t^{\mathrm{MAIC}}=\sum_i w_i\mathbf 1\{T_i=t\}Y_i/\sum_i w_i\mathbf 1\{T_i=t\}$ whose probability
-limit, under the affine-mean condition $\mu_t(x)=a_0+\mathbf a^\top x$ of
-@thm-anchored-maic-consistency, is $a_0+\mathbf a^\top\bar x_{BC}=\mu_t(\bar x_{BC})$ (weighted balance
-forces the weighted covariate mean to $\bar x_{BC}$). ML-NMR's arm mean is the integral
-$\int\mu_t(x)f_{BC}(x)\,dx$, which for the same affine $\mu_t$ equals $a_0+\mathbf a^\top\bar x_{BC}=\mu_t(\bar x_{BC})$
-by linearity of the integral. The two probability limits coincide, $\hat\mu_t^{\mathrm{MAIC}}$ and the
-ML-NMR arm mean both converging to $\mu_t(\bar x_{BC})$; differencing on the link scale and combining with
-the comparator contrast gives the same limit for the two indirect estimators. This is the
+limit, under the affine-mean condition $\mu^{AC}_t(x)=a_t+\mathbf a_t^\top x$ of
+@thm-anchored-maic-consistency, is $a_t+\mathbf a_t^\top\bar x_{BC}$ (weighted balance forces the weighted
+covariate mean to $\bar x_{BC}$). ML-NMR's arm mean in $\mathcal P_{BC}$ is $\int\mu^{BC}_t(x)f_{BC}(x)\,dx$,
+the same affine function evaluated at $\bar x_{BC}$ but with the comparator's baseline in place of the
+index trial's. The baseline is common to both arms and cancels from the $A$-versus-$C$ difference, so the
+two $A$-versus-$C$ contrasts have the same limit, and combining with the comparator contrast gives the same
+limit for the two indirect estimators. This is the
 weighting-versus-modeling coincidence already proved for MAIC and STC in @thm-maic-stc-equivalence,
 restated here with ML-NMR's integral playing the role of STC's regression prediction. On a nonlinear
 surface the two limits can differ: ML-NMR integrates the full distribution $f_{BC}$ while MAIC matches
@@ -1087,12 +1090,12 @@ g-formula estimands of Chapter 17 (@thm-target-population-estimand, catalogue E.
 the conditional-transportability theory of Chapter 12; the collapsibility dichotomy in part (c) is the
 non-collapsibility of Chapter 7 (@def-non-collapsibility) made operational, the same phenomenon that
 forces the marginal-versus-conditional choice in STC (Chapter 19) and that the worked example exhibits
-numerically. The expansion beyond the base draft of @phillippo2019thesis is in three places. First, the
-catalogue's one-line claim that "the AgD trial identifies $\gamma_B$ via the aggregate likelihood" is here
-given a complete proof through the monotonicity lemma @lem-mlnmr-aggregate-monotone, which isolates the
+numerically. Three arguments here go beyond @phillippo2019thesis. First, the statement that the AgD
+trial identifies $\gamma_B$ through the aggregate likelihood is given a complete proof through the
+monotonicity lemma @lem-mlnmr-aggregate-monotone, which isolates the
 elementary fact (an aggregate mean is strictly increasing in any additive shift of the linear predictor)
 that makes a single aggregate mean identify a single scalar; the same lemma then powers the large-network
-argument. Second, the no-SEMA non-identification is upgraded from a remark to the proposition
+argument. Second, the no-SEMA non-identification is stated as the proposition
 @prp-mlnmr-sema-necessary, with an explicit binary-covariate two-point construction showing the comparison
 survives in the comparator population and is lost at every other target, the regression mirror of the
 testability analysis @prp-testable-untestable-constancy of Chapter 17. Third, the large-network theorem
@@ -1118,11 +1121,8 @@ why ML-NMR can report estimates in target populations that no single trial sampl
 what the response-scale integration of @eq-mlnmr-est-armmean avoids, by @thm-aggregation-bias.
 
 ML-NMR has no counterpart in the companion Coq development: there is no `ML_NMR.v` (or aggregation or
-network-meta-regression file) in `theories/`, and the manuscript records this deliberately, because the
-substantive content of ML-NMR is numerical (quasi-Monte Carlo integration, Sobol' sequences, copulae)
-rather than algebraic, and the algebraic core, the aggregation identity, is a single application of
-Fubini and conditional independence that would add little once a measure-theoretic probability layer were
-in place. Accordingly none of the results in this chapter carries a machine-checked tag; the
+network-meta-regression file) in `theories/`, because the substantive content of ML-NMR is numerical
+(quasi-Monte Carlo integration, Sobol' sequences, copulas) rather than algebraic. Accordingly none of the results in this chapter carries a machine-checked tag; the
 identifiability building blocks they invoke, the NMA and IPD-NMR rank theorems of Chapter 15, are
 likewise pen-and-paper in this development. Chapter 30 discusses what is and is not in the Coq tree.
 

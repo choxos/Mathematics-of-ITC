@@ -9,8 +9,8 @@ linear or generalized-linear model to data, read off a contrast of coefficients,
 uncertainty. Simulated treatment comparison (STC) fits an outcome regression and predicts into a target
 population; multilevel network meta-regression (ML-NMR) fits a shared regression across studies;
 matching-adjusted indirect comparison (MAIC) reweights one trial so that its covariate moments match
-another, which is again a constrained least-squares idea in disguise. Underneath all of them sits one
-geometric fact: the best approximation of a data vector by the vectors a model can produce is the
+another's, and every weighting or regression step then feeds a linear model. Underneath the regression
+steps sits one geometric fact: the best approximation of a data vector by the vectors a model can produce is the
 *orthogonal projection* of the data onto the model's column space, and the error of that approximation
 is orthogonal to everything the model can explain.
 
@@ -109,8 +109,8 @@ chosen so you can sketch each picture yourself. $\blacktriangleleft$
 An abstract vector space in the sense of @def-vector-space has addition and scaling but no notion of
 length or perpendicularity. An inner product supplies both. We front-load three definitions and two
 inequalities here; to keep them from feeling weightless, the section ends with a numerical example
-(@exm-weighted-angle) showing that "perpendicular" depends on which inner product you choose, the very
-idea that underlies MAIC's matching geometry.
+(@exm-weighted-angle) showing that "perpendicular" depends on which inner product you choose, the idea
+behind generalized least squares and Mahalanobis distance matching.
 
 ::: {#def-inner-product}
 ## Inner product space
@@ -162,8 +162,8 @@ in which patients barely vary is up-weighted (a small gap there is striking). Co
 varies widely across a trial but a biomarker barely varies. Two patients who differ by ten years of age
 but share the biomarker are close in Mahalanobis distance, because age scatter is expected; two patients
 of the same age who differ sharply on the biomarker are far, because biomarker scatter is not. This is the
-geometry that MAIC uses to decide which trial population a reweighted sample resembles, developed in
-Part IV, and that the distance-matching methods of Part VI reuse. Everything proved in this chapter for a
+geometry of the covariate-distance matching methods of Part VI (Chapter 27); the same weighted inner
+product, with $A$ an inverse error covariance, underlies generalized least squares. Everything proved in this chapter for a
 general inner product applies verbatim to these weighted geometries. $\blacktriangleleft$
 :::
 
@@ -235,7 +235,7 @@ both sides of @eq-cauchy-schwarz equal $|c|\,\|\mathbf{v}\|^2$. $\square$
 
 **Why this matters.** Cauchy-Schwarz is the guardrail that makes "angle" and "distance" behave. Without
 it the cosine defined in the next section could exceed $1$, and the triangle inequality (hence the very
-word "norm," hence the meaning of "closest point") would fail. Every least-squares, MAIC-balancing, and
+word "norm," hence the meaning of "closest point") would fail. Every least-squares and
 distance-matching argument in this book silently relies on having a genuine norm, which is what this one
 inequality secures.
 
@@ -266,7 +266,7 @@ two-leg detour ($\|\mathbf{u}\|+\|\mathbf{v}\|$): a straight line is the shortes
 are perpendicular the triangle is a right triangle, and the inequality becomes the Pythagorean equality of
 @thm-pythagoras below.
 
-A useful corollary of homogeneity is the *reverse triangle inequality*
+A useful corollary of the triangle inequality is the *reverse triangle inequality*
 $\bigl|\,\|\mathbf{u}\|-\|\mathbf{v}\|\,\bigr|\le\|\mathbf{u}-\mathbf{v}\|$, obtained by applying
 @cor-triangle-inequality to $\mathbf{u}=(\mathbf{u}-\mathbf{v})+\mathbf{v}$ and symmetrically; we record it
 for later use without separate proof.
@@ -294,7 +294,7 @@ so they are *not* perpendicular in the weighted geometry. Their weighted lengths
 $\|\mathbf{x}\|_A=\sqrt{2+1}=\sqrt3$ and $\|\mathbf{y}\|_A=\sqrt{2+1}=\sqrt3$, so the weighted angle
 $\vartheta_A$ satisfies $\cos\vartheta_A=1/(\sqrt3\cdot\sqrt3)=\tfrac13$, about $70.5^\circ$. Reweighting
 the first coordinate (here doubling its importance) literally bends the angles. This is exactly what a
-covariance weighting does in MAIC and in Mahalanobis matching: it changes which patients count as "close"
+covariance weighting does in generalized least squares and in Mahalanobis matching: it changes which patients count as "close"
 and which directions of difference count as "large." $\blacktriangleleft$
 :::
 
@@ -385,8 +385,9 @@ read off" means, and it is why software prefers orthonormal bases when fitting m
 
 ## The Gram-Schmidt process {#sec-gram-schmidt}
 
-*ITC connection.* MAIC and ML-NMR both fit models by solving normal equations; the orthonormal basis built
-here is what lets software solve those equations stably, through the QR factorization of @sec-qr.
+*ITC connection.* Every linear-model fit in this book, including the outcome regression of STC, solves
+normal equations; the orthonormal basis built here is what lets software solve them stably, through the
+QR factorization of @sec-qr.
 
 The coordinate formulas above presuppose an orthonormal basis. Gram-Schmidt manufactures one from any
 linearly independent list, one vector at a time, by subtracting off the part already explained. The single
@@ -497,7 +498,7 @@ space, has an orthonormal basis.
 :::
 
 ::: {.proof}
-A finite-dimensional space (or subspace) has a basis $\mathbf{a}_1,\dots,\mathbf{a}_p$ by @def-basis.
+A finite-dimensional space (or subspace) has a basis $\mathbf{a}_1,\dots,\mathbf{a}_p$ by @lem-reduction-to-basis.
 Applying @thm-gram-schmidt produces an orthonormal set $\{\mathbf{q}_1,\dots,\mathbf{q}_p\}$ with the same
 span. The set has $p=\dim$ elements and is linearly independent by @lem-orthonormal-independent, so it is
 a basis. $\square$
@@ -793,8 +794,7 @@ space, a refinement we do not need since every subspace of $\mathbb{R}^n$ is bot
 ## Orthogonal projection matrices {#sec-projection-matrices}
 
 *ITC connection.* The hat matrix of Chapter 6 is exactly a matrix of the kind characterized in this
-section; its diagonal entries are the leverages that flag influential trial arms in a network
-meta-analysis.
+section; its diagonal entries are the leverages that flag influential observations.
 
 Restrict now to $V=\mathbb{R}^n$ with the Euclidean inner product. The map
 $\mathbf{v}\mapsto P_{\mathcal{M}}\mathbf{v}$ is linear, hence given by a matrix, and that matrix has a
@@ -1140,16 +1140,16 @@ assumptions are correct; probability enters only later, in Chapter 6, to say how
 across repeated trials. $\blacktriangleleft$
 :::
 
-Two symmetric and idempotent matrices verify @thm-projection-matrix-characterization directly: one checks
+The hat matrix satisfies @thm-projection-matrix-characterization directly: one checks
 $H^\top=H$ and $H^2=\mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}(\mathbf{X}^\top\mathbf{X})(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top=H$,
 confirming $H$ is the orthogonal projection onto $\mathcal{C}(\mathbf{X})$, with
 $\operatorname{tr}(H)=\operatorname{rank}(\mathbf{X})=p$ by @cor-projection-trace-rank.
 
 ## QR factorization and least squares by QR {#sec-qr}
 
-*ITC connection.* When you run `lm(y ~ x)` in R, `regress` in Stata, or fit a linear model inside Stan, the
-software does not form $\mathbf{A}^\top\mathbf{A}$ and invert it; it solves the least-squares problem
-through the QR factorization developed here (or the related singular value decomposition of Chapter 3).
+*ITC connection.* When you run `lm(y ~ x)` in R, the software does not form $\mathbf{A}^\top\mathbf{A}$ and
+invert it; it solves the least-squares problem through a (Householder) QR factorization of the kind
+developed here.
 Learning QR is learning what those commands actually do. The uniqueness proof below is the most technical
 passage in the chapter and may be skipped on a first reading; the message to retain is the practical one in
 the closing remark.
@@ -1257,8 +1257,9 @@ The QR route never forms $\mathbf{A}^\top\mathbf{A}$. The **condition number** $
 matrix measures how much a relative error in the input to a linear solve can be amplified in the output; a
 large $\kappa$ means "numerically fragile," and the precise definition through singular values is given in
 Chapter 3 (@thm-svd). The relevant fact here is $\kappa(\mathbf{A}^\top\mathbf{A})=\kappa(\mathbf{A})^2$:
-forming the Gram matrix squares the fragility. Working with $\mathbf{R}$ directly therefore preserves about
-twice as many correct digits as solving the normal equations naively, which is the standard reason
+forming the Gram matrix squares the fragility (for full-column-rank $\mathbf{A}$ and the condition number
+based on singular values). Solving through $\mathbf{R}$ therefore loses roughly half as many digits to
+rounding as solving the normal equations, which is the standard reason
 statistical software fits linear models by QR (or by the singular value decomposition of Chapter 3,
 @thm-svd) rather than by inverting the Gram matrix. See @strang2016. $\blacktriangleleft$
 :::
@@ -1372,7 +1373,7 @@ $H_{ii}=\mathbf{a}^{(i)}(\mathbf{A}^\top\mathbf{A})^{-1}\mathbf{a}^{(i)\top}=\tf
 giving $H_{11}=\tfrac{14}{20}=0.7$, $H_{22}=\tfrac{6}{20}=0.3$, $H_{33}=0.3$, $H_{44}=0.7$. Their sum is
 $\operatorname{tr}(H)=2=p$, confirming @cor-projection-trace-rank. These diagonal entries are the
 **leverages**: the end groups (covariate values $1$ and $4$) sit farther from the covariate mean and so pull
-harder on the fitted line, exactly the influence diagnostic referenced for trial arms in later chapters.
+harder on the fitted line.
 One also checks $H^2=H$ and $H^\top=H$ on this $4\times4$ matrix, so $H$ is indeed the orthogonal projection
 onto $\mathcal{C}(\mathbf{A})$, as @thm-projection-matrix-characterization requires.
 
@@ -1405,9 +1406,9 @@ the statistics stay cleanly separated.
 
 The weighted inner product $\langle\mathbf{x},\mathbf{y}\rangle_A=\mathbf{x}^\top A\mathbf{y}$ for
 $A\succ0$ previewed after @def-inner-product, and computed on numbers in @exm-weighted-angle, is the bridge
-to the Mahalanobis geometry of matching: the balancing problem solved by MAIC in Part IV and the
-distance-matching estimators of Part VI are projections and minimizations in such weighted spaces, so every
-theorem here transfers to them by replacing the Euclidean inner product with $\langle\cdot,\cdot\rangle_A$.
+to generalized least squares and to the Mahalanobis geometry of the distance-matching estimators of
+Part VI: every theorem here transfers to them by replacing the Euclidean inner product with
+$\langle\cdot,\cdot\rangle_A$.
 The positive-definiteness facts used there are proved in Chapter 3 (@thm-pd-characterization), and the
 numerically preferred singular value decomposition mentioned at the end of @sec-qr is the subject of
 @thm-svd. Figures are described in words throughout, and the numerical examples (@exm-two-arm-running,
@@ -1539,6 +1540,6 @@ $\star$ Let $P\in\mathbb{R}^{n\times n}$ be idempotent ($P^2=P$). Prove that the
 (i) $P$ is symmetric; (ii) $P$ is the orthogonal projection onto $\mathcal{C}(P)$; (iii)
 $\|P\mathbf{v}\|\le\|\mathbf{v}\|$ for every $\mathbf{v}\in\mathbb{R}^n$; (iv) $\mathcal{C}(P)\perp\mathcal{N}(P)$.
 (Hint: for (iii) $\Rightarrow$ (i), decompose an arbitrary $\mathbf{v}$ using $\mathbb{R}^n=\mathcal{C}(P)\oplus\mathcal{N}(P)$,
-which holds for any idempotent, and test the contraction inequality on $\mathbf{v}=\mathbf{m}+t\mathbf{w}$ as
-$t\to\infty$.) (Solution in Appendix F.)
+which holds for any idempotent, and test the contraction inequality on $\mathbf{v}=\mathbf{m}+t\mathbf{w}$ for
+small $t$ of either sign.) (Solution in Appendix F.)
 :::

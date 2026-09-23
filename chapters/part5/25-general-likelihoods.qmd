@@ -38,11 +38,11 @@ covariates $\mathbf{x}$ under parameters $\boldsymbol\xi$. Given that one object
 of an AgD individual whose covariates are unobserved is the average of the conditional likelihood over the
 study's covariate distribution, and the arm likelihood is the product of these marginal contributions
 over the (possibly reconstructed) individuals on the arm. This is the **general-likelihood ML-NMR**
-framework of @phillippo2025general, and it makes ML-NMR the only population-adjustment method that extends
-verbatim to any outcome with a parametric individual model. By contrast, matching-adjusted indirect
-comparison (Chapter 18) balances reported moments and so needs the aggregate data in a moment form, and
-simulated treatment comparison (Chapter 19) needs an outcome regression on the IPD scale; neither absorbs
-a censored survival time or an ordinal band without bespoke surgery.
+framework of @phillippo2025general, and it extends ML-NMR to any outcome with a parametric individual
+model without changing the method. Matching-adjusted indirect comparison (Chapter 18) and simulated
+treatment comparison (Chapter 19) also handle survival and ordinal outcomes, through weighted survival fits
+and standardized outcome regressions, but each outcome type needs its own weighted or standardized
+estimator, and both remain pairwise comparisons in the comparator population.
 
 This chapter develops the framework with survival as the leading and hardest case. We define the survival
 function (@def-survival-function) and hazard (@def-hazard) and prove the identity
@@ -563,7 +563,7 @@ $$ {#eq-genlik-rmst}
 the expected event-free time over $[0,\tau]$. The conditional RMST is
 $\operatorname{RMST}_t(\tau\mid\mathbf{x}):=\int_0^{\tau}S_t(s\mid\mathbf{x})\,ds$, and the **RMST
 contrast** of $b$ versus $a$ is
-$\Delta\!\operatorname{RMST}_{ba}^{\mathcal{P}}(\tau):=\operatorname{RMST}_b^{\mathcal{P}}(\tau)-
+$\Delta\!\operatorname{RMST}_{ab}^{\mathcal{P}}(\tau):=\operatorname{RMST}_b^{\mathcal{P}}(\tau)-
 \operatorname{RMST}_a^{\mathcal{P}}(\tau)$. $\blacktriangleleft$
 :::
 
@@ -574,7 +574,7 @@ $$
 \operatorname{RMST}_t^{\mathcal{P}}(\tau)
 =\mathbb{E}_{\mathbf{X}\sim f_{\mathcal{P}}}\!\big[\operatorname{RMST}_t(\tau\mid\mathbf{X})\big],
 \qquad
-\Delta\!\operatorname{RMST}_{ba}^{\mathcal{P}}(\tau)
+\Delta\!\operatorname{RMST}_{ab}^{\mathcal{P}}(\tau)
 =\mathbb{E}_{\mathbf{X}\sim f_{\mathcal{P}}}\!\big[\operatorname{RMST}_b(\tau\mid\mathbf{X})
 -\operatorname{RMST}_a(\tau\mid\mathbf{X})\big].
 $$ {#eq-genlik-rmst-collapse}
@@ -603,10 +603,11 @@ populations. The RMST contrast is collapsible by @thm-rmst-collapsible, yet if t
 fitted on the log-hazard scale (PH, $g=\log$) while the reported effect is the RMST (a time-scale
 quantity), the composition $\operatorname{RMST}_t(\tau\mid\mathbf{x})=\int_0^{\tau}
 \exp\!\big(-\!\int_0^s e^{\eta_t(\mathbf{x})}h_{0}(u)\,du\big)ds$ is a nonlinear functional of
-$\eta_t(\mathbf{x})$. The shared-effect-modifier assumption (@def-sema) holds on the log-hazard scale, not
-on the RMST scale, so the RMST contrast computed in the comparator population does not generally equal the
-RMST contrast in a different target population; transporting it requires the target covariate
-distribution, exactly as in the scale-misalignment analysis taken up for the unanchored case in Chapter 26
+$\eta_t(\mathbf{x})$. Conditional constancy of relative effects (@def-conditional-constancy-relative) is
+assumed on the log-hazard scale, not on the RMST scale, so the RMST contrast computed in the comparator
+population does not generally equal the RMST contrast in a different target population; transporting it
+requires the target covariate distribution and baseline hazard, exactly as in the scale-misalignment
+analysis taken up for the unanchored case in Chapter 26
 (@thm-mlumr-tte). The clean estimand to transport remains the conditional log-hazard model; RMST is a
 collapsible *read-out* in a stated population. $\blacktriangleleft$
 :::
@@ -623,16 +624,16 @@ whereas a target population with $q^{*}=\tfrac14$ has $\tfrac34(0.399)+\tfrac14(
 conditional model, same treatment, different marginal RMST contrast, purely because the covariate mix
 differs. The object that *is* shared across the two populations is the conditional log-hazard model; the
 RMST contrast must be recomputed in each target population, which is why transporting it needs the target
-covariate distribution. Exercise @exr-genlik-rmst-transport works the general formula. $\blacktriangleleft$
+covariate distribution. @exr-genlik-rmst-transport works the general formula. $\blacktriangleleft$
 :::
 
 The practical decision rule for a survival submission follows.
 
 | Quantity | Scale | Transports across populations? | Role in the analysis |
 |---|---|---|---|
-| conditional log-hazard effects $\gamma_k,\boldsymbol\beta_{2,k}$ | log-hazard | yes, under the shared-effect-modifier assumption (@def-sema) | the estimand to fit and share across the network |
+| conditional log-hazard effects $\gamma_k,\boldsymbol\beta_{2,k}$ | log-hazard | yes, under conditional constancy of relative effects (@def-conditional-constancy-relative) | the estimand to fit and share across the network |
 | marginal hazard ratio $\mathrm{mHR}(s)$ | hazard | no; varies with time and population | not a transportable summary; avoid reporting it as one number |
-| RMST contrast $\Delta\!\operatorname{RMST}_{ba}^{\mathcal{P}}(\tau)$ | time | only by recomputing in the target covariate mix | collapsible read-out; always report with its target population $\mathcal{P}$ and horizon $\tau$ |
+| RMST contrast $\Delta\!\operatorname{RMST}_{ab}^{\mathcal{P}}(\tau)$ | time | only by recomputing with the target covariate mix and baseline hazard | collapsible read-out; always report with its target population $\mathcal{P}$ and horizon $\tau$ |
 
 In one line: fit and transport on the conditional log-hazard scale, report RMST as a population-specific
 read-out, and never treat a single marginal hazard ratio as a transportable parameter.
@@ -807,7 +808,7 @@ density outcome it is the marginal density of $Y_i$, finite for almost every $y_
 :::
 
 ::: {.remark}
-**Relation to mean aggregation and to numerical integration.** Theorem @thm-aggregation aggregates the
+**Relation to mean aggregation and to numerical integration.** @thm-aggregation aggregates the
 conditional *mean* $g^{-1}(\eta_{jk}(\mathbf{x}))$; theorem @thm-marginal-individual-likelihood aggregates
 the conditional *likelihood* $L_{i\mid\mathbf{x}}$. The two agree exactly when the likelihood kernel is
 affine in the mean, as for the Bernoulli mass $p^{y}(1-p)^{1-y}$, which equals $p$ at $y=1$ and $1-p$ at
@@ -816,11 +817,11 @@ with $\bar p=\int p\,f_j$, so integrating the likelihood reproduces the aggregat
 count case as an explicit *non*-example: the Poisson mass $\theta^{y}e^{-\theta}/y!$ is not affine in its
 mean $\theta$ (it carries both a $\theta^{y}$ factor and an $e^{-\theta}$ factor), so in general
 $\int \theta(\mathbf{x})^{y}e^{-\theta(\mathbf{x})}/y!\,f_j\,d\mathbf{x}\ne\bar\theta^{y}e^{-\bar\theta}/y!$;
-averaging the likelihood is genuinely different from evaluating it at the average mean. The survival kernel
-$h^{\delta}S$ and the proportional-odds mass $p_k$ fail affinity in the same way. For kernels
-that are not affine in a single mean, survival ($h^{\delta}S$) and the proportional-odds mass of
-@def-proportional-odds among them, the integral @eq-genlik-marginal-lik genuinely exceeds mean
-aggregation, and like the logit case (@thm-logit-no-closed-form) it has no closed form. It is then
+averaging the likelihood is genuinely different from evaluating it at the average mean. The Gaussian
+density, the survival kernel $h^{\delta}S$, and the proportional-odds mass $p_k$ of
+@def-proportional-odds fail affinity in the same way; for them the integral @eq-genlik-marginal-lik does
+not reduce to mean aggregation, and like the logit case (@thm-logit-no-closed-form) it generally has no
+closed form. It is then
 evaluated by the Sobol' QMC rule of Chapter 22 (@def-sobol-net, @thm-hypercube-integration): with
 integration nodes $\mathbf{x}^{(1)},\dots,\mathbf{x}^{(N)}$ drawn from $f_j$ through the inverse-CDF map
 (@thm-inverse-cdf) and a Gaussian copula (@def-gaussian-copula, @thm-sklar) for covariate dependence,
@@ -880,7 +881,7 @@ probability $\bar p_{jk}=\int\operatorname{expit}(\eta_{jk})f_j$, recovering the
 single sufficient statistic; the individual observations entering @eq-genlik-aggregate-lik are then
 **pseudo-IPD** $(t_{ijk},\delta_{ijk})$ reconstructed from the published curve and the numbers at risk,
 the reconstruction whose validity is established for the unanchored setting in Chapter 26
-(@thm-pseudo-ipd-reconstruction). In outline the reconstruction, the algorithm of Guyot and colleagues,
+(@thm-pseudo-ipd-reconstruction). In outline the reconstruction, the algorithm of @guyot2012,
 digitizes the published Kaplan-Meier curve into a fine grid of (time, survival-probability) points, then
 uses the reported numbers at risk in each interval to solve, step by step, for how many events and how many
 censorings must have occurred to produce the observed drops in the curve; its output is a table of
@@ -1068,7 +1069,7 @@ affinity in the mean, summarized in @tbl-genlik-reduction.
 
 | Outcome family | Kernel in the mean $\theta$ | Affine in $\theta$? | Integrated likelihood $=\pi(y\mid\bar\theta_{jk})$? |
 |---|---|---|---|
-| Gaussian, identity link | linear in $\theta$ | yes | yes |
+| Gaussian, identity link | $e^{-(y-\theta)^2/2\sigma^2}/\sqrt{2\pi}\sigma$ | no | no (a normal mixture; the arm *mean* is still exact, @thm-identity-link-exact) |
 | Bernoulli / binomial | $\theta^{y}(1-\theta)^{1-y}$ | yes | yes |
 | Poisson, count | $\theta^{y}e^{-\theta}/y!$ | no | no |
 | Censored survival | $h^{\delta}S$ | no | no |
@@ -1081,8 +1082,7 @@ $\bar\theta_{jk}$ may still need quasi-Monte Carlo when the link has no closed-f
 node-by-node integral is retained. {#tbl-genlik-reduction}
 
 The theorem then says: choose the one function $\pi_{\mathrm{Ind}}$, and the entire aggregation,
-integration, and inference pipeline of Chapters 20 to 24 runs unchanged. That is the structural reason
-ML-NMR, unlike MAIC (Chapter 18) and STC (Chapter 19), never needs to be rebuilt for a new outcome type.
+integration, and inference pipeline of Chapters 20 to 24 runs unchanged.
 
 ::: {#thm-general-likelihood-mlnmr}
 ## General-likelihood ML-NMR
@@ -1111,11 +1111,11 @@ Chapter 22.
 $\theta=g^{-1}(\eta_{jk}(\mathbf{x}))$ and the kernel is affine in $\theta$ for each fixed $y$, then
 @eq-genlik-general reduces to the mean-aggregation model of @thm-aggregation with aggregate mean
 $\bar\theta_{jk}=\int g^{-1}(\eta_{jk}(\mathbf{x}))f_j(\mathbf{x})\,d\mathbf{x}$. The affine-in-$\theta$
-hypothesis is essential and restrictive: it holds for the Bernoulli mass and the identity-link Gaussian
-mean, but *not* for the Poisson mass $\theta^{y}e^{-\theta}/y!$, the survival kernel $h^{\delta}S$, or the
+hypothesis is essential and restrictive: it holds for the Bernoulli mass, but *not* for the Gaussian
+density, the Poisson mass $\theta^{y}e^{-\theta}/y!$, the survival kernel $h^{\delta}S$, or the
 proportional-odds mass $p_k$, all of which are nonlinear in $\theta$ and retain the full integral
-(@tbl-genlik-reduction). So "reduces to a GLM" really means "reduces in the Bernoulli or identity-link
-case"; the other families genuinely need @eq-genlik-general.
+(@tbl-genlik-reduction). So "reduces to a GLM" really means "reduces in the Bernoulli case"; a reported
+continuous arm mean is instead modeled directly through its exact aggregate mean on the identity link.
 
 4. **(NMA reduction.)** If there are no covariates (or $f_j$ is degenerate at a single $\mathbf{x}_j$),
 @eq-genlik-general reduces to the standard network meta-analysis likelihood (@thm-mlnmr-generalizes-nma).
@@ -1201,11 +1201,10 @@ networks in this book use one family at a time. $\blacktriangleleft$
 
 ::: {.remark}
 **Generality as the distinguishing feature.** This theorem is the structural reason ML-NMR is more
-flexible than its competitors. Matching-adjusted indirect comparison (Chapter 18) requires the aggregate
-data in a moment form to solve its balancing equations, and simulated treatment comparison (Chapter 19)
-requires an outcome regression of a specific form; both need rework for each outcome type, and neither
-ingests a censored survival time or an ordinal band without it. General-likelihood ML-NMR changes one
-function, $\pi_{\mathrm{Ind}}$, and reuses the entire aggregation, integration, and inference pipeline.
+flexible than its competitors. Matching-adjusted indirect comparison (Chapter 18) and simulated treatment
+comparison (Chapter 19) need a separate weighted or standardized estimator for each outcome type, and each
+compares only two trials. General-likelihood ML-NMR changes one function, $\pi_{\mathrm{Ind}}$, and reuses
+the entire aggregation, integration, and inference pipeline across a whole network.
 The same generality carries to the unanchored extension ML-UMR (Chapter 26), where the time-to-event and
 proportional-odds kernels reappear inside the unanchored likelihood (@thm-mlumr-tte). $\blacktriangleleft$
 :::
@@ -1220,8 +1219,8 @@ factor is exact and checkable by hand. The example uses a single binary covariat
 covariate integral into a two-point sum (the degenerate QMC rule for a Bernoulli marginal) and makes the
 non-collapsibility of the hazard ratio and the collapsibility of the RMST visible in closed form. It is a
 stylized analogue of the multiple-myeloma progression-free-survival network of @phillippo2025general,
-whose `multinma` analysis integrates four covariates (age modeled as gamma, three binary) at $64$ Sobol'
-nodes with a Gaussian copula; here we keep one binary covariate so the arithmetic is transparent.
+whose `multinma` analysis integrates several covariates over Sobol' nodes with a Gaussian copula; here we
+keep one binary covariate so the arithmetic is transparent.
 
 ::: {#exm-genlik-survival}
 ## Exponential-hazard aggregation with a binary prognostic covariate
@@ -1286,7 +1285,7 @@ $\operatorname{RMST}_C^{\mathcal{P}}(2)=\tfrac12(0.8647+0.3325)=0.5986$ and
 $\operatorname{RMST}_A^{\mathcal{P}}(2)=\tfrac12(1.2642+0.6335)=0.9489$. Integrating the marginal survival
 of Step 1: $\int_0^{2}(\tfrac12 e^{-s}+\tfrac12 e^{-3s})\,ds=\tfrac12(1-e^{-2})+\tfrac16(1-e^{-6})=
 0.5986$, the same. The collapsible RMST contrast is
-$\Delta\!\operatorname{RMST}_{AC}^{\mathcal{P}}(2)=0.9489-0.5986=0.3503$ years, equal to the average of the
+$\Delta\!\operatorname{RMST}_{CA}^{\mathcal{P}}(2)=0.9489-0.5986=0.3503$ years, equal to the average of the
 conditional contrasts $\tfrac12(0.3995+0.3010)=0.3503$. Unlike the hazard ratio, this marginal contrast is
 the average of conditional contrasts.
 
@@ -1307,8 +1306,7 @@ L_2(\boldsymbol\xi)=\tfrac12\big[e^{-\lambda_0 t_2}\big]+\tfrac12\big[e^{-\lambd
 $$
 ($L_1$ is a density, with units of inverse time; $L_2$ is a probability.) Here the two integration nodes
 are the covariate values $\{0,1\}$ with QMC weights $\{\tfrac12,\tfrac12\}$; a continuous covariate would
-replace this exact two-point rule with an $N$-node Sobol' average, as in the $64$-node `multinma`
-analysis.
+replace this exact two-point rule with an $N$-node Sobol' average, as in the `multinma` analyses.
 
 **Step 5: the aggregate arm likelihood (@thm-aggregate-marginal-likelihood).** The product over the two
 pseudo-observations is
@@ -1348,10 +1346,10 @@ accelerated-failure-time individual models, the flexible M-spline baseline hazar
 reconstruction of pseudo-IPD from published Kaplan-Meier curves, follows @phillippo2025general and Chapter
 7 of @phillippo2019thesis. The survival fundamentals of @sec-genlik-survival, the survival function, the
 hazard, the identity $S=\exp(-\int h)$, and the right-censored likelihood under independent censoring, are
-classical; the standard reference is Klein and Moeschberger (see the proposed bibliography entry in the
-work log), and the independent-censoring factorization @prp-censored-likelihood-density is the textbook
-construction. The Kaplan-Meier reconstruction algorithm is due to Guyot and colleagues (proposed entry in
-the log); its role in the unanchored network is developed in Chapter 26 (@thm-pseudo-ipd-reconstruction).
+classical; the standard reference is @klein2003, and the independent-censoring factorization
+@prp-censored-likelihood-density is the textbook construction. The Kaplan-Meier reconstruction algorithm
+is due to @guyot2012; its role in the unanchored network is developed in Chapter 26
+(@thm-pseudo-ipd-reconstruction).
 
 The non-collapsibility of the marginal hazard ratio (@thm-marginal-hr-time-varying) is a much-discussed
 feature of survival analysis: even a correctly specified conditional proportional-hazards model induces a
@@ -1364,8 +1362,8 @@ the odds-ratio non-collapsibility of Chapter 11, and it is the reason the restri
 marginal summary. The transportability subtlety, that RMST collapsibility does not imply RMST
 transportability when the conditional model is on the log-hazard scale, is the scale-misalignment finding
 analyzed for the unanchored case by @chandler2025mlumr and revisited in Chapter 26 (@thm-mlumr-tte); the
-clean transportable object remains the conditional log-hazard model under the shared-effect-modifier
-assumption (@def-sema) of Chapter 17.
+clean transportable object remains the conditional log-hazard model under conditional constancy of
+relative effects (@def-conditional-constancy-relative) of Chapter 17.
 
 The proportional-odds model (@def-proportional-odds) is the standard cumulative-logit model for ordered
 categorical data; the validity lemma @lem-ordinal-valid-probabilities and the proportional-odds
@@ -1374,19 +1372,15 @@ GLM reference. The aggregation theorems @thm-marginal-individual-likelihood and
 @thm-aggregate-marginal-likelihood are the general-likelihood forms of the mean-aggregation theorem
 @thm-aggregation of Chapter 20, and they inherit the numerical-integration apparatus of Chapter 22, the
 Sobol' net (@def-sobol-net, @thm-hypercube-integration, @sobol1967), the inverse-CDF transform
-(@thm-inverse-cdf, @owen1956), and the Gaussian copula (@def-gaussian-copula, @thm-sklar, @sklar1959). The
+(@thm-inverse-cdf), and the Gaussian copula (@def-gaussian-copula, @thm-sklar, @sklar1959). The
 Bayesian computation, including the diagnostics and model comparison referenced in @sec-genlik-general, is
 the Stan/Hamiltonian Monte Carlo apparatus of Chapter 24 (@carpenter2017stan), and the network reductions
 to standard NMA (@thm-mlnmr-generalizes-nma) connect to @dias2018nma.
 
-There is no machine-checked counterpart for this chapter. The companion Coq development
-(`~/Documents/GitHub/ITC_Coq/theories/`) does not formalize survival, hazard, restricted mean survival
-time, or ordered categorical outcomes: there is no `Survival.v`, and the only mention of hazards and
-non-collapsibility is a prose comment in `STC.v`. The reasons, recorded in the source manuscript, are that
-survival's content requires Lebesgue integration over time beyond the analysis machinery used elsewhere in
-the development, and that the most interesting statements, the time-variation of the marginal hazard ratio
-and its non-collapsibility, are analytic results more naturally stated in prose than as Coq lemmas. The
-results of this chapter are therefore pen-and-paper, and the proofs above are self-contained. This chapter
+There is no machine-checked counterpart for this chapter: the companion Coq development does not
+formalize survival, hazard, restricted mean survival time, or ordered categorical outcomes, whose content
+needs Lebesgue integration over time beyond the machinery used elsewhere in the development. The results of
+this chapter are pen-and-paper, and the proofs above are self-contained. This chapter
 corresponds to results J.1 (survival function), J.2 (hazard), J.3 (the identity $S=\exp(-\int h)$), J.4
 (the right-censored likelihood, with J.4a the conditional hazard ratio, J.4b the time-varying marginal
 hazard ratio, and J.4c the collapsible RMST), J.5 (the marginal individual likelihood), J.6 (the aggregate
@@ -1481,8 +1475,8 @@ interpretation.
 **($\star$, Proof) Collapsible but not transportable.** Consider two populations $\mathcal{P}$ and $\mathcal{P}^{*}$
 with the same binary covariate $X$ but different prevalences $q\ne q^{*}$, and the exponential PH model of
 @exm-genlik-survival (conditional hazards $\lambda_x$ for control and $\psi\lambda_x$ for treatment, shared
-across populations: the shared-effect-modifier assumption holds on the log-hazard scale). Using
-@thm-rmst-collapsible, show that the RMST contrast $\Delta\!\operatorname{RMST}_{AC}(\tau)$ differs between
+across populations: conditional constancy of relative effects holds on the log-hazard scale). Using
+@thm-rmst-collapsible, show that the RMST contrast $\Delta\!\operatorname{RMST}_{CA}(\tau)$ differs between
 $\mathcal{P}$ and $\mathcal{P}^{*}$, and give an explicit formula for the difference in terms of
 $q-q^{*}$. Conclude that RMST collapsibility (a within-population identity) does not imply RMST
 transportability (a cross-population identity), and explain how this differs from the conditional

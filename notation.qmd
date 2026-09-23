@@ -33,7 +33,7 @@ definition, example, or remark when needed for clarity.
 | $\mathbf{e}_i$ | $i$-th standard basis vector |
 | $\mathbf{1}_n$, $\mathbf{0}_n$ | $n$-vectors of ones and of zeros |
 | $I_n$, $J_n = \mathbf{1}_n\mathbf{1}_n^\top$ | $n\times n$ identity, $n\times n$ all-ones matrix |
-| $A^\top$, $A^{-1}$, $A^{+}$ | transpose, inverse, Moore–Penrose pseudoinverse |
+| $A^\top$, $A^{-1}$, $A^{+}$ | transpose, inverse, Moore-Penrose pseudoinverse |
 | $\mathrm{rank}(A)$, $\det(A)$, $\mathrm{tr}(A)$ | rank, determinant, trace |
 | $\mathcal{C}(A)$, $\mathcal{N}(A)$ | column space and null space of $A$ |
 | $\langle \mathbf{x},\mathbf{y}\rangle = \mathbf{x}^\top\mathbf{y}$ | Euclidean inner product |
@@ -58,7 +58,7 @@ definition, example, or remark when needed for clarity.
 | $\mathbf{y}$, $\hat{\mathbf{y}}$ | response vector, fitted values |
 | $\boldsymbol{\beta}$, $\hat{\boldsymbol{\beta}}$ | regression coefficient vector and its estimator |
 | $\boldsymbol{\varepsilon}$, $\mathbf{r}=\mathbf{y}-\hat{\mathbf{y}}$ | error vector, residual vector |
-| $H = \mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$ | hat matrix (orthogonal projection onto $\mathcal{C}(\mathbf{X})$) |
+| $H = \mathbf{X}(\mathbf{X}^\top\mathbf{X})^{-1}\mathbf{X}^\top$ | hat matrix (orthogonal projection onto $\mathcal{C}(\mathbf{X})$), for $\mathbf{X}$ of full column rank; in general $H=\mathbf{X}(\mathbf{X}^\top\mathbf{X})^{+}\mathbf{X}^\top$ |
 | $M = I - H$ | residual maker (projection onto the orthogonal complement) |
 | $\mathrm{RSS}$, $\mathrm{TSS}$, $\mathrm{ESS}_{\mathrm{reg}}$ | residual, total, and explained sums of squares |
 | $\sigma^2$, $s^2$ | error variance and its unbiased estimator |
@@ -82,7 +82,7 @@ defined below.
 | $F_X$, $F_X^{-1}$ | cumulative distribution function and its generalized inverse (quantile) |
 | $\Phi$, $\phi$ | standard normal distribution function and density |
 | $M_X(\mathbf{t})=\mathbb{E}[e^{\mathbf{t}^\top X}]$ | moment generating function |
-| $\|\mu-\nu\|_{\mathrm{TV}}$ | total variation distance between measures $\mu$ and $\nu$ |
+| $\|\mu-\nu\|_{\mathrm{TV}}=\sup_A|\mu(A)-\nu(A)|$ | total variation distance between probability measures $\mu$ and $\nu$ (the supremum convention, so it lies in $[0,1]$) |
 | $\xrightarrow{p}$, $\xrightarrow{d}$, $\xrightarrow{\text{a.s.}}$ | convergence in probability, in distribution, almost surely |
 | $O_p$, $o_p$, $O(\cdot)$, $o(\cdot)$ | stochastic and deterministic order symbols |
 
@@ -103,7 +103,7 @@ defined below.
 | $\pi(\boldsymbol{\xi})$, $\pi(\boldsymbol{\xi}\mid\mathbf{y})$ | prior and posterior density of the parameter vector |
 | $p(\mathbf{y}\mid\boldsymbol{\xi})$ | likelihood of the data given the parameters |
 | $\Pi$ | prior probability measure (used when the prior has no density) |
-| $\tau^2$ | between-study heterogeneity variance |
+| $\tau^2$ | between-study heterogeneity variance (always squared; the unsquared $\tau$, $\tau(x)$ of causal inference is a treatment effect) |
 | $\hat R$ | Gelman-Rubin potential scale reduction statistic (near $1$ at convergence) |
 | $N_{\mathrm{eff}}$ | effective sample size of an autocorrelated MCMC chain, distinct from the weighting $\mathrm{ESS}$ |
 | $\bar D$, $D(\bar{\boldsymbol{\theta}})$, $p_D$ | posterior mean deviance, deviance at the posterior mean, and effective number of parameters $p_D=\bar D-D(\bar{\boldsymbol{\theta}})$ |
@@ -136,6 +136,8 @@ defined below.
 | $f_j(x)$, $F_j(x)$ | covariate density and distribution function in study $j$ |
 | $\bar{\mathbf{x}}_j=\int \mathbf{x}\,f_j(x)\,dx$, $\boldsymbol{\Sigma}_j$ | covariate mean and covariance in study $j$ |
 | $d_{ab(\mathcal{P})}$ | marginal relative effect of treatment $b$ versus $a$ in population $\mathcal{P}$ on a stated scale |
+| $\tilde d_{ab(\mathcal{P})}$ | average-conditional relative effect: the conditional contrast averaged over $f_{\mathcal{P}}$ (Chapter 16) |
+| $\Delta^{\mathrm{Cond},g}_{AB}(\mathcal{P}^{*})$ | target average-conditional contrast of $B$ versus $A$ in $\mathcal{P}^{*}$ on scale $g$ (Chapter 16) |
 | $\hat d_{ab(j)}$ | estimator of $d_{ab}$ from study $j$ |
 | $\delta_{j,\,t_1 t_k}$ | study-$j$ contrast of treatment $t_k$ versus $t_1$ |
 
@@ -159,11 +161,11 @@ defined below.
 |---|---|
 | $w_i$, $w(x)$ | matching weight for individual $i$, or weight function at $x$ |
 | $\mathrm{ESS}=\left(\sum_i w_i\right)^2 / \sum_i w_i^2$ | effective sample size of a weighted sample |
-| $\alpha, \boldsymbol{\beta}$ | matching-weight parameters in $w_i=\exp(\alpha+\boldsymbol{\beta}^\top \mathbf{x}_i)$ |
+| $\alpha, \boldsymbol{\beta}$ | matching-weight parameters in $w_i=\exp(\alpha+\boldsymbol{\beta}^\top \mathbf{x}_i)$; inside MAIC chapters $\boldsymbol{\beta}$ means these weight parameters, not regression coefficients |
 | $\hat\mu_t^{\mathrm{STC}}$ | simulated treatment comparison predicted mean under treatment $t$ |
 | $C(u_1,\dots,u_d)$ | copula |
 | $C_\Omega(\mathbf{u})=\Phi_\Omega\!\big(\Phi^{-1}(u_1),\dots,\Phi^{-1}(u_d)\big)$ | Gaussian copula with correlation matrix $\Omega$ |
-| $V_{\mathrm{HK}}(f)$ | Hardy–Krause variation of $f$ |
+| $V_{\mathrm{HK}}(f)$ | Hardy-Krause variation of $f$ |
 | $D_N^{*}(P)$ | star discrepancy of a point set $P$ |
 | SEMA, SPFA | shared effect modifier assumption, shared prognostic factor assumption |
 

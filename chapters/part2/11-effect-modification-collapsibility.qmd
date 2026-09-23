@@ -320,8 +320,9 @@ makes it precise and @exm-emcoll-worked carries the numbers through to an indire
 
 ## Effect modification and statistical interaction {#sec-emcoll-em-interaction}
 
-*Why this matters (ITC).* Anchored indirect comparisons (Bucher, NMA) are unbiased only when the trials
-are balanced on the *effect modifiers* of the reported scale (@thm-bucher-unbiased). This section says
+*Why this matters (ITC).* Anchored indirect comparisons (Bucher, NMA) are unbiased when the trials are
+balanced on the *effect modifiers* of the reported scale (@thm-bucher-unbiased), and in general not
+otherwise. This section says
 exactly what an effect modifier is, why it is not the same as a regression interaction term, and why the
 answer depends on the scale you report.
 
@@ -383,8 +384,9 @@ Under the model @eq-emcoll-model, the conditional effect on scale $g$ is
 $$
 \tau^{g}_{01}(x) \;=\; \gamma + \boldsymbol\beta_2^\top x .
 $$
-Consequently, the covariate component $X_j$ is an effect modifier on scale $g$ if and only if its
-interaction coefficient is nonzero, $\beta_{2,j}\neq 0$, and $X_j$ has nondegenerate support. If
+Consequently, if $X_j$ can vary on the support while the other components are held fixed, then $X_j$
+is an effect modifier on scale $g$ if and only if its interaction coefficient is nonzero,
+$\beta_{2,j}\neq 0$. If
 $\boldsymbol\beta_2=\mathbf 0$, no component is an effect modifier on scale $g$ and the conditional effect
 is the constant $\gamma$.
 :::
@@ -515,9 +517,10 @@ prognostic variables.** The reason is that a covariate can influence each treatm
 between-arm contrast untouched; such a *purely prognostic* covariate cancels when two arms are compared
 against a shared comparator, but not when an absolute arm mean is transported on its own. This section
 proves that effect modifiers and prognostic variables are genuinely different, and isolates the
-cancellation. In the transportability literature the first rule is the **shared effect modifier
-assumption (SEMA)** and the second the **shared prognostic factor assumption (SPFA)**; both names, listed
-in [Notation](/notation.qmd), return in Chapter 12.
+cancellation. The two rules are distinct from, though often discussed alongside, two named structural
+assumptions: the **shared effect modifier assumption (SEMA)**, which equates the interactions of the compared
+active treatments (Chapters 12 and 17), and the **shared prognostic factor assumption (SPFA)** of the
+unanchored case (Chapter 26); both names are listed in [Notation](/notation.qmd).
 
 Effect modification concerns the *contrast* $\tau^g_{ab}$. A different and weaker condition concerns each
 arm separately.
@@ -678,9 +681,10 @@ This is why @thm-bucher-unbiased requires balancing only effect modifiers, while
 Chapter 12 requires balancing all imbalanced prognostic variables as well. The precise
 estimand-level consequences are developed there; here we have isolated the algebraic mechanism and tied
 it to the machine-checked counterexample. In the language of the section opener,
-@lem-emcoll-anchored-cancellation is the mathematical content of the shared effect modifier assumption
-(SEMA): balance the effect modifiers and the anchored contrast transports. The shared prognostic factor
-assumption (SPFA) is the stronger requirement the unanchored case needs, developed in Chapter 12.
+@lem-emcoll-anchored-cancellation is the mathematical content of the first rule: balance the effect
+modifiers and the anchored contrast transports. The unanchored case needs the stronger second rule
+(Chapter 17), conditional constancy of absolute effects, which the model-based method of Chapter 26 pairs
+with the shared prognostic factor assumption (SPFA).
 
 ## Collapsibility, direct collapsibility, and non-collapsibility {#sec-emcoll-collapse}
 
@@ -1031,8 +1035,8 @@ backdoor path, no omitted common cause, no selection. The conditional odds ratio
 ratio are simply two different functionals of the same confounding-free data generating mechanism, and
 they disagree because the logit does not commute with averaging. By @lem-emcoll-gap the gap is exactly the
 Jensen defect @eq-emcoll-gap, $J_{\mathrm{logit}}(\mu_1)-J_{\mathrm{logit}}(\mu_0)$, which is generically
-nonzero for the strictly convex-then-concave logit, and which the risk difference escapes because its link
-is affine. Confounding is a statement about *which* expectation identifies the causal effect;
+nonzero for the logit (concave on $(0,\tfrac12)$, convex on $(\tfrac12,1)$), and which the risk
+difference escapes because its link is affine. Confounding is a statement about *which* expectation identifies the causal effect;
 non-collapsibility is a statement about how a *correctly identified* effect changes when you transform
 before or after averaging. The two are independent, and conflating them is a standard error. The catalogue
 records this under B.13. $\blacktriangleleft$
@@ -1213,8 +1217,8 @@ observation that the risk ratio is collapsible but not directly collapsible (@pr
 it is sharper than the constant-effect collapsibility of the classical literature. The general
 non-collapsibility and strict attenuation of the odds ratio, @thm-noncollapsibility-or-hr(a) and
 @cor-emcoll-or-attenuation, are the catalogue's B.13; the monotone-attenuation phenomenon is classical in
-categorical data analysis and the change-of-measure proof given here packages the convexity argument of
-@lem-emcoll-gap into a covariance inequality. The non-collapsibility and time-variation of the marginal
+categorical data analysis (@gail1984; @greenland1999collapsibility), and the change-of-measure proof
+given here reduces it to a covariance inequality. The non-collapsibility and time-variation of the marginal
 hazard ratio, @thm-noncollapsibility-or-hr(b), is the survival-analysis counterpart; the closed-form
 two-stratum frailty computation is standard, and the same mechanism reappears in the survival chapters of
 this book where the marginal hazard ratio of a conditionally proportional-hazards model is shown to drift
@@ -1230,11 +1234,9 @@ scale-specific population-adjustment consistency theorems, which depend on estim
 model correctness beyond the algebraic abstraction; those live in the paper proofs of Part E and in
 Chapter 12 of this book.
 
-Two bibliographic additions are proposed in the chapter work log for the orchestrator: the original
-collapsibility analysis of Greenland, Robins, and Pearl (1999), to which the term non-collapsibility and
-the odds-ratio attenuation are usually attributed, and the early demonstration by Gail and colleagues
-(1984) that omitting a balanced prognostic covariate biases a nonlinear-model treatment coefficient. The
-present chapter cites the keys available in `references.bib`.
+The standard references for collapsibility are @greenland1999collapsibility, to which the term
+non-collapsibility is usually attributed, and @gail1984, who showed that omitting a balanced prognostic
+covariate changes a nonlinear-model treatment coefficient.
 
 ## Exercises {#sec-emcoll-exercises}
 
@@ -1333,7 +1335,7 @@ $\operatorname{logit}\mu_t(x)=\beta_0+\beta_1 x+\beta_2 t+\beta_3 (xt)$. Express
 @exm-emcoll-worked through $\beta_0,\dots,\beta_3$, solve for the coefficients, and verify that
 $\beta_3=0$ corresponds exactly to the absence of effect modification on the logit scale
 (@lem-emcoll-interaction). Then compute, from the same fitted model, the marginal odds ratio $4.5$ by
-averaging the fitted risks, and confirm that no value of $(\beta_0,\beta_1,\beta_2,\beta_3)$ makes the
-marginal odds ratio equal the conditional odds ratio $e^{\beta_2}$ unless $\beta_1=0$. Interpret
+averaging the fitted risks, and confirm that, with $\beta_3=0$ and $\beta_2\neq 0$, the marginal odds
+ratio equals the conditional odds ratio $e^{\beta_2}$ only if $\beta_1=0$. Interpret
 $\beta_1=0$ as the degeneracy clause of @cor-emcoll-or-attenuation.
 :::

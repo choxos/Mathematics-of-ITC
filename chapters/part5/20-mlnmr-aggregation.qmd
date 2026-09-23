@@ -9,11 +9,11 @@ Part IV gave two ways to repair the indirect comparison once one trial hands us 
 weighted covariate moments equal the aggregate comparator's, then reads off the relative effect in the
 reweighted pseudo-population; simulated treatment comparison (STC, Chapter 19) fits an outcome regression
 to the IPD and predicts what its arms would do in the comparator's covariate distribution. Both are
-*pairwise* repairs of a single Bucher triangle, both target the *comparator* population and no other, and
-both buy their cure with assumptions that are exact only on a linear scale. On a nonlinear link such as the
-logit or the log, matching covariate *means* and plugging those means into the model is not the same as
-averaging the model over the population: the difference is the ecological bias of @def-ecological-bias, and
-it is the residue that @thm-failure-of-bucher could not remove from aggregate data alone.
+*pairwise* repairs of a single Bucher triangle, and both target the *comparator* population and no other.
+Both are also simplest on a linear scale. On a nonlinear link such as the logit or the log, plugging covariate
+means into the model is not the same as averaging the model over the population, and matching covariate means
+alone need not reproduce that average; the difference is the ecological bias of @def-ecological-bias, which
+Chapter 16 showed aggregate data alone cannot remove (@thm-ecological-norecovery).
 
 This chapter opens Part V with the method that resolves all three limitations at once: multilevel network
 meta-regression (ML-NMR), introduced by @phillippo2020mlnmr and @phillippo2019thesis. The idea is a single
@@ -34,7 +34,7 @@ by one, with no integration because each covariate vector is observed; AgD studi
 integral, with the covariate distribution standing in for the individuals we cannot see. The two contributions
 enter one likelihood and estimate one set of parameters.
 
-The aggregation theorem also explains, in one line, why everyone before us was biased. If you do the cheap
+The aggregation theorem also explains, in one line, why the plug-in approaches are biased. If you do the cheap
 thing and plug the *mean* covariate into the model, you compute $g^{-1}(\eta_{jk}(\bar{\mathbf x}_j))$, the
 inverse link *of the average*; the correct quantity is the *average of the inverse link*. Because $g^{-1}$ is
 nonlinear, Jensen's inequality (@thm-jensen) separates the two, and the gap is exactly the ecological bias
@@ -201,19 +201,19 @@ This is result H.1 of the proof catalogue (corresponds to H.1; Phillippo et al. 
 Eq. 4.1b).
 
 ::: {.remark}
-**Why a shared effect modifier assumption is needed (preview).** The interaction $\boldsymbol\beta_{2,k}$ is the
-one thing an AgD study cannot see directly: an AgD study reports one number per arm, so it cannot reveal how
-outcome varies with covariate *within* an arm. Only an IPD study exposes that within-study slope. ML-NMR can
-still use AgD studies to help estimate effect modification, but only under the **shared effect modifier
-assumption** (SEMA, @def-sema): the interaction coefficients $\boldsymbol\beta_{2,k}$ are the same across
-studies, because they attach to the treatment, not to the study. Under SEMA the IPD trial estimates
-$\boldsymbol\beta_{2,B}$, and the AgD trial's case mix $f_j$ then tells us how much of its reported effect is
-explained by that same interaction, which is what links the two into one estimable model. If SEMA fails, say
-the IL-17 inhibitor's effect modification by biologic-naive status differs between the IPD and AgD populations,
-then the AgD study's single summary per arm cannot separate a genuine treatment effect from a case-mix artifact,
-and the indirect comparison is not identified from aggregate data alone. This is the same identification wall
-that Chapter 16 hit for standard NMA; ML-NMR does not repeal it, it makes the assumption explicit and testable
-wherever IPD overlaps. The full identifiability analysis is Chapter 23. $\blacktriangleleft$
+**Why a shared effect modifier assumption is needed (preview).** The model already lets the interactions
+$\boldsymbol\beta_{2,k}$ attach to the treatment, not the study: they are the same in every study, which is
+conditional constancy of relative effects (@def-conditional-constancy-relative). In a small network that is
+not enough. An AgD study reports one number per arm, so it cannot reveal how the outcome varies with the
+covariate *within* an arm; only an IPD study exposes that slope. In the running example the IPD trial
+estimates $\boldsymbol\beta_{2,B}$, but no study reveals $\boldsymbol\beta_{2,C}$, because the competitor
+$C$ is seen only in aggregate. The **shared effect modifier assumption** (SEMA, @def-sema) closes the gap by
+equating the interactions of the active treatments, $\boldsymbol\beta_{2,B}=\boldsymbol\beta_{2,C}$, so that
+the IPD estimate also describes $C$. If SEMA fails, the AgD study's single summary per arm cannot separate
+$C$'s treatment effect from its effect modification, and the comparison in a new target population is not
+identified from these data. ML-NMR does not repeal this identification wall; it makes the assumption explicit,
+and testable when several AgD studies of $C$ differ in case mix (@prp-testable-untestable-constancy). The
+full identifiability analysis is Chapter 23. $\blacktriangleleft$
 :::
 
 ## The aggregate-level model {#sec-agg-aggregate}
@@ -474,8 +474,8 @@ g^{-1}\ \text{convex on the support}&:\quad \theta^{\mathrm{naive}}_{\bullet jk}
 g^{-1}\ \text{concave on the support}&:\quad \theta^{\mathrm{naive}}_{\bullet jk}\ \ge\ \theta_{\bullet jk},
 \end{aligned}
 $$ {#eq-agg-bias}
-and the inequality is an equality if and only if either $g^{-1}$ is affine on the support of
-$\eta_{jk}(X)$ or $\eta_{jk}(X)$ is degenerate, the latter meaning
+If $g^{-1}$ is affine there, equality holds for every $f_j$; if $g^{-1}$ is strictly convex or strictly
+concave there, equality holds if and only if $\eta_{jk}(X)$ is degenerate, that is
 $\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}=0$. The signed
 discrepancy is exactly the ecological bias of @def-ecological-bias,
 $$
@@ -493,12 +493,10 @@ and by @eq-agg-aggregate-mean the right side is $\theta_{\bullet jk}$, which is 
 @eq-agg-bias. If $g^{-1}$ is concave then $-g^{-1}$ is convex and the same argument applied to $-g^{-1}$
 reverses the inequality, giving the concave case.
 
-For the equality case, the strict form of @thm-jensen states that for a strictly convex $\varphi$ the
-inequality is strict unless $W$ is almost surely constant. Decompose: if $g^{-1}$ is affine on the support,
-then $g^{-1}(w)=a+bw$ there and $\mathbb E[g^{-1}(W)]=a+b\,\mathbb E[W]=g^{-1}(\mathbb E[W])$, an equality;
-this is the degenerate-curvature case. Otherwise $g^{-1}$ is strictly convex (or strictly concave) on a
-subinterval that $W$ charges with positive probability, and then equality forces $W$ to be almost surely
-constant, that is $\eta_{jk}(X)=\eta_{jk}(\bar{\mathbf x}_j)$ almost surely. Since $\eta_{jk}$ is affine with
+For the equality cases: if $g^{-1}$ is affine on the support, then $g^{-1}(w)=a+bw$ there and
+$\mathbb E[g^{-1}(W)]=a+b\,\mathbb E[W]=g^{-1}(\mathbb E[W])$. If $g^{-1}$ is strictly convex (or strictly
+concave), the strict form of @thm-jensen says equality forces $W$ to be almost surely constant, that is
+$\eta_{jk}(X)=\eta_{jk}(\bar{\mathbf x}_j)$ almost surely. Since $\eta_{jk}$ is affine with
 slope $\boldsymbol\beta_{\mathrm{tot},k}$, this says $\boldsymbol\beta_{\mathrm{tot},k}^\top(X-\bar{\mathbf x}_j)=0$
 almost surely, equivalently $\mathrm{Var}(\eta_{jk}(X))=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}=0$,
 which is the stated degeneracy. The identity @eq-agg-eb is @eq-agg-naive minus @eq-agg-aggregate-mean and
@@ -506,15 +504,14 @@ coincides termwise with the ecological-bias formula @eq-ecological-bias of @def-
 :::
 
 ::: {.remark}
-**This is the resolution of @thm-failure-of-bucher.** Chapter 16 diagnosed the bias of the unadjusted
-indirect comparison as a difference of population-averaged conditional contrasts that did not cancel
-(@thm-failure-of-bucher), and named the arm-level residue the ecological bias (@def-ecological-bias). Theorem
-@thm-aggregation-bias shows that the residue is exactly the gap between plugging in the mean and integrating,
-and @thm-aggregation shows that ML-NMR closes the gap by *doing the integral* @eq-agg-aggregate-mean rather
-than approximating it. MAIC and STC attack the same gap by other means: MAIC's first-moment matching
+**Where this sits relative to Chapter 16.** Chapter 16 found two failures: effect-modifier imbalance
+(@thm-failure-of-bucher), repaired by standardizing every contrast to one population, and the ecological bias
+of aggregate regression (@def-ecological-bias, @thm-ecological-norecovery). @thm-aggregation-bias shows that
+the second is exactly the gap between plugging in the mean and integrating, and @thm-aggregation shows that
+ML-NMR closes it by *doing the integral* @eq-agg-aggregate-mean rather than approximating it. MAIC and STC attack the same gap by other means: MAIC's first-moment matching
 (@thm-maic-exponential-weights) makes $\bar{\mathbf x}$ agree across populations but leaves the within-population
-curvature gap untouched unless higher moments are matched too, and STC's mean-covariate prediction is precisely
-the plug-in @eq-agg-naive unless the regression is centered and integrated (@thm-marginal-stc-unbiased).
+curvature gap untouched unless higher moments are matched too, and plug-in STC's mean-covariate prediction is precisely
+the plug-in @eq-agg-naive, which marginal STC avoids by integrating (@thm-marginal-stc-unbiased).
 ML-NMR is the systematic cure because it never plugs in. $\blacktriangleleft$
 :::
 
@@ -526,8 +523,8 @@ $m_k$, and therefore lives in its own curvature region of $g^{-1}$; on the logit
 convex region and the other in the concave region, so the plug-in underestimates one arm and overestimates the
 other. When we subtract to form the treatment contrast, the two biases *add* rather than cancel. A small,
 innocuous-looking error in each arm becomes a systematic distortion of the exact quantity the HTA body is
-deciding on. The worked example @exm-agg-logit-discrete makes this concrete: two arm-level biases of about
-$1\%$ combine into an $8\%$ inflation of the odds ratio. This is the practical reason ML-NMR integrates rather
+deciding on. The worked example @exm-agg-logit-discrete makes this concrete: arm-level biases of a quarter and one and
+a half percentage points, in opposite directions, combine into an $8\%$ inflation of the odds ratio. This is the practical reason ML-NMR integrates rather
 than plugs in. $\blacktriangleleft$
 :::
 
@@ -543,8 +540,8 @@ curvature of the inverse link times the variance of the linear predictor.*
 
 ::: {#lem-agg-bias-expansion}
 ## Leading-order aggregation bias
-Suppose $g^{-1}$ is three times continuously differentiable with bounded third derivative on a neighborhood
-of $m:=\eta_{jk}(\bar{\mathbf x}_j)$, and write $v:=\mathrm{Var}(\eta_{jk}(X))=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}$
+Suppose $g^{-1}$ is three times continuously differentiable with bounded third derivative on an interval
+containing the support of $\eta_{jk}(X)$, let $m:=\eta_{jk}(\bar{\mathbf x}_j)$, and write $v:=\mathrm{Var}(\eta_{jk}(X))=\boldsymbol\beta_{\mathrm{tot},k}^\top\boldsymbol\Sigma_j\boldsymbol\beta_{\mathrm{tot},k}$
 for the variance of the linear predictor. Then, as the covariate distribution concentrates so that $v\to 0$
 with the standardized linear predictor having bounded third absolute moment,
 $$
@@ -675,7 +672,8 @@ $$
 $$ {#eq-agg-identity}
 so the aggregation bias @eq-agg-eb vanishes identically. Conversely, if a link makes
 $\theta_{\bullet jk}=\theta^{\mathrm{naive}}_{\bullet jk}$ for *every* covariate distribution supported on an
-open set, then $g^{-1}$ is affine on that set.
+open set, and $\boldsymbol\beta_{\mathrm{tot},k}\neq\mathbf 0$, then $g^{-1}$ is affine on the image of that
+set under $\eta_{jk}$.
 :::
 
 ::: {.proof}
@@ -833,7 +831,7 @@ $U-bZ$ through its moment generating function. Specializing $a=0,b=1$ gives @eq-
 the heat-flow language of @lem-agg-heat-flow, $u(m,\tau)=\Phi(m/\sqrt{1+\tau})$ solves
 $\partial_\tau u=\tfrac12\partial_m^2 u$ with $u(m,0)=\Phi(m)$: writing $u=\Phi(m\,(1+\tau)^{-1/2})$ and
 $\varphi=\Phi'$, one computes $\partial_m u=\varphi\,(1+\tau)^{-1/2}$,
-$\partial_m^2 u=\varphi'\,(1+\tau)^{-1}=-\tfrac{m}{(1+\tau)^{2}}\varphi$ using $\varphi'(x)=-x\varphi(x)$, and
+$\partial_m^2 u=\varphi'\,(1+\tau)^{-1}=-\tfrac{m}{(1+\tau)^{3/2}}\varphi$ using $\varphi'(x)=-x\varphi(x)$, and
 $\partial_\tau u=-\tfrac{m}{2}(1+\tau)^{-3/2}\varphi=\tfrac12\partial_m^2 u$, with $u(m,0)=\Phi(m)$. $\square$
 :::
 
@@ -1012,7 +1010,7 @@ contrast.
 **The marginal odds ratio.** The reported estimand is the marginal $B$-versus-$C$ log odds ratio in study $j$,
 $g(\theta_{\bullet B})-g(\theta_{\bullet C})$ on the logit scale. The integrated (ML-NMR) value is
 $$
-\mathrm{logit}(0.61800)-\mathrm{logit}(0.32324)=0.48107-(-0.73893)=1.22000,
+\mathrm{logit}(0.61800)-\mathrm{logit}(0.32324)=0.48107-(-0.73892)=1.21999,
 $$
 whereas the plug-in value telescopes, because $\mathrm{logit}\circ\mathrm{expit}$ is the identity, to the
 conditional log odds ratio at the mean covariate:
@@ -1021,15 +1019,15 @@ $$
 =\eta_B(0.5)-\eta_C(0.5)=0.55-(-0.75)=1.30000=\gamma_B+\beta_{2,B}\,\bar x_j .
 $$
 The naive aggregation thus reports the conditional-at-the-mean log odds ratio $1.30000$, while the correct
-marginal log odds ratio is $1.22000$. The ecological bias of the contrast is
+marginal log odds ratio is $1.21999$. The ecological bias of the contrast is
 $$
-1.30000-1.22000=0.08000\ \text{on the log-odds scale},
+1.30000-1.21999=0.08001\ \text{on the log-odds scale},
 $$
-an odds-ratio inflation of $e^{0.08000}=1.0833$, roughly an eight percent distortion produced entirely by
-plugging in the mean instead of integrating. ML-NMR reports $1.22000$; pre-ML-NMR meta-regression on the mean
+an odds-ratio inflation of $e^{0.08001}=1.0833$, roughly an eight percent distortion produced entirely by
+plugging in the mean instead of integrating. ML-NMR reports $1.21999$; pre-ML-NMR meta-regression on the mean
 covariate reports $1.30000$. In HTA terms, the naive analysis would credit the IL-17 inhibitor with an odds
 ratio of $e^{1.30000}=3.669$ against the comparator, when the correct population-average figure is
-$e^{1.22000}=3.387$: a real difference in the number a reimbursement decision would rest on, and it came from
+$e^{1.21999}=3.387$: a real difference in the number a reimbursement decision would rest on, and it came from
 nothing but the order of two operations. $\blacktriangleleft$
 :::
 
@@ -1092,9 +1090,10 @@ an aggregate trial and a conditional odds ratio from a patient-level model are n
 Two practical consequences follow. First, an analyst must decide which estimand the decision maker wants; ML-NMR
 targets the marginal effect in a stated population and computes it honestly by integrating, whereas plug-in
 meta-regression silently reports a conditional-at-the-mean effect and mislabels it as a population effect.
-Second, the risk difference and the log risk ratio are *collapsible* in the no-confounding case, so on the
-identity and log links this particular gap does not arise. (Aggregation can still bias the log link through
-Jensen, as @thm-log-link-mgf shows, but that is variance-driven curvature, not non-collapsibility.) The odds
+Second, on the identity link this gap never arises, and on the log link it arises only through effect
+modification, because the risk ratio is collapsible (@exm-stc-loglink). (Each log-link arm mean is still
+biased by Jensen, as @thm-log-link-mgf shows, but without effect modification the two arm biases cancel in
+the contrast.) The odds
 ratio is the scale on which the two phenomena coincide, which is why binary outcomes are where the fights
 happen. Chapter 7 introduced non-collapsibility for a single logistic regression; this section has shown that it
 is the same phenomenon as logit aggregation bias, now playing out across a network.
@@ -1132,13 +1131,9 @@ $\mathrm{expit}(z)\approx\Phi(\kappa z)$ mentioned in the remark after @thm-logi
 logistic-to-normal slope match; it is an approximation only and is not used in the fitted ML-NMR likelihood,
 which integrates numerically.
 
-There is no machine-checked counterpart to this chapter. The Coq development accompanying the book
-(@phillippo2019thesis notwithstanding) formalizes the potential-outcomes, propensity-score, MAIC, and STC
-material of Parts II to IV but stops short of ML-NMR, whose mathematical content is the numerical analysis of
-Chapters 21 and 22 rather than the algebra of the earlier parts; we note this gap in the work log. The
-aggregation identity @thm-aggregation is, however, a single application of the chain rule, Fubini's theorem
-(@thm-fubini-tonelli), and the tower property (@cor-total-expectation), all of which are formalized in the
-probability libraries the development depends on, so a future formalization would be short.
+There is no machine-checked counterpart to this chapter: the companion Coq development formalizes the
+potential-outcomes, propensity-score, MAIC, and STC material of Parts II to IV but not ML-NMR, whose
+mathematical content is largely the numerical analysis of Chapters 21 and 22.
 
 ## Exercises {#sec-agg-exercises}
 
@@ -1246,8 +1241,8 @@ link, and reconcile this with @thm-aggregation-bias.
 
 ::: {#exr-agg-jensen-gap-bound}
 ## A two-sided bound on the logit aggregation bias
-Let $\eta_{jk}(X)\sim\mathcal N(m,\tau)$ on the logit scale. Using $0\le\mathrm{expit}''(z)\le$ its maximum
-modulus and the exact second-moment identity $\mathbb E[(\eta-m)^2]=\tau$, prove the nonasymptotic bound
+Let $\eta_{jk}(X)\sim\mathcal N(m,\tau)$ on the logit scale. Using $|\mathrm{expit}''(z)|\le\sup_z|\mathrm{expit}''(z)|$
+and the exact second-moment identity $\mathbb E[(\eta-m)^2]=\tau$, prove the nonasymptotic bound
 $$
 \big|\,\theta_{\bullet jk}-\theta^{\mathrm{naive}}_{\bullet jk}\,\big|\ \le\ \tfrac12\Big(\sup_z|\mathrm{expit}''(z)|\Big)\,\tau
 =\tfrac{1}{12\sqrt3}\,\tau,

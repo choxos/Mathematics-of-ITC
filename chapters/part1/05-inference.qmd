@@ -257,8 +257,8 @@ the thing they will eventually be applied to.
 Before we can analyze any estimator as $n \to \infty$ we need three theorems about how limits in
 distribution interact with continuous functions and with constants. We will use them constantly, so we
 prove them here, near the front. We take as given two classical results from probability, which belong
-to the foundations of Chapter 4 and which we cite rather than reprove; see @bingham2010regression and a
-standard graduate probability text for proofs.
+to the foundations of Chapter 4 and which we cite rather than reprove; see @billingsley1995 and
+@vandervaart1998 for proofs.
 
 ::: {.remark}
 ## Prerequisites cited from probability
@@ -330,7 +330,7 @@ $g(X_n) \xrightarrow{\text{a.s.}} g(X)$.
 subsequence along which $P(\|g(X_n) - g(X)\| > \varepsilon) > \eta$. Along that subsequence
 $X_n \xrightarrow{p} X$ still holds, so it has a further subsequence with
 $X_{n_k} \xrightarrow{\text{a.s.}} X$ (a standard fact: convergence in probability implies almost-sure
-convergence along a subsequence; see @bingham2010regression). Intuitively, a sequence converges in
+convergence along a subsequence; see @billingsley1995). Intuitively, a sequence converges in
 probability if and only if every subsequence contains a further subsequence that converges almost surely,
 and the contradiction we now derive exploits exactly that escape hatch. By part (iii),
 $g(X_{n_k}) \xrightarrow{\text{a.s.}} g(X)$, hence $g(X_{n_k}) \xrightarrow{p} g(X)$, contradicting
@@ -464,8 +464,9 @@ an affine image of a Gaussian is Gaussian with the transformed covariance (@thm-
 :::
 
 ::: {.remark}
-The hypothesis $g'(\theta) \ne 0$ (more generally, $\mathbf D$ of full row rank) is what makes the limit
-*nondegenerate*. If $g'(\theta) = 0$ the first-order term vanishes and the correct rate is $n$ rather
+The limit is *nondegenerate* when $g'(\theta) \ne 0$ (more generally, when
+$\mathbf D\boldsymbol\Sigma\mathbf D^\top$ is positive definite, which holds if $\mathbf D$ has full row rank and
+$\boldsymbol\Sigma\succ 0$). If $g'(\theta) = 0$ the first-order term vanishes and the correct rate is $n$ rather
 than $\sqrt n$, with a $\chi^2$-type limit driven by the second derivative; this *second-order delta
 method* underlies the asymptotics of the likelihood-ratio statistic in @sec-tests.
 $\blacktriangleleft$
@@ -517,16 +518,17 @@ Each arm gives a log odds $\log\frac{\hat p}{1 - \hat p}$ whose variance, by @ex
 arm log odds, so its variance is the sum of the four reciprocals. For the direct contrasts,
 $$
 \begin{aligned}
-\widehat d_{BA} &= \log\tfrac{20/30}{10/40} = \log\tfrac{20\cdot 40}{30\cdot 10} = 0.9808, &
-\widehat{\mathrm{Var}}(\widehat d_{BA}) &= \tfrac1{20} + \tfrac1{30} + \tfrac1{10} + \tfrac1{40} = 0.20833,\\
-\widehat d_{CA} &= \log\tfrac{18/42}{15/45} = \log\tfrac{18\cdot 45}{42\cdot 15} = 0.2513, &
-\widehat{\mathrm{Var}}(\widehat d_{CA}) &= \tfrac1{18} + \tfrac1{42} + \tfrac1{15} + \tfrac1{45} = 0.16825.
+\widehat d_{AB} &= \log\tfrac{20/30}{10/40} = \log\tfrac{20\cdot 40}{30\cdot 10} = 0.9808, &
+\widehat{\mathrm{Var}}(\widehat d_{AB}) &= \tfrac1{20} + \tfrac1{30} + \tfrac1{10} + \tfrac1{40} = 0.20833,\\
+\widehat d_{AC} &= \log\tfrac{18/42}{15/45} = \log\tfrac{18\cdot 45}{42\cdot 15} = 0.2513, &
+\widehat{\mathrm{Var}}(\widehat d_{AC}) &= \tfrac1{18} + \tfrac1{42} + \tfrac1{15} + \tfrac1{45} = 0.16825.
 \end{aligned}
 $$
-The indirect contrast of $B$ versus $C$ is the difference
-$\widehat d_{BC} = \widehat d_{BA} - \widehat d_{CA} = 0.9808 - 0.2513 = 0.7295$. Because the two trials
+(Following [Notation](/notation.qmd), $d_{AB}$ is the effect of $B$ versus $A$.) The indirect contrast of
+$B$ versus $C$ is the difference
+$\widehat d_{CB} = \widehat d_{AB} - \widehat d_{AC} = 0.9808 - 0.2513 = 0.7295$. Because the two trials
 are independent, the variances add (there is no covariance term across independent studies in
-@eq-delta-variance): $\widehat{\mathrm{Var}}(\widehat d_{BC}) = 0.20833 + 0.16825 = 0.37658$, so the
+@eq-delta-variance): $\widehat{\mathrm{Var}}(\widehat d_{CB}) = 0.20833 + 0.16825 = 0.37658$, so the
 standard error is $\sqrt{0.37658} = 0.6137$. A 95% interval is
 $0.7295 \pm 1.96 \times 0.6137 = (-0.4733,\, 1.9323)$, and on the odds-ratio scale
 $(e^{-0.4733}, e^{1.9323}) = (0.62,\, 6.91)$. The interval covers $1$, so the indirect comparison is
@@ -936,7 +938,7 @@ $$
 This is a standard consequence of compactness, almost-everywhere continuity, and the integrable envelope;
 the proof covers $\Theta$ by finitely many small balls, applies the pointwise WLLN at the centers, and
 controls the oscillation inside each ball with the envelope and dominated convergence. See
-@bingham2010regression and a standard text on asymptotic statistics; we take it as given. $\square$
+@vandervaart1998, Chapter 5; we take it as given. $\square$
 :::
 
 ::: {#lem-argmax-consistency}
@@ -1007,10 +1009,13 @@ $\square$
 :::
 
 ::: {.remark}
-**Why this matters, with the running example.** For the Bernoulli the hypotheses are easy to check:
-$\Theta = [0, 1]$ is compact (C1), the model is identifiable since different $p$ give different
-distributions (C2), $\log f(x; p)$ is continuous in $p$ (C3), and the envelope holds, so the theorem gives
-$\hat p_n \xrightarrow{p} p_0$. In words, the trial's response rate converges to the true response rate.
+**Why this matters, with the running example.** For the Bernoulli take $\Theta = [\epsilon, 1-\epsilon]$
+for a small $\epsilon > 0$ with $p_0$ inside; it is compact (C1). The model is identifiable since
+different $p$ give different distributions (C2), $\log f(x; p)$ is continuous in $p$ (C3), and
+$\sup_{p\in\Theta}|\log f(x;p)| \le -\log\epsilon$ gives the envelope (C4). The theorem gives
+$\hat p_n \xrightarrow{p} p_0$. (On all of $[0,1]$ the envelope fails, since $\log p \to -\infty$ as
+$p\to 0$; the truncation is harmless because $\hat p_n$ is the sample proportion either way once it lies
+in $\Theta$.) In words, the trial's response rate converges to the true response rate.
 Translated to the book's subject, this is what guarantees that, with enough patients, an indirect
 comparison built from such estimates converges to the true contrast rather than to a biased value.
 $\blacktriangleleft$
@@ -1227,7 +1232,7 @@ almost surely for some constant $a(\boldsymbol\theta)$.
 
 *(ii)* Let $\mathbf s = \mathbf s(\boldsymbol\theta; X)$ and center $\mathbf U = \mathbf T - \boldsymbol\theta$
 (mean zero by unbiasedness). The componentwise version of the scalar computation gives, for each pair
-$(a, b)$, $\mathbb E_{\boldsymbol\theta}[U_a\, s_b] = \partial_{\theta_b}\mathbb E_{\boldsymbol\theta}[T_a] = \partial_{\theta_b}\theta_a = \mathbb 1\{a = b\}$,
+$(a, b)$, $\mathbb E_{\boldsymbol\theta}[U_a\, s_b] = \partial_{\theta_b}\mathbb E_{\boldsymbol\theta}[T_a] = \partial_{\theta_b}\theta_a = \delta_{ab}$,
 so the cross-covariance is the identity:
 $\mathrm{Cov}_{\boldsymbol\theta}(\mathbf T, \mathbf s) = \mathbb E_{\boldsymbol\theta}[\mathbf U \mathbf s^\top] = I_p$.
 Stack $\mathbf U$ and $\mathbf s$ into a $2p$-vector; its covariance matrix is positive semidefinite
@@ -1299,8 +1304,7 @@ The matrix bound @eq-crlb-matrix is a *finite-sample* statement about unbiased e
 @def-efficient-estimator's asymptotic optimality is a statement about the limiting distribution of
 possibly biased estimators. The rigorous bridge that no regular estimator can have asymptotic covariance
 below $\mathcal I(\boldsymbol\theta_0)^{-1}$ is the Hájek-Le Cam convolution theorem and the local
-asymptotic minimax theorem; we cite these (see @bingham2010regression and the asymptotic-statistics
-literature) rather than prove them, as they require the local asymptotic normality framework beyond this
+asymptotic minimax theorem; we cite these (see @vandervaart1998, Chapter 8) rather than prove them, as they require the local asymptotic normality framework beyond this
 chapter. $\blacktriangleleft$
 :::
 
@@ -1670,8 +1674,8 @@ $$
 Notice the algebra collapses to $\tfrac{1}{n\hat p(1-\hat p)} = \tfrac{1}{n\hat p} + \tfrac{1}{n(1-\hat p)} = \tfrac{1}{\#\text{success}} + \tfrac{1}{\#\text{fail}} = \tfrac{1}{10} + \tfrac{1}{15} = 0.1\overline 6$,
 the textbook standard error of an empirical log-odds. Thus $g(\hat p) = \log(0.4/0.6) = -0.40546$ with
 $\widehat{\mathrm{se}} = \sqrt{1/6} = 0.40825$, giving a 95% interval for the log-odds of
-$-0.40546 \pm 1.96 \times 0.40825 = (-1.2056,\, 0.3947)$ and, exponentiating, an odds-ratio-scale
-interval $(e^{-1.2056}, e^{0.3947}) = (0.2995,\, 1.4830)$.
+$-0.40546 \pm 1.96 \times 0.40825 = (-1.2056,\, 0.3947)$ and, exponentiating, an odds-scale
+interval $(e^{-1.2056}, e^{0.3947}) = (0.2995,\, 1.4839)$.
 
 **Three tests of $H_0 : p = 0.5$.** Using @def-test-statistics with $\boldsymbol\theta_0 = 0.5$:
 

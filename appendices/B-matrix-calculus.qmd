@@ -20,8 +20,8 @@ MAIC and STC (Chapters 18 and 19), read the Jacobian convention (@def-mc-jacobia
 (@thm-chain-rule). If your goal is restricted maximum likelihood and random-effects meta-analysis
 (Chapters 8 and 13), read the trace, inverse, and log-determinant identities
 (@sec-mc-trace-inverse-det) together with the worked covariance example (@sec-mc-example). If your goal
-is efficient computation of a marginal likelihood in ML-NMR (Chapters 20 to 25), read the
-Sherman-Morrison-Woodbury identity (@sec-mc-woodbury). A one-line map from each identity to the chapter
+is efficient computation of a Gaussian mixed-model or random-effects network meta-analysis likelihood,
+read the Sherman-Morrison-Woodbury identity (@sec-mc-woodbury). A one-line map from each identity to the chapter
 that consumes it is the closing table of the appendix (@sec-mc-summary); a reader who wants that map
 first may jump there now and use it as a roadmap.
 
@@ -790,9 +790,10 @@ score. $\blacktriangleleft$
 ## The Sherman-Morrison-Woodbury identity {#sec-mc-woodbury}
 
 A recurring computational need is to invert a matrix that differs from an easily inverted one by a
-low-rank correction. In random-effects meta-analysis and in mixed models the marginal covariance has the
-form $\mathbf{V}=A+UCV$ with $A$ diagonal (so trivially inverted) and $UCV$ of small rank; the Woodbury
-identity reduces the inversion of $\mathbf{V}$ to that of a small matrix.
+low-rank correction. In mixed models, and in random-effects network meta-analysis with multi-arm trials,
+the marginal covariance has the form $\mathbf{V}=A+UCV$ with $A$ diagonal (so trivially inverted) and
+$UCV$ of small rank; the Woodbury identity reduces the inversion of $\mathbf{V}$ to that of a small
+matrix.
 
 *A warning about the letter $V$.* In the identity below, $V$ (plain, unbolded) is a generic rectangular
 factor, one of the four matrices $A,U,C,V$ that build the low-rank update. It is *not* the covariance
@@ -800,7 +801,7 @@ matrix $\mathbf{V}$ (bold) of the likelihood @eq-mc-mvn-loglik, and it is not a 
 unfortunate but the notation $A+UCV$ is universal, so we keep it and simply flag it here.
 
 *What the four matrices are, concretely.* It helps to have a picture before the algebra. Think of a
-mixed model or a random-effects meta-analysis whose marginal covariance is $\mathbf{V}=A+UCV$. Here $A$
+mixed model whose marginal covariance is $\mathbf{V}=A+UCV$. Here $A$
 is the easy diagonal part (within-study or residual variances, one per observation); $U$ is a tall thin
 matrix that maps a few random effects to the many observations they influence; $C$ is the small
 covariance of those random effects (often just a single between-study variance $\tau^2$); and
@@ -808,9 +809,7 @@ $V=U^\top$ closes the low-rank correction. Inverting the big $n\times n$ matrix 
 expensive, but Woodbury turns it into inverting the tiny $k\times k$ **capacitance matrix**
 $C^{-1}+VA^{-1}U$, where $k$ is the number of random effects. The compound-symmetry example of
 @sec-mc-example is the smallest instance, with $k=1$: a single shared random effect, $U=V^\top=\mathbf{1}_n$
-and $C=[\tau^2]$. The same low-rank structure appears in the marginal likelihood of ML-NMR (Chapters 20
-to 25), where integrating out individual-level variation leaves a diagonal-plus-low-rank covariance of
-exactly this kind, and Woodbury is what keeps the likelihood computable.
+and $C=[\tau^2]$.
 
 We build up from the rank-one case.
 
@@ -923,7 +922,7 @@ $n\times n$ inversion of $A+UCV$ collapses to the $k\times k$ inversion of the c
 $C^{-1}+VA^{-1}U$, a huge saving when $k\ll n$. The name "capacitance" is borrowed from electrical network
 theory, where this Schur-complement matrix arises; in this book it carries no electrical meaning and is
 simply the small matrix you end up inverting. This is the identity that makes the marginal likelihood of a
-mixed model, a random-effects meta-analysis, or ML-NMR computable at scale.
+Gaussian mixed model or a random-effects network meta-analysis computable at scale.
 
 A companion identity handles the determinant, which is what the log-determinant term of a restricted
 likelihood requires. We first record the Schur-complement determinant formula, then specialize.
@@ -1115,8 +1114,8 @@ compound-symmetry covariance, where $\mathbf{V}_\vartheta=\mathbf{1}_n\mathbf{1}
 ## A worked example: the compound-symmetry covariance {#sec-mc-example}
 
 We assemble the rank-one inverse, the matrix determinant lemma, and the log-determinant derivative on the
-covariance matrix that governs the balanced one-way random-effects model and the random-effects
-meta-analysis of Chapter 13. Let
+covariance matrix that governs one group of the balanced one-way random-effects model of Chapter 8
+(@exr-reml-one-way). Let
 $$
 \mathbf{V}=\sigma^2 I_n+\tau^2\,\mathbf{1}_n\mathbf{1}_n^\top,
 $$
@@ -1124,15 +1123,16 @@ the **compound-symmetry** (equicorrelation) matrix, with $\sigma^2>0$ and $\tau^
 inverse, its determinant, and the derivative of $\log\det\mathbf{V}$ with respect to the between-study
 variance $\tau^2$, all in closed form, and then verify the formulas numerically.
 
-*What each symbol means for a meta-analysis.* This covariance is not an abstract choice; it is the exact
-marginal covariance of the estimates from $n$ studies in a random-effects meta-analysis, so it is worth
-translating every symbol. Here $n$ is the number of studies; $\sigma^2$ is the within-study (residual,
-sampling) variance, assumed common across studies in this balanced illustration; and $\tau^2$ is the
-between-study variance, the **heterogeneity**, the extra variability because the true effect differs from
-study to study. The vector $\mathbf{1}_n=(1,\dots,1)^\top$ is the $n$-vector of ones, and the matrix
-$\mathbf{1}_n\mathbf{1}_n^\top$ (a matrix of all ones) encodes a *single shared random effect*: it says
-every study's estimate is shifted by the same common random deviation, so all pairs of studies share the
-$\tau^2$ component of variance. That matrix has rank one, because it is the outer product of one vector
+*What each symbol means.* This covariance is not an abstract choice; it is the exact marginal covariance
+of the $n$ observations $y_{i1},\dots,y_{in}$ in one group of the one-way model
+$y_{ij}=\mu+\theta_i+\varepsilon_{ij}$, so it is worth translating every symbol. Here $n$ is the number of
+observations in the group; $\sigma^2$ is the within-group (residual) variance; and $\tau^2$ is the
+between-group variance, the variance of the shared group effect $\theta_i$. The vector
+$\mathbf{1}_n=(1,\dots,1)^\top$ is the $n$-vector of ones, and the matrix $\mathbf{1}_n\mathbf{1}_n^\top$
+(a matrix of all ones) encodes a *single shared random effect*: every observation in the group is shifted
+by the same random deviation $\theta_i$, so all pairs share the $\tau^2$ component of variance. (In a
+standard random-effects meta-analysis each study has its own independent random effect, so the marginal
+covariance of the study estimates is the diagonal $\operatorname{diag}(s_i^2+\tau^2)$, not this matrix.) That matrix has rank one, because it is the outer product of one vector
 with itself, and the rank-one structure is exactly what lets Sherman-Morrison and the matrix determinant
 lemma reduce an $n\times n$ inverse and determinant to *scalars*. The reason we care about the derivative
 with respect to $\tau^2$ is that estimating heterogeneity means solving the variance-component score
@@ -1194,7 +1194,7 @@ $\mathbf{1}_3^\top\mathbf{V}^{-1}\mathbf{1}_3=$ (sum of all entries of $\mathbf{
 $=(3\cdot5+6\cdot(-2))/7=(15-12)/7=\frac{3}{7}$. All three routes agree.
 
 This is precisely the arithmetic that makes the restricted maximum likelihood (REML) estimating equations
-for $\tau^2$ tractable in closed form for balanced designs, as used in Chapters 8 and 13: the Woodbury
+for $\tau^2$ tractable in closed form for the balanced one-way design of Chapter 8: the Woodbury
 inverse and the matrix determinant lemma reduce an $n\times n$ problem to scalars, and the
 log-determinant and inverse derivatives produce the score.
 
@@ -1203,8 +1203,8 @@ log-determinant and inverse derivatives produce the score.
 The previous example served the variance-component side of the book. This one serves the side the target
 reader most often needs: the likelihood derivatives behind logistic regression, which underpin the
 binary-outcome likelihood of ML-NMR (Chapters 20 to 25) and the outcome model of an anchored indirect
-comparison. The phrase "the MAIC, STC, and ML-NMR derivations just follow from differentiating a
-likelihood" means, concretely, the computation below.
+comparison. The phrase "the STC and ML-NMR derivations just follow from differentiating a likelihood"
+means, concretely, the computation below.
 
 Let $y_i\in\{0,1\}$ be binary outcomes for $i=1,\dots,n$, with covariate rows
 $\mathbf{x}_i\in\mathbb{R}^p$ stacked into the design matrix $\mathbf{X}$ (rows $\mathbf{x}_i^\top$).
@@ -1263,7 +1263,7 @@ $$
 $$
 and the Hessian is $-\mathcal{I}$. One Newton (Fisher scoring) step from $\boldsymbol\beta=\mathbf{0}$ is
 $\boldsymbol\beta\mapsto\boldsymbol\beta+\mathcal{I}^{-1}\mathbf{s}$, the same update that drives the
-maximum likelihood fits in the GLM, MAIC, and ML-NMR chapters. This is the derivative computation the
+maximum likelihood fits of the GLM chapter and the outcome regressions of STC. This is the derivative computation the
 target reader came to this appendix for; it uses only @thm-linear-form-derivative and @thm-chain-rule.
 
 ## Summary of identities {#sec-mc-summary}
@@ -1285,7 +1285,7 @@ and points at the chapter that consumes each result.
 | $X^{-1}$ | $X$ | $d(X^{-1})=-X^{-1}(dX)X^{-1}$ | inverse-quadratic term of a REML/Gaussian score | @thm-inverse-derivative |
 | $\det X$ | $X$ | $\det(X)\,X^{-\top}$ | route to the log-determinant | @lem-mc-jacobi |
 | $\log\det X$ | $X$ | $X^{-\top}$ ($=X^{-1}$ if symmetric) | REML and meta-analysis log-determinant term | @thm-logdet-derivative |
-| $(A+UCV)^{-1}$ | low-rank update | $A^{-1}-A^{-1}U(C^{-1}+VA^{-1}U)^{-1}VA^{-1}$ | ML-NMR and mixed-model marginal inverse | @thm-woodbury |
+| $(A+UCV)^{-1}$ | low-rank update | $A^{-1}-A^{-1}U(C^{-1}+VA^{-1}U)^{-1}VA^{-1}$ | mixed-model and random-effects NMA marginal inverse | @thm-woodbury |
 | $\det(A+UCV)$ | low-rank update | $\det(A)\det(C)\det(C^{-1}+VA^{-1}U)$ | low-rank log-determinant | @cor-mc-matrix-determinant-lemma |
 
 For low-rank updates, $(A+UCV)^{-1}=A^{-1}-A^{-1}U(C^{-1}+VA^{-1}U)^{-1}VA^{-1}$ (@thm-woodbury) and
